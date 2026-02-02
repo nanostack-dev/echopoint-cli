@@ -234,11 +234,6 @@ api:
   base_url: "https://apidev.echopoint.dev"
   timeout: 30s
 
-auth:
-  clerk_base_url: "https://blessed-cobra-90.clerk.accounts.dev"
-  clerk_oauth_app_id: "I6FPYrmcg3X8lCVJ"
-  clerk_redirect_url: "http://127.0.0.1:8765/callback"
-
 defaults:
   output_format: "table"
 ```

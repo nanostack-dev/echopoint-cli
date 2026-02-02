@@ -77,7 +77,7 @@ func newAuthHelpCmd(state *AppState) *cobra.Command {
 │ Echopoint CLI Authentication                                   │
 └─────────────────────────────────────────────────────────────────┘
 
-The CLI uses Clerk authentication, the same system as the frontend.
+The CLI uses the same authentication system as the frontend.
 
 How it works:
 
