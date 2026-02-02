@@ -1,0 +1,197 @@
+version: "2"
+
+issues:
+  max-same-issues: 50
+
+formatters:
+  enable:
+    - goimports
+    - golines
+  settings:
+    goimports:
+      local-prefixes:
+        - echopoint-cli
+    golines:
+      max-len: 120
+
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - cyclop
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - fatcontext
+    - funlen
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - intrange
+    - makezero
+    - mirror
+    - nakedret
+    - nestif
+    - nilerr
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - predeclared
+    - reassign
+    - revive
+    - staticcheck
+    - testifylint
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+
+  settings:
+    cyclop:
+      max-complexity: 30
+      package-average: 10.0
+
+    errcheck:
+      check-type-assertions: true
+      # Ignore errors from these functions (common for CLI output)
+      exclude-functions:
+        - (io.Writer).Write
+        - (*os.File).Write
+        - (*os.File).WriteString
+        - (*os.File).Sync
+        - fmt.Print
+        - fmt.Printf
+        - fmt.Println
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        # Generated API client union type methods
+        - (*echopoint-cli/internal/api.FlowNode).FromRequestFlowNode
+        - (*echopoint-cli/internal/api.FlowNode).FromDelayFlowNode
+
+    funlen:
+      lines: 150
+      statements: 80
+
+    gocognit:
+      min-complexity: 30
+
+    gocritic:
+      settings:
+        captLocal:
+          paramsOnly: false
+        underef:
+          skipRecvDeref: false
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+
+    nakedret:
+      max-func-lines: 0
+
+    nolintlint:
+      allow-no-explanation: [funlen, gocognit, golines]
+      require-explanation: true
+      require-specific: true
+
+    reassign:
+      patterns:
+        - ".*"
+
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1016
+        - -QF1008
+
+  exclusions:
+    warn-unused: true
+    presets:
+      - std-error-handling
+      - common-false-positives
+    rules:
+      - source: 'TODO'
+        linters: [godot]
+      - text: 'should have a package comment'
+        linters: [revive]
+      - text: 'exported \S+ \S+ should have comment( \(or a comment on this block\))? or be unexported'
+        linters: [revive]
+      - path: '_test\.go'
+        linters:
+          - bodyclose
+          - errcheck
+          - gocognit
+          - funlen
+          - goconst
+          - gosec
+          - govet
+          - noctx
+      # Exclude generated API client
+      - path: 'internal/api/gen\.go'
+        linters:
+          - ALL
+      - path: 'tools\.go$'
+        linters:
+          - ALL
+      # TUI code often has complex state machines
+      - path: 'internal/tui/'
+        linters:
+          - gocognit
+          - funlen
+          - cyclop
+          - gocyclo
+          - goconst
+          - govet
+          - unparam
+          - unused
+          - gosec
+          - intrange
+          - staticcheck
+          - unconvert
+      # Commands have CLI-specific patterns
+      - path: 'internal/commands/'
+        linters:
+          - gocognit
+          - funlen
+          - gocritic
+          - unparam
+          - gosec
+          - govet
+          - unconvert
+          - usestdlibvars
+          - staticcheck
+      # Auth has browser-specific code
+      - path: 'internal/auth/'
+        linters:
+          - gosec
+          - noctx
+          - govet
+          - staticcheck
+      # Config has hardcoded defaults
+      - path: 'internal/config/'
+        linters:
+          - gosec
+          - govet
+      # Flow builder has complex algorithms
+      - path: 'internal/flowbuilder/'
+        linters:
+          - intrange
+          - unparam

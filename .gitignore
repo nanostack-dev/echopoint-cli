@@ -1,0 +1,7 @@
+/.idea/
+/.vscode/
+/bin/
+/dist/
+/echopoint
+/.DS_Store
+*.log

@@ -1,0 +1,3138 @@
+openapi: 3.0.3
+info:
+  title: Echopoint Webhook Testing Service API
+  version: 1.0.0
+  description: |-
+    API for webhook testing and monitoring service. 
+    Provides endpoints for creating webhook endpoints, capturing requests,
+    and analyzing webhook traffic with real-time streaming and analytics.
+tags:
+  - name: Health
+    description: Health check operations.
+  - name: Webhook
+    description: Manage webhook endpoints and capture requests.
+  - name: Analytics
+    description: Webhook analytics and metrics operations.
+  - name: Flows
+    description: Manage Requests flows
+  - name: Collections
+    description: Manage request collections with folders and requests
+  - name: Extractors
+    description: Manage flow extractors for data extraction from responses
+  - name: Assertions
+    description: Manage flow assertions for response validation
+  - name: SpecialNodes
+    description: Special flow control nodes like delay
+# servers removed to avoid host-header validation warnings under oapi validator
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Clerk session JWT token in Authorization header"
+  parameters:
+    LimitParameter:
+      name: limit
+      in: query
+      required: true
+      description: Maximum number of items per page.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+    OffsetParameter:
+      name: offset
+      in: query
+      required: true
+      description: Number of items to skip.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+    WebhookIdParameter:
+      name: id
+      in: path
+      required: true
+      description: The unique identifier of the webhook endpoint.
+      schema:
+        type: string
+        example: "wh_abc123def456"
+  responses:
+    BadRequest:
+      description: Bad Request (e.g., validation error)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    Unauthorized:
+      description: Unauthorized (Authentication required or invalid)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          example:
+            errors:
+              [
+                {
+                  "code": "UNAUTHENTICATED",
+                  "message": "Authentication required.",
+                },
+              ]
+    Forbidden:
+      description: Forbidden (Authenticated user lacks permission)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          example:
+            errors:
+              [{ "code": "FORBIDDEN", "message": "Insufficient permissions." }]
+    NotFound:
+      description: Resource Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    Conflict:
+      description: Conflict (e.g., resource already exists)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+          example:
+            errors:
+              [
+                {
+                  "code": "CONFLICT",
+                  "message": "Resource conflict.",
+                  "field": "name",
+                },
+              ]
+  schemas:
+    # Generic Error Handling
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A machine-readable error code.
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: A human-readable error message.
+          example: "Request validation failed"
+        field:
+          type: string
+          description: The specific field that caused the error (optional).
+          example: "name"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional details about the error (optional).
+          example: { "minLength": 2 }
+      required:
+        - code
+        - message
+    ApiErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+      required:
+        - errors
+
+    # Custom enum mapped to Go type for analytics period
+    AnalyticsPeriod:
+      type: string
+      enum: ["1h", "6h", "24h", "7d", "30d"]
+      x-go-type: webhook.AnalyticsPeriod
+      x-go-type-import:
+        path: echopoint/internal/domain/webhook
+
+    # Generic Pagination
+    PagedListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: Total number of matching items.
+        count:
+          type: integer
+          description: The number of items returned in this response.
+      required:
+        - total
+        - count
+
+
+    PaginationRequest:
+      type: object
+      properties:
+        limit:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Maximum number of items per page.
+        offset:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+          description: Number of items to skip.
+      x-go-type: search.Pagination
+      x-go-type-import:
+        path: github.com/nanostack-dev/shared/toolkit/search
+    SortDirection:
+      type: string
+      enum: [ ASC, DESC ]
+      default: DESC
+      x-go-type: search.SortDirection
+      x-go-type-import:
+        path: github.com/nanostack-dev/shared/toolkit/search
+
+    SearchRequest:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/PaginationRequest"
+        full_text_search:
+          type: string
+          description: Full-text search term to match against searchable fields.
+        sort_direction:
+          $ref: "#/components/schemas/SortDirection"
+          description: Sorting direction
+      description: Generic search request template
+
+    # Webhook Schemas
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the webhook endpoint.
+          example: "wh_abc123def456"
+        name:
+          type: string
+          description: Human-readable name for the webhook endpoint.
+          example: "My API Webhook"
+        url:
+          type: string
+          description: The URL where webhook requests are received.
+          example: "https://api.echopoint.com/webhook/wh_abc123def456"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the webhook endpoint was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the webhook endpoint was last updated.
+        request_count:
+          type: integer
+          description: Total number of requests received by this webhook endpoint.
+          example: 1247
+      required:
+        - id
+        - name
+        - url
+        - created_at
+        - updated_at
+        - request_count
+
+    CreateWebhookRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Human-readable name for the webhook endpoint.
+          example: "My API Webhook"
+      required:
+        - name
+    HttpMethod:
+      type: string
+      enum: [ GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS ]
+      description: HTTP method
+    WebhookRequestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the webhook request.
+          example: "req_xyz789abc123"
+        webhook_id:
+          type: string
+          description: ID of the webhook endpoint that received this request.
+          example: "wh_abc123def456"
+        method:
+          $ref: "#/components/schemas/HttpMethod"
+          description: HTTP method used for the request.
+          example: "POST"
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: HTTP headers received with the request.
+          example:
+            "content-type": "application/json"
+            "user-agent": "GitHub-Hookshot/abc123"
+        query_params:
+          type: object
+          additionalProperties:
+            type: string
+          description: Query parameters received with the request.
+          example:
+            "signature": "sha256=abcd1234"
+        body:
+          type: string
+          nullable: true
+          description: Raw request body content.
+          example: '{"event": "push", "repository": {"name": "test"}}'
+        content_type:
+          type: string
+          nullable: true
+          description: Content-Type header value.
+          example: "application/json"
+        user_agent:
+          type: string
+          nullable: true
+          description: User-Agent header value.
+          example: "GitHub-Hookshot/abc123"
+        ip_address:
+          type: string
+          description: IP address of the request sender.
+          example: "192.168.1.100"
+        received_at:
+          type: string
+          format: date-time
+          description: Timestamp when the request was received.
+      required:
+        - id
+        - webhook_id
+        - method
+        - headers
+        - query_params
+        - received_at
+        - ip_address
+
+    WebhookRequestFilter:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+          description: Filter by specific webhook request IDs.
+          x-go-type-skip-optional-pointer: true
+        methods:
+          type: array
+          items:
+            $ref: "#/components/schemas/HttpMethod"
+          description: Filter by HTTP methods.
+          x-go-type-skip-optional-pointer: true
+        ip_addresses:
+          type: array
+          items:
+            type: string
+          description: Filter by IP addresses.
+          x-go-type-skip-optional-pointer: true
+        since:
+          type: string
+          format: date-time
+          description: Include requests received at or after this timestamp.
+        until:
+          type: string
+          format: date-time
+          description: Include requests received at or before this timestamp.
+        has_body:
+          type: boolean
+          description: Filter by presence of request body.
+        has_query_params:
+          type: boolean
+          description: Filter by presence of query parameters.
+
+    WebhookRequestSearchRequest:
+      allOf:
+        - $ref: "#/components/schemas/SearchRequest"
+        - type: object
+          properties:
+            filter:
+              $ref: "#/components/schemas/WebhookRequestFilter"
+              description: Filter criteria for webhook requests
+            sort_by:
+              type: string
+              enum: ["received_at", "method", "ip_address"]
+              default: "received_at"
+              description: Field to sort by
+              x-go-type: webhook.SortFieldWebhookRequest
+              x-go-type-import:
+                path: echopoint/internal/domain/webhook
+
+    WebhookRequestListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/WebhookRequestResponse"
+          required:
+            - items
+
+    WebhookResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success message confirming webhook receipt.
+          example: "Webhook received successfully"
+        request_id:
+          type: string
+          description: Unique identifier for this webhook request.
+          example: "req_xyz789abc123"
+        received_at:
+          type: string
+          format: date-time
+          description: Timestamp when the webhook was received.
+      required:
+        - message
+        - request_id
+        - received_at
+
+    # Flow Engine Schemas
+    FlowDefinition:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the flow
+          example: "User API Test"
+        description:
+          type: string
+          description: Description of what the flow does
+          example: "Test user endpoints with branching"
+        version:
+          type: string
+          description: Flow definition version
+          example: "1.0"
+        nodes:
+          type: array
+          description: List of nodes in the flow
+          items:
+            $ref: "#/components/schemas/FlowNode"
+        edges:
+          type: array
+          description: Connections between nodes
+          items:
+            $ref: "#/components/schemas/FlowEdge"
+      required:
+        - name
+        - version
+        - nodes
+        - edges
+
+    ExportedFlow:
+      allOf:
+        - $ref: "#/components/schemas/FlowDefinition"
+        - type: object
+          properties:
+            initialInputs:
+              type: object
+              description: Initial input variables for the flow (from environment)
+              additionalProperties: true
+          required:
+            - initialInputs
+
+    # Base schema for all nodes in a flow
+    BaseFlowNode:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the node
+          example: "node-1"
+        display_name:
+          type: string
+          description: Human-readable name for the node
+          example: "My Node"
+        type:
+          type: string
+          description: Type of node
+        outputs:
+          type: array
+          description: Named outputs extracted from the response/data
+          items:
+            $ref: "#/components/schemas/Output"
+        assertions:
+          type: array
+          description: Validation assertions for the node
+          items:
+            $ref: "#/components/schemas/CompositeAssertion"
+      required:
+        - id
+        - display_name
+        - type
+
+    FlowNode:
+      oneOf:
+        - $ref: "#/components/schemas/RequestFlowNode"
+        - $ref: "#/components/schemas/DelayFlowNode"
+      discriminator:
+        propertyName: type
+        mapping:
+          request: "#/components/schemas/RequestFlowNode"
+          delay: "#/components/schemas/DelayFlowNode"
+
+    RequestFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "request"
+            data:
+              $ref: "#/components/schemas/RequestNodeData"
+          required:
+            - data
+
+    DelayFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "delay"
+            data:
+              $ref: "#/components/schemas/DelayNodeData"
+          required:
+            - data
+
+    RequestNodeData:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+          description: HTTP method
+          example: "POST"
+        url:
+          type: string
+          format: uri
+          description: |
+            Full URL for the request. Supports variable substitution using template syntax.
+            - Initial variables: {{variableName}} (e.g., {{apiUrl}})
+            - Node outputs: {{nodeId.outputKey}} (e.g., {{create-user.userId}})
+          example: "{{apiUrl}}/users/{{create-user.userId}}"
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            HTTP headers. Supports the same variable substitution as URL.
+            Headers can reference both initial inputs and previous node outputs.
+          example: {"Content-Type": "application/json", "Authorization": "Bearer {{auth.token}}"}
+        query_params:
+          type: object
+          additionalProperties: true
+          description: |
+            Query parameters. Supports variable substitution.
+            All keys and values can contain template variables.
+        body:
+          description: |
+            Request body (can be any JSON structure). Supports variable substitution.
+            Any string values within the body can contain template variables.
+          example: {"name": "{{userName}}", "email": "{{userEmail}}"}
+        timeout:
+          type: integer
+          description: Request timeout in milliseconds
+          example: 30000
+      required:
+        - method
+        - url
+
+    DelayNodeData:
+      type: object
+      properties:
+        duration:
+          type: integer
+          description: Delay duration in milliseconds
+          example: 1000
+      required:
+        - duration
+
+    Output:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the output for reference by downstream nodes
+          example: "userId"
+        extractor:
+          type: object
+          description: Extractor configuration that defines how to extract data from the response
+          properties:
+            type:
+              $ref: "#/components/schemas/ExtractorType"
+            path:
+              type: string
+              description: Path for extraction (used by jsonPath, xmlPath, header extractors)
+              example: "$.user.id"
+            header_name:
+              type: string
+              description: Header name to extract (used by header extractor)
+              example: "x-custom-id"
+          required:
+            - type
+      required:
+        - name
+        - extractor
+
+    CompositeAssertion:
+      type: object
+      properties:
+        extractor_type:
+          $ref: "#/components/schemas/ExtractorType"
+        extractor_data:
+          type: object
+          additionalProperties: true
+          description: Configuration for the extractor
+          example: {"path": "$.user.name"}
+        operator_type:
+          $ref: "#/components/schemas/OperatorType"
+        operator_data:
+          type: object
+          additionalProperties: true
+          description: Configuration for the operator
+          example: {"min": 200, "max": 299}
+      required:
+        - extractor_type
+        - extractor_data
+        - operator_type
+        - operator_data
+
+    FlowEdge:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the edge
+          example: "e-success"
+        source:
+          type: string
+          description: ID of the source node
+          example: "req-1"
+        target:
+          type: string
+          description: ID of the target node
+          example: "req-success"
+        type:
+          type: string
+          enum: ["success", "failure"]
+          description: Condition for following this edge
+          example: "success"
+      required:
+        - id
+        - source
+        - target
+        - type
+
+    FlowExecutionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the flow executed successfully
+          example: true
+        executed_nodes:
+          type: array
+          description: List of node IDs that were executed
+          items:
+            type: string
+          example: ["req-1", "req-success"]
+        results:
+          type: object
+          additionalProperties: true
+          description: Detailed results from each node
+        error:
+          type: string
+          description: Error message if execution failed
+      required:
+        - success
+
+    # Analytics Schemas
+    WebhookAnalytics:
+      type: object
+      properties:
+        period:
+          type: string
+          description: Time period for the analytics data.
+          example: "24h"
+        total_requests:
+          type: integer
+          description: Total number of requests in the period.
+          example: 1247
+        time_series:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+          description: Time series data points for the period.
+          x-go-type-skip-optional-pointer: true
+        method_distribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/MethodDistribution"
+      required:
+        - period
+        - total_requests
+        - method_distribution
+        - response_time_distribution
+
+    TimeSeriesPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp for this data point.
+        request_count:
+          type: integer
+          description: Number of requests in this time bucket.
+          example: 42
+        success_rate:
+          type: number
+          format: float
+          description: Success rate for this time bucket (0.0 to 1.0).
+          example: 0.95
+        avg_response_time:
+          type: number
+          format: float
+          description: Average response time in milliseconds for this time bucket.
+          example: 150.2
+      required:
+        - timestamp
+        - request_count
+        - success_rate
+        - avg_response_time
+
+    MethodDistribution:
+      type: object
+      properties:
+        method:
+          type: string
+          description: HTTP method.
+          example: "POST"
+        count:
+          type: integer
+          description: Number of requests using this method.
+          example: 980
+        percentage:
+          type: number
+          format: float
+          description: Percentage of total requests (0.0 to 1.0).
+          example: 0.786
+      required:
+        - method
+        - count
+        - percentage
+
+    # New minimal analytics schemas
+    RequestVolumePoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        request_count:
+          type: integer
+      required: [timestamp, request_count]
+    RequestVolumesResponse:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: Start datetime for the analytics data.
+        to:
+          type: string
+          format: date-time
+          description: End datetime for the analytics data.
+        time_series:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestVolumePoint"
+      required: [from, to, time_series]
+    MethodDistributionResponse:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: Start datetime for the analytics data.
+        to:
+          type: string
+          format: date-time
+          description: End datetime for the analytics data.
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MethodDistribution"
+      required: [from, to, items]
+
+    MetricsResponse:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: Aggregation bucket size used for the metrics.
+          example: "1h"
+        since:
+          type: string
+          format: date-time
+          description: Start timestamp for the metrics window.
+        until:
+          type: string
+          format: date-time
+          description: End timestamp for the metrics window.
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricsSeries"
+          description: Array of metric series data.
+      required: [bucket, since, until, series]
+
+    MetricsSeries:
+      type: object
+      properties:
+        label:
+          type: string
+          description: Label identifying this series (e.g., HTTP method when grouped).
+          example: "POST"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricsPoint"
+          description: Array of data points for this series.
+      required: [label, points]
+
+    MetricsPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp for this data point.
+        value:
+          type: integer
+          description: Metric value at this timestamp.
+          example: 42
+      required: [timestamp, value]
+
+    # Flow Persistence Schemas
+    Flow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated unique identifier for the flow.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        author_id:
+          type: string
+          description: User ID of the flow author.
+          example: "user_123"
+        name:
+          type: string
+          description: Human-readable name for the flow.
+          example: "User API Test Flow"
+        description:
+          type: string
+          nullable: true
+          description: Optional description of what the flow does.
+          example: "Test user endpoints with branching logic"
+        version:
+          type: string
+          description: Version identifier for the flow.
+          example: "1.0"
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        metadata:
+          type: object
+          description: Frontend-specific metadata including UI layout information.
+          properties:
+            node_positions:
+              type: object
+              description: Map of node IDs to their x,y positions in the editor.
+              additionalProperties:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the flow was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the flow was last updated.
+      required:
+        - id
+        - author_id
+        - name
+        - version
+        - flow_definition
+        - metadata
+        - created_at
+        - updated_at
+
+    CreateFlowRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Human-readable name for the flow.
+          example: "User API Test Flow"
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Optional description of the flow.
+          example: "Test user endpoints with branching logic"
+        version:
+          type: string
+          default: "1.0"
+          description: Version identifier for the flow.
+          example: "1.0"
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        auto_layout:
+          type: boolean
+          description: Recompute node positions on create using backend layout.
+        metadata:
+          type: object
+          description: Frontend-specific metadata including UI layout information.
+          properties:
+            node_positions:
+              type: object
+              description: Map of node IDs to their x,y positions in the editor.
+              additionalProperties:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+          additionalProperties: true
+      required:
+        - name
+        - flow_definition
+
+    UpdateFlowRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Human-readable name for the flow.
+          example: "User API Test Flow"
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Optional description of the flow.
+          example: "Test user endpoints with branching logic"
+        version:
+          type: string
+          description: Version identifier for the flow.
+          example: "1.0"
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        auto_layout:
+          type: boolean
+          description: Recompute node positions on update using backend layout.
+        metadata:
+          type: object
+          description: Frontend-specific metadata including UI layout information.
+          properties:
+            node_positions:
+              type: object
+              description: Map of node IDs to their x,y positions in the editor.
+              additionalProperties:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+          additionalProperties: true
+
+    FlowListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Flow"
+          required:
+            - items
+
+    # Flow Execution Schemas
+    ExecutionStatus:
+      type: string
+      enum: [pending, running, completed, failed, cancelled]
+      description: Status of a flow execution
+
+    NodeExecutionStatus:
+      type: string
+      enum: [pending, running, completed, failed, skipped]
+      description: Status of a single node execution
+
+    TriggerType:
+      type: string
+      enum: [manual, scheduled, webhook]
+      description: How a flow execution was triggered
+
+    FlowExecution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the execution
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        flow_id:
+          type: string
+          format: uuid
+          description: ID of the flow that was executed
+          example: "650e8400-e29b-41d4-a716-446655440000"
+        author_id:
+          type: string
+          description: User ID who triggered the execution
+          example: "user_123"
+        flow_snapshot:
+          $ref: "#/components/schemas/FlowDefinition"
+          description: Immutable snapshot of the flow at execution time
+        status:
+          $ref: "#/components/schemas/ExecutionStatus"
+        started_at:
+          type: string
+          format: date-time
+          description: When the execution started
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the execution completed (if finished)
+        error_message:
+          type: string
+          nullable: true
+          description: Error message if execution failed
+        error_code:
+          type: string
+          nullable: true
+          description: Error code if execution failed
+        trigger_type:
+          $ref: "#/components/schemas/TriggerType"
+          nullable: true
+        trigger_metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata about the trigger
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - flow_id
+        - author_id
+        - flow_snapshot
+        - status
+        - started_at
+        - created_at
+        - updated_at
+
+    NodeExecutionResult:
+      type: object
+      description: |
+        Node execution result with hybrid design: single source of truth (result) + promoted columns.
+        The `result` field contains the complete polymorphic result from the flow engine.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the node result
+        flow_id:
+          type: string
+          format: uuid
+          description: ID of the flow
+        execution_id:
+          type: string
+          format: uuid
+          description: ID of the parent execution
+        node_id:
+          type: string
+          description: ID of the node (from flow definition)
+        display_name:
+          type: string
+          description: Human-readable name for the node
+        node_type:
+          type: string
+          enum: [request, delay]
+          description: Type of node (promoted from result)
+        result:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: |
+            Complete polymorphic result from flow engine.
+            Contains RequestExecutionResult or DelayExecutionResult based on node_type.
+            Includes all data: request/response, assertions, extracted outputs, etc.
+        status:
+          $ref: "#/components/schemas/NodeExecutionStatus"
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+          description: System-level error (orchestration failures)
+        error_code:
+          type: string
+          nullable: true
+          description: System-level error code
+        has_errors:
+          type: boolean
+          nullable: true
+          description: Fast flag for filtering failures (promoted from result)
+        duration_ms:
+          type: integer
+          nullable: true
+          description: Duration in milliseconds (promoted from result)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - flow_id
+        - execution_id
+        - node_id
+        - display_name
+        - node_type
+        - status
+        - created_at
+        - updated_at
+
+    FlowExecutionListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FlowExecution"
+          required:
+            - items
+
+    NodeExecutionHistoryResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/NodeExecutionResult"
+          required:
+            - items
+
+    # Collection Schemas
+    CollectionSource:
+      type: string
+      enum: [manual, openapi]
+      default: manual
+      description: Source of the collection
+
+    HTTPMethod:
+      type: string
+      enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
+      description: HTTP method for requests
+
+    OpenAPISpecMetadata:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Version of the OpenAPI spec
+          example: "3.0.0"
+        original_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Original URL where the spec was imported from
+          example: "https://api.example.com/openapi.json"
+        imported_at:
+          type: string
+          format: date-time
+          description: Timestamp when the spec was imported
+      required:
+        - version
+        - imported_at
+
+    Collection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        author_id:
+          type: string
+          description: User ID of the collection author
+          example: "user_123"
+        name:
+          type: string
+          description: Human-readable name for the collection
+          example: "My API Collection"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the collection
+          example: "Collection for testing my API"
+        source:
+          $ref: "#/components/schemas/CollectionSource"
+        openapi_spec:
+          $ref: "#/components/schemas/OpenAPISpecMetadata"
+          nullable: true
+          description: Metadata if imported from OpenAPI spec
+        folders:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionFolder"
+          description: Flat array of folders with parent_id references
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionRequest"
+          description: Flat array of requests with folder_id references
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the collection was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the collection was last updated
+      required:
+        - id
+        - author_id
+        - name
+        - source
+        - folders
+        - requests
+        - created_at
+        - updated_at
+
+    CollectionFolder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        collection_id:
+          type: string
+          format: uuid
+          description: Reference to parent collection
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Reference to parent folder (null for root folders)
+          example: "550e8400-e29b-41d4-a716-446655440002"
+        name:
+          type: string
+          description: Folder name
+          example: "User Endpoints"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional folder description
+          example: "Contains user management endpoints"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the folder was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the folder was last updated
+      required:
+        - id
+        - collection_id
+        - name
+        - created_at
+        - updated_at
+
+    CollectionRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440003"
+        collection_id:
+          type: string
+          format: uuid
+          description: Reference to parent collection
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Reference to parent folder (null for root level)
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        name:
+          type: string
+          description: Request name
+          example: "Get User by ID"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional request description
+          example: "Retrieves a user by their ID"
+        method:
+          $ref: "#/components/schemas/HTTPMethod"
+        url:
+          type: string
+          format: uri
+          description: Request URL
+          example: "https://api.example.com/users/123"
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          description: HTTP headers for the request
+          example:
+            Content-Type: "application/json"
+            Authorization: "Bearer token123"
+        body:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Request body (any JSON structure)
+          example:
+            name: "John Doe"
+            email: "john@example.com"
+        timeout:
+          type: integer
+          nullable: true
+          description: Request timeout in milliseconds
+          example: 30000
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the request was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the request was last updated
+      required:
+        - id
+        - collection_id
+        - name
+        - method
+        - url
+        - created_at
+        - updated_at
+
+    CreateCollectionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Collection name
+          example: "My API Collection"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional description
+          example: "Collection for testing my API"
+        source:
+          $ref: "#/components/schemas/CollectionSource"
+      required:
+        - name
+
+    UpdateCollectionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Collection name
+          example: "Updated Collection Name"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional description
+
+    CreateFolderRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Folder name
+          example: "User Endpoints"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional folder description
+          example: "Contains user management endpoints"
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent folder ID (null for root level)
+          example: "550e8400-e29b-41d4-a716-446655440002"
+      required:
+        - name
+
+    UpdateFolderRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Folder name
+          example: "Updated Folder Name"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional folder description
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent folder ID (null to move to root)
+
+    CreateRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Request name
+          example: "Get User by ID"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional request description
+          example: "Retrieves a user by their ID"
+        method:
+          $ref: "#/components/schemas/HTTPMethod"
+        url:
+          type: string
+          format: uri
+          description: Request URL
+          example: "https://api.example.com/users/123"
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          description: HTTP headers
+          example:
+            Content-Type: "application/json"
+        body:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Request body (any JSON structure)
+        timeout:
+          type: integer
+          nullable: true
+          description: Request timeout in milliseconds
+          example: 30000
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent folder ID (null for collection root)
+      required:
+        - name
+        - method
+        - url
+
+    UpdateRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Request name
+          example: "Updated Request Name"
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+          description: Optional request description
+        method:
+          $ref: "#/components/schemas/HTTPMethod"
+        url:
+          type: string
+          format: uri
+          description: Request URL
+          example: "https://api.example.com/users/123"
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          description: HTTP headers
+        body:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Request body (any JSON structure)
+        timeout:
+          type: integer
+          nullable: true
+          description: Request timeout in milliseconds
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent folder ID
+
+    ImportOpenAPIRequest:
+      type: object
+      properties:
+        spec:
+          type: object
+          description: OpenAPI spec as JSON object
+        options:
+          $ref: "#/components/schemas/OpenAPIImportOptions"
+      required:
+        - spec
+
+    OpenAPIImportOptions:
+      type: object
+      properties:
+        collection_name:
+          type: string
+          description: Name for the imported collection
+          example: "Pet Store API"
+        tags_as_folders:
+          type: boolean
+          description: Whether to use OpenAPI tags as folder structure
+          default: true
+
+    OpenAPIImportResult:
+      type: object
+      properties:
+        collection:
+          $ref: "#/components/schemas/Collection"
+        requests_created:
+          type: integer
+          description: Number of requests created from the spec
+          example: 15
+        folders_created:
+          type: integer
+          description: Number of folders created from tags
+          example: 3
+        warnings:
+          type: array
+          items:
+            type: string
+          description: List of warnings from the import process
+          example:
+            - "Skipped endpoint with no operationId"
+      required:
+        - collection
+        - requests_created
+
+    CollectionListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Collection"
+          required:
+            - items
+
+    # Base schema for all definitions (operations and nodes)
+    DefinitionBase:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Human-readable name
+        description:
+          type: string
+          nullable: true
+          description: Description of what this does
+        usage_examples:
+          type: array
+          items:
+            type: string
+          description: Example use cases
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata for UI or categorization
+          properties:
+            category:
+              type: string
+            difficulty:
+              type: string
+              enum: ["beginner", "intermediate", "advanced"]
+            tags:
+              type: array
+              items:
+                type: string
+      required:
+        - name
+
+    # Operation Schemas (extractors + assertions)
+    OperationType:
+      type: string
+      enum:
+        # Extractors
+        - "jsonPath"
+        - "xmlPath"
+        - "statusCode"
+        - "header"
+        - "body"
+        # Assertions
+        - "string"
+        - "number"
+        - "boolean"
+      description: Type of operation for data extraction or validation
+
+    OperationDefinition:
+      allOf:
+        - $ref: "#/components/schemas/DefinitionBase"
+        - type: object
+          properties:
+            type:
+              $ref: "#/components/schemas/OperationType"
+            category:
+              type: string
+              enum: ["extractor", "assertion"]
+              description: Category of operation
+            config:
+              type: object
+              description: Configuration specific to the operation type
+              additionalProperties: true
+              oneOf:
+                - $ref: "#/components/schemas/JSONPathExtractorConfig"
+                - $ref: "#/components/schemas/XMLPathExtractorConfig"
+                - $ref: "#/components/schemas/HeaderExtractorConfig"
+                - $ref: "#/components/schemas/StatusCodeExtractorConfig"
+                - $ref: "#/components/schemas/BodyExtractorConfig"
+          required:
+            - type
+            - category
+
+    # Node Schemas (special nodes only)
+    NodeType:
+      type: string
+      enum:
+        - "delay"
+      description: Type of special node for flow control
+
+    # Extractor Type Enum
+    ExtractorType:
+      type: string
+      enum:
+        - "jsonPath"
+        - "xmlPath"
+        - "statusCode"
+        - "header"
+        - "body"
+      x-go-type: extractors.ExtractorType
+      x-go-type-import:
+        path: github.com/nanostack-dev/echopoint-flow-engine/pkg/extractors
+      description: Type of extractor to use for data extraction
+
+    # Operator Type Enum
+    OperatorType:
+      type: string
+      enum:
+        - "equals"
+        - "notEquals"
+        - "contains"
+        - "notContains"
+        - "startsWith"
+        - "endsWith"
+        - "regex"
+        - "empty"
+        - "notEmpty"
+        - "greaterThan"
+        - "lessThan"
+        - "greaterThanOrEqual"
+        - "lessThanOrEqual"
+        - "between"
+      description: Operator to apply in assertions
+
+    NodeDefinition:
+      allOf:
+        - $ref: "#/components/schemas/DefinitionBase"
+        - type: object
+          properties:
+            type:
+              $ref: "#/components/schemas/NodeType"
+            config:
+              type: object
+              description: Configuration specific to the node type
+              additionalProperties: true
+          required:
+            - type
+            - config
+    JSONPathExtractorConfig:
+      type: object
+      properties:
+        path:
+          type: string
+          description: JSONPath expression (RFC 9535)
+          example: "$.user.id"
+        default_value:
+          description: Default value if path not found
+          example: null
+      required:
+        - path
+
+    XMLPathExtractorConfig:
+      type: object
+      properties:
+        path:
+          type: string
+          description: XPath expression
+          example: "//user/@id"
+        default_value:
+          description: Default value if path not found
+          example: null
+      required:
+        - path
+
+    HeaderExtractorConfig:
+      type: object
+      properties:
+        header_name:
+          type: string
+          description: HTTP header name (case-sensitive)
+          example: "X-Request-ID"
+        default_value:
+          type: string
+          nullable: true
+          description: Default value if header not found
+          example: null
+      required:
+        - header_name
+
+    StatusCodeExtractorConfig:
+      type: object
+      description: Status code extractor requires no configuration
+
+    BodyExtractorConfig:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: ["raw", "json", "xml", "text"]
+          default: "raw"
+          description: How to format the extracted body
+
+
+    # Environment Schemas
+    EnvironmentVariable:
+      type: object
+      properties:
+        value:
+          type: string
+          maxLength: 1000
+          description: The variable value
+          example: "https://api.example.com"
+        author_id:
+          type: string
+          description: User ID who created/updated this variable
+          example: "user_123"
+        created_at:
+          type: string
+          format: date-time
+          description: When the variable was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the variable was last updated
+      required:
+        - value
+        - author_id
+        - created_at
+        - updated_at
+
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated unique identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        owner_id:
+          type: string
+          format: uuid
+          description: The owner (flow, organization, workspace, etc.)
+          example: "550e8400-e29b-41d4-a716-446655440100"
+        owner_type:
+          type: string
+          enum: [flow]
+          description: Type of owner
+          example: "flow"
+        variables:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/EnvironmentVariable"
+          description: Environment variables as key-value pairs
+          example:
+            API_KEY:
+              value: "secret123"
+              author_id: "user_123"
+              created_at: "2025-11-09T10:00:00Z"
+              updated_at: "2025-11-09T10:00:00Z"
+            BASE_URL:
+              value: "https://api.example.com"
+              author_id: "user_456"
+              created_at: "2025-11-09T10:05:00Z"
+              updated_at: "2025-11-09T10:05:00Z"
+        author_id:
+          type: string
+          description: User ID of the environment creator
+          example: "user_123"
+        created_at:
+          type: string
+          format: date-time
+          description: When the environment was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the environment was last updated
+      required:
+        - id
+        - owner_id
+        - owner_type
+        - variables
+        - author_id
+        - created_at
+        - updated_at
+
+    CreateEnvironmentRequest:
+      type: object
+      properties:
+        owner_id:
+          type: string
+          format: uuid
+          description: The owner ID (flow, organization, workspace, etc.)
+          example: "550e8400-e29b-41d4-a716-446655440100"
+        owner_type:
+          type: string
+          enum: [flow]
+          description: Type of owner (currently only 'flow' is supported)
+          example: "flow"
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 1000
+          description: Initial environment variables
+          example:
+            API_KEY: "secret123"
+            BASE_URL: "https://api.example.com"
+      required:
+        - owner_id
+        - owner_type
+
+    UpdateEnvironmentRequest:
+      type: object
+      properties:
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 1000
+          description: Variables to add or update
+          example:
+            API_KEY: "new_secret456"
+      required:
+        - variables
+
+    CreateFlowEnvironmentRequest:
+      type: object
+      description: Request to create or update flow environment
+      properties:
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 1000
+          description: Environment variables to set
+          example:
+            API_KEY: "secret123"
+            BASE_URL: "https://api.example.com"
+      required:
+        - variables
+
+    UpdateFlowEnvironmentRequest:
+      type: object
+      description: Request to update flow environment
+      properties:
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 1000
+          description: Environment variables to update
+          example:
+            API_KEY: "new_secret456"
+      required:
+        - variables
+
+  requestBodies:
+    WebhookAnyPayload:
+      description: Webhook payload in various formats.
+      required: false
+      content:
+        "*/*":
+          schema:
+            type:
+              - object
+              - string
+              - array
+              - number
+              - boolean
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Returns the health status of the webhook service.
+      operationId: healthCheck
+      tags: [Health]
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "HEALTHY"
+                required:
+                  - status
+
+  /webhooks:
+    post:
+      summary: Create Webhook Endpoint
+      description: Creates a new webhook endpoint for receiving webhook requests.
+      operationId: createWebhook
+      tags: [Webhook]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Webhook endpoint details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookRequest"
+      responses:
+        "201":
+          description: Webhook endpoint created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /webhooks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/WebhookIdParameter"
+    get:
+      summary: Get Webhook Endpoint
+      description: Retrieves details of a specific webhook endpoint.
+      operationId: getWebhook
+      tags: [Webhook]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Webhook endpoint details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Webhook Endpoint
+      description: Deletes a webhook endpoint. This is a destructive operation.
+      operationId: deleteWebhook
+      tags: [Webhook]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Webhook endpoint deleted successfully or already deleted.
+
+  /webhooks/{id}/requests/search:
+    parameters:
+      - $ref: "#/components/parameters/WebhookIdParameter"
+    post:
+      summary: Search Webhook Requests
+      description: Server-side search with pagination, filtering and sorting for a webhook's requests.
+      operationId: searchWebhookRequests
+      tags: [Webhook]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Search criteria for webhook requests.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRequestSearchRequest"
+      responses:
+        "200":
+          description: Search results retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookRequestListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /webhooks/{id}/stream:
+    parameters:
+      - $ref: "#/components/parameters/WebhookIdParameter"
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+          default: 100
+        required: true
+
+    get:
+      summary: Stream Webhook Requests
+      description: Stream webhook requests in real-time using Server-Sent Events.
+      operationId: streamWebhookRequests
+      tags: [Webhook]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Server-Sent Events stream of webhook requests.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /webhooks/{id}/analytics/requests/volumes:
+    parameters:
+      - $ref: "#/components/parameters/WebhookIdParameter"
+    get:
+      summary: Get Request Volumes
+      description: Returns request counts over time for the selected datetime range.
+      operationId: getWebhookRequestVolumes
+      tags: [Analytics]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          description: Start datetime for analytics data (ISO 8601 format).
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: "2023-01-01T00:00:00Z"
+        - name: to
+          in: query
+          description: End datetime for analytics data (ISO 8601 format).
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: "2023-01-02T00:00:00Z"
+      responses:
+        "200":
+          description: Request volumes time series retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestVolumesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /webhooks/{id}/analytics/requests/methods:
+    parameters:
+      - $ref: "#/components/parameters/WebhookIdParameter"
+    get:
+      summary: Get Method Distribution
+      description: Returns distribution of HTTP methods for the selected datetime range.
+      operationId: getWebhookMethodDistribution
+      tags: [Analytics]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          description: Start datetime for analytics data (ISO 8601 format).
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: "2023-01-01T00:00:00Z"
+        - name: to
+          in: query
+          description: End datetime for analytics data (ISO 8601 format).
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: "2023-01-02T00:00:00Z"
+      responses:
+        "200":
+          description: Method distribution retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MethodDistributionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /webhook/{id}:
+    parameters:
+      - $ref: "#/components/parameters/WebhookIdParameter"
+    get:
+      summary: Receive Webhook via GET
+      description: Receives and processes webhook requests sent via GET method.
+      operationId: receiveWebhookGet
+      tags: [Webhook]
+      requestBody:
+        $ref: "#/components/requestBodies/WebhookAnyPayload"
+      responses:
+        "200":
+          description: Webhook request received and processed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Receive Webhook via POST
+      description: Receives and processes webhook requests sent via POST method.
+      operationId: receiveWebhookPost
+      tags: [Webhook]
+      requestBody:
+        $ref: "#/components/requestBodies/WebhookAnyPayload"
+      responses:
+        "200":
+          description: Webhook request received and processed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Receive Webhook via PUT
+      description: Receives and processes webhook requests sent via PUT method.
+      operationId: receiveWebhookPut
+      tags: [Webhook]
+      requestBody:
+        $ref: "#/components/requestBodies/WebhookAnyPayload"
+      responses:
+        "200":
+          description: Webhook request received and processed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Receive Webhook via PATCH
+      description: Receives and processes webhook requests sent via PATCH method.
+      operationId: receiveWebhookPatch
+      tags: [Webhook]
+      requestBody:
+        $ref: "#/components/requestBodies/WebhookAnyPayload"
+      responses:
+        "200":
+          description: Webhook request received and processed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Receive Webhook via DELETE
+      description: Receives and processes webhook requests sent via DELETE method.
+      operationId: receiveWebhookDelete
+      tags: [Webhook]
+      requestBody:
+        $ref: "#/components/requestBodies/WebhookAnyPayload"
+      responses:
+        "200":
+          description: Webhook request received and processed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /flows/{id}/launch:
+    post:
+      operationId: launchFlow
+      summary: Launch a flow execution with real-time updates
+      description: |
+        Executes a flow definition and streams execution events in real-time using Server-Sent Events (SSE).
+        The response is a stream of JSON events, with each event containing the event type and data.
+
+        The request should contain a complete FlowDefinition with:
+        - `initialInputs`: Variables that are available to all nodes (optional)
+        - `nodes`: Array of nodes (request or delay)
+        - `edges`: Array of connections between nodes
+
+        Event types:
+        - `flow.started`: Flow execution has begun
+        - `node.started`: A node has started executing
+        - `node.completed`: A node has completed successfully
+        - `node.failed`: A node has failed
+        - `flow.completed`: Flow execution completed successfully
+        - `flow.failed`: Flow execution failed
+      tags:
+        - Flows
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the collection.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Server-Sent Events stream of flow execution events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Stream of JSON events in SSE format. Each event has the structure:
+                  ```
+                  event: <event-type>
+                  data: <json-payload>
+                  ```
+              examples:
+                flowExecution:
+                  summary: Example flow execution stream
+                  value: |
+                    event: flow.started
+                    data: {"flowName":"User API Test","timestamp":"2024-01-15T10:30:00Z"}
+
+                    event: node.started
+                    data: {"nodeId":"req-1","nodeType":"request","timestamp":"2024-01-15T10:30:00Z"}
+
+                    event: node.completed
+                    data: {"nodeId":"req-1","success":true,"duration":125,"timestamp":"2024-01-15T10:30:00Z"}
+
+                    event: flow.completed
+                    data: {"success":true,"executedNodes":["req-1","req-2"],"duration":250,"timestamp":"2024-01-15T10:30:01Z"}
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          description: Flow execution failed to start
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+
+  /flows:
+    get:
+      summary: List Flows
+      description: Retrieves a paginated list of flows for the authenticated user.
+      operationId: listFlows
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Flows retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create Flow
+      description: Creates a new flow for the authenticated user.
+      operationId: createFlow
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Flow creation details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlowRequest"
+      responses:
+        "201":
+          description: Flow created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Flow"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /flows/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get Flow
+      description: Retrieves details of a specific flow by ID.
+      operationId: getFlow
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Flow retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Flow"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update Flow
+      description: Updates an existing flow.
+      operationId: updateFlow
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Flow update details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFlowRequest"
+      responses:
+        "200":
+          description: Flow updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Flow"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Flow
+      description: Deletes a flow. This is a destructive operation.
+      operationId: deleteFlow
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Flow deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /flows/{id}/export:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Export Flow
+      description: Returns the raw flow definition JSON formatted for the flow engine.
+      operationId: exportFlow
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Flow definition exported successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportedFlow"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /collections:
+    get:
+      summary: List Collections
+      description: Retrieves a paginated list of collections for the authenticated user.
+      operationId: listCollections
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Collections retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create Collection
+      description: Creates a new collection for the authenticated user.
+      operationId: createCollection
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Collection creation details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCollectionRequest"
+      responses:
+        "201":
+          description: Collection created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collection"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /collections/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get Collection
+      description: Retrieves a collection with all folders and requests (flat arrays).
+      operationId: getCollection
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Collection retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collection"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update Collection
+      description: Updates collection metadata.
+      operationId: updateCollection
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Collection update details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCollectionRequest"
+      responses:
+        "200":
+          description: Collection updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collection"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Collection
+      description: Deletes a collection and all its contents.
+      operationId: deleteCollection
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Collection deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /collections/{id}/folders:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Add Folder
+      description: Adds a folder to a collection.
+      operationId: addFolder
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Folder creation details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFolderRequest"
+      responses:
+        "201":
+          description: Folder created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /collections/{collectionId}/folders/{folderId}:
+    parameters:
+      - name: collectionId
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - name: folderId
+        in: path
+        required: true
+        description: The unique identifier of the folder.
+        schema:
+          type: string
+          format: uuid
+    put:
+      summary: Update Folder
+      description: Updates a folder.
+      operationId: updateFolder
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Folder update details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFolderRequest"
+      responses:
+        "200":
+          description: Folder updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Folder
+      description: Deletes a folder (requests moved to collection root).
+      operationId: deleteFolder
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Folder deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /collections/{id}/requests:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Add Request
+      description: Adds a request to a collection.
+      operationId: addRequest
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Request creation details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequestRequest"
+      responses:
+        "201":
+          description: Request created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /collections/{collectionId}/requests/{requestId}:
+    parameters:
+      - name: collectionId
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - name: requestId
+        in: path
+        required: true
+        description: The unique identifier of the request.
+        schema:
+          type: string
+          format: uuid
+    put:
+      summary: Update Request
+      description: Updates a request.
+      operationId: updateRequest
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Request update details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRequestRequest"
+      responses:
+        "200":
+          description: Request updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Request
+      description: Deletes a request.
+      operationId: deleteRequest
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Request deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /collections/import/openapi:
+    post:
+      summary: Import from OpenAPI
+      description: Imports a collection from an OpenAPI specification.
+      operationId: importFromOpenAPI
+      tags: [Collections]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: OpenAPI spec to import.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportOpenAPIRequest"
+      responses:
+        "201":
+          description: Collection imported successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPIImportResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /flows/{id}/environments:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Create or Update Flow Environment
+      description: Creates or updates environment variables for a flow.
+      operationId: createOrUpdateFlowEnvironment
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Environment variables to set.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlowEnvironmentRequest"
+      responses:
+        "200":
+          description: Environment updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "201":
+          description: Environment created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    get:
+      summary: Get Flow Environment
+      description: Retrieves environment variables for a flow.
+      operationId: getFlowEnvironment
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Environment retrieved successfully (empty object if not exists).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update Flow Environment
+      description: Updates environment variables for a flow.
+      operationId: updateFlowEnvironment
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Environment variables to update.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFlowEnvironmentRequest"
+      responses:
+        "200":
+          description: Environment updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Flow Environment
+      description: Deletes environment variables for a flow.
+      operationId: deleteFlowEnvironment
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Environment deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /operations:
+    get:
+      summary: List Available Operations
+      description: Retrieves all available operations (extractors and assertions) for flow data processing.
+      operationId: listOperations
+      tags: [Operations]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Operations retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OperationDefinition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /nodes:
+    get:
+      summary: List Available Nodes
+      description: Retrieves all available special nodes for flow control (delay, etc.).
+      operationId: listNodes
+      tags: [Nodes]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Nodes retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NodeDefinition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # Flow Execution Tracking Endpoints
+  /flows/{id}/executions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List Flow Executions
+      description: Retrieves execution history for a specific flow with pagination.
+      operationId: listFlowExecutions
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Executions retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowExecutionListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{flowId}/executions/{executionId}:
+    parameters:
+      - name: flowId
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - name: executionId
+        in: path
+        required: true
+        description: The unique identifier of the execution.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get Execution Details
+      description: Retrieves detailed information about a specific flow execution.
+      operationId: getExecution
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Execution details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowExecution"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{flowId}/executions/{executionId}/nodes:
+    parameters:
+      - name: flowId
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - name: executionId
+        in: path
+        required: true
+        description: The unique identifier of the execution.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get All Node Results
+      description: Retrieves execution results for all nodes in a flow execution.
+      operationId: getExecutionNodeResults
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Node results retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NodeExecutionResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{flowId}/executions/{executionId}/nodes/{nodeId}:
+    parameters:
+      - name: flowId
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - name: executionId
+        in: path
+        required: true
+        description: The unique identifier of the execution.
+        schema:
+          type: string
+          format: uuid
+      - name: nodeId
+        in: path
+        required: true
+        description: The node ID (from flow definition).
+        schema:
+          type: string
+    get:
+      summary: Get Specific Node Result
+      description: Retrieves execution result for a specific node in a flow execution.
+      operationId: getNodeExecutionResult
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Node result retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NodeExecutionResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /flows/{flowId}/nodes/{nodeId}/executions:
+    parameters:
+      - name: flowId
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - name: nodeId
+        in: path
+        required: true
+        description: The node ID (from flow definition).
+        schema:
+          type: string
+      - $ref: "#/components/parameters/LimitParameter"
+      - $ref: "#/components/parameters/OffsetParameter"
+    get:
+      summary: Get Node Execution History
+      description: Retrieves execution history for a specific node across all flow executions with pagination.
+      operationId: getNodeExecutionHistory
+      tags: [Flows]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Node execution history retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NodeExecutionHistoryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"

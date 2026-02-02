@@ -1,0 +1,99 @@
+version: 2
+
+project_name: echopoint
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: echopoint
+    main: ./cmd/echopoint
+    binary: echopoint
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE*
+      - docs/*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: nanostack-dev
+    name: echopoint-cli
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  header: |
+    ## Installation
+
+    ### Quick Install (macOS/Linux)
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/nanostack-dev/echopoint-cli/main/install.sh | bash
+    ```
+
+    ### Manual Download
+    Download the appropriate binary for your platform from the assets below.
+
+    ### Homebrew (macOS)
+    ```bash
+    brew install nanostack-dev/tap/echopoint
+    ```
+
+brews:
+  - name: echopoint
+    repository:
+      owner: nanostack-dev
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://echopoint.dev"
+    description: "CLI for Echopoint webhook testing platform"
+    license: "MIT"
+    install: |
+      bin.install "echopoint"
+    test: |
+      system "#{bin}/echopoint", "version"
