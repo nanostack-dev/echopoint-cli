@@ -29,12 +29,11 @@ jobs:
     name: Sandbox Integration Test
     runs-on: ubuntu-latest
 
-    # Skip when required secrets are absent (e.g. fork PRs)
-    if: >
-      vars.ECHOPOINT_SANDBOX_ENABLED == 'true' ||
-      (secrets.ECHOPOINT_SANDBOX_API_KEY != '' &&
-       secrets.ECHOPOINT_SANDBOX_ORGANIZATION_ID != '' &&
-       secrets.ECHOPOINT_SANDBOX_FLOW_ID != '')
+    # The `secrets` context is not allowed in a job-level `if`, so gate on a repo
+    # variable instead (set ECHOPOINT_SANDBOX_ENABLED=true once the sandbox secrets
+    # exist) and always allow manual dispatch. The "Check credentials present" step
+    # below still skips gracefully if any secret is missing.
+    if: vars.ECHOPOINT_SANDBOX_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Check credentials present
