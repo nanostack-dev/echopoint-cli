@@ -1,0 +1,79 @@
+name: Action Sandbox Integration
+
+# Runs the composite action against a real Echopoint sandbox flow.
+# Guarded by required secrets: ECHOPOINT_SANDBOX_API_KEY,
+# ECHOPOINT_SANDBOX_ORGANIZATION_ID, and ECHOPOINT_SANDBOX_FLOW_ID.
+#
+# The workflow is skipped (not failed) when any of these secrets are absent
+# so that forks and PRs without access to org secrets are not blocked.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'action.yml'
+      - '.github/workflows/action-sandbox.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'action.yml'
+      - '.github/workflows/action-sandbox.yml'
+  workflow_dispatch:
+    inputs:
+      flow-id:
+        description: Override the sandbox flow ID (optional)
+        required: false
+
+jobs:
+  sandbox:
+    name: Sandbox Integration Test
+    runs-on: ubuntu-latest
+
+    # Skip when required secrets are absent (e.g. fork PRs)
+    if: >
+      vars.ECHOPOINT_SANDBOX_ENABLED == 'true' ||
+      (secrets.ECHOPOINT_SANDBOX_API_KEY != '' &&
+       secrets.ECHOPOINT_SANDBOX_ORGANIZATION_ID != '' &&
+       secrets.ECHOPOINT_SANDBOX_FLOW_ID != '')
+
+    steps:
+      - name: Check credentials present
+        id: check-creds
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.ECHOPOINT_SANDBOX_API_KEY }}" ] || \
+             [ -z "${{ secrets.ECHOPOINT_SANDBOX_ORGANIZATION_ID }}" ] || \
+             [ -z "${{ secrets.ECHOPOINT_SANDBOX_FLOW_ID }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Sandbox secrets not configured — skipping integration test."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.check-creds.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Run Echopoint sandbox flow
+        if: steps.check-creds.outputs.skip != 'true'
+        id: run
+        uses: ./
+        with:
+          api-key: ${{ secrets.ECHOPOINT_SANDBOX_API_KEY }}
+          organization-id: ${{ secrets.ECHOPOINT_SANDBOX_ORGANIZATION_ID }}
+          flow-id: ${{ inputs.flow-id || secrets.ECHOPOINT_SANDBOX_FLOW_ID }}
+          cli-version: latest
+          poll-timeout: '120'
+
+      - name: Verify outputs
+        if: steps.check-creds.outputs.skip != 'true'
+        shell: bash
+        run: |
+          echo "execution-id:  ${{ steps.run.outputs.execution-id }}"
+          echo "status:        ${{ steps.run.outputs.status }}"
+          echo "success:       ${{ steps.run.outputs.success }}"
+
+          if [ "${{ steps.run.outputs.success }}" != "true" ]; then
+            echo "::error::Sandbox flow did not complete successfully."
+            exit 1
+          fi

@@ -1,0 +1,28 @@
+{
+  "status": "completed",
+  "success": true,
+  "exit_code": 0,
+  "duration_ms": 2500,
+  "results": [
+    {
+      "execution_id": "exec-111",
+      "flow_id": "flow-aaa",
+      "status": "completed",
+      "success": true,
+      "exit_code": 0,
+      "duration_ms": 1200,
+      "error_message": null,
+      "nodes": []
+    },
+    {
+      "execution_id": "exec-222",
+      "flow_id": "flow-bbb",
+      "status": "completed",
+      "success": true,
+      "exit_code": 0,
+      "duration_ms": 1300,
+      "error_message": null,
+      "nodes": []
+    }
+  ]
+}

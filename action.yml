@@ -1,0 +1,537 @@
+name: Run Echopoint Flows
+description: >
+  Run one or more Echopoint flows as ephemeral CI executions and report results.
+  Usage: uses: nanostack-dev/echopoint-cli@v1
+author: nanostack-dev
+
+branding:
+  icon: play-circle
+  color: purple
+
+inputs:
+  api-key:
+    description: Echopoint API key with flows:execute and runner:complete scopes.
+    required: true
+  organization-id:
+    description: Echopoint organization ID.
+    required: true
+  flow-id:
+    description: Single flow ID to run. Mutually exclusive with flow-ids.
+    required: false
+  flow-ids:
+    description: >
+      Comma-separated or newline-separated list of flow IDs to run.
+      Mutually exclusive with flow-id.
+    required: false
+  environment:
+    description: Environment key to use for resolved flow inputs.
+    required: false
+  version-id:
+    description: Immutable flow version ID. Omit to run the current flow state.
+    required: false
+  cli-version:
+    description: Version of the echopoint CLI to download (e.g. v1.2.0 or latest).
+    required: false
+    default: latest
+  runner-version:
+    description: >
+      Version of echopoint-runner to download. Defaults to cli-version when omitted.
+    required: false
+  runner-binary:
+    description: >
+      Path to an already-installed echopoint-runner binary. When set, the action
+      skips downloading the runner and uses this path instead.
+    required: false
+  poll-timeout:
+    description: Maximum seconds to wait for all flows to complete.
+    required: false
+    default: '300'
+  parallel:
+    description: Number of flows to execute concurrently. Must be >= 1.
+    required: false
+    default: '1'
+
+outputs:
+  execution-id:
+    description: Execution ID for a single-flow run.
+    value: ${{ steps.parse-outputs.outputs.execution-id }}
+  execution-ids:
+    description: Comma-separated execution IDs for a multi-flow run.
+    value: ${{ steps.parse-outputs.outputs.execution-ids }}
+  status:
+    description: >
+      Aggregate status string: completed, failed, or error.
+    value: ${{ steps.parse-outputs.outputs.status }}
+  success:
+    description: 'true if all flows completed successfully, false otherwise.'
+    value: ${{ steps.parse-outputs.outputs.success }}
+  results-json:
+    description: Raw JSON output from echopoint flows run.
+    value: ${{ steps.parse-outputs.outputs.results-json }}
+
+runs:
+  using: composite
+  steps:
+    # ------------------------------------------------------------------ #
+    # 1. Mask the API key immediately so it never appears in logs          #
+    # ------------------------------------------------------------------ #
+    - name: Mask API key
+      shell: bash
+      run: echo "::add-mask::${{ inputs.api-key }}"
+
+    # ------------------------------------------------------------------ #
+    # 2. Validate inputs before any network call                          #
+    # ------------------------------------------------------------------ #
+    - name: Validate inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Exactly one of flow-id / flow-ids must be set
+        flow_id="${{ inputs.flow-id }}"
+        flow_ids="${{ inputs.flow-ids }}"
+
+        if [ -z "$flow_id" ] && [ -z "$flow_ids" ]; then
+          echo "::error::Either 'flow-id' or 'flow-ids' must be provided."
+          exit 3
+        fi
+
+        if [ -n "$flow_id" ] && [ -n "$flow_ids" ]; then
+          echo "::error::'flow-id' and 'flow-ids' are mutually exclusive; provide exactly one."
+          exit 3
+        fi
+
+        # parallel >= 1
+        parallel="${{ inputs.parallel }}"
+        if ! [[ "$parallel" =~ ^[0-9]+$ ]] || [ "$parallel" -lt 1 ]; then
+          echo "::error::'parallel' must be an integer >= 1, got: $parallel"
+          exit 3
+        fi
+
+    # ------------------------------------------------------------------ #
+    # 3. Resolve versions                                                 #
+    # ------------------------------------------------------------------ #
+    - name: Resolve versions
+      id: versions
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        cli_version="${{ inputs.cli-version }}"
+        runner_version="${{ inputs.runner-version }}"
+
+        # Default runner-version to cli-version when not set
+        if [ -z "$runner_version" ]; then
+          runner_version="$cli_version"
+        fi
+
+        # Resolve 'latest' for the CLI via GitHub Releases API
+        if [ "$cli_version" = "latest" ]; then
+          cli_version=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/nanostack-dev/echopoint-cli/releases/latest" \
+            | grep '"tag_name"' \
+            | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$cli_version" ]; then
+            echo "::error::Failed to resolve latest CLI version from GitHub Releases."
+            exit 3
+          fi
+        fi
+
+        # Resolve 'latest' for the runner
+        if [ "$runner_version" = "latest" ]; then
+          runner_version=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/nanostack-dev/echopoint-runner/releases/latest" \
+            | grep '"tag_name"' \
+            | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$runner_version" ]; then
+            echo "::error::Failed to resolve latest runner version from GitHub Releases."
+            exit 3
+          fi
+        fi
+
+        echo "cli-version=$cli_version" >> "$GITHUB_OUTPUT"
+        echo "runner-version=$runner_version" >> "$GITHUB_OUTPUT"
+
+    # ------------------------------------------------------------------ #
+    # 4. Detect runner OS / arch                                          #
+    # ------------------------------------------------------------------ #
+    - name: Detect platform
+      id: platform
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        os="${{ runner.os }}"
+        arch="${{ runner.arch }}"
+
+        # Normalise OS to lowercase GoReleaser naming
+        case "$os" in
+          Linux)   os_name="linux" ;;
+          macOS)   os_name="darwin" ;;
+          Windows) os_name="windows" ;;
+          *)
+            echo "::error::Unsupported runner OS: $os"
+            exit 3
+            ;;
+        esac
+
+        # Normalise arch to GoReleaser naming
+        case "$arch" in
+          X64)   arch_name="amd64" ;;
+          ARM64) arch_name="arm64" ;;
+          *)
+            echo "::error::Unsupported runner arch: $arch"
+            exit 3
+            ;;
+        esac
+
+        # Windows ARM64 is not built
+        if [ "$os_name" = "windows" ] && [ "$arch_name" = "arm64" ]; then
+          echo "::error::Windows ARM64 is not supported."
+          exit 3
+        fi
+
+        if [ "$os_name" = "windows" ]; then
+          archive_ext="zip"
+          binary_ext=".exe"
+        else
+          archive_ext="tar.gz"
+          binary_ext=""
+        fi
+
+        echo "os=$os_name"           >> "$GITHUB_OUTPUT"
+        echo "arch=$arch_name"       >> "$GITHUB_OUTPUT"
+        echo "archive-ext=$archive_ext" >> "$GITHUB_OUTPUT"
+        echo "binary-ext=$binary_ext"   >> "$GITHUB_OUTPUT"
+
+    # ------------------------------------------------------------------ #
+    # 5. Download echopoint CLI                                           #
+    # ------------------------------------------------------------------ #
+    - name: Download echopoint CLI
+      id: download-cli
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        version="${{ steps.versions.outputs.cli-version }}"
+        version_num="${version#v}"
+        os="${{ steps.platform.outputs.os }}"
+        arch="${{ steps.platform.outputs.arch }}"
+        ext="${{ steps.platform.outputs.archive-ext }}"
+        bin_ext="${{ steps.platform.outputs.binary-ext }}"
+
+        archive="echopoint_${version_num}_${os}_${arch}.${ext}"
+        url="https://github.com/nanostack-dev/echopoint-cli/releases/download/${version}/${archive}"
+
+        echo "Downloading echopoint CLI ${version} (${os}/${arch}) from ${url}"
+
+        tmp_dir=$(mktemp -d)
+        trap "rm -rf '$tmp_dir'" EXIT
+
+        curl -fsSL -o "${tmp_dir}/${archive}" "$url"
+
+        install_dir="${RUNNER_TEMP}/echopoint-bin"
+        mkdir -p "$install_dir"
+
+        if [ "$ext" = "zip" ]; then
+          unzip -q "${tmp_dir}/${archive}" -d "$install_dir"
+        else
+          tar -xzf "${tmp_dir}/${archive}" -C "$install_dir"
+        fi
+
+        # Make executable
+        chmod +x "${install_dir}/echopoint${bin_ext}"
+
+        echo "install-dir=$install_dir" >> "$GITHUB_OUTPUT"
+        echo "binary=${install_dir}/echopoint${bin_ext}" >> "$GITHUB_OUTPUT"
+
+        # TODO(post-v1): verify SHA-256 checksum against checksums.txt from the release.
+        # The release publishes a checksums.txt file that can be verified with:
+        #   sha256sum -c checksums.txt
+        # This is omitted in v1 as a known hardening TODO.
+
+    # ------------------------------------------------------------------ #
+    # 6. Download echopoint-runner (skip when runner-binary is set)       #
+    # ------------------------------------------------------------------ #
+    - name: Download echopoint-runner
+      id: download-runner
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        runner_binary="${{ inputs.runner-binary }}"
+
+        if [ -n "$runner_binary" ]; then
+          echo "Using provided runner-binary: $runner_binary"
+          echo "binary=$runner_binary" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        version="${{ steps.versions.outputs.runner-version }}"
+        version_num="${version#v}"
+        os="${{ steps.platform.outputs.os }}"
+        arch="${{ steps.platform.outputs.arch }}"
+        ext="${{ steps.platform.outputs.archive-ext }}"
+        bin_ext="${{ steps.platform.outputs.binary-ext }}"
+
+        # Runner uses the same GoReleaser naming convention
+        archive="echopoint-runner_${version_num}_${os}_${arch}.${ext}"
+        url="https://github.com/nanostack-dev/echopoint-runner/releases/download/${version}/${archive}"
+
+        echo "Downloading echopoint-runner ${version} (${os}/${arch}) from ${url}"
+
+        tmp_dir=$(mktemp -d)
+        trap "rm -rf '$tmp_dir'" EXIT
+
+        curl -fsSL -o "${tmp_dir}/${archive}" "$url"
+
+        install_dir="${RUNNER_TEMP}/echopoint-runner-bin"
+        mkdir -p "$install_dir"
+
+        if [ "$ext" = "zip" ]; then
+          unzip -q "${tmp_dir}/${archive}" -d "$install_dir"
+        else
+          tar -xzf "${tmp_dir}/${archive}" -C "$install_dir"
+        fi
+
+        chmod +x "${install_dir}/echopoint-runner${bin_ext}"
+
+        echo "binary=${install_dir}/echopoint-runner${bin_ext}" >> "$GITHUB_OUTPUT"
+
+        # TODO(post-v1): verify SHA-256 checksum against checksums.txt from the release.
+
+    # ------------------------------------------------------------------ #
+    # 7. Add binaries to PATH                                             #
+    # ------------------------------------------------------------------ #
+    - name: Add binaries to PATH
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        cli_dir=$(dirname "${{ steps.download-cli.outputs.binary }}")
+        runner_dir=$(dirname "${{ steps.download-runner.outputs.binary }}")
+
+        echo "$cli_dir"    >> "$GITHUB_PATH"
+
+        # Only add runner dir to PATH when it differs from CLI dir
+        if [ "$runner_dir" != "$cli_dir" ]; then
+          echo "$runner_dir" >> "$GITHUB_PATH"
+        fi
+
+    # ------------------------------------------------------------------ #
+    # 8. Build flow ID list                                               #
+    # ------------------------------------------------------------------ #
+    - name: Build flow ID args
+      id: flow-ids
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        flow_id="${{ inputs.flow-id }}"
+        flow_ids="${{ inputs.flow-ids }}"
+
+        if [ -n "$flow_id" ]; then
+          # Single flow: pass directly
+          echo "args=$flow_id" >> "$GITHUB_OUTPUT"
+        else
+          # Multi-flow: normalise newline/comma separators to space-separated args
+          # Replace commas and newlines with spaces, strip surrounding whitespace
+          normalized=$(echo "$flow_ids" \
+            | tr ',\n' '  ' \
+            | tr -s ' ' \
+            | sed 's/^ //;s/ $//')
+          echo "args=$normalized" >> "$GITHUB_OUTPUT"
+        fi
+
+    # ------------------------------------------------------------------ #
+    # 9. Run echopoint flows run                                          #
+    # ------------------------------------------------------------------ #
+    - name: Run echopoint flows run
+      id: run-flows
+      shell: bash
+      env:
+        ECHOPOINT_API_KEY: ${{ inputs.api-key }}
+        ECHOPOINT_ORGANIZATION_ID: ${{ inputs.organization-id }}
+      run: |
+        set -uo pipefail
+
+        # Build optional flags
+        extra_flags=()
+
+        env_input="${{ inputs.environment }}"
+        if [ -n "$env_input" ]; then
+          extra_flags+=(--environment "$env_input")
+        fi
+
+        version_id="${{ inputs.version-id }}"
+        if [ -n "$version_id" ]; then
+          extra_flags+=(--version-id "$version_id")
+        fi
+
+        poll_timeout="${{ inputs.poll-timeout }}"
+        if [ -n "$poll_timeout" ]; then
+          extra_flags+=(--poll-timeout "${poll_timeout}s")
+        fi
+
+        parallel="${{ inputs.parallel }}"
+        if [ -n "$parallel" ]; then
+          extra_flags+=(--parallel "$parallel")
+        fi
+
+        runner_binary="${{ steps.download-runner.outputs.binary }}"
+        if [ -n "$runner_binary" ]; then
+          extra_flags+=(--runner-binary "$runner_binary")
+        fi
+
+        flow_args="${{ steps.flow-ids.outputs.args }}"
+
+        # Run CLI and capture JSON output (stdout) while letting human-readable
+        # progress/errors (stderr) flow to the workflow log. Preserve exit code without
+        # aborting. The CLI writes exactly one JSON object to stdout under -o json.
+        # shellcheck disable=SC2086
+        json_output=$(echopoint flows run $flow_args \
+          -o json \
+          "${extra_flags[@]}") || cli_exit=$?
+        cli_exit="${cli_exit:-0}"
+
+        # Write JSON to a temp file for the parse step
+        json_file="${RUNNER_TEMP}/echopoint-result.json"
+        echo "$json_output" > "$json_file"
+
+        echo "json-file=$json_file"  >> "$GITHUB_OUTPUT"
+        echo "cli-exit=$cli_exit"    >> "$GITHUB_OUTPUT"
+
+    # ------------------------------------------------------------------ #
+    # 10. Parse JSON into GITHUB_OUTPUT and write step summary            #
+    # ------------------------------------------------------------------ #
+    - name: Parse outputs and write summary
+      id: parse-outputs
+      shell: bash
+      run: |
+        set -uo pipefail
+
+        json_file="${{ steps.run-flows.outputs.json-file }}"
+
+        if [ ! -f "$json_file" ]; then
+          echo "execution-id="      >> "$GITHUB_OUTPUT"
+          echo "execution-ids="     >> "$GITHUB_OUTPUT"
+          echo "status=error"       >> "$GITHUB_OUTPUT"
+          echo "success=false"      >> "$GITHUB_OUTPUT"
+          echo "results-json="      >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        raw=$(cat "$json_file")
+
+        # Helper: extract a top-level JSON key value with basic sed (no jq dependency)
+        extract() {
+          echo "$raw" | grep -o "\"$1\":[^,}]*" | head -1 | sed -E 's/"[^"]+": *"?([^",}]*)"?.*/\1/'
+        }
+
+        # Detect single vs multi result by presence of "results" array key
+        if echo "$raw" | grep -q '"results"'; then
+          # Multi-flow output
+          status=$(extract "status")
+          success=$(extract "success")
+          # Build comma-separated execution-ids from results array
+          exec_ids=$(echo "$raw" \
+            | grep -o '"execution_id":"[^"]*"' \
+            | sed 's/"execution_id":"//;s/"//' \
+            | tr '\n' ',' \
+            | sed 's/,$//')
+
+          {
+            echo "execution-id="
+            echo "execution-ids=${exec_ids}"
+            echo "status=${status:-error}"
+            echo "success=${success:-false}"
+            echo "results-json<<ECHOPOINT_EOF"
+            echo "$raw"
+            echo "ECHOPOINT_EOF"
+          } >> "$GITHUB_OUTPUT"
+        else
+          # Single-flow output
+          exec_id=$(extract "execution_id")
+          status=$(extract "status")
+          success=$(extract "success")
+
+          {
+            echo "execution-id=${exec_id}"
+            echo "execution-ids=${exec_id}"
+            echo "status=${status:-error}"
+            echo "success=${success:-false}"
+            echo "results-json<<ECHOPOINT_EOF"
+            echo "$raw"
+            echo "ECHOPOINT_EOF"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+        # Write step summary
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+          {
+            echo "## Echopoint Flow Run"
+            echo ""
+            if echo "$raw" | grep -q '"results"'; then
+              # Multi-flow summary
+              echo "**Status:** $(extract 'status')"
+              echo "**Success:** $(extract 'success')"
+              echo "**Duration:** $(extract 'duration_ms') ms"
+              echo ""
+              echo "<details><summary>Full results JSON</summary>"
+              echo ""
+              echo '```json'
+              echo "$raw"
+              echo '```'
+              echo "</details>"
+            else
+              # Single-flow summary
+              exec_id=$(extract "execution_id")
+              status=$(extract "status")
+              success=$(extract "success")
+              duration=$(extract "duration_ms")
+              error_msg=$(echo "$raw" | grep -o '"error_message":"[^"]*"' | sed 's/"error_message":"//;s/"//')
+
+              echo "**Execution ID:** ${exec_id}"
+              echo "**Status:** ${status}"
+              echo "**Success:** ${success}"
+              echo "**Duration:** ${duration} ms"
+
+              if [ -n "$error_msg" ]; then
+                echo ""
+                echo "**Error:** ${error_msg}"
+              fi
+
+              # Node table
+              if echo "$raw" | grep -q '"nodes"'; then
+                echo ""
+                echo "### Node Results"
+                echo ""
+                echo "| Node | Status | Duration |"
+                echo "|------|--------|----------|"
+                # Extract node entries (best-effort; no jq)
+                echo "$raw" \
+                  | grep -o '"display_name":"[^"]*","node_type":"[^"]*","status":"[^"]*","duration_ms":[0-9]*' \
+                  | while IFS= read -r node; do
+                      name=$(echo "$node" | grep -o '"display_name":"[^"]*"' | sed 's/"display_name":"//;s/"//')
+                      nstatus=$(echo "$node" | grep -o '"status":"[^"]*"' | sed 's/"status":"//;s/"//')
+                      ndur=$(echo "$node" | grep -o '"duration_ms":[0-9]*' | sed 's/"duration_ms"://')
+                      echo "| ${name} | ${nstatus} | ${ndur} ms |"
+                    done
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        # Remove the temp result file now that outputs and summary are written.
+        rm -f "$json_file"
+
+    # ------------------------------------------------------------------ #
+    # 11. Exit with original CLI exit code                                #
+    # ------------------------------------------------------------------ #
+    - name: Exit with CLI exit code
+      shell: bash
+      run: |
+        cli_exit="${{ steps.run-flows.outputs.cli-exit }}"
+        exit "${cli_exit:-3}"

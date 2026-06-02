@@ -1,0 +1,906 @@
+package commands
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+	"sync"
+	"time"
+
+	"echopoint-cli/internal/api"
+	"echopoint-cli/internal/output"
+
+	"github.com/google/uuid"
+	"github.com/spf13/cobra"
+)
+
+// Exit codes for `echopoint flows run`.
+const (
+	exitSuccess    = 0
+	exitFlowFailed = 1
+	exitCancelled  = 2
+	exitError      = 3
+	exitTimeout    = 4
+)
+
+const (
+	statusCompleted        = "completed"
+	statusFailed           = "failed"
+	statusCancelled        = "cancelled"
+	statusError            = "error"
+	outputFormatJSON       = "json"
+	githubActionsTrueValue = "true"
+)
+
+// statusForExit maps a CLI exit code to the stable status string surfaced in JSON output and
+// to the GitHub Action. Flow failures are "failed"; launch/runner/publish/timeout problems are
+// "error" so callers can distinguish a failing flow from broken infrastructure.
+func statusForExit(code int) string {
+	switch code {
+	case exitSuccess:
+		return statusCompleted
+	case exitFlowFailed:
+		return statusFailed
+	case exitCancelled:
+		return statusCancelled
+	default: // exitError, exitTimeout
+		return statusError
+	}
+}
+
+// FlowRunResult holds the per-flow result for JSON output.
+type FlowRunResult struct {
+	ExecutionID  string        `json:"execution_id"`
+	FlowID       string        `json:"flow_id"`
+	Status       string        `json:"status"`
+	Success      bool          `json:"success"`
+	ExitCode     int           `json:"exit_code"`
+	DurationMs   int64         `json:"duration_ms"`
+	ErrorMessage *string       `json:"error_message"`
+	Nodes        []FlowRunNode `json:"nodes"`
+}
+
+// FlowRunNode holds a node summary for JSON output.
+type FlowRunNode struct {
+	NodeID      string  `json:"node_id"`
+	DisplayName string  `json:"display_name"`
+	NodeType    string  `json:"node_type"`
+	Status      string  `json:"status"`
+	DurationMs  *int    `json:"duration_ms"`
+	ErrorMsg    *string `json:"error_message"`
+}
+
+// FlowRunOutput is the single-flow stdout JSON shape.
+type FlowRunOutput struct {
+	FlowRunResult
+}
+
+// MultiFlowRunOutput is the multi-flow stdout JSON shape.
+type MultiFlowRunOutput struct {
+	Status     string          `json:"status"`
+	Success    bool            `json:"success"`
+	ExitCode   int             `json:"exit_code"`
+	DurationMs int64           `json:"duration_ms"`
+	Results    []FlowRunResult `json:"results"`
+}
+
+// ephemeralPackage is the JSON the runner reads from stdin.
+type ephemeralPackage struct {
+	ExecutionID     string                 `json:"execution_id"`
+	FlowID          string                 `json:"flow_id"`
+	FlowDefinition  map[string]interface{} `json:"flow_definition"`
+	Inputs          map[string]interface{} `json:"inputs"`
+	ReferencedFlows map[string]interface{} `json:"referenced_flows"`
+}
+
+// ephemeralResult is the JSON the runner writes to stdout.
+type ephemeralResult struct {
+	Status       string                 `json:"status"`
+	StartedAt    string                 `json:"started_at"`
+	CompletedAt  string                 `json:"completed_at"`
+	DurationMs   int64                  `json:"duration_ms"`
+	Result       map[string]interface{} `json:"result"`
+	ErrorMessage *string                `json:"error_message"`
+	ErrorCode    *string                `json:"error_code"`
+}
+
+func newFlowsRunCmd(state *AppState) *cobra.Command {
+	var (
+		flagEnvironment    string
+		flagVersionID      string
+		flagRunnerBinary   string
+		flagIdempotencyKey string
+		flagPollTimeout    time.Duration
+		flagParallel       int
+		flagOutput         string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "run <flow-id> [<flow-id>...]",
+		Short: "Run one or more flows using an ephemeral runner",
+		Long: `Run one or more flows locally using the ephemeral runner mode.
+
+The CLI launches each flow on the server with runner_type=ephemeral, receives
+an execution package, runs it using echopoint-runner, and publishes the result.
+
+Authentication: requires --api-key / ECHOPOINT_API_KEY (and optionally
+--organization-id / ECHOPOINT_ORGANIZATION_ID).
+
+Exit codes:
+  0  all flows succeeded
+  1  one or more flows failed (node assertions or runner failure)
+  2  cancelled
+  3  API / runner / contract error
+  4  timeout`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Ephemeral execution is API-key only: the result-publication endpoint accepts
+			// ApiKeys:[runner:complete] and rejects bearer tokens, so a bearer-only run would
+			// launch and then fail to publish. Require the API key + organization ID up front.
+			if state.APIKey == "" {
+				return runError(cmd, state, flagOutput, nil, exitError,
+					"ephemeral execution requires an organization API key (--api-key or ECHOPOINT_API_KEY)")
+			}
+			if state.OrganizationID == "" {
+				return runError(cmd, state, flagOutput, nil, exitError,
+					"ephemeral execution requires an organization ID (--organization-id or ECHOPOINT_ORGANIZATION_ID)")
+			}
+
+			if flagParallel < 1 {
+				return runError(cmd, state, flagOutput, nil, exitError, "--parallel must be >= 1")
+			}
+
+			if flagPollTimeout == 0 {
+				flagPollTimeout = 30 * time.Minute
+			}
+
+			runnerBinary, err := resolveRunnerBinary(flagRunnerBinary)
+			if err != nil {
+				return runError(cmd, state, flagOutput, nil, exitError, err.Error())
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), flagPollTimeout)
+			defer cancel()
+
+			flowIDs := args
+			baseKey := resolveIdempotencyKey(flagIdempotencyKey, flowIDs)
+
+			results, exitCode := executeFlows(
+				ctx, state, flowIDs, runnerBinary, baseKey,
+				flagEnvironment, flagVersionID, flagParallel, flagOutput,
+			)
+
+			return emitOutput(cmd, state, flagOutput, results, exitCode, len(flowIDs))
+		},
+	}
+
+	cmd.Flags().StringVar(&flagEnvironment, "environment", "", "Named environment key to overlay on flow inputs")
+	cmd.Flags().StringVar(&flagVersionID, "version-id", "",
+		"Flow version ID to execute (default: current flow definition)")
+	cmd.Flags().StringVar(&flagRunnerBinary, "runner-binary", "",
+		"Path to echopoint-runner binary (default: echopoint-runner on PATH)")
+	cmd.Flags().StringVar(&flagIdempotencyKey, "idempotency-key", "",
+		"Stable key for idempotent CI retries (auto-derived from GitHub env when GITHUB_ACTIONS=true)")
+	cmd.Flags().DurationVar(&flagPollTimeout, "poll-timeout", 30*time.Minute,
+		"Maximum time to wait for each flow execution")
+	cmd.Flags().IntVar(&flagParallel, "parallel", 1, "Maximum number of flows to run concurrently (>= 1)")
+	cmd.Flags().StringVarP(&flagOutput, "output", "o", "", "Output format: json (or empty for human)")
+
+	return cmd
+}
+
+func resolveRunnerBinary(flagValue string) (string, error) {
+	if flagValue != "" {
+		info, err := os.Stat(flagValue)
+		if err != nil {
+			return "", fmt.Errorf("runner binary not found at %q: %w", flagValue, err)
+		}
+		if info.IsDir() {
+			return "", fmt.Errorf("runner binary path %q is a directory", flagValue)
+		}
+		if info.Mode()&0o111 == 0 {
+			return "", fmt.Errorf("runner binary %q is not executable", flagValue)
+		}
+		return flagValue, nil
+	}
+
+	path, err := exec.LookPath("echopoint-runner")
+	if err != nil {
+		return "", fmt.Errorf("echopoint-runner not found on PATH; use --runner-binary to specify the path")
+	}
+	return path, nil
+}
+
+func resolveIdempotencyKey(flagValue string, flowIDs []string) string {
+	if flagValue != "" {
+		return flagValue
+	}
+	if os.Getenv("ECHOPOINT_IDEMPOTENCY_KEY") != "" {
+		return os.Getenv("ECHOPOINT_IDEMPOTENCY_KEY")
+	}
+	if os.Getenv("GITHUB_ACTIONS") == githubActionsTrueValue {
+		return deriveGitHubIdempotencyKey(flowIDs)
+	}
+	return ""
+}
+
+func deriveGitHubIdempotencyKey(flowIDs []string) string {
+	parts := []string{
+		os.Getenv("GITHUB_REPOSITORY"),
+		os.Getenv("GITHUB_WORKFLOW"),
+		os.Getenv("GITHUB_JOB"),
+		os.Getenv("GITHUB_RUN_ID"),
+		os.Getenv("GITHUB_RUN_ATTEMPT"),
+	}
+	base := strings.Join(parts, "/")
+	if base == "////" {
+		return ""
+	}
+	h := sha256.Sum256([]byte(base))
+	return fmt.Sprintf("gh-%x", h[:8])
+}
+
+func derivePerFlowKey(baseKey, flowID string) string {
+	if baseKey == "" {
+		return ""
+	}
+	h := sha256.Sum256([]byte(baseKey + ":" + flowID))
+	return fmt.Sprintf("%s-%x", baseKey, h[:8])
+}
+
+func buildGitHubTriggerMetadata() *api.GitTriggerMetadata {
+	if os.Getenv("GITHUB_ACTIONS") != githubActionsTrueValue {
+		return nil
+	}
+	source := "github_actions"
+	meta := api.GitTriggerMetadata{Source: &source}
+	if v := os.Getenv("GITHUB_REPOSITORY"); v != "" {
+		meta.Repository = &v
+	}
+	if v := os.Getenv("GITHUB_WORKFLOW"); v != "" {
+		meta.Workflow = &v
+	}
+	if v := os.Getenv("GITHUB_JOB"); v != "" {
+		meta.Job = &v
+	}
+	if v := os.Getenv("GITHUB_RUN_ID"); v != "" {
+		meta.RunId = &v
+	}
+	if v := os.Getenv("GITHUB_RUN_ATTEMPT"); v != "" {
+		meta.RunAttempt = &v
+	}
+	if v := os.Getenv("GITHUB_SHA"); v != "" {
+		meta.Sha = &v
+	}
+	if v := os.Getenv("GITHUB_REF"); v != "" {
+		meta.Ref = &v
+	}
+	if v := os.Getenv("GITHUB_ACTOR"); v != "" {
+		meta.Actor = &v
+	}
+	return &meta
+}
+
+func executeFlows(
+	ctx context.Context,
+	state *AppState,
+	flowIDs []string,
+	runnerBinary string,
+	baseKey string,
+	environment string,
+	versionID string,
+	parallel int,
+	outputFormat string,
+) ([]FlowRunResult, int) {
+	results := make([]FlowRunResult, len(flowIDs))
+	for i := range results {
+		results[i] = FlowRunResult{FlowID: flowIDs[i]}
+	}
+
+	if parallel == 1 || len(flowIDs) == 1 {
+		for i, flowID := range flowIDs {
+			key := derivePerFlowKey(baseKey, flowID)
+			if len(flowIDs) == 1 && baseKey != "" {
+				key = baseKey
+			}
+			results[i] = runSingleFlow(ctx, state, flowID, runnerBinary, key, environment, versionID, outputFormat)
+		}
+	} else {
+		sem := make(chan struct{}, parallel)
+		var mu sync.Mutex
+		var wg sync.WaitGroup
+
+		for i, flowID := range flowIDs {
+			wg.Add(1)
+			go func(idx int, fid string) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				key := derivePerFlowKey(baseKey, fid)
+				result := runSingleFlow(ctx, state, fid, runnerBinary, key, environment, versionID, outputFormat)
+				mu.Lock()
+				results[idx] = result
+				mu.Unlock()
+			}(i, flowID)
+		}
+		wg.Wait()
+	}
+
+	return results, aggregateExitCode(results)
+}
+
+func runSingleFlow(
+	ctx context.Context,
+	state *AppState,
+	flowID string,
+	runnerBinary string,
+	idempotencyKey string,
+	environment string,
+	versionID string,
+	outputFormat string,
+) FlowRunResult {
+	flowUUID, err := uuid.Parse(flowID)
+	if err != nil {
+		return errorResult(flowID, "", exitError, fmt.Sprintf("invalid flow id %q: %v", flowID, err))
+	}
+
+	pkg, executionID, terminalResult, launchErr := launchEphemeral(
+		ctx, state, flowUUID, idempotencyKey, environment, versionID, outputFormat,
+	)
+	if launchErr != nil {
+		return errorResult(flowID, "", exitCodeForError(launchErr), launchErr.Error())
+	}
+
+	if terminalResult != nil {
+		return *terminalResult
+	}
+
+	runnerResult, runErr := runEphemeralRunner(ctx, runnerBinary, pkg)
+	if runErr != nil {
+		badResult := &ephemeralResult{
+			Status:       statusFailed,
+			StartedAt:    time.Now().UTC().Format(time.RFC3339),
+			CompletedAt:  time.Now().UTC().Format(time.RFC3339),
+			DurationMs:   0,
+			ErrorMessage: ptrString(runErr.Error()),
+			ErrorCode:    ptrString("RUNNER_ERROR"),
+		}
+		// Best-effort failure publication; ignore its error so the original failure
+		// (including a timeout) determines the exit code.
+		_, _ = publishResult(ctx, state, flowUUID, executionID, badResult, outputFormat)
+		return errorResult(flowID, executionID.String(), exitCodeForError(runErr), runErr.Error())
+	}
+
+	publishResp, pubErr := publishResult(ctx, state, flowUUID, executionID, runnerResult, outputFormat)
+	if pubErr != nil {
+		return errorResult(flowID, executionID.String(), exitCodeForError(pubErr), pubErr.Error())
+	}
+
+	return buildRunResult(flowID, executionID.String(), publishResp)
+}
+
+// exitCodeForError classifies an operational error into a stable CI exit code:
+// a deadline (--poll-timeout / runtime timeout) is 4, an explicit cancellation is 2,
+// and everything else is an API/runner/contract error (3).
+func exitCodeForError(err error) int {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return exitTimeout
+	case errors.Is(err, context.Canceled):
+		return exitCancelled
+	default:
+		return exitError
+	}
+}
+
+func launchEphemeral(
+	ctx context.Context,
+	state *AppState,
+	flowUUID uuid.UUID,
+	idempotencyKey string,
+	environment string,
+	versionID string,
+	outputFormat string,
+) (*ephemeralPackage, uuid.UUID, *FlowRunResult, error) {
+	runnerTypEphemeral := api.Ephemeral
+	req := api.LaunchFlowRequest{
+		RunnerType: &runnerTypEphemeral,
+	}
+	if environment != "" {
+		req.EnvironmentKey = ptrString(environment)
+	}
+	if versionID != "" {
+		vid, err := uuid.Parse(versionID)
+		if err != nil {
+			return nil, uuid.UUID{}, nil, fmt.Errorf("invalid version-id %q: %w", versionID, err)
+		}
+		req.VersionId = &vid
+	}
+
+	if os.Getenv("GITHUB_ACTIONS") == githubActionsTrueValue {
+		triggerGit := api.TriggerTypeGit
+		req.TriggerType = &triggerGit
+		if git := buildGitHubTriggerMetadata(); git != nil {
+			var tm api.TriggerMetadata
+			if err := tm.FromGitTriggerMetadata(*git); err != nil {
+				return nil, uuid.UUID{}, nil, fmt.Errorf("build trigger metadata: %w", err)
+			}
+			req.TriggerMetadata = &tm
+		}
+	}
+
+	var params *api.LaunchFlowParams
+	if idempotencyKey != "" {
+		params = &api.LaunchFlowParams{IdempotencyKey: &idempotencyKey}
+	}
+
+	progressf(outputFormat, "Launching flow %s (ephemeral)...\n", flowUUID)
+
+	resp, err := state.Client.API().LaunchFlowWithResponse(ctx, flowUUID, params, req)
+	if err != nil {
+		return nil, uuid.UUID{}, nil, fmt.Errorf("launch flow: %w", err)
+	}
+	if resp.JSON202 == nil {
+		return nil, uuid.UUID{}, nil, fmt.Errorf(
+			"launch flow: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
+		)
+	}
+
+	execution := resp.JSON202.Execution
+	executionID := execution.Id
+
+	// Idempotent terminal replay: the server returns the existing execution when a duplicate
+	// launch is detected and the execution has already reached a terminal state. The caller
+	// must not run the runner in this case — just surface the existing status.
+	if isTerminalStatus(string(execution.Status)) {
+		result := buildRunResultFromExecution(execution.FlowId.String(), executionID.String(), execution)
+		return nil, executionID, &result, nil
+	}
+
+	epkg := executionToEphemeralPackage(execution)
+	return &epkg, executionID, nil, nil
+}
+
+func isTerminalStatus(status string) bool {
+	return status == statusCompleted || status == statusFailed || status == statusCancelled
+}
+
+func executionToEphemeralPackage(execution api.FlowExecution) ephemeralPackage {
+	var flowDef map[string]interface{}
+	flowDefBytes, _ := json.Marshal(execution.FlowSnapshot)
+	_ = json.Unmarshal(flowDefBytes, &flowDef)
+
+	inputs := map[string]interface{}{}
+	for k, v := range execution.RunnerInputs {
+		inputs[k] = v
+	}
+
+	referenced := map[string]interface{}{}
+	for k, v := range execution.ReferencedFlows {
+		refBytes, _ := json.Marshal(v)
+		var refObj interface{}
+		_ = json.Unmarshal(refBytes, &refObj)
+		referenced[k] = refObj
+	}
+
+	return ephemeralPackage{
+		ExecutionID:     execution.Id.String(),
+		FlowID:          execution.FlowId.String(),
+		FlowDefinition:  flowDef,
+		Inputs:          inputs,
+		ReferencedFlows: referenced,
+	}
+}
+
+// filteredRunnerEnv returns the current environment minus credentials the ephemeral runner
+// must never receive (it does not authenticate to the control plane).
+func filteredRunnerEnv() []string {
+	blocked := map[string]bool{
+		"ECHOPOINT_API_KEY":         true,
+		"ECHOPOINT_ORGANIZATION_ID": true,
+		"ECHOPOINT_TOKEN":           true,
+	}
+	env := os.Environ()
+	filtered := make([]string, 0, len(env))
+	for _, kv := range env {
+		key := kv
+		if i := strings.IndexByte(kv, '='); i >= 0 {
+			key = kv[:i]
+		}
+		if blocked[key] {
+			continue
+		}
+		filtered = append(filtered, kv)
+	}
+	return filtered
+}
+
+func runEphemeralRunner(ctx context.Context, runnerBinary string, pkg *ephemeralPackage) (*ephemeralResult, error) {
+	pkgBytes, err := json.Marshal(pkg)
+	if err != nil {
+		return nil, fmt.Errorf("marshal package: %w", err)
+	}
+
+	runnerCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	runnerCmd := exec.CommandContext(runnerCtx, runnerBinary, "ephemeral", "--input", "-", "--output", "-")
+	runnerCmd.Stdin = bytes.NewReader(pkgBytes)
+	// Least privilege: the ephemeral runner executes flow logic locally and needs no API
+	// credentials, so strip them from the child environment to avoid exposing the org API
+	// key to the runner subprocess.
+	runnerCmd.Env = filteredRunnerEnv()
+
+	var stdout, stderr bytes.Buffer
+	runnerCmd.Stdout = &stdout
+	runnerCmd.Stderr = &stderr
+
+	if err := runnerCmd.Start(); err != nil {
+		return nil, fmt.Errorf("start runner: %w", err)
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- runnerCmd.Wait() }()
+
+	select {
+	case <-ctx.Done():
+		_ = runnerCmd.Process.Kill()
+		return nil, fmt.Errorf("runner timeout/cancelled: %w", ctx.Err())
+	case err := <-done:
+		if err != nil {
+			stderrStr := strings.TrimSpace(stderr.String())
+			if stderrStr != "" {
+				fmt.Fprintf(os.Stderr, "[runner stderr] %s\n", stderrStr)
+			}
+			return nil, fmt.Errorf("runner exited with error: %w", err)
+		}
+	}
+
+	stderrStr := strings.TrimSpace(stderr.String())
+	if stderrStr != "" {
+		fmt.Fprintf(os.Stderr, "[runner] %s\n", stderrStr)
+	}
+
+	var result ephemeralResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		// Do not include the raw runner stdout in the error: it is the result payload and
+		// may contain resolved request/response data. Report only the byte length.
+		return nil, fmt.Errorf("parse runner result (%d bytes): %w", stdout.Len(), err)
+	}
+
+	return &result, nil
+}
+
+func publishResult(
+	ctx context.Context,
+	state *AppState,
+	_ uuid.UUID,
+	executionID uuid.UUID,
+	result *ephemeralResult,
+	outputFormat string,
+) (*api.EphemeralCompletionResponse, error) {
+	status := api.RunnerJobTerminalStatus(result.Status)
+	req := api.EphemeralCompletionRequest{
+		Status:       status,
+		DurationMs:   result.DurationMs,
+		ErrorMessage: result.ErrorMessage,
+		ErrorCode:    result.ErrorCode,
+	}
+
+	startedAt, _ := time.Parse(time.RFC3339, result.StartedAt)
+	completedAt, _ := time.Parse(time.RFC3339, result.CompletedAt)
+	req.StartedAt = startedAt
+	req.CompletedAt = completedAt
+
+	if result.Result != nil {
+		req.Result = &result.Result
+	}
+
+	progressf(outputFormat, "Publishing result for execution %s...\n", executionID)
+
+	params := &api.CompleteEphemeralExecutionParams{
+		XOrganizationId: state.OrganizationID,
+	}
+
+	var lastErr error
+	for attempt := range 3 {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				// Wrap the context error so exitCodeForError classifies a timeout (4) or
+				// cancellation (2) rather than a generic contract error (3).
+				return nil, fmt.Errorf("publish cancelled: %w", ctx.Err())
+			case <-time.After(time.Duration(attempt) * 2 * time.Second):
+			}
+		}
+
+		resp, err := state.Client.API().CompleteEphemeralExecutionWithResponse(ctx, executionID, params, req)
+		if err != nil {
+			lastErr = fmt.Errorf("publish result: %w", err)
+			continue
+		}
+
+		if resp.StatusCode() == 200 && resp.JSON200 != nil {
+			return resp.JSON200, nil
+		}
+
+		if resp.StatusCode() >= 500 {
+			lastErr = fmt.Errorf("publish result: server error %d: %s", resp.StatusCode(), string(resp.Body))
+			continue
+		}
+
+		return nil, fmt.Errorf(
+			"publish result: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
+		)
+	}
+
+	return nil, lastErr
+}
+
+func buildRunResult(flowID, executionID string, resp *api.EphemeralCompletionResponse) FlowRunResult {
+	execution := resp.Execution
+	nodes := buildNodeList(resp.Nodes)
+
+	statusStr := string(execution.Status)
+	success := execution.Status == statusCompleted
+	exitCode := exitSuccess
+	if !success {
+		exitCode = exitFlowFailed
+	}
+
+	var durationMs int64
+	if execution.StartedAt != (time.Time{}) && execution.CompletedAt != nil {
+		durationMs = execution.CompletedAt.Sub(execution.StartedAt).Milliseconds()
+	}
+
+	return FlowRunResult{
+		ExecutionID:  executionID,
+		FlowID:       flowID,
+		Status:       statusStr,
+		Success:      success,
+		ExitCode:     exitCode,
+		DurationMs:   durationMs,
+		ErrorMessage: execution.ErrorMessage,
+		Nodes:        nodes,
+	}
+}
+
+func buildRunResultFromExecution(flowID, executionID string, execution api.FlowExecution) FlowRunResult {
+	statusStr := string(execution.Status)
+	success := execution.Status == statusCompleted
+	exitCode := exitSuccess
+	if !success {
+		exitCode = exitFlowFailed
+	}
+	if execution.Status == "cancelled" {
+		exitCode = exitCancelled
+	}
+
+	var durationMs int64
+	if execution.CompletedAt != nil {
+		durationMs = execution.CompletedAt.Sub(execution.StartedAt).Milliseconds()
+	}
+
+	return FlowRunResult{
+		ExecutionID:  executionID,
+		FlowID:       flowID,
+		Status:       statusStr,
+		Success:      success,
+		ExitCode:     exitCode,
+		DurationMs:   durationMs,
+		ErrorMessage: execution.ErrorMessage,
+		Nodes:        nil,
+	}
+}
+
+func buildNodeList(nodes []api.NodeExecutionResult) []FlowRunNode {
+	result := make([]FlowRunNode, 0, len(nodes))
+	for _, n := range nodes {
+		var durationMs *int
+		if n.DurationMs != nil {
+			v := *n.DurationMs
+			durationMs = &v
+		}
+		result = append(result, FlowRunNode{
+			NodeID:      n.NodeId,
+			DisplayName: n.DisplayName,
+			NodeType:    string(n.NodeType),
+			Status:      string(n.Status),
+			DurationMs:  durationMs,
+			ErrorMsg:    n.ErrorMessage,
+		})
+	}
+	return result
+}
+
+func aggregateExitCode(results []FlowRunResult) int {
+	code := exitSuccess
+	for _, r := range results {
+		if r.ExitCode > code {
+			code = r.ExitCode
+		}
+	}
+	return code
+}
+
+func errorResult(flowID, executionID string, exitCode int, msg string) FlowRunResult {
+	return FlowRunResult{
+		ExecutionID:  executionID,
+		FlowID:       flowID,
+		Status:       statusForExit(exitCode),
+		Success:      false,
+		ExitCode:     exitCode,
+		ErrorMessage: ptrString(msg),
+		Nodes:        nil,
+	}
+}
+
+func emitOutput(
+	_ *cobra.Command, _ *AppState, flagOutput string,
+	results []FlowRunResult, exitCode int, numFlows int,
+) error {
+	writeSummary(results, exitCode)
+
+	if summaryPath := os.Getenv("GITHUB_STEP_SUMMARY"); summaryPath != "" {
+		_ = writeGitHubStepSummary(summaryPath, results)
+	}
+
+	if strings.ToLower(strings.TrimSpace(flagOutput)) == outputFormatJSON {
+		if err := output.PrintJSON(os.Stdout, buildJSONOutput(results, exitCode, numFlows)); err != nil {
+			return err
+		}
+	}
+
+	return &exitCodeError{code: exitCode}
+}
+
+func buildJSONOutput(results []FlowRunResult, exitCode int, numFlows int) interface{} {
+	if numFlows == 1 {
+		return FlowRunOutput{results[0]}
+	}
+
+	var durationMs int64
+	success := true
+	for _, r := range results {
+		durationMs += r.DurationMs
+		if !r.Success {
+			success = false
+		}
+	}
+	return MultiFlowRunOutput{
+		Status:     statusForExit(exitCode),
+		Success:    success,
+		ExitCode:   exitCode,
+		DurationMs: durationMs,
+		Results:    results,
+	}
+}
+
+func runError(
+	_ *cobra.Command, _ *AppState, flagOutput string,
+	results []FlowRunResult, exitCode int, msg string,
+) error {
+	fmt.Fprintf(os.Stderr, "error: %s\n", msg)
+
+	if strings.ToLower(strings.TrimSpace(flagOutput)) == outputFormatJSON {
+		out := buildErrorJSON(results, exitCode, msg)
+		_ = output.PrintJSON(os.Stdout, out)
+	}
+
+	return &exitCodeError{code: exitCode}
+}
+
+func buildErrorJSON(results []FlowRunResult, exitCode int, msg string) interface{} {
+	if results != nil {
+		return MultiFlowRunOutput{
+			Status:   statusForExit(exitCode),
+			Success:  false,
+			ExitCode: exitCode,
+			Results:  results,
+		}
+	}
+	return FlowRunOutput{FlowRunResult{
+		Status:       statusForExit(exitCode),
+		Success:      false,
+		ExitCode:     exitCode,
+		ErrorMessage: ptrString(msg),
+	}}
+}
+
+// exitCodeError is an error that carries an exit code so main can call os.Exit.
+type exitCodeError struct {
+	code int
+}
+
+func (e *exitCodeError) Error() string {
+	if e.code == exitSuccess {
+		return ""
+	}
+	return fmt.Sprintf("exit code %d", e.code)
+}
+
+func (e *exitCodeError) ExitCode() int {
+	return e.code
+}
+
+func writeSummary(results []FlowRunResult, exitCode int) {
+	isGitHub := os.Getenv("GITHUB_ACTIONS") == githubActionsTrueValue
+
+	if isGitHub {
+		fmt.Fprintf(os.Stderr, "::group::Echopoint Flow Results\n")
+	}
+
+	for _, r := range results {
+		icon := "✓"
+		if !r.Success {
+			icon = "✗"
+		}
+		fmt.Fprintf(os.Stderr, "%s Flow %s: %s", icon, r.FlowID, r.Status)
+		if r.DurationMs > 0 {
+			fmt.Fprintf(os.Stderr, " (%dms)", r.DurationMs)
+		}
+		fmt.Fprintln(os.Stderr)
+
+		if r.ErrorMessage != nil && *r.ErrorMessage != "" {
+			if isGitHub {
+				fmt.Fprintf(os.Stderr, "::error::Flow %s failed: %s\n", r.FlowID, *r.ErrorMessage)
+			} else {
+				fmt.Fprintf(os.Stderr, "  Error: %s\n", *r.ErrorMessage)
+			}
+		}
+
+		for _, n := range r.Nodes {
+			if n.Status == statusFailed {
+				nodeMsg := ""
+				if n.ErrorMsg != nil {
+					nodeMsg = ": " + *n.ErrorMsg
+				}
+				fmt.Fprintf(os.Stderr, "  Node %s (%s) failed%s\n", n.DisplayName, n.NodeID, nodeMsg)
+			}
+		}
+	}
+
+	if isGitHub {
+		fmt.Fprintf(os.Stderr, "::endgroup::\n")
+	}
+}
+
+func writeGitHubStepSummary(path string, results []FlowRunResult) error {
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	fmt.Fprintln(f, "## Echopoint Flow Results")
+	fmt.Fprintln(f)
+	fmt.Fprintln(f, "| Flow ID | Status | Duration | Error |")
+	fmt.Fprintln(f, "|---------|--------|----------|-------|")
+
+	for _, r := range results {
+		errStr := ""
+		if r.ErrorMessage != nil {
+			errStr = *r.ErrorMessage
+		}
+		fmt.Fprintf(f, "| %s | %s | %dms | %s |\n", r.FlowID, r.Status, r.DurationMs, errStr)
+	}
+
+	return nil
+}
+
+func progressf(outputFormat, format string, args ...interface{}) {
+	if strings.ToLower(strings.TrimSpace(outputFormat)) != outputFormatJSON {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
+}
+
+func ptrString(s string) *string {
+	return &s
+}

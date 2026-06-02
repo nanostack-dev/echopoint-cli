@@ -1,0 +1,94 @@
+name: Go Build and Lint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - '.github/workflows/go.yml'
+      - '.golangci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - '.github/workflows/go.yml'
+      - '.golangci.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.1'
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9.2.0
+        with:
+          version: latest
+          args: --timeout 5m
+
+      - name: Install gotestsum
+        run: |
+          go install gotest.tools/gotestsum@v1.13.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Run tests
+        run: gotestsum --format github-actions -- -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: verify
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.1'
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          EXT=""
+          if [ "$GOOS" = "windows" ]; then
+            EXT=".exe"
+          fi
+          go build -ldflags="-s -w" -o dist/echopoint-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} ./cmd/echopoint
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: echopoint-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/echopoint-*
