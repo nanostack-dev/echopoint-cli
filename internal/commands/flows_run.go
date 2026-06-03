@@ -129,8 +129,9 @@ func newFlowsRunCmd(state *AppState) *cobra.Command {
 The CLI launches each flow on the server with runner_type=ephemeral, receives
 an execution package, runs it using echopoint-runner, and publishes the result.
 
-Authentication: requires --api-key / ECHOPOINT_API_KEY (and optionally
---organization-id / ECHOPOINT_ORGANIZATION_ID).
+Authentication: a logged-in session (echopoint auth login) or an organization
+API key (--api-key / ECHOPOINT_API_KEY). An organization ID is always required
+(--organization-id / ECHOPOINT_ORGANIZATION_ID, or the profile default).
 
 Exit codes:
   0  all flows succeeded
@@ -140,12 +141,19 @@ Exit codes:
   4  timeout`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Ephemeral execution is API-key only: the result-publication endpoint accepts
-			// ApiKeys:[runner:complete] and rejects bearer tokens, so a bearer-only run would
-			// launch and then fail to publish. Require the API key + organization ID up front.
-			if state.APIKey == "" {
-				return runError(cmd, state, flagOutput, nil, exitError,
-					"ephemeral execution requires an organization API key (--api-key or ECHOPOINT_API_KEY)")
+			// Ephemeral execution needs an org-scoped credential for both launch
+			// (flows:execute) and result publication. The completion endpoint accepts
+			// ApiKeys:[runner:complete] or a session bearer carrying flows:execute, so
+			// either a stored login or an API key works; an org ID is always required.
+			if state.APIKey == "" && state.Token == "" {
+				return runError(
+					cmd,
+					state,
+					flagOutput,
+					nil,
+					exitError,
+					"ephemeral execution requires authentication: log in (echopoint auth login) or set an API key (--api-key or ECHOPOINT_API_KEY)",
+				)
 			}
 			if state.OrganizationID == "" {
 				return runError(cmd, state, flagOutput, nil, exitError,
