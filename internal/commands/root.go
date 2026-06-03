@@ -131,7 +131,6 @@ func NewRootCmd() *cobra.Command {
 		newCollectionsCmd(state),
 		newConfigCmd(state),
 		newProfileCmd(state),
-		newTUICmd(state),
 		newVersionCmd(),
 		newUpdateCmd(),
 	)

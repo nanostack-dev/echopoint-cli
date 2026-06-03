@@ -17,8 +17,7 @@ func newFlowInteractiveCmd(state *AppState) *cobra.Command {
 		Short: "Create a flow interactively (simplified)",
 		Long: `Create a new flow through interactive prompts.
 
-This command will guide you through creating a basic flow.
-For advanced features, use the TUI: echopoint tui`,
+This command will guide you through creating a basic flow.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -53,8 +52,7 @@ For advanced features, use the TUI: echopoint tui`,
 			fmt.Printf("  ID: %s\n", flow.Id)
 			fmt.Println("\nNext steps:")
 			fmt.Printf("  View flow:   echopoint flows get %s\n", flow.Id)
-			fmt.Printf("  Open TUI:    echopoint tui\n")
-			fmt.Println("\nNote: Use the TUI (echopoint tui) for interactive flow editing")
+			fmt.Printf("  Add a node:  echopoint flows node add %s --type request --name \"...\"\n", flow.Id)
 
 			return nil
 		},
@@ -105,10 +103,6 @@ func newFlowShowCmd(state *AppState) *cobra.Command {
 			fmt.Printf("\nStructure:\n")
 			fmt.Printf("  Nodes: %d\n", len(flow.FlowDefinition.Nodes))
 			fmt.Printf("  Edges: %d\n", len(flow.FlowDefinition.Edges))
-
-			if len(flow.FlowDefinition.Nodes) > 0 {
-				fmt.Printf("\nNodes: %d (view in TUI for details)\n", len(flow.FlowDefinition.Nodes))
-			}
 
 			fmt.Println()
 
