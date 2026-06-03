@@ -90,6 +90,13 @@ Examples:
 					if n.Id == toNode {
 						targetExists = true
 					}
+				case api.ModuleFlowNode:
+					if n.Id == fromNode {
+						sourceExists = true
+					}
+					if n.Id == toNode {
+						targetExists = true
+					}
 				}
 			}
 

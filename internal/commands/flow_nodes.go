@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	googleuuid "github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/spf13/cobra"
 )
 
@@ -35,8 +36,9 @@ func newFlowNodeCmd(state *AppState) *cobra.Command {
 
 // newFlowNodeAddCmd adds a new node to a flow
 func newFlowNodeAddCmd(state *AppState) *cobra.Command {
-	var nodeType, name, method, url, headers, body string
+	var nodeType, name, method, url, headers, body, moduleFlowID string
 	var duration int
+	var inputBindings, outputBindings []string
 
 	cmd := &cobra.Command{
 		Use:   "add <flow-id>",
@@ -49,7 +51,13 @@ Examples:
   echopoint flows node add <flow-id> --type request --name "API Call" --method POST --url "https://api.example.com"
 
   # Add a delay node
-  echopoint flows node add <flow-id> --type delay --name "Wait" --duration 5000`,
+  echopoint flows node add <flow-id> --type delay --name "Wait" --duration 5000
+
+  # Add a module node that runs another flow (reuse a flow inside this one)
+  echopoint flows node add <flow-id> --type module --name "Login" \
+    --flow-id <child-flow-id> \
+    --input email={{userEmail}} --input password={{userPassword}} \
+    --output token=authToken`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -119,8 +127,49 @@ Examples:
 				}
 				newNode.FromDelayFlowNode(delayNode)
 
+			case "module":
+				if moduleFlowID == "" {
+					return fmt.Errorf("--flow-id is required for module nodes")
+				}
+				childID, perr := googleuuid.Parse(moduleFlowID)
+				if perr != nil {
+					return fmt.Errorf("invalid --flow-id: %w", perr)
+				}
+
+				moduleData := api.ModuleNodeData{
+					FlowId: openapi_types.UUID(childID),
+				}
+
+				if len(inputBindings) > 0 {
+					inputs, ierr := parseKeyVals(inputBindings)
+					if ierr != nil {
+						return fmt.Errorf("invalid --input: %w", ierr)
+					}
+					bindings := make(map[string]interface{}, len(inputs))
+					for k, v := range inputs {
+						bindings[k] = v
+					}
+					moduleData.InputBindings = &bindings
+				}
+
+				if len(outputBindings) > 0 {
+					outputs, oerr := parseKeyVals(outputBindings)
+					if oerr != nil {
+						return fmt.Errorf("invalid --output: %w", oerr)
+					}
+					moduleData.OutputBindings = &outputs
+				}
+
+				moduleNode := api.ModuleFlowNode{
+					Id:          nodeID,
+					Type:        "module",
+					DisplayName: name,
+					Data:        moduleData,
+				}
+				newNode.FromModuleFlowNode(moduleNode)
+
 			default:
-				return fmt.Errorf("invalid node type: %s (must be 'request' or 'delay')", nodeType)
+				return fmt.Errorf("invalid node type: %s (must be 'request', 'delay' or 'module')", nodeType)
 			}
 
 			// Add node to definition
@@ -155,18 +204,37 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request or delay)")
+	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request, delay or module)")
 	cmd.Flags().StringVar(&name, "name", "", "Node display name")
 	cmd.Flags().StringVar(&method, "method", "", "HTTP method (for request nodes)")
 	cmd.Flags().StringVar(&url, "url", "", "Request URL (for request nodes)")
 	cmd.Flags().StringVar(&headers, "headers", "", "HTTP headers as JSON (for request nodes)")
 	cmd.Flags().StringVar(&body, "body", "", "Request body (for request nodes)")
 	cmd.Flags().IntVar(&duration, "duration", 0, "Delay duration in milliseconds (for delay nodes)")
+	cmd.Flags().StringVar(&moduleFlowID, "flow-id", "", "Referenced child flow ID (for module nodes)")
+	cmd.Flags().StringArrayVar(&inputBindings, "input", nil,
+		"Module input binding key=value (for module nodes; repeatable)")
+	cmd.Flags().StringArrayVar(&outputBindings, "output", nil,
+		"Module output binding parentName=childKey (for module nodes; repeatable)")
 
 	_ = cmd.MarkFlagRequired("type")
 	_ = cmd.MarkFlagRequired("name")
 
 	return cmd
+}
+
+// parseKeyVals parses repeated "key=value" flag entries into a map. The value
+// may itself contain "=" (only the first separator splits the pair).
+func parseKeyVals(pairs []string) (map[string]string, error) {
+	result := make(map[string]string, len(pairs))
+	for _, pair := range pairs {
+		key, value, found := strings.Cut(pair, "=")
+		if !found || key == "" {
+			return nil, fmt.Errorf("expected key=value, got %q", pair)
+		}
+		result[key] = value
+	}
+	return result, nil
 }
 
 // newFlowNodeRemoveCmd removes a node from a flow
@@ -212,6 +280,12 @@ func newFlowNodeRemoveCmd(state *AppState) *cobra.Command {
 						found = true
 					}
 				case api.DelayFlowNode:
+					if n.Id != nodeID {
+						newNodes = append(newNodes, node)
+					} else {
+						found = true
+					}
+				case api.ModuleFlowNode:
 					if n.Id != nodeID {
 						newNodes = append(newNodes, node)
 					} else {
@@ -314,6 +388,14 @@ func newFlowNodeUpdateCmd(state *AppState) *cobra.Command {
 							n.DisplayName = name
 						}
 						definition.Nodes[i].FromDelayFlowNode(n)
+						found = true
+					}
+				case api.ModuleFlowNode:
+					if n.Id == nodeID {
+						if name != "" {
+							n.DisplayName = name
+						}
+						definition.Nodes[i].FromModuleFlowNode(n)
 						found = true
 					}
 				}

@@ -897,6 +897,35 @@ type MethodDistributionResponse struct {
 	To time.Time `json:"to"`
 }
 
+// ModuleFlowNode defines model for ModuleFlowNode.
+type ModuleFlowNode struct {
+	// Assertions Validation assertions for the node
+	Assertions *[]CompositeAssertion `json:"assertions,omitempty"`
+	Data       ModuleNodeData        `json:"data"`
+
+	// DisplayName Human-readable name for the node
+	DisplayName string `json:"display_name"`
+
+	// Id Unique identifier for the node
+	Id string `json:"id"`
+
+	// Outputs Named outputs extracted from the response/data
+	Outputs *[]Output `json:"outputs,omitempty"`
+	Type    string    `json:"type"`
+}
+
+// ModuleNodeData defines model for ModuleNodeData.
+type ModuleNodeData struct {
+	// FlowId Referenced child flow executed by this module node.
+	FlowId openapi_types.UUID `json:"flow_id"`
+
+	// InputBindings Inputs bound from parent flow variables and upstream outputs.
+	InputBindings *map[string]interface{} `json:"input_bindings,omitempty"`
+
+	// OutputBindings Parent-visible outputs mapped from child final output keys.
+	OutputBindings *map[string]string `json:"output_bindings,omitempty"`
+}
+
 // NodeDefinition defines model for NodeDefinition.
 type NodeDefinition struct {
 	// Config Configuration specific to the node type
@@ -2152,6 +2181,34 @@ func (t *FlowNode) MergeDelayFlowNode(v DelayFlowNode) error {
 	return err
 }
 
+// AsModuleFlowNode returns the union data inside the FlowNode as a ModuleFlowNode
+func (t FlowNode) AsModuleFlowNode() (ModuleFlowNode, error) {
+	var body ModuleFlowNode
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromModuleFlowNode overwrites any union data inside the FlowNode as the provided ModuleFlowNode
+func (t *FlowNode) FromModuleFlowNode(v ModuleFlowNode) error {
+	v.Type = "module"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeModuleFlowNode performs a merge with any union data inside the FlowNode, using the provided ModuleFlowNode
+func (t *FlowNode) MergeModuleFlowNode(v ModuleFlowNode) error {
+	v.Type = "module"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t FlowNode) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"type"`
@@ -2168,6 +2225,8 @@ func (t FlowNode) ValueByDiscriminator() (interface{}, error) {
 	switch discriminator {
 	case "delay":
 		return t.AsDelayFlowNode()
+	case "module":
+		return t.AsModuleFlowNode()
 	case "request":
 		return t.AsRequestFlowNode()
 	default:

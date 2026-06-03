@@ -1,6 +1,6 @@
 # Echopoint CLI
 
-Terminal-first tooling for the Echopoint webhook testing platform. Manage webhooks, flows, collections, and analytics from a fast, interactive CLI built on Bubble Tea.
+Terminal-first tooling for the Echopoint webhook testing platform. Manage webhooks, flows, collections, and analytics from a fast CLI.
 
 ## Installation
 
@@ -71,7 +71,7 @@ latest release.
 - Manage flows with granular node, edge, and assertion control
 - Manage collections with OpenAPI import support
 - Environment variable management for flows
-- Interactive TUI mode
+- Flow reuse via module nodes (run a flow inside another flow)
 - JSON/YAML/Table output formats
 - Configuration profiles for switching between environments
 - Built-in self-update from GitHub releases
@@ -204,11 +204,42 @@ echopoint flows node add <flow-id> \
   --name "Wait" \
   --duration 5000
 
+# Add module node (run another flow inside this one — flow reuse)
+echopoint flows node add <flow-id> \
+  --type module \
+  --name "Login" \
+  --flow-id <child-flow-id> \
+  --input email={{userEmail}} \
+  --input password={{userPassword}} \
+  --output token=authToken
+
 # Remove node
 echopoint flows node remove <flow-id> <node-id>
 
 # Update node
 echopoint flows node update <flow-id> <node-id> --name "New Name"
+```
+
+### Module Nodes (Flow Reuse)
+
+A **module node** runs another flow as a step inside the current flow, so a flow
+can be composed from smaller reusable flows.
+
+- `--flow-id` — ID of the child flow to run (required).
+- `--input key=value` — bind a child input from a parent variable or upstream
+  output. Repeatable. Values support `{{template}}` substitution.
+- `--output parentName=childKey` — expose a child final-output key under
+  `parentName` for downstream nodes in the parent flow. Repeatable.
+
+```bash
+echopoint flows node add <parent-flow-id> \
+  --type module \
+  --name "Authenticate" \
+  --flow-id <auth-flow-id> \
+  --input baseUrl={{apiUrl}} \
+  --output token=sessionToken
+
+# Downstream nodes then reference {{<module-node-id>.sessionToken}}
 ```
 
 ### Node Outputs
@@ -291,12 +322,6 @@ echopoint collections import --file ./openapi.json --name "My API"
 ```bash
 echopoint config show
 echopoint config set api.base_url https://api.echopoint.dev
-```
-
-### Interactive TUI
-
-```bash
-echopoint tui
 ```
 
 ## Configuration

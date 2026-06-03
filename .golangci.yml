@@ -78,6 +78,7 @@ linters:
         # Generated API client union type methods
         - (*echopoint-cli/internal/api.FlowNode).FromRequestFlowNode
         - (*echopoint-cli/internal/api.FlowNode).FromDelayFlowNode
+        - (*echopoint-cli/internal/api.FlowNode).FromModuleFlowNode
 
     funlen:
       lines: 150
@@ -151,21 +152,6 @@ linters:
       - path: 'tools\.go$'
         linters:
           - ALL
-      # TUI code often has complex state machines
-      - path: 'internal/tui/'
-        linters:
-          - gocognit
-          - funlen
-          - cyclop
-          - gocyclo
-          - goconst
-          - govet
-          - unparam
-          - unused
-          - gosec
-          - intrange
-          - staticcheck
-          - unconvert
       # Commands have CLI-specific patterns
       - path: 'internal/commands/'
         linters:
@@ -190,8 +176,3 @@ linters:
         linters:
           - gosec
           - govet
-      # Flow builder has complex algorithms
-      - path: 'internal/flowbuilder/'
-        linters:
-          - intrange
-          - unparam

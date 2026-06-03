@@ -485,11 +485,13 @@ components:
       oneOf:
         - $ref: "#/components/schemas/RequestFlowNode"
         - $ref: "#/components/schemas/DelayFlowNode"
+        - $ref: "#/components/schemas/ModuleFlowNode"
       discriminator:
         propertyName: type
         mapping:
           request: "#/components/schemas/RequestFlowNode"
           delay: "#/components/schemas/DelayFlowNode"
+          module: "#/components/schemas/ModuleFlowNode"
 
     RequestFlowNode:
       allOf:
@@ -514,6 +516,19 @@ components:
               const: "delay"
             data:
               $ref: "#/components/schemas/DelayNodeData"
+          required:
+            - data
+
+    ModuleFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "module"
+            data:
+              $ref: "#/components/schemas/ModuleNodeData"
           required:
             - data
 
@@ -569,6 +584,25 @@ components:
           example: 1000
       required:
         - duration
+
+    ModuleNodeData:
+      type: object
+      properties:
+        flow_id:
+          type: string
+          format: uuid
+          description: Referenced child flow executed by this module node.
+        input_bindings:
+          type: object
+          additionalProperties: true
+          description: Inputs bound from parent flow variables and upstream outputs.
+        output_bindings:
+          type: object
+          additionalProperties:
+            type: string
+          description: Parent-visible outputs mapped from child final output keys.
+      required:
+        - flow_id
 
     Output:
       type: object
