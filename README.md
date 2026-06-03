@@ -7,8 +7,31 @@ Terminal-first tooling for the Echopoint webhook testing platform. Manage webhoo
 ### Quick Install (macOS/Linux)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nanostack-dev/echopoint-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nanostack-dev/echopoint-cli/main/install.sh | sh
 ```
+
+Installs to `~/.local/bin` (honoring `$XDG_BIN_HOME`) — **no sudo required** —
+verifies the release checksum, and adds the directory to your shell `PATH`.
+Open a new terminal afterwards, or run `. ~/.echopoint/env`.
+
+Options (pass after `-s --`):
+
+```bash
+# Custom install directory
+curl -fsSL .../install.sh | sh -s -- --dir /usr/local/bin
+
+# Pin a version, or don't touch shell PATH
+curl -fsSL .../install.sh | sh -s -- --version v0.3.0 --no-modify-path
+```
+
+### Quick Install (Windows / PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/nanostack-dev/echopoint-cli/main/install.ps1 | iex
+```
+
+Installs to `%LOCALAPPDATA%\Programs\echopoint`, verifies the checksum, and adds
+it to your user `PATH`. No administrator rights required.
 
 ### Manual Download
 
