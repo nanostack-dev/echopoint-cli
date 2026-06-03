@@ -5,12 +5,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"echopoint-cli/internal/config"
 )
 
-const credentialsFileName = "credentials.json"
+// credentialsSubdir holds one <profile>.json credentials file per profile.
+const credentialsSubdir = "credentials"
 
 type Credentials struct {
 	AccessToken    string     `json:"access_token"`
@@ -18,16 +20,51 @@ type Credentials struct {
 	OrganizationID string     `json:"organization_id,omitempty"`
 }
 
-func CredentialsPath() (string, error) {
+// sanitizeProfile keeps credentials filenames safe (no path traversal).
+func sanitizeProfile(profile string) string {
+	if profile == "" {
+		return config.DefaultProfile
+	}
+	cleaned := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return r
+		case r == '-' || r == '_' || r == '.':
+			return r
+		default:
+			return '-'
+		}
+	}, profile)
+	if cleaned == "" || cleaned == "." || cleaned == ".." {
+		return config.DefaultProfile
+	}
+	return cleaned
+}
+
+func credentialsDir() (string, error) {
 	dir, err := config.ConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, credentialsFileName), nil
+	return filepath.Join(dir, credentialsSubdir), nil
 }
 
-func LoadCredentials() (*Credentials, string, error) {
-	path, err := CredentialsPath()
+// CredentialsPath returns the credentials file for a profile.
+//
+// Note: the pre-profiles ~/.echopoint/credentials.json is intentionally NOT
+// migrated. The old single-environment default pointed at a different endpoint
+// than the new enforced default, so reusing that token here would be wrong —
+// users re-authenticate per profile with `echopoint auth login`.
+func CredentialsPath(profile string) (string, error) {
+	dir, err := credentialsDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, sanitizeProfile(profile)+".json"), nil
+}
+
+func LoadCredentials(profile string) (*Credentials, string, error) {
+	path, err := CredentialsPath(profile)
 	if err != nil {
 		return nil, "", err
 	}
@@ -52,12 +89,12 @@ func LoadCredentials() (*Credentials, string, error) {
 	return &creds, path, nil
 }
 
-func SaveCredentials(creds Credentials) (string, error) {
-	path, err := CredentialsPath()
+func SaveCredentials(profile string, creds Credentials) (string, error) {
+	path, err := CredentialsPath(profile)
 	if err != nil {
 		return "", err
 	}
-	if err := config.EnsureConfigDir(); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return "", err
 	}
 
@@ -68,8 +105,8 @@ func SaveCredentials(creds Credentials) (string, error) {
 	return path, os.WriteFile(path, data, 0o600)
 }
 
-func DeleteCredentials() (string, error) {
-	path, err := CredentialsPath()
+func DeleteCredentials(profile string) (string, error) {
+	path, err := CredentialsPath(profile)
 	if err != nil {
 		return "", err
 	}

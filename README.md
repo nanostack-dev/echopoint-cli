@@ -10,29 +10,37 @@ Terminal-first tooling for the Echopoint webhook testing platform. Manage webhoo
 curl -fsSL https://raw.githubusercontent.com/nanostack-dev/echopoint-cli/main/install.sh | bash
 ```
 
-### Homebrew (macOS)
-
-```bash
-brew install nanostack-dev/tap/echopoint
-```
-
 ### Manual Download
 
-Download the latest release from [GitHub Releases](https://github.com/nanostack-dev/echopoint-cli/releases).
+Download the latest release for your platform from
+[GitHub Releases](https://github.com/nanostack-dev/echopoint-cli/releases),
+extract it, and move the `echopoint` binary onto your `PATH`.
 
 ### From Source
-
-```bash
-go install github.com/nanostack-dev/echopoint-cli/cmd/echopoint@latest
-```
-
-Or build locally:
 
 ```bash
 git clone https://github.com/nanostack-dev/echopoint-cli.git
 cd echopoint-cli
 go build -o echopoint ./cmd/echopoint
 ```
+
+## Updating
+
+The CLI can update itself in place from the latest GitHub release:
+
+```bash
+# Check whether a newer version is available
+echopoint update --check
+
+# Download and install the latest release (verifies the checksum)
+echopoint update
+
+# Show the installed version
+echopoint version
+```
+
+Alternatively, re-run the quick-install script above — it always fetches the
+latest release.
 
 ## Features
 
@@ -42,6 +50,8 @@ go build -o echopoint ./cmd/echopoint
 - Environment variable management for flows
 - Interactive TUI mode
 - JSON/YAML/Table output formats
+- Configuration profiles for switching between environments
+- Built-in self-update from GitHub releases
 
 ## Quick Start
 
@@ -64,7 +74,8 @@ echopoint flows env set <flow-id> --var API_KEY=secret --var BASE_URL=https://ap
 
 ## Authentication
 
-Echopoint uses Clerk session JWTs. The CLI stores the token in `~/.echopoint/credentials.json`.
+Echopoint uses Clerk session JWTs. Credentials are stored per profile in
+`~/.echopoint/credentials/<profile>.json`.
 
 ### Browser Login (Recommended)
 
@@ -85,6 +96,46 @@ echopoint auth login --token "<SESSION_JWT>"
 ```bash
 ECHOPOINT_TOKEN="<SESSION_JWT>" echopoint flows list
 ```
+
+## Profiles
+
+By default the CLI talks to `https://api.echopoint.dev`. Profiles let you point
+the CLI at a different API base URL (for example a self-hosted or alternate
+environment) and switch between them. Each profile keeps its own stored
+credentials, so you stay logged in to every environment independently.
+
+```bash
+# Create a profile that overrides the API base URL
+echopoint profile add staging \
+  --api-url https://staging.example.com \
+  --frontend-url https://app.staging.example.com
+
+# List profiles (the active one is marked with *)
+echopoint profile list
+
+# Switch the active profile
+echopoint profile use staging
+
+# Show the active profile
+echopoint profile current
+
+# Reset back to the default (api.echopoint.dev)
+echopoint profile use default
+
+# Delete a profile (also removes its stored credentials)
+echopoint profile delete staging
+```
+
+Select a profile for a single command without switching the active one:
+
+```bash
+echopoint --profile staging flows list
+# or
+ECHOPOINT_PROFILE=staging echopoint flows list
+```
+
+The `default` profile always targets `https://api.echopoint.dev` and cannot be
+modified or removed.
 
 ## Commands
 

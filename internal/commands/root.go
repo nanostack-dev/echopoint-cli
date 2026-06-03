@@ -18,6 +18,7 @@ import (
 type AppState struct {
 	Config         config.Config
 	ConfigPath     string
+	Profile        string
 	OutputFormat   output.Format
 	Token          string
 	APIKey         string
@@ -31,6 +32,7 @@ func NewRootCmd() *cobra.Command {
 
 	var (
 		flagConfig         string
+		flagProfile        string
 		flagAPIURL         string
 		flagOutput         string
 		flagToken          string
@@ -44,7 +46,8 @@ func NewRootCmd() *cobra.Command {
 		Short: "Echopoint CLI",
 		Long:  "Echopoint CLI for managing webhooks, flows, collections, and analytics.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			cfg, cfgPath, err := loadConfig(flagConfig)
+			profile := resolveProfile(flagProfile)
+			cfg, cfgPath, err := loadConfig(flagConfig, profile)
 			if err != nil {
 				return err
 			}
@@ -66,21 +69,21 @@ func NewRootCmd() *cobra.Command {
 
 			// Resolve API key (flag > env var). API key takes precedence over Bearer token.
 			apiKey := resolveAPIKey(flagAPIKey)
-			organizationID := resolveOrganizationIDFlag(flagOrganizationID)
+			organizationID := resolveOrganizationIDFlag(flagOrganizationID, cfg.Profile)
 
-			// Skip token validation for auth commands or when API key is present
+			// Skip token validation for auth/profile/version/update commands or when
+			// an API key is present.
 			var token string
-			if apiKey == "" {
-				if cmd.Parent() == nil || cmd.Parent().Name() != "auth" {
-					token, err = resolveToken(flagToken)
-					if err != nil {
-						return err
-					}
+			if apiKey == "" && requiresToken(cmd) {
+				token, err = resolveToken(flagToken, cfg.Profile)
+				if err != nil {
+					return err
 				}
 			}
 
 			state.Config = cfg
 			state.ConfigPath = cfgPath
+			state.Profile = cfg.Profile
 			state.OutputFormat = output.ParseFormat(outputValue)
 			state.Token = token
 			state.APIKey = apiKey
@@ -99,7 +102,7 @@ func NewRootCmd() *cobra.Command {
 				}
 				state.Client = cli
 			} else {
-				cli, err := client.New(cfg.API.BaseURL, token, cfg.API.Timeout)
+				cli, err := client.New(cfg.API.BaseURL, token, organizationID, cfg.API.Timeout)
 				if err != nil {
 					return err
 				}
@@ -111,6 +114,8 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringVar(&flagConfig, "config", "", "Path to config file")
+	cmd.PersistentFlags().StringVar(&flagProfile, "profile", "",
+		"Profile to use (overrides ECHOPOINT_PROFILE and the current profile)")
 	cmd.PersistentFlags().StringVar(&flagAPIURL, "api-url", "", "Override API base URL")
 	cmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table, json, yaml")
 	cmd.PersistentFlags().StringVar(&flagToken, "token", "", "Session token (overrides stored credentials)")
@@ -125,25 +130,62 @@ func NewRootCmd() *cobra.Command {
 		newFlowsCmd(state),
 		newCollectionsCmd(state),
 		newConfigCmd(state),
+		newProfileCmd(state),
 		newTUICmd(state),
+		newVersionCmd(),
+		newUpdateCmd(),
 	)
 
 	return cmd
 }
 
-func loadConfig(flagConfig string) (config.Config, string, error) {
-	if flagConfig != "" {
-		return config.LoadFrom(flagConfig)
+// requiresToken reports whether a command needs a resolved session token in
+// PersistentPreRunE. Auth, profile, config, version, and update commands manage
+// their own state and must run without valid credentials.
+func requiresToken(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		switch c.Name() {
+		case "auth", "profile", "config", "version", "update":
+			return false
+		}
 	}
-
-	if envConfig := os.Getenv("ECHOPOINT_CONFIG"); envConfig != "" {
-		return config.LoadFrom(envConfig)
-	}
-
-	return config.Load()
+	return true
 }
 
-func resolveToken(flagToken string) (string, error) {
+func resolveProfile(flagProfile string) string {
+	if strings.TrimSpace(flagProfile) != "" {
+		return strings.TrimSpace(flagProfile)
+	}
+	return strings.TrimSpace(os.Getenv("ECHOPOINT_PROFILE"))
+}
+
+func loadConfig(flagConfig, profile string) (config.Config, string, error) {
+	var (
+		store config.Store
+		path  string
+		err   error
+	)
+
+	switch {
+	case flagConfig != "":
+		store, path, err = config.LoadStoreFrom(flagConfig)
+	case os.Getenv("ECHOPOINT_CONFIG") != "":
+		store, path, err = config.LoadStoreFrom(os.Getenv("ECHOPOINT_CONFIG"))
+	default:
+		store, path, err = config.LoadStore()
+	}
+	if err != nil {
+		return config.Config{}, "", err
+	}
+
+	cfg, err := store.Resolve(profile)
+	if err != nil {
+		return config.Config{}, "", err
+	}
+	return cfg, path, nil
+}
+
+func resolveToken(flagToken, profile string) (string, error) {
 	if flagToken != "" {
 		return flagToken, nil
 	}
@@ -151,7 +193,7 @@ func resolveToken(flagToken string) (string, error) {
 		return envToken, nil
 	}
 
-	creds, _, err := auth.LoadCredentials()
+	creds, _, err := auth.LoadCredentials(profile)
 	if err != nil {
 		return "", err
 	}
@@ -178,14 +220,14 @@ func resolveAPIKey(flagValue string) string {
 	return strings.TrimSpace(os.Getenv("ECHOPOINT_API_KEY"))
 }
 
-func resolveOrganizationIDFlag(flagValue string) string {
+func resolveOrganizationIDFlag(flagValue, profile string) string {
 	if strings.TrimSpace(flagValue) != "" {
 		return strings.TrimSpace(flagValue)
 	}
 	if env := strings.TrimSpace(os.Getenv("ECHOPOINT_ORGANIZATION_ID")); env != "" {
 		return env
 	}
-	if creds, _, err := auth.LoadCredentials(); err == nil && creds != nil {
+	if creds, _, err := auth.LoadCredentials(profile); err == nil && creds != nil {
 		return strings.TrimSpace(creds.OrganizationID)
 	}
 	return ""

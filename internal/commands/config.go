@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"echopoint-cli/internal/config"
 	"echopoint-cli/internal/output"
@@ -38,6 +37,7 @@ func newConfigShowCmd(state *AppState) *cobra.Command {
 				return output.PrintYAML(os.Stdout, state.Config)
 			default:
 				fmt.Fprintf(os.Stdout, "Config path: %s\n", state.ConfigPath)
+				fmt.Fprintf(os.Stdout, "Profile: %s\n", state.Config.Profile)
 				fmt.Fprintf(os.Stdout, "API base URL: %s\n", state.Config.API.BaseURL)
 				fmt.Fprintf(os.Stdout, "API timeout: %s\n", state.Config.API.Timeout)
 				fmt.Fprintf(os.Stdout, "Output format: %s\n", state.Config.Defaults.OutputFormat)
@@ -51,32 +51,34 @@ func newConfigSetCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <key> <value>",
 		Short: "Update a configuration value",
-		Args:  cobra.ExactArgs(2),
+		Long: `Update a configuration value.
+
+Supported keys:
+  defaults.output_format   table | json | yaml
+
+Per-environment settings (API base URL, timeout) live on profiles — see
+'echopoint profile --help'.`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 			value := args[1]
 
-			cfg, _, err := config.Load()
+			store, _, err := config.LoadStore()
 			if err != nil {
 				return err
 			}
 
 			switch key {
-			case "api.base_url":
-				cfg.API.BaseURL = value
-			case "api.timeout":
-				timeout, err := time.ParseDuration(value)
-				if err != nil {
-					return fmt.Errorf("invalid timeout value")
-				}
-				cfg.API.Timeout = timeout
 			case "defaults.output_format":
-				cfg.Defaults.OutputFormat = value
+				store.Defaults.OutputFormat = value
 			default:
-				return fmt.Errorf("unknown config key: %s", key)
+				return fmt.Errorf(
+					"unknown or read-only config key: %s (set API base URL via 'echopoint profile add')",
+					key,
+				)
 			}
 
-			path, err := config.Save(cfg)
+			path, err := config.SaveStore(store)
 			if err != nil {
 				return err
 			}
@@ -92,9 +94,9 @@ func newConfigSetCmd(state *AppState) *cobra.Command {
 func newConfigResetCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
 		Use:   "reset",
-		Short: "Reset configuration to defaults",
+		Short: "Reset configuration to defaults (removes all profiles)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, err := config.Save(config.Default())
+			path, err := config.SaveStore(config.DefaultStore())
 			if err != nil {
 				return err
 			}

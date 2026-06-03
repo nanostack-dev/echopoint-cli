@@ -42,8 +42,12 @@ This uses the same authentication flow as the web frontend.
 A browser window will open where you can sign in, and the CLI
 will automatically receive your session token.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Determine frontend URL based on API URL or --local flag
-			frontendURL := "https://dev.echopoint.dev"
+			// Frontend URL comes from the active profile; --local and the legacy
+			// localhost API both fall back to the local frontend.
+			frontendURL := state.Config.FrontendURL
+			if frontendURL == "" {
+				frontendURL = "https://dev.echopoint.dev"
+			}
 			if local || state.Config.API.BaseURL == "http://localhost:8080" {
 				frontendURL = "http://localhost:3001"
 			}
@@ -64,12 +68,12 @@ will automatically receive your session token.`,
 				creds.OrganizationID = orgID
 			}
 
-			path, err := auth.SaveCredentials(creds)
+			path, err := auth.SaveCredentials(state.Profile, creds)
 			if err != nil {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "\n✓ Successfully authenticated!\n")
+			fmt.Fprintf(os.Stdout, "\n✓ Successfully authenticated! (profile: %s)\n", state.Profile)
 			fmt.Fprintf(os.Stdout, "Credentials saved to %s\n", path)
 			if creds.OrganizationID != "" {
 				fmt.Fprintf(os.Stdout, "Default organization: %s\n", creds.OrganizationID)
@@ -125,11 +129,12 @@ func newAuthStatusCmd(state *AppState) *cobra.Command {
 		Use:   "status",
 		Short: "Show authentication status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			creds, path, err := auth.LoadCredentials()
+			creds, path, err := auth.LoadCredentials(state.Profile)
 			if err != nil {
 				return err
 			}
 
+			fmt.Fprintf(os.Stdout, "Profile: %s\n", state.Profile)
 			if creds == nil {
 				fmt.Fprintln(os.Stdout, "No credentials found.")
 				fmt.Fprintf(os.Stdout, "Expected path: %s\n", path)
@@ -190,11 +195,11 @@ func newAuthLogoutCmd(state *AppState) *cobra.Command {
 		Use:   "logout",
 		Short: "Remove stored credentials",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, err := auth.DeleteCredentials()
+			path, err := auth.DeleteCredentials(state.Profile)
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(os.Stdout, "✓ Removed credentials at %s\n", path)
+			fmt.Fprintf(os.Stdout, "✓ Removed credentials for profile %s at %s\n", state.Profile, path)
 			return nil
 		},
 	}

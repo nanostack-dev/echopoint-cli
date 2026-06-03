@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"echopoint-cli/internal/api"
-	"echopoint-cli/internal/auth"
 )
 
 type Client struct {
@@ -21,8 +20,9 @@ type Client struct {
 }
 
 // New creates a new API client with Bearer token auth (for interactive/UI flows).
-func New(baseURL string, token string, timeout time.Duration) (*Client, error) {
-	return newClient(baseURL, token, "", timeout)
+// organizationID may be empty; when set it is sent as the X-Organization-Id header.
+func New(baseURL string, token string, organizationID string, timeout time.Duration) (*Client, error) {
+	return newClient(baseURL, token, organizationID, "", timeout)
 }
 
 // NewWithAPIKey creates a new API client that uses API key auth instead of Bearer token.
@@ -50,7 +50,13 @@ func NewWithAPIKey(baseURL string, apiKey string, organizationID string, timeout
 	}, nil
 }
 
-func newClient(baseURL string, token string, apiKey string, timeout time.Duration) (*Client, error) {
+func newClient(
+	baseURL string,
+	token string,
+	organizationID string,
+	apiKey string,
+	timeout time.Duration,
+) (*Client, error) {
 	httpClient := &http.Client{Timeout: timeout}
 	debug := os.Getenv("ECHOPOINT_DEBUG") != ""
 
@@ -59,7 +65,9 @@ func newClient(baseURL string, token string, apiKey string, timeout time.Duratio
 	}
 
 	if token != "" {
-		organizationID := resolveOrganizationID()
+		if organizationID == "" {
+			organizationID = strings.TrimSpace(os.Getenv("ECHOPOINT_ORGANIZATION_ID"))
+		}
 		options = append(options, api.WithRequestEditorFn(bearerTokenRequestEditor(token, organizationID, debug)))
 	}
 
@@ -141,16 +149,4 @@ func (c *Client) APIKey() string {
 
 func (c *Client) API() *api.ClientWithResponses {
 	return c.api
-}
-
-func resolveOrganizationID() string {
-	if organizationID := strings.TrimSpace(os.Getenv("ECHOPOINT_ORGANIZATION_ID")); organizationID != "" {
-		return organizationID
-	}
-
-	if creds, _, err := auth.LoadCredentials(); err == nil && creds != nil {
-		return strings.TrimSpace(creds.OrganizationID)
-	}
-
-	return ""
 }

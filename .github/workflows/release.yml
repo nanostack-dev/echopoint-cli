@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       new_tag: ${{ steps.tag.outputs.new_tag }}
+      release: ${{ steps.tag.outputs.release }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,28 +29,61 @@ jobs:
           # cannot see pre-squash tags and falls back to v0.0.0.
           latest_tag=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
           [ -z "$latest_tag" ] && latest_tag="v0.0.0"
-          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+          echo "latest_tag=$latest_tag" >> "$GITHUB_OUTPUT"
           echo "Latest tag: $latest_tag"
 
       - name: Calculate new version
         id: tag
         run: |
           latest_tag="${{ steps.get_latest.outputs.latest_tag }}"
-          
-          # Parse version components
+
+          # Parse the current version components.
           if [[ $latest_tag =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
             minor="${BASH_REMATCH[2]}"
             patch="${BASH_REMATCH[3]}"
+            range="${latest_tag}..HEAD"
           else
             major=0
             minor=0
             patch=0
+            range="HEAD"
           fi
-          
-          # Increment minor version
-          new_minor=$((minor + 1))
-          new_tag="v${major}.${new_minor}.0"
+
+          # Conventional Commits drive the semver bump:
+          #   - breaking change (type! or "BREAKING CHANGE") -> major
+          #   - feat                                          -> minor
+          #   - fix | perf                                    -> patch
+          #   - anything else only (docs/chore/ci/refactor)   -> no release
+          commits=$(git log --no-merges --pretty=format:'%B' "$range")
+          if [ -z "$commits" ]; then
+            echo "No commits since ${latest_tag}; skipping release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          bump="none"
+          if grep -qE '^[a-zA-Z]+(\([^)]+\))?!:' <<<"$commits" \
+            || grep -qE 'BREAKING[ -]CHANGE' <<<"$commits"; then
+            bump="major"
+          elif grep -qE '^feat(\([^)]+\))?!?:' <<<"$commits"; then
+            bump="minor"
+          elif grep -qE '^(fix|perf)(\([^)]+\))?!?:' <<<"$commits"; then
+            bump="patch"
+          fi
+
+          if [ "$bump" = "none" ]; then
+            echo "No feat/fix/perf/breaking commits since ${latest_tag}; skipping release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          case "$bump" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          new_tag="v${major}.${minor}.${patch}"
 
           # Guard against collision with an existing tag.
           if git rev-parse "$new_tag" >/dev/null 2>&1; then
@@ -57,10 +91,12 @@ jobs:
             exit 1
           fi
 
-          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
-          echo "New tag: $new_tag"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "new_tag=$new_tag" >> "$GITHUB_OUTPUT"
+          echo "Bump: $bump -> $new_tag (from $latest_tag)"
 
       - name: Create and push tag
+        if: steps.tag.outputs.release == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -71,6 +107,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     needs: create-tag
+    if: needs.create-tag.outputs.release == 'true'
     steps:
       - uses: actions/checkout@v4
         with:

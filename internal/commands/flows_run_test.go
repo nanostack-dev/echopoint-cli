@@ -27,16 +27,19 @@ import (
 
 func makeState(t *testing.T, apiKey, token, baseURL string) *AppState {
 	t.Helper()
-	cfg := config.Default()
+	store := config.DefaultStore()
+	cfg, err := store.Resolve("")
+	if err != nil {
+		t.Fatalf("resolve config: %v", err)
+	}
 	cfg.API.BaseURL = baseURL
 	cfg.API.Timeout = 5 * time.Second
 
 	var cli *client.Client
-	var err error
 	if apiKey != "" {
 		cli, err = client.NewWithAPIKey(baseURL, apiKey, "org_test", cfg.API.Timeout)
 	} else {
-		cli, err = client.New(baseURL, token, cfg.API.Timeout)
+		cli, err = client.New(baseURL, token, "", cfg.API.Timeout)
 	}
 	if err != nil {
 		t.Fatalf("create client: %v", err)
