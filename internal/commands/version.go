@@ -19,7 +19,7 @@ var (
 // SetBuildInfo wires the linker-injected build metadata from main.
 func SetBuildInfo(version, commit, date string) {
 	if version != "" {
-		buildVersion = version
+		buildVersion = normalizeVersion(version)
 	}
 	if commit != "" {
 		buildCommit = commit
@@ -27,6 +27,16 @@ func SetBuildInfo(version, commit, date string) {
 	if date != "" {
 		buildDate = date
 	}
+}
+
+// normalizeVersion prefixes a bare semantic version (e.g. "0.3.0", as injected
+// by GoReleaser's {{.Version}}) with "v" so the CLI displays "v0.3.0",
+// consistent with the git tags. Non-semver values (e.g. "dev") pass through.
+func normalizeVersion(version string) string {
+	if len(version) > 0 && version[0] >= '0' && version[0] <= '9' {
+		return "v" + version
+	}
+	return version
 }
 
 // Version returns the current CLI version string (e.g. "v0.2.0" or "dev").
