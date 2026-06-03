@@ -7,8 +7,8 @@ info:
     Provides endpoints for creating webhook endpoints, capturing requests,
     and analyzing webhook traffic with real-time streaming and analytics.
 tags:
-  - name: Health
-    description: Health check operations.
+  - name: Auth
+    description: Authentication and current user context operations.
   - name: Webhook
     description: Manage webhook endpoints and capture requests.
   - name: Analytics
@@ -17,12 +17,18 @@ tags:
     description: Manage Requests flows
   - name: Collections
     description: Manage request collections with folders and requests
+  - name: Resources
+    description: Cross-domain resource discovery operations.
+  - name: Administration
+    description: Operator-only cross-tenant maintenance operations.
   - name: Extractors
     description: Manage flow extractors for data extraction from responses
   - name: Assertions
     description: Manage flow assertions for response validation
   - name: SpecialNodes
     description: Special flow control nodes like delay
+  - name: Runner
+    description: Self-hosted runner control-plane operations
 # servers removed to avoid host-header validation warnings under oapi validator
 components:
   securitySchemes:
@@ -58,6 +64,16 @@ components:
         format: int32
         minimum: 0
         default: 0
+    RequiredOrganizationIDHeader:
+      name: X-Organization-ID
+      in: header
+      required: true
+      description: Organization context for the request. The authenticated user must be a member.
+      schema:
+        type: string
+        minLength: 1
+        pattern: ".*\\S.*"
+        example: "org_abc123"
     WebhookIdParameter:
       name: id
       in: path
@@ -66,6 +82,29 @@ components:
       schema:
         type: string
         example: "wh_abc123def456"
+    ApiKeyIdParameter:
+      name: id
+      in: path
+      required: true
+      description: The unique identifier of the API key.
+      schema:
+        type: string
+        example: "organization_apikey_abc123def456"
+    ApiKeyPermissionTypeParameter:
+      name: type
+      in: query
+      required: true
+      description: The API key permission type to list.
+      schema:
+        $ref: "#/components/schemas/ApiKeyPermissionType"
+    RunnerJobIDParameter:
+      name: jobId
+      in: path
+      required: true
+      description: The unique identifier of the claimed runner job.
+      schema:
+        type: string
+        format: uuid
   responses:
     BadRequest:
       description: Bad Request (e.g., validation error)
@@ -116,13 +155,7 @@ components:
             $ref: "#/components/schemas/ApiErrorResponse"
           example:
             errors:
-              [
-                {
-                  "code": "CONFLICT",
-                  "message": "Resource conflict.",
-                  "field": "name",
-                },
-              ]
+              [{ "code": "CONFLICT", "message": "Resource conflict.", "field": "name" }]
   schemas:
     # Generic Error Handling
     ApiError:
@@ -158,10 +191,260 @@ components:
       required:
         - errors
 
+    MembershipStatus:
+      type: string
+      enum: [ PENDING_SYNC, READY ]
+
+    CurrentUserOrganizationRole:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Role identifier in Nanostack.
+        name:
+          type: string
+          description: Role name.
+        permissions:
+          type: array
+          items:
+            type: string
+          description: List of resource permission strings attached to the role.
+      required:
+        - id
+        - name
+        - permissions
+
+    CurrentUserOrganization:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Organization identifier in Nanostack.
+        name:
+          type: string
+          description: Organization display name.
+        description:
+          type: string
+          nullable: true
+          description: Optional organization description.
+        role:
+          $ref: "#/components/schemas/CurrentUserOrganizationRole"
+      required:
+        - id
+        - name
+        - role
+
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Authenticated user identifier from Clerk.
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: User email from Nanostack product user profile when available.
+        name:
+          type: string
+          nullable: true
+          description: User display name from Nanostack product user profile when available.
+        product_user_id:
+          type: string
+          nullable: true
+          description: Nanostack product user identifier.
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrentUserOrganization"
+          description: The user's active organization memberships.
+      required:
+        - id
+        - organizations
+
+    CurrentUserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/CurrentUser"
+        membership_status:
+          $ref: "#/components/schemas/MembershipStatus"
+      required:
+        - user
+        - membership_status
+
+    InitResponse:
+      type: object
+      description: Response for provisioning initialization.
+      properties: {}
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the API key.
+          example: "organization_apikey_abc123def456"
+        name:
+          type: string
+          description: Human-readable name for the API key.
+          example: "CI Runner"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the API key was created.
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional expiration timestamp for the API key.
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the API key was last used.
+        permissions:
+          type: array
+          description: Permissions currently assigned to the API key.
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - created_at
+        - permissions
+
+    ApiKeyCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Human-readable name for the API key.
+          example: "CI Runner"
+        expires_in_days:
+          type: integer
+          format: int32
+          minimum: 1
+          nullable: true
+          description: Optional number of days until the API key expires.
+          example: 30
+        permissions:
+          type: array
+          description: Permissions to assign to the API key.
+          minItems: 1
+          items:
+            type: string
+      required:
+        - name
+        - permissions
+
+    Permission:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Permission identifier.
+          example: "flows:read"
+        description:
+          type: string
+          nullable: true
+          description: Optional human-readable description.
+        scope_modifier:
+          type: string
+          nullable: true
+          description: Optional scope modifier provided by Nanostack.
+      required:
+        - name
+
+    ApiKeyPermissionType:
+      type: string
+      enum: [custom, runner]
+      description: The API key permission set to return.
+
+    ApiKeyCreateResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiKey"
+        - type: object
+          properties:
+            secret:
+              type: string
+              description: The full API key secret. This value is only returned once at creation time.
+              example: "epk_live_xxxxxxxxxxxxxxxxxxxx"
+          required:
+            - secret
+
+    ApiKeyListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApiKey"
+          required:
+            - items
+
+    ApiKeySortField:
+      type: string
+      enum: ["id", "name", "created_at", "last_used_at"]
+      default: "created_at"
+      description: Field to sort API key search results by.
+
+    ApiKeyFilter:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+          description: Filter by specific API key IDs.
+          x-go-type-skip-optional-pointer: true
+        names:
+          type: array
+          items:
+            type: string
+          description: Filter by exact API key names.
+          x-go-type-skip-optional-pointer: true
+        last_used_after:
+          type: string
+          format: date-time
+          description: Include API keys last used at or after this timestamp.
+        last_used_before:
+          type: string
+          format: date-time
+          description: Include API keys last used at or before this timestamp.
+
+    ApiKeySearchRequest:
+      allOf:
+        - $ref: "#/components/schemas/SearchRequest"
+        - type: object
+          properties:
+            filter:
+              $ref: "#/components/schemas/ApiKeyFilter"
+              description: Filter criteria for API keys.
+            sort_by:
+              $ref: "#/components/schemas/ApiKeySortField"
+              description: Field to sort by.
+
+    PermissionListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Permission"
+          required:
+            - items
+
+    # Custom enum mapped to Go type for analytics period
     AnalyticsPeriod:
       type: string
       enum: ["1h", "6h", "24h", "7d", "30d"]
-
     # Generic Pagination
     PagedListResponse:
       type: object
@@ -198,7 +481,6 @@ components:
       type: string
       enum: [ ASC, DESC ]
       default: DESC
-
     SearchRequest:
       type: object
       properties:
@@ -211,6 +493,161 @@ components:
           $ref: "#/components/schemas/SortDirection"
           description: Sorting direction
       description: Generic search request template
+
+    ResourceSearchDomain:
+      type: string
+      enum: [collections, requests, openapi_operations, flows]
+      description: Searchable resource domain included in cross-domain resource search.
+    ResourceSearchType:
+      type: string
+      enum: [collection, request, openapi_operation, flow]
+      description: Concrete resource type represented by a search result item.
+    RequestOrigin:
+      type: string
+      enum: [manual, openapi]
+      description: Normalized provenance for saved request resources.
+    ResourceSearchPreset:
+      type: string
+      enum: [top_bar_navigation, ai_generation, flow_reference, flow_right_click]
+      description: Preset that shapes default search behavior for a specific discovery workflow.
+    ResourceSearchContextLevel:
+      type: string
+      enum: [outline, summary]
+      default: outline
+      description: Controls how much result context is returned for each matched resource.
+    ResourceSearchScope:
+      type: object
+      properties:
+        collection_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Limits applicable search results to one or more collections when that scope is meaningful.
+        flow_id:
+          type: string
+          format: uuid
+          description: Active flow context used to shape flow-aware search behavior.
+
+    ResourceSearchIdentifiers:
+      type: object
+      properties:
+        resource_id:
+          type: string
+          format: uuid
+          description: Canonical identifier for the matched resource.
+        collection_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Related collection identifier when the resource belongs to a collection.
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Related folder identifier when the resource belongs to a folder.
+        request_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Related request identifier when the resource is or resolves through a saved request.
+        openapi_operation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Related OpenAPI operation identifier when the resource is backed by persisted OpenAPI contract data.
+        flow_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Related flow identifier when the resource is a flow or flow reference target.
+      required:
+        - resource_id
+
+    ResourceSearchResultItem:
+      type: object
+      properties:
+        domain:
+          $ref: "#/components/schemas/ResourceSearchDomain"
+        type:
+          $ref: "#/components/schemas/ResourceSearchType"
+        title:
+          type: string
+          description: Primary display label for the matched resource.
+        subtitle:
+          type: string
+          nullable: true
+          description: Secondary display text for picker and navigation UIs.
+        description:
+          type: string
+          nullable: true
+          description: Additional compact context shaped by the requested context level.
+        identifiers:
+          $ref: "#/components/schemas/ResourceSearchIdentifiers"
+        request_origin:
+          $ref: "#/components/schemas/RequestOrigin"
+        method:
+          type: string
+          nullable: true
+          description: HTTP method when the resource represents an executable request or operation.
+        path:
+          type: string
+          nullable: true
+          description: Indexed path, route, or hierarchical location text for the resource.
+        url:
+          type: string
+          nullable: true
+          description: Indexed URL when relevant to the matched resource.
+      required:
+        - domain
+        - type
+        - title
+        - identifiers
+
+    ResourceSearchResultGroup:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            domain:
+              $ref: "#/components/schemas/ResourceSearchDomain"
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ResourceSearchResultItem"
+          required:
+            - domain
+            - items
+
+    ResourceSearchRequest:
+      allOf:
+        - $ref: "#/components/schemas/SearchRequest"
+        - type: object
+          properties:
+            domains:
+              type: array
+              items:
+                $ref: "#/components/schemas/ResourceSearchDomain"
+              minItems: 1
+              description: Domains to include in this search request.
+            preset:
+              $ref: "#/components/schemas/ResourceSearchPreset"
+            context_level:
+              $ref: "#/components/schemas/ResourceSearchContextLevel"
+            scope:
+              $ref: "#/components/schemas/ResourceSearchScope"
+          required:
+            - domains
+
+    ResourceSearchResponse:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceSearchResultGroup"
+      required:
+        - groups
 
     # Webhook Schemas
     Webhook:
@@ -248,6 +685,51 @@ components:
         - updated_at
         - request_count
 
+    WebhookSortField:
+      type: string
+      enum: ["name", "created_at", "updated_at", "request_count"]
+      default: "created_at"
+      description: Field to sort webhook endpoint search results by.
+    WebhookFilter:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+          description: Filter by specific webhook IDs.
+          x-go-type-skip-optional-pointer: true
+        names:
+          type: array
+          items:
+            type: string
+          description: Filter by exact webhook names.
+          x-go-type-skip-optional-pointer: true
+
+    WebhookSearchRequest:
+      allOf:
+        - $ref: "#/components/schemas/SearchRequest"
+        - type: object
+          properties:
+            filter:
+              $ref: "#/components/schemas/WebhookFilter"
+              description: Filter criteria for webhook endpoints.
+            sort_by:
+              $ref: "#/components/schemas/WebhookSortField"
+              description: Field to sort by.
+
+    WebhookListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Webhook"
+          required:
+            - items
+
     CreateWebhookRequest:
       type: object
       properties:
@@ -263,6 +745,70 @@ components:
       type: string
       enum: [ GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS ]
       description: HTTP method
+    CollectionRequestResponseBodyKind:
+      type: string
+      enum: [json, text, xml, binary, empty, unknown]
+      description: Simplified response body classification for AI and UX.
+    CollectionRequestAuthType:
+      type: string
+      enum: [none, bearer, api_key]
+      description: Dedicated authentication mode for a saved collection request.
+    CollectionRequestAuthApiKeyLocation:
+      type: string
+      enum: [header, query, cookie]
+      description: Placement for API key authentication when a request uses the api_key auth type.
+    CollectionRequestAuth:
+      type: object
+      nullable: true
+      properties:
+        source_option_id:
+          type: string
+          nullable: true
+          description: Stable identifier for the imported OpenAPI auth option currently selected on this request.
+        source_option_label:
+          type: string
+          nullable: true
+          description: Human-readable label for the imported OpenAPI auth option currently selected on this request.
+        type:
+          $ref: "#/components/schemas/CollectionRequestAuthType"
+        token:
+          type: string
+          nullable: true
+          description: Bearer token template or literal value.
+          example: "{{apiToken}}"
+        key:
+          type: string
+          nullable: true
+          description: API key header, query parameter, or cookie name.
+          example: "X-API-Key"
+        value:
+          type: string
+          nullable: true
+          description: API key template or literal value.
+          example: "{{apiKey}}"
+        in:
+          allOf:
+            - $ref: "#/components/schemas/CollectionRequestAuthApiKeyLocation"
+          nullable: true
+          description: API key placement for api_key authentication.
+      required:
+        - type
+
+    CollectionRequestAuthOption:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Stable identifier for an imported OpenAPI auth option.
+        label:
+          type: string
+          description: Human-readable label shown in the request editor.
+        auth:
+          $ref: "#/components/schemas/CollectionRequestAuth"
+      required:
+        - id
+        - label
+        - auth
     WebhookRequestResponse:
       type: object
       properties:
@@ -374,7 +920,6 @@ components:
               enum: ["received_at", "method", "ip_address"]
               default: "received_at"
               description: Field to sort by
-
     WebhookRequestListResponse:
       allOf:
         - $ref: "#/components/schemas/PagedListResponse"
@@ -466,6 +1011,8 @@ components:
         type:
           type: string
           description: Type of node
+        run_when:
+          $ref: "#/components/schemas/FlowNodeRunWhen"
         outputs:
           type: array
           description: Named outputs extracted from the response/data
@@ -536,8 +1083,7 @@ components:
       type: object
       properties:
         method:
-          type: string
-          enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+          $ref: "#/components/schemas/HttpMethod"
           description: HTTP method
           example: "POST"
         url:
@@ -669,6 +1215,14 @@ components:
           type: string
           description: ID of the target node
           example: "req-success"
+        source_handle:
+          type: string
+          description: Optional source handle ID used for anchor-specific edge routing
+          example: "source-right-step-login"
+        target_handle:
+          type: string
+          description: Optional target handle ID used for anchor-specific edge routing
+          example: "target-left-step-auth"
         type:
           type: string
           enum: ["success", "failure"]
@@ -880,10 +1434,10 @@ components:
           format: uuid
           description: Server-generated unique identifier for the flow.
           example: "550e8400-e29b-41d4-a716-446655440000"
-        author_id:
+        organization_id:
           type: string
-          description: User ID of the flow author.
-          example: "user_123"
+          description: Organization ID that owns this flow.
+          example: "org_123"
         name:
           type: string
           description: Human-readable name for the flow.
@@ -900,20 +1454,7 @@ components:
         flow_definition:
           $ref: "#/components/schemas/FlowDefinition"
         metadata:
-          type: object
-          description: Frontend-specific metadata including UI layout information.
-          properties:
-            node_positions:
-              type: object
-              description: Map of node IDs to their x,y positions in the editor.
-              additionalProperties:
-                type: object
-                properties:
-                  x:
-                    type: number
-                  y:
-                    type: number
-          additionalProperties: true
+          $ref: "#/components/schemas/FlowMetadata"
         created_at:
           type: string
           format: date-time
@@ -924,7 +1465,7 @@ components:
           description: Timestamp when the flow was last updated.
       required:
         - id
-        - author_id
+        - organization_id
         - name
         - version
         - flow_definition
@@ -958,20 +1499,7 @@ components:
           type: boolean
           description: Recompute node positions on create using backend layout.
         metadata:
-          type: object
-          description: Frontend-specific metadata including UI layout information.
-          properties:
-            node_positions:
-              type: object
-              description: Map of node IDs to their x,y positions in the editor.
-              additionalProperties:
-                type: object
-                properties:
-                  x:
-                    type: number
-                  y:
-                    type: number
-          additionalProperties: true
+          $ref: "#/components/schemas/FlowMetadata"
       required:
         - name
         - flow_definition
@@ -1001,20 +1529,27 @@ components:
           type: boolean
           description: Recompute node positions on update using backend layout.
         metadata:
+          $ref: "#/components/schemas/FlowMetadata"
+
+    FlowMetadata:
+      type: object
+      description: Frontend-specific metadata including UI layout information and execution defaults.
+      properties:
+        node_positions:
           type: object
-          description: Frontend-specific metadata including UI layout information.
-          properties:
-            node_positions:
-              type: object
-              description: Map of node IDs to their x,y positions in the editor.
-              additionalProperties:
-                type: object
-                properties:
-                  x:
-                    type: number
-                  y:
-                    type: number
-          additionalProperties: true
+          description: Map of node IDs to their x,y positions in the editor.
+          additionalProperties:
+            type: object
+            properties:
+              x:
+                type: number
+              y:
+                type: number
+        target_environment_key:
+          type: string
+          description: Optional default organization environment key to use when launching this flow.
+          example: "staging"
+      additionalProperties: true
 
     FlowListResponse:
       allOf:
@@ -1028,17 +1563,453 @@ components:
           required:
             - items
 
+    FlowVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for this published version.
+        flow_id:
+          type: string
+          format: uuid
+          description: The flow this version belongs to.
+        organization_id:
+          type: string
+          description: Organization ID.
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        metadata:
+          $ref: "#/components/schemas/FlowMetadata"
+        published_at:
+          type: string
+          format: date-time
+          description: When this version was published.
+        created_at:
+          type: string
+          format: date-time
+          description: When this record was created.
+      required:
+        - id
+        - flow_id
+        - organization_id
+        - flow_definition
+        - metadata
+        - published_at
+        - created_at
+
+    FlowVersionListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FlowVersion"
+          required:
+            - items
+
+    FlowGenerationStatus:
+      type: string
+      enum: [running, completed, failed, cancelled]
+      description: Lifecycle status for an AI-assisted flow generation run.
+    CreateFlowGenerationRequest:
+      type: object
+      properties:
+        flow_id:
+          type: string
+          format: uuid
+          description: Existing flow to update with the generated plan.
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Natural-language request describing the flow to generate.
+          example: "Create a smoke test that creates a user and then fetches it"
+        collection_ids:
+          type: array
+          description: Optional collection scope to limit request search.
+          items:
+            type: string
+            format: uuid
+      required:
+        - flow_id
+        - prompt
+
+    FlowGeneration:
+      type: object
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          description: Workflow run ID backing this generation.
+        status:
+          $ref: "#/components/schemas/FlowGenerationStatus"
+        flow_id:
+          type: string
+          format: uuid
+          description: Existing flow ID being updated by this generation run.
+        flow:
+          allOf:
+            - $ref: "#/components/schemas/Flow"
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+          description: Failure reason when the generation run does not succeed.
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - run_id
+        - status
+        - flow_id
+        - created_at
+
+    FlowGenerationSessionStatus:
+      type: string
+      enum: [idle, running, archived]
+      description: Lifecycle status for a persisted AI flow generation session.
+    FlowGenerationSessionMessageRole:
+      type: string
+      enum: [user, assistant, system]
+      description: Author role for a flow generation session message.
+    FlowGenerationSessionMessageKind:
+      type: string
+      enum: [message, status, result, error, checkpoint]
+      description: Display category for a flow generation session message.
+    FlowGenerationSessionMentionKind:
+      type: string
+      enum: [collection, request, flow]
+      description: Supported mention kinds within a flow generation session message.
+    FlowGenerationSessionMention:
+      type: object
+      properties:
+        kind:
+          $ref: "#/components/schemas/FlowGenerationSessionMentionKind"
+        id:
+          type: string
+          format: uuid
+        collection_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent collection id for request mentions.
+        label:
+          type: string
+      required:
+        - kind
+        - id
+        - label
+
+    FlowGenerationConversationMessage:
+      type: object
+      properties:
+        role:
+          $ref: "#/components/schemas/FlowGenerationSessionMessageRole"
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    FlowGenerationSessionMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+          nullable: true
+        role:
+          $ref: "#/components/schemas/FlowGenerationSessionMessageRole"
+        kind:
+          $ref: "#/components/schemas/FlowGenerationSessionMessageKind"
+        content:
+          type: string
+        mentions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowGenerationSessionMention"
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - role
+        - kind
+        - content
+        - mentions
+        - metadata
+        - created_at
+
+    FlowGenerationSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        flow_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/FlowGenerationSessionStatus"
+        active_run_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - flow_id
+        - status
+        - created_at
+        - updated_at
+
+    FlowGenerationSessionRun:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_run_id:
+          type: string
+          format: uuid
+          nullable: true
+        flow_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/FlowGenerationStatus"
+        prompt:
+          type: string
+        collection_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        error_message:
+          type: string
+          nullable: true
+        can_restore:
+          type: boolean
+          description: Whether the flow can be restored to the pre-run snapshot captured for this run.
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - flow_id
+        - status
+        - prompt
+        - collection_ids
+        - can_restore
+        - created_at
+
+    FlowGenerationContextSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        model:
+          type: string
+        system_prompt:
+          type: string
+        runtime_context:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        prompt_messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowGenerationConversationMessage"
+        prompt_message_count:
+          type: integer
+        estimated_input_tokens:
+          type: integer
+        max_input_tokens:
+          type: integer
+        reserved_completion_tokens:
+          type: integer
+        compaction_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - run_id
+        - model
+        - system_prompt
+        - runtime_context
+        - prompt_messages
+        - prompt_message_count
+        - estimated_input_tokens
+        - max_input_tokens
+        - reserved_completion_tokens
+        - compaction_count
+        - created_at
+
+    FlowGenerationCompactionCheckpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+          nullable: true
+        source_end_message_id:
+          type: string
+          format: uuid
+          nullable: true
+        summary:
+          type: string
+        compacted_message_count:
+          type: integer
+        tail_message_count:
+          type: integer
+        estimated_tokens_before:
+          type: integer
+        estimated_tokens_after:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - summary
+        - compacted_message_count
+        - tail_message_count
+        - estimated_tokens_before
+        - estimated_tokens_after
+        - created_at
+
+    FlowGenerationSessionDetail:
+      type: object
+      properties:
+        session:
+          $ref: "#/components/schemas/FlowGenerationSession"
+        latest_run:
+          allOf:
+            - $ref: "#/components/schemas/FlowGenerationSessionRun"
+          nullable: true
+        latest_context_snapshot:
+          allOf:
+            - $ref: "#/components/schemas/FlowGenerationContextSnapshot"
+          nullable: true
+        recent_checkpoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowGenerationCompactionCheckpoint"
+        total_message_count:
+          type: integer
+          description: Total number of messages in the session.
+      required:
+        - session
+        - recent_checkpoints
+        - total_message_count
+
+    FlowGenerationSessionMessageList:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowGenerationSessionMessage"
+        has_more:
+          type: boolean
+          description: Whether older messages exist before this page.
+      required:
+        - messages
+        - has_more
+
+    CreateFlowGenerationSessionMessageRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        mentions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowGenerationSessionMention"
+      required:
+        - content
+
+    FlowGenerationSessionMessageSendResult:
+      type: object
+      properties:
+        session:
+          $ref: "#/components/schemas/FlowGenerationSession"
+        latest_run:
+          $ref: "#/components/schemas/FlowGenerationSessionRun"
+        message:
+          $ref: "#/components/schemas/FlowGenerationSessionMessage"
+      required:
+        - session
+        - latest_run
+        - message
+
+    FlowGenerationSessionRestoreResult:
+      type: object
+      properties:
+        flow:
+          $ref: "#/components/schemas/Flow"
+        message:
+          $ref: "#/components/schemas/FlowGenerationSessionMessage"
+        restored_run_id:
+          type: string
+          format: uuid
+      required:
+        - flow
+        - message
+        - restored_run_id
+
     # Flow Execution Schemas
     ExecutionStatus:
       type: string
       enum: [pending, running, completed, failed, cancelled]
       description: Status of a flow execution
-
     NodeExecutionStatus:
       type: string
       enum: [pending, running, completed, failed, skipped]
       description: Status of a single node execution
-
+    NodeExecutionResultNodeType:
+      type: string
+      enum: [request, delay, module]
+      description: Type of node (promoted from result)
+    FlowNodeRunWhen:
+      type: string
+      enum: [on_success, always]
+      default: on_success
+      description: Controls whether a node runs only in the normal success path or also after the main flow has already failed.
     TriggerType:
       type: string
       enum: [manual, git]
@@ -1046,7 +2017,6 @@ components:
         How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
         (e.g. GitHub Actions) carrying source-control provenance. The shape of `trigger_metadata`
         is determined by this value.
-
     ManualTriggerMetadata:
       type: object
       description: |
@@ -1068,7 +2038,7 @@ components:
       type: object
       description: |
         Source-control provenance for a `git` (CI/CD) launch. Fields mirror the common CI
-        environment (GitHub Actions today); absent values are omitted.
+        environment absent values are omitted.
       properties:
         source:
           type: string
@@ -1110,7 +2080,6 @@ components:
         `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
         customer runner, and `ephemeral` returns an execution package for a short-lived
         caller-owned runner (e.g. CI) to execute locally and then publish results.
-
     LaunchFlowRequest:
       type: object
       properties:
@@ -1135,6 +2104,326 @@ components:
           nullable: true
           description: Trigger provenance; shape determined by trigger_type.
       description: Optional launch settings for selecting the execution backend and version.
+
+    RunnerJobTerminalStatus:
+      type: string
+      enum: [completed, failed]
+      # Pin generated Go const names so they stay stable regardless of enum-value
+      # collisions with other schemas.
+      x-enum-varnames: [RunnerJobTerminalStatusCompleted, RunnerJobTerminalStatusFailed]
+      description: Terminal status reported by a runner for a claimed job
+
+    RunnerJobProgressEventType:
+      type: string
+      enum: [flow.started, node.started, node.completed, node.failed]
+      description: Incremental execution event reported by a claimed self-hosted runner.
+
+    RunnerJobHeartbeatStatus:
+      type: string
+      enum: [renewed, rejected]
+      description: Lease heartbeat outcome for a requested runner job.
+
+    RunnerInputs:
+      type: object
+      additionalProperties: true
+      description: Effective root inputs snapshot resolved for a runner execution.
+
+    ReferencedFlow:
+      type: object
+      properties:
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        input_overrides:
+          type: object
+          additionalProperties: true
+          description: Child flow-specific static input overrides applied before module bindings.
+      required:
+        - flow_definition
+
+    ReferencedFlows:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/ReferencedFlow"
+      description: Additional flow snapshots available to module nodes during execution.
+
+    LiveRunnerJob:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Claimed runner job identifier.
+        execution_id:
+          type: string
+          format: uuid
+          description: Flow execution currently associated with the claimed job.
+        claimed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Time when the runner claimed the job.
+        lease_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Current lease expiration for the claimed job.
+      required:
+        - job_id
+        - execution_id
+
+    LiveRunner:
+      type: object
+      properties:
+        runner_id:
+          type: string
+          description: Stable runner identifier across restarts.
+        boot_id:
+          type: string
+          format: uuid
+          description: Ephemeral identifier for the current runner process.
+        max_parallel_flows:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Max concurrency advertised by the runner.
+        active_job_count:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Number of claimed jobs currently associated with this runner process.
+        active_jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiveRunnerJob"
+        last_seen_at:
+          type: string
+          format: date-time
+          description: Last time the control plane observed the runner.
+      required:
+        - runner_id
+        - boot_id
+        - max_parallel_flows
+        - active_job_count
+        - active_jobs
+        - last_seen_at
+
+    LiveRunnerListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiveRunner"
+      required:
+        - items
+
+    RunnerJobNextRequest:
+      type: object
+      properties:
+        runner_id:
+          type: string
+          description: Stable runner identifier across restarts.
+          example: runner-eu-west-1-a
+        boot_id:
+          type: string
+          format: uuid
+          description: Ephemeral identifier for the current runner process.
+          example: 01957d27-7c6c-7d4e-9b08-9ea5d6ab4a21
+        max_parallel_flows:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Maximum number of concurrent executions this runner can accept.
+          example: 4
+      required:
+        - runner_id
+        - boot_id
+        - max_parallel_flows
+
+    RunnerJobPayload:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Claimed runner job identifier.
+        execution_id:
+          type: string
+          format: uuid
+          description: Flow execution identifier associated with the claimed job.
+        flow_id:
+          type: string
+          format: uuid
+          description: Flow identifier to execute.
+        lease_expires_at:
+          type: string
+          format: date-time
+          description: Time when the current claim lease expires unless renewed.
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        inputs:
+          $ref: "#/components/schemas/RunnerInputs"
+        referenced_flows:
+          $ref: "#/components/schemas/ReferencedFlows"
+      required:
+        - job_id
+        - execution_id
+        - flow_id
+        - lease_expires_at
+        - flow_definition
+        - inputs
+
+    RunnerJobProgressEventPayload:
+      type: object
+      additionalProperties: true
+      description: Progress payload mirroring the execution SSE event body for the given event type.
+
+    RunnerJobProgressEvent:
+      type: object
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Monotonic per-job event sequence number assigned by the runner.
+        type:
+          $ref: "#/components/schemas/RunnerJobProgressEventType"
+        payload:
+          $ref: "#/components/schemas/RunnerJobProgressEventPayload"
+      required:
+        - sequence
+        - type
+        - payload
+
+    RunnerJobEventsRequest:
+      type: object
+      properties:
+        runner_id:
+          type: string
+          description: Stable runner identifier across restarts.
+        boot_id:
+          type: string
+          format: uuid
+          description: Ephemeral identifier for the current runner process.
+        events:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/RunnerJobProgressEvent"
+      required:
+        - runner_id
+        - boot_id
+        - events
+
+    RunnerJobEventsResponse:
+      type: object
+      properties:
+        last_accepted_sequence:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Highest contiguous runner progress sequence durably accepted for the job.
+      required:
+        - last_accepted_sequence
+
+    RunnerJobCompletionRequest:
+      type: object
+      properties:
+        runner_id:
+          type: string
+          description: Stable runner identifier across restarts.
+        boot_id:
+          type: string
+          format: uuid
+          description: Ephemeral identifier for the current runner process.
+        status:
+          $ref: "#/components/schemas/RunnerJobTerminalStatus"
+        started_at:
+          type: string
+          format: date-time
+          description: Time the runner started executing the claimed job.
+        completed_at:
+          type: string
+          format: date-time
+          description: Time the runner finished executing the claimed job.
+        duration_ms:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Execution duration in milliseconds.
+        result:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Terminal flow execution result payload for successful executions.
+        error_message:
+          type: string
+          nullable: true
+          description: Terminal error message when the runner reports failure.
+        error_code:
+          type: string
+          nullable: true
+          description: Terminal error code when the runner reports failure.
+        last_event_sequence:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          description: Highest runner progress event sequence that must be durably accepted before completion.
+      required:
+        - runner_id
+        - boot_id
+        - status
+        - started_at
+        - completed_at
+        - duration_ms
+
+    RunnerJobHeartbeatRequest:
+      type: object
+      properties:
+        runner_id:
+          type: string
+          description: Stable runner identifier across restarts.
+        boot_id:
+          type: string
+          format: uuid
+          description: Ephemeral identifier for the current runner process.
+        max_parallel_flows:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Maximum number of concurrent executions this runner can accept.
+        job_ids:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+          description: List of claimed runner jobs that are still actively executing.
+      required:
+        - runner_id
+        - boot_id
+        - max_parallel_flows
+        - job_ids
+
+    RunnerJobHeartbeatResult:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/RunnerJobHeartbeatStatus"
+        lease_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Extended lease expiration when the heartbeat is accepted.
+      required:
+        - job_id
+        - status
 
     FlowExecution:
       type: object
@@ -1238,16 +2527,14 @@ components:
           type: string
           description: Human-readable name for the node
         node_type:
-          type: string
-          enum: [request, delay]
-          description: Type of node (promoted from result)
+          $ref: "#/components/schemas/NodeExecutionResultNodeType"
         result:
           type: object
           nullable: true
           additionalProperties: true
           description: |
             Complete polymorphic result from flow engine.
-            Contains RequestExecutionResult or DelayExecutionResult based on node_type.
+            Contains RequestExecutionResult, DelayExecutionResult, or ModuleExecutionResult based on node_type.
             Includes all data: request/response, assertions, extracted outputs, etc.
         status:
           $ref: "#/components/schemas/NodeExecutionStatus"
@@ -1267,6 +2554,16 @@ components:
           type: string
           nullable: true
           description: System-level error code
+        skip_reason:
+          type: string
+          nullable: true
+          description: Present when the node was skipped rather than executed.
+        missing_inputs:
+          type: array
+          nullable: true
+          description: Missing input references that caused an always-run node to be skipped.
+          items:
+            type: string
         has_errors:
           type: boolean
           nullable: true
@@ -1304,29 +2601,6 @@ components:
           required:
             - items
 
-    RunnerInputs:
-      type: object
-      additionalProperties: true
-      description: Effective root inputs snapshot resolved for a runner execution.
-
-    ReferencedFlow:
-      type: object
-      properties:
-        flow_definition:
-          $ref: "#/components/schemas/FlowDefinition"
-        input_overrides:
-          type: object
-          additionalProperties: true
-          description: Child flow-specific static input overrides applied before module bindings.
-      required:
-        - flow_definition
-
-    ReferencedFlows:
-      type: object
-      additionalProperties:
-        $ref: "#/components/schemas/ReferencedFlow"
-      description: Additional flow snapshots available to module nodes during execution.
-
     LaunchFlowAcceptedResponse:
       type: object
       description: |
@@ -1338,11 +2612,6 @@ components:
           $ref: "#/components/schemas/FlowExecution"
       required:
         - execution
-
-    RunnerJobTerminalStatus:
-      type: string
-      enum: [completed, failed]
-      description: Terminal status reported by a runner for a claimed job
 
     EphemeralCompletionRequest:
       type: object
@@ -1419,32 +2688,10 @@ components:
       enum: [manual, openapi]
       default: manual
       description: Source of the collection
-
-    HTTPMethod:
-      type: string
-      enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
-      description: HTTP method for requests
-
-    OpenAPISpecMetadata:
-      type: object
-      properties:
-        version:
-          type: string
-          description: Version of the OpenAPI spec
-          example: "3.0.0"
-        original_url:
-          type: string
-          format: uri
-          nullable: true
-          description: Original URL where the spec was imported from
-          example: "https://api.example.com/openapi.json"
-        imported_at:
-          type: string
-          format: date-time
-          description: Timestamp when the spec was imported
-      required:
-        - version
-        - imported_at
+      # Pinned: the domain Collection.Source field is a raw string (not collection.Source),
+      # so this enum is not x-go-type'd. Pin names to keep them stable when sibling enums
+      # change the oapi-codegen collision set.
+      x-enum-varnames: [CollectionSourceManual, CollectionSourceOpenapi]
 
     Collection:
       type: object
@@ -1454,10 +2701,10 @@ components:
           format: uuid
           description: Server-generated unique identifier
           example: "550e8400-e29b-41d4-a716-446655440000"
-        author_id:
+        organization_id:
           type: string
-          description: User ID of the collection author
-          example: "user_123"
+          description: Organization ID that owns this collection.
+          example: "org_123"
         name:
           type: string
           description: Human-readable name for the collection
@@ -1471,20 +2718,29 @@ components:
           example: "Collection for testing my API"
         source:
           $ref: "#/components/schemas/CollectionSource"
-        openapi_spec:
-          $ref: "#/components/schemas/OpenAPISpecMetadata"
+        openapi_sync_config_id:
+          type: string
+          format: uuid
           nullable: true
-          description: Metadata if imported from OpenAPI spec
+          description: Identifier of the attached OpenAPI sync config when this collection is sync-managed
+        folder_count:
+          type: integer
+          description: Total number of folders in the collection
+          example: 12
+        request_count:
+          type: integer
+          description: Total number of requests in the collection
+          example: 438
         folders:
           type: array
           items:
             $ref: "#/components/schemas/CollectionFolder"
-          description: Flat array of folders with parent_id references
+          description: Lightweight collection responses return an empty array; use the dedicated folders endpoint for content.
         requests:
           type: array
           items:
             $ref: "#/components/schemas/CollectionRequest"
-          description: Flat array of requests with folder_id references
+          description: Lightweight collection responses return an empty array; use the dedicated requests endpoint for content.
         created_at:
           type: string
           format: date-time
@@ -1495,13 +2751,39 @@ components:
           description: Timestamp when the collection was last updated
       required:
         - id
-        - author_id
+        - organization_id
         - name
         - source
+        - folder_count
+        - request_count
         - folders
         - requests
         - created_at
         - updated_at
+
+    CollectionFolderListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CollectionFolder"
+          required:
+            - items
+
+    CollectionRequestListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CollectionRequest"
+          required:
+            - items
 
     CollectionFolder:
       type: object
@@ -1579,21 +2861,30 @@ components:
           description: Optional request description
           example: "Retrieves a user by their ID"
         method:
-          $ref: "#/components/schemas/HTTPMethod"
+          $ref: "#/components/schemas/HttpMethod"
         url:
           type: string
-          format: uri
-          description: Request URL
-          example: "https://api.example.com/users/123"
+          description: |
+            Request URL. Supports template variables such as {{baseUrl}}/users/123.
+            Templates are resolved from the active organization environment in the request workspace.
+          example: "{{baseUrl}}/users/123"
         headers:
           type: object
           additionalProperties:
             type: string
           nullable: true
-          description: HTTP headers for the request
+          description: Non-auth HTTP headers for the request
           example:
             Content-Type: "application/json"
-            Authorization: "Bearer token123"
+            Accept: "application/json"
+        auth:
+          $ref: "#/components/schemas/CollectionRequestAuth"
+        auth_options:
+          type: array
+          nullable: true
+          description: Imported OpenAPI authentication options available for this request. Empty for manual requests.
+          items:
+            $ref: "#/components/schemas/CollectionRequestAuthOption"
         body:
           type: object
           nullable: true
@@ -1607,6 +2898,8 @@ components:
           nullable: true
           description: Request timeout in milliseconds
           example: 30000
+        response_spec:
+          $ref: "#/components/schemas/CollectionRequestResponseSpec"
         created_at:
           type: string
           format: date-time
@@ -1714,20 +3007,23 @@ components:
           description: Optional request description
           example: "Retrieves a user by their ID"
         method:
-          $ref: "#/components/schemas/HTTPMethod"
+          $ref: "#/components/schemas/HttpMethod"
         url:
           type: string
-          format: uri
-          description: Request URL
-          example: "https://api.example.com/users/123"
+          description: |
+            Request URL. Supports template variables such as {{baseUrl}}/users/123.
+            Templates are resolved from the active organization environment in the request workspace.
+          example: "{{baseUrl}}/users/123"
         headers:
           type: object
           additionalProperties:
             type: string
           nullable: true
-          description: HTTP headers
+          description: Non-auth HTTP headers
           example:
             Content-Type: "application/json"
+        auth:
+          $ref: "#/components/schemas/CollectionRequestAuth"
         body:
           type: object
           nullable: true
@@ -1738,6 +3034,8 @@ components:
           nullable: true
           description: Request timeout in milliseconds
           example: 30000
+        response_spec:
+          $ref: "#/components/schemas/CollectionRequestResponseSpec"
         folder_id:
           type: string
           format: uuid
@@ -1762,18 +3060,21 @@ components:
           nullable: true
           description: Optional request description
         method:
-          $ref: "#/components/schemas/HTTPMethod"
+          $ref: "#/components/schemas/HttpMethod"
         url:
           type: string
-          format: uri
-          description: Request URL
-          example: "https://api.example.com/users/123"
+          description: |
+            Request URL. Supports template variables such as {{baseUrl}}/users/123.
+            Templates are resolved from the active organization environment in the request workspace.
+          example: "{{baseUrl}}/users/123"
         headers:
           type: object
           additionalProperties:
             type: string
           nullable: true
-          description: HTTP headers
+          description: Non-auth HTTP headers
+        auth:
+          $ref: "#/components/schemas/CollectionRequestAuth"
         body:
           type: object
           nullable: true
@@ -1783,22 +3084,116 @@ components:
           type: integer
           nullable: true
           description: Request timeout in milliseconds
+        response_spec:
+          $ref: "#/components/schemas/CollectionRequestResponseSpec"
         folder_id:
           type: string
           format: uuid
           nullable: true
           description: Parent folder ID
 
+    ExecuteRequestRequest:
+      allOf:
+        - $ref: "#/components/schemas/UpdateRequestRequest"
+        - type: object
+          properties:
+            environment_key:
+              type: string
+              nullable: true
+              description: Optional named organization environment override. Base organization variables are always loaded.
+
+    ExecutedRequestResponse:
+      type: object
+      properties:
+        request_method:
+          $ref: "#/components/schemas/HttpMethod"
+        request_url:
+          type: string
+          description: Fully resolved request URL used by server-side execution.
+        request_headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Fully resolved request headers sent upstream.
+        request_body:
+          nullable: true
+          description: Fully resolved request body sent upstream.
+        response_status_code:
+          type: integer
+          description: Upstream HTTP status code.
+        response_headers:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Upstream response headers.
+        response_body:
+          type: string
+          description: Upstream response body as text.
+        response_body_parsed:
+          nullable: true
+          additionalProperties: true
+          description: Parsed response body when the content type is JSON.
+        duration_ms:
+          type: integer
+          format: int64
+          description: Total server-side execution duration in milliseconds.
+      required:
+        - request_method
+        - request_url
+        - request_headers
+        - response_status_code
+        - response_headers
+        - response_body
+        - duration_ms
+
+    CollectionRequestResponseSpec:
+      type: object
+      nullable: true
+      properties:
+        primary_status_code:
+          type: integer
+          nullable: true
+          description: Preferred success status code for this request's response.
+          example: 200
+        status_codes:
+          type: array
+          items:
+            type: integer
+          description: Known response status codes from the source definition.
+          example: [200, 400, 404]
+        primary_content_type:
+          type: string
+          nullable: true
+          description: Preferred response media type.
+          example: application/json
+        content_types:
+          type: array
+          items:
+            type: string
+          description: Known response media types from the source definition.
+          example: [application/json]
+        body_kind:
+          allOf:
+            - $ref: "#/components/schemas/CollectionRequestResponseBodyKind"
+          nullable: true
+          example: json
+        schema:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Reduced response schema for the preferred response media type.
+
     ImportOpenAPIRequest:
       type: object
       properties:
         spec:
           type: object
+          nullable: true
           description: OpenAPI spec as JSON object
         options:
           $ref: "#/components/schemas/OpenAPIImportOptions"
-      required:
-        - spec
 
     OpenAPIImportOptions:
       type: object
@@ -1807,10 +3202,31 @@ components:
           type: string
           description: Name for the imported collection
           example: "Pet Store API"
+        collection_description:
+          type: string
+          nullable: true
+          description: Description for the imported collection
         tags_as_folders:
           type: boolean
           description: Whether to use OpenAPI tags as folder structure
           default: true
+        grouping_strategy:
+          $ref: "#/components/schemas/OpenAPIGroupingStrategy"
+          description: How imported operations should be grouped into folders
+          default: tags
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Original source URL for the imported spec when available
+        use_base_url_variable:
+          type: boolean
+          description: Whether to rewrite imported request URLs as {{baseUrl}}/path
+          default: false
+        base_url_variable_name:
+          type: string
+          description: Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
+          example: "baseUrl"
 
     OpenAPIImportResult:
       type: object
@@ -1835,6 +3251,286 @@ components:
       required:
         - collection
         - requests_created
+
+    OpenAPIGroupingStrategy:
+      type: string
+      enum: [none, path, tags]
+      description: How imported operations should be grouped into folders
+    UpsertOpenAPISyncConfigRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ".*\\S.*"
+          description: Optional collection name to apply while updating the OpenAPI sync configuration
+        source_url:
+          type: string
+          format: uri
+          description: Source URL used to fetch the upstream OpenAPI document
+        grouping_strategy:
+          allOf:
+            - $ref: "#/components/schemas/OpenAPIGroupingStrategy"
+          default: tags
+        use_base_url_variable:
+          type: boolean
+          description: Whether synced request URLs should be rewritten as {{baseUrl}}/path
+          default: false
+        base_url_variable_name:
+          type: string
+          description: Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
+          example: "baseUrl"
+      required:
+        - source_url
+        - grouping_strategy
+
+    RunOpenAPISyncNowRequest:
+      type: object
+      properties:
+        force_reset:
+          type: boolean
+          default: false
+          description: Reapply the current upstream OpenAPI import shape to the collection, overwriting previously skipped user-modified requests and ignoring prior sync hash shortcuts.
+
+    OpenAPISyncConfig:
+      type: object
+      properties:
+        collection_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Current collection name used by this OpenAPI sync
+        source_url:
+          type: string
+          format: uri
+        sync_interval_minutes:
+          type: integer
+          description: Current fixed sync interval in minutes
+          example: 5
+        grouping_strategy:
+          $ref: "#/components/schemas/OpenAPIGroupingStrategy"
+        use_base_url_variable:
+          type: boolean
+          description: Whether synced request URLs are rewritten as {{baseUrl}}/path
+        base_url_variable_name:
+          type: string
+          description: Variable name currently used for rewritten base URLs
+          example: "baseUrl"
+        request_count:
+          type: integer
+          description: Current number of requests in the synced collection
+          example: 616
+        last_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_run_at:
+          type: string
+          format: date-time
+        last_successful_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - collection_id
+        - name
+        - source_url
+        - sync_interval_minutes
+        - grouping_strategy
+        - use_base_url_variable
+        - base_url_variable_name
+        - request_count
+        - next_run_at
+        - created_at
+        - updated_at
+
+    OpenAPISyncConfigSortField:
+      type: string
+      enum: ["name", "updated_at", "created_at", "last_run_at", "next_run_at"]
+      default: "updated_at"
+      description: Field to sort top-level OpenAPI sync config results by.
+    OpenAPISyncConfigSearchRequest:
+      allOf:
+        - $ref: "#/components/schemas/SearchRequest"
+        - type: object
+          properties:
+            sort_by:
+              $ref: "#/components/schemas/OpenAPISyncConfigSortField"
+              description: Field to sort by.
+
+    OpenAPISyncConfigListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OpenAPISyncConfig"
+          required:
+            - items
+
+    OpenAPISyncChangeType:
+      type: string
+      enum:
+        - added
+        - updated
+        - removed
+        - recreated_missing_request
+    OpenAPISyncChange:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        collection_id:
+          type: string
+          format: uuid
+        reference_id:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+          nullable: true
+        change_type:
+          $ref: "#/components/schemas/OpenAPISyncChangeType"
+        applied:
+          type: boolean
+        before_hash:
+          type: string
+          nullable: true
+        after_hash:
+          type: string
+          nullable: true
+        before_snapshot:
+          type: object
+          nullable: true
+          additionalProperties: true
+        after_snapshot:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - run_id
+        - collection_id
+        - reference_id
+        - change_type
+        - applied
+        - created_at
+
+    OpenAPISyncChangeListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OpenAPISyncChange"
+          required:
+            - items
+
+    OpenAPISyncOperationSortField:
+      type: string
+      enum: ["route_name", "method", "operation_key", "source_operation_id", "updated_at"]
+      default: "route_name"
+    OpenAPISyncOperationSearchRequest:
+      allOf:
+        - $ref: "#/components/schemas/SearchRequest"
+        - type: object
+          properties:
+            sort_by:
+              $ref: "#/components/schemas/OpenAPISyncOperationSortField"
+              description: Field to sort by
+
+    OpenAPISyncOperation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        collection_id:
+          type: string
+          format: uuid
+        request_id:
+          type: string
+          format: uuid
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+        operation_key:
+          type: string
+          description: Stable persisted identifier used by sync selection.
+        source_operation_id:
+          type: string
+          nullable: true
+        synthetic_operation_id:
+          type: string
+        method:
+          type: string
+        path:
+          type: string
+        route_name:
+          type: string
+          description: Human-friendly route label for sorting and display.
+        group_key:
+          type: string
+          nullable: true
+        last_applied_hash:
+          type: string
+        spec_snapshot:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - collection_id
+        - request_id
+        - operation_key
+        - synthetic_operation_id
+        - method
+        - path
+        - route_name
+        - last_applied_hash
+        - created_at
+        - updated_at
+
+    OpenAPISyncOperationListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OpenAPISyncOperation"
+          required:
+            - items
 
     CollectionListResponse:
       allOf:
@@ -1871,9 +3567,6 @@ components:
           properties:
             category:
               type: string
-            difficulty:
-              type: string
-              enum: ["beginner", "intermediate", "advanced"]
             tags:
               type: array
               items:
@@ -1927,8 +3620,8 @@ components:
       type: string
       enum:
         - "delay"
+        - "module"
       description: Type of special node for flow control
-
     # Extractor Type Enum
     ExtractorType:
       type: string
@@ -2038,10 +3731,10 @@ components:
           maxLength: 1000
           description: The variable value
           example: "https://api.example.com"
-        author_id:
+        organization_id:
           type: string
-          description: User ID who created/updated this variable
-          example: "user_123"
+          description: Organization ID that owns this variable.
+          example: "org_123"
         created_at:
           type: string
           format: date-time
@@ -2052,9 +3745,40 @@ components:
           description: When the variable was last updated
       required:
         - value
-        - author_id
+        - organization_id
         - created_at
         - updated_at
+
+    EnvironmentVariableSet:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/EnvironmentVariable"
+      description: Flat key/value environment variables with audit metadata.
+
+    NamedEnvironmentVariableSets:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/EnvironmentVariableSet"
+      description: Named environment overlays such as dev, stg1, or prd.
+
+    EnvironmentVariablesInput:
+      type: object
+      additionalProperties:
+        type: string
+        maxLength: 1000
+      example:
+        API_KEY: "secret123"
+        BASE_URL: "https://api.example.com"
+
+    NamedEnvironmentVariablesInput:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/EnvironmentVariablesInput"
+      example:
+        dev:
+          BASE_URL: "https://dev.api.example.com"
+        prd:
+          BASE_URL: "https://api.example.com"
 
     Environment:
       type: object
@@ -2071,29 +3795,30 @@ components:
           example: "550e8400-e29b-41d4-a716-446655440100"
         owner_type:
           type: string
-          enum: [flow]
+          enum: [flow, organization]
           description: Type of owner
           example: "flow"
         variables:
-          type: object
-          additionalProperties:
-            $ref: "#/components/schemas/EnvironmentVariable"
+          $ref: "#/components/schemas/EnvironmentVariableSet"
           description: Environment variables as key-value pairs
           example:
             API_KEY:
               value: "secret123"
-              author_id: "user_123"
+              organization_id: "org_123"
               created_at: "2025-11-09T10:00:00Z"
               updated_at: "2025-11-09T10:00:00Z"
             BASE_URL:
               value: "https://api.example.com"
-              author_id: "user_456"
+              organization_id: "org_123"
               created_at: "2025-11-09T10:05:00Z"
               updated_at: "2025-11-09T10:05:00Z"
-        author_id:
+        environments:
+          $ref: "#/components/schemas/NamedEnvironmentVariableSets"
+          description: Named environment overlays owned by this environment resource.
+        organization_id:
           type: string
-          description: User ID of the environment creator
-          example: "user_123"
+          description: Organization ID that owns this environment.
+          example: "org_123"
         created_at:
           type: string
           format: date-time
@@ -2107,7 +3832,8 @@ components:
         - owner_id
         - owner_type
         - variables
-        - author_id
+        - environments
+        - organization_id
         - created_at
         - updated_at
 
@@ -2156,14 +3882,8 @@ components:
       description: Request to create or update flow environment
       properties:
         variables:
-          type: object
-          additionalProperties:
-            type: string
-            maxLength: 1000
+          $ref: "#/components/schemas/EnvironmentVariablesInput"
           description: Environment variables to set
-          example:
-            API_KEY: "secret123"
-            BASE_URL: "https://api.example.com"
       required:
         - variables
 
@@ -2172,15 +3892,32 @@ components:
       description: Request to update flow environment
       properties:
         variables:
-          type: object
-          additionalProperties:
-            type: string
-            maxLength: 1000
+          $ref: "#/components/schemas/EnvironmentVariablesInput"
           description: Environment variables to update
-          example:
-            API_KEY: "new_secret456"
       required:
         - variables
+
+    UpsertOrganizationEnvironmentRequest:
+      type: object
+      description: Request to create or update the organization environment layers.
+      properties:
+        variables:
+          $ref: "#/components/schemas/EnvironmentVariablesInput"
+          description: Base organization variables loaded for every execution.
+        environments:
+          $ref: "#/components/schemas/NamedEnvironmentVariablesInput"
+          description: Named organization environment overlays selected at launch time.
+
+    UpdateOrganizationEnvironmentRequest:
+      type: object
+      description: Request to replace the organization environment layers.
+      properties:
+        variables:
+          $ref: "#/components/schemas/EnvironmentVariablesInput"
+          description: Base organization variables loaded for every execution.
+        environments:
+          $ref: "#/components/schemas/NamedEnvironmentVariablesInput"
+          description: Named organization environment overlays selected at launch time.
 
   requestBodies:
     WebhookAnyPayload:
@@ -2196,34 +3933,36 @@ components:
               - number
               - boolean
 paths:
-  /health:
+  /webhooks:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
-      summary: Health Check
-      description: Returns the health status of the webhook service.
-      operationId: healthCheck
-      tags: [Health]
+      summary: List Webhook Endpoints
+      description: Lists webhook endpoints for the current organization.
+      operationId: listWebhooks
+      tags: [Webhook]
+      security:
+        - BearerAuth: [webhooks:read]
       responses:
         "200":
-          description: Service is healthy.
+          description: Webhook endpoints retrieved successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "HEALTHY"
-                required:
-                  - status
-
-  /webhooks:
+                $ref: "#/components/schemas/WebhookListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     post:
       summary: Create Webhook Endpoint
       description: Creates a new webhook endpoint for receiving webhook requests.
       operationId: createWebhook
       tags: [Webhook]
       security:
-        - BearerAuth: []
+        - BearerAuth: [webhooks:create]
       requestBody:
         description: Webhook endpoint details.
         required: true
@@ -2246,13 +3985,14 @@ paths:
   /webhooks/{id}:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Webhook Endpoint
       description: Retrieves details of a specific webhook endpoint.
       operationId: getWebhook
       tags: [Webhook]
       security:
-        - BearerAuth: []
+        - BearerAuth: [webhooks:read]
       responses:
         "200":
           description: Webhook endpoint details retrieved successfully.
@@ -2268,21 +4008,73 @@ paths:
       operationId: deleteWebhook
       tags: [Webhook]
       security:
-        - BearerAuth: []
+        - BearerAuth: [webhooks:delete]
       responses:
         "204":
           description: Webhook endpoint deleted successfully or already deleted.
 
+  /resources/search:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Search Resources
+      description: Cross-domain resource discovery across persisted flow-relevant resources.
+      operationId: searchResources
+      tags: [Resources]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Search criteria for cross-domain resources.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceSearchRequest"
+      responses:
+        "200":
+          description: Domain-grouped resource search results retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceSearchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /administrations/resource-search/resync:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Resync Resource Search Documents
+      description: |-
+        Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant.
+        Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
+      operationId: resyncResourceSearch
+      tags: [Administration]
+      security:
+        - BearerAuth: []
+      responses:
+        "202":
+          description: Resync completed successfully.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /webhooks/{id}/requests/search:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
       summary: Search Webhook Requests
       description: Server-side search with pagination, filtering and sorting for a webhook's requests.
       operationId: searchWebhookRequests
       tags: [Webhook]
       security:
-        - BearerAuth: []
+        - BearerAuth: [webhooks:read]
       requestBody:
         description: Search criteria for webhook requests.
         required: true
@@ -2302,9 +4094,41 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /webhooks/search:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Search Webhook Endpoints
+      description: Server-side search with pagination, filtering and sorting for webhook endpoints.
+      operationId: searchWebhooks
+      tags: [Webhook]
+      security:
+        - BearerAuth: [webhooks:read]
+      requestBody:
+        description: Search criteria for webhook endpoints.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSearchRequest"
+      responses:
+        "200":
+          description: Webhook endpoint search results retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /webhooks/{id}/stream:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
       - in: query
         name: limit
         schema:
@@ -2321,7 +4145,7 @@ paths:
       operationId: streamWebhookRequests
       tags: [Webhook]
       security:
-        - BearerAuth: []
+        - BearerAuth: [webhooks:read]
       responses:
         "200":
           description: Server-Sent Events stream of webhook requests.
@@ -2334,13 +4158,14 @@ paths:
   /webhooks/{id}/analytics/requests/volumes:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Request Volumes
       description: Returns request counts over time for the selected datetime range.
       operationId: getWebhookRequestVolumes
       tags: [Analytics]
       security:
-        - BearerAuth: []
+        - BearerAuth: [webhooks:read]
       parameters:
         - name: from
           in: query
@@ -2373,13 +4198,14 @@ paths:
   /webhooks/{id}/analytics/requests/methods:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Method Distribution
       description: Returns distribution of HTTP methods for the selected datetime range.
       operationId: getWebhookMethodDistribution
       tags: [Analytics]
       security:
-        - BearerAuth: []
+        - BearerAuth: [webhooks:read]
       parameters:
         - name: from
           in: query
@@ -2492,24 +4318,39 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
   /flows/{id}/launch:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
       operationId: launchFlow
       summary: Launch a flow execution
       description: |
         Launches a flow execution asynchronously and returns the created execution.
-        The execution already carries flow_snapshot, runner_inputs, and referenced_flows.
-        For `runner_type = ephemeral` the caller runs the execution locally from those fields,
-        then reports the result to POST /runner/ephemeral/executions/{executionId}/complete.
+        Real-time updates can be consumed separately from the execution stream endpoint.
+        Specify a version_id in the request body to run a specific published version;
+        omit it to run the current (mutable) flow definition.
       tags:
         - Flows
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:execute]
         - ApiKeys: [flows:execute]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaunchFlowRequest"
       parameters:
         - name: id
           in: path
           required: true
-          description: The unique identifier of the flow.
+          description: The unique identifier of the collection.
           schema:
             type: string
             format: uuid
@@ -2519,18 +4360,12 @@ paths:
           description: |
             Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
             by organization, flow, environment key, version ID, runner type, trigger type, and the
-            key digest. A matching non-terminal ephemeral launch returns the original execution; a
-            matching terminal one returns the execution summary; reusing the key with different
-            scoped parameters returns 409 Conflict.
+            key digest. A matching non-terminal ephemeral launch returns the original package; a
+            matching terminal one returns the execution summary without a package; reusing the key
+            with different scoped parameters returns 409 Conflict.
           schema:
             type: string
             maxLength: 255
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LaunchFlowRequest"
       responses:
         "202":
           description: |
@@ -2553,7 +4388,11 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
-          $ref: "#/components/responses/InternalServerError"
+          description: Flow execution failed to start
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
 
   /runner/ephemeral/executions/{executionId}/complete:
     parameters:
@@ -2564,13 +4403,7 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: X-Organization-Id
-        in: header
-        required: true
-        description: Organization context for the request.
-        schema:
-          type: string
-          minLength: 1
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
       operationId: completeEphemeralExecution
       summary: Complete an ephemeral execution
@@ -2612,14 +4445,187 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /runners:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      operationId: listLiveRunners
+      summary: List live self-hosted runners
+      description: |
+        Returns the currently live self-hosted runners observed for the active organization,
+        based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
+      tags:
+        - Runner
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Live self-hosted runners for the organization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveRunnerListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /runner/jobs/next:
+    post:
+      operationId: nextRunnerJob
+      summary: Claim the next runner job
+      description: |
+        Long-polls for work, refreshes runner liveness, and atomically claims one queued runner job
+        when capacity is available.
+      tags:
+        - Runner
+      security:
+        - ApiKeys: [runner:claim]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerJobNextRequest"
+      responses:
+        "200":
+          description: Claimed runner job payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunnerJobPayload"
+        "204":
+          description: No runner job available before timeout.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /runner/jobs/{jobId}/complete:
+    parameters:
+      - $ref: "#/components/parameters/RunnerJobIDParameter"
+    post:
+      operationId: completeRunnerJob
+      summary: Complete a claimed runner job
+      description: |
+        Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+      tags:
+        - Runner
+      security:
+        - ApiKeys: [runner:complete]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerJobCompletionRequest"
+      responses:
+        "204":
+          description: Runner job completion accepted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /runner/jobs/{jobId}/events:
+    parameters:
+      - $ref: "#/components/parameters/RunnerJobIDParameter"
+    post:
+      operationId: sendRunnerJobEvents
+      summary: Append progress events for a claimed runner job
+      description: |
+        Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+      tags:
+        - Runner
+      security:
+        - ApiKeys: [runner:complete]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerJobEventsRequest"
+      responses:
+        "200":
+          description: Runner progress batch accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunnerJobEventsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /runner/jobs/heartbeat:
+    post:
+      operationId: heartbeatRunnerJobs
+      summary: Renew leases for active runner jobs
+      description: |
+        Refreshes the lease for the claimed runner jobs that are still actively executing
+        on the current runner process.
+      tags:
+        - Runner
+      security:
+        - ApiKeys: [runner:claim]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerJobHeartbeatRequest"
+      responses:
+        "200":
+          description: Heartbeat result for each requested runner job.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RunnerJobHeartbeatResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /flows:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: List Flows
       description: Retrieves a paginated list of flows for the authenticated user.
       operationId: listFlows
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
       parameters:
         - $ref: "#/components/parameters/LimitParameter"
         - $ref: "#/components/parameters/OffsetParameter"
@@ -2640,7 +4646,7 @@ paths:
       operationId: createFlow
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:create]
       requestBody:
         description: Flow creation details.
         required: true
@@ -2660,6 +4666,265 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /flows/generations:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Start Flow Generation
+      description: Starts an asynchronous AI-assisted flow generation run.
+      operationId: createFlowGeneration
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlowGenerationRequest"
+      responses:
+        "201":
+          description: Flow generation run started successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowGeneration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /flows/generations/{runId}:
+    parameters:
+      - name: runId
+        in: path
+        required: true
+        description: The workflow run ID returned when generation started.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Flow Generation
+      description: Retrieves the current status and result of an AI-assisted flow generation run.
+      operationId: getFlowGeneration
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Flow generation status retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowGeneration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{id}/generation-sessions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Ensure Flow Generation Session
+      description: Creates or returns the active AI generation session for the current user and flow.
+      operationId: ensureFlowGenerationSession
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+      responses:
+        "200":
+          description: Active generation session returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowGenerationSession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flow-generation-sessions/{sessionId}:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: The unique identifier of the flow generation session.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Flow Generation Session
+      description: Retrieves the current session state, latest run, and recent chat messages.
+      operationId: getFlowGenerationSession
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Session retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowGenerationSessionDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flow-generation-sessions/{sessionId}/messages:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: The unique identifier of the flow generation session.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Flow Generation Session Messages
+      description: Returns a paginated list of messages for the session, ordered oldest to newest. Use the `before` cursor to page backward through older messages.
+      operationId: listFlowGenerationSessionMessages
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of messages to return (1–50, default 20).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: before
+          in: query
+          required: false
+          description: Cursor — return messages created before this message ID. Omit to start from the latest messages.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated list of messages.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowGenerationSessionMessageList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Send Flow Generation Session Message
+      description: Persists a user message and starts a linked AI generation run for the session.
+      operationId: createFlowGenerationSessionMessage
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlowGenerationSessionMessageRequest"
+      responses:
+        "201":
+          description: Session message accepted and run started.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowGenerationSessionMessageSendResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /flow-generation-sessions/{sessionId}/stream:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: The unique identifier of the flow generation session.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Stream flow generation session events
+      description: Streams real-time AI session events for a specific flow generation session using Server-Sent Events.
+      operationId: streamFlowGenerationSession
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Server-Sent Events stream of flow generation session events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream of JSON event payloads prefixed with `data:`.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flow-generation-sessions/{sessionId}/runs/{runId}/restore:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: The unique identifier of the flow generation session.
+        schema:
+          type: string
+          format: uuid
+      - name: runId
+        in: path
+        required: true
+        description: The unique identifier of the flow generation run to restore from.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Restore flow from AI session run snapshot
+      description: Restores the current flow to the snapshot captured before the specified AI session run applied its changes.
+      operationId: restoreFlowGenerationSessionRun
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+      responses:
+        "200":
+          description: Flow restored successfully from the selected AI session run snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowGenerationSessionRestoreResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /flows/{id}:
     parameters:
       - name: id
@@ -2669,13 +4934,14 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Flow
       description: Retrieves details of a specific flow by ID.
       operationId: getFlow
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
       responses:
         "200":
           description: Flow retrieved successfully.
@@ -2693,7 +4959,7 @@ paths:
       operationId: updateFlow
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:update]
       requestBody:
         description: Flow update details.
         required: true
@@ -2720,7 +4986,7 @@ paths:
       operationId: deleteFlow
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:delete]
       responses:
         "204":
           description: Flow deleted successfully or already deleted.
@@ -2736,13 +5002,21 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: version_id
+        in: query
+        required: false
+        description: Optional flow version ID to export. When omitted, the current flow definition is used.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Export Flow
       description: Returns the raw flow definition JSON formatted for the flow engine.
       operationId: exportFlow
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
       responses:
         "200":
           description: Flow definition exported successfully.
@@ -2757,14 +5031,303 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /me:
+    get:
+      summary: Get current user and organization context
+      description: Returns the authenticated user profile and resolved organization context.
+      operationId: getMe
+      tags: [ Auth ]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current user context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /organization/environment:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Create or Update Organization Environment
+      description: Creates or updates the organization base environment and named environment overlays.
+      operationId: createOrUpdateOrganizationEnvironment
+      tags: [Organization]
+      security:
+        - BearerAuth: [flows:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertOrganizationEnvironmentRequest"
+      responses:
+        "200":
+          description: Organization environment updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "201":
+          description: Organization environment created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    get:
+      summary: Get Organization Environment
+      description: Retrieves the organization base environment and named environment overlays.
+      operationId: getOrganizationEnvironment
+      tags: [Organization]
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Organization environment retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      summary: Update Organization Environment
+      description: Replaces the organization base environment and named environment overlays.
+      operationId: updateOrganizationEnvironment
+      tags: [Organization]
+      security:
+        - BearerAuth: [flows:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrganizationEnvironmentRequest"
+      responses:
+        "200":
+          description: Organization environment updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      summary: Delete Organization Environment
+      description: Deletes the organization environment and its named overlays.
+      operationId: deleteOrganizationEnvironment
+      tags: [Organization]
+      security:
+        - BearerAuth: [flows:update]
+      responses:
+        "204":
+          description: Organization environment deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /init:
+    post:
+      summary: Initialize current user organization
+      description: Creates initial organization and membership when a synced user has no organizations.
+      operationId: initUser
+      tags: [ Auth ]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Initialization completed or already initialized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InitResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api-keys:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List API Keys
+      description: Lists API keys for the current organization.
+      operationId: listAPIKeys
+      tags: [Auth]
+      security:
+        - BearerAuth: [api_key:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: API keys retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create API Key
+      description: Creates a new API key for the current organization.
+      operationId: createAPIKey
+      tags: [Auth]
+      security:
+        - BearerAuth: [api_key:create]
+      requestBody:
+        description: API key creation details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKeyCreateRequest"
+      responses:
+        "201":
+          description: API key created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api-keys/search:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Search API Keys
+      description: Server-side search with pagination, filtering and sorting for organization API keys.
+      operationId: searchAPIKeys
+      tags: [Auth]
+      security:
+        - BearerAuth: [api_key:read]
+      requestBody:
+        description: Search criteria for API keys.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKeySearchRequest"
+      responses:
+        "200":
+          description: API key search results retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /permissions:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+      - $ref: "#/components/parameters/ApiKeyPermissionTypeParameter"
+    get:
+      summary: List Available Permissions
+      description: Lists product permissions that can be assigned to Echopoint API keys for the requested type.
+      operationId: listPermissions
+      tags: [Auth]
+      security:
+        - BearerAuth: [api_key:create]
+      responses:
+        "200":
+          description: Permissions retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api-keys/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ApiKeyIdParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get API Key
+      description: Retrieves details for a single API key in the current organization.
+      operationId: getAPIKey
+      tags: [Auth]
+      security:
+        - BearerAuth: [api_key:read]
+      responses:
+        "200":
+          description: API key retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKey"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete API Key
+      description: Revokes an API key for the current organization.
+      operationId: deleteAPIKey
+      tags: [Auth]
+      security:
+        - BearerAuth: [api_key:delete]
+      responses:
+        "204":
+          description: API key revoked successfully.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /collections:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: List Collections
       description: Retrieves a paginated list of collections for the authenticated user.
       operationId: listCollections
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:read]
       parameters:
         - $ref: "#/components/parameters/LimitParameter"
         - $ref: "#/components/parameters/OffsetParameter"
@@ -2785,7 +5348,7 @@ paths:
       operationId: createCollection
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:create]
       requestBody:
         description: Collection creation details.
         required: true
@@ -2814,13 +5377,14 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Collection
       description: Retrieves a collection with all folders and requests (flat arrays).
       operationId: getCollection
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:read]
       responses:
         "200":
           description: Collection retrieved successfully.
@@ -2838,7 +5402,7 @@ paths:
       operationId: updateCollection
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:update]
       requestBody:
         description: Collection update details.
         required: true
@@ -2865,12 +5429,222 @@ paths:
       operationId: deleteCollection
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:delete]
       responses:
         "204":
           description: Collection deleted successfully or already deleted.
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  /collections/{id}/openapi-sync:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get OpenAPI Sync Config
+      description: Retrieves the OpenAPI sync config for a collection.
+      operationId: getOpenAPISyncConfig
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      responses:
+        "200":
+          description: OpenAPI sync config retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPISyncConfig"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /collections/{id}/openapi-sync/run:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Run OpenAPI Sync Now
+      description: Triggers an immediate OpenAPI sync run for a collection and returns the updated sync config when the run completes.
+      operationId: runOpenAPISyncNow
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:update]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunOpenAPISyncNowRequest"
+      responses:
+        "200":
+          description: OpenAPI sync completed and returned the updated sync config.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPISyncConfig"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /collections/{id}/openapi-sync/history:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List OpenAPI Sync History
+      description: Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
+      operationId: listOpenAPISyncHistory
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: OpenAPI sync history returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPISyncChangeListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Create or Update OpenAPI Sync Config
+      description: Creates or updates the OpenAPI sync config for a collection. Sync currently runs every 5 minutes.
+      operationId: createOrUpdateOpenAPISyncConfig
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:update]
+      requestBody:
+        description: OpenAPI sync config details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertOpenAPISyncConfigRequest"
+      responses:
+        "200":
+          description: OpenAPI sync config updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPISyncConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete OpenAPI Sync Config
+      description: Deletes the OpenAPI sync config for a collection.
+      operationId: deleteOpenAPISyncConfig
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:delete]
+      responses:
+        "204":
+          description: OpenAPI sync config deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /collections/{id}/openapi-sync/operations/search:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Search OpenAPI Sync Operations
+      description: Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+      operationId: searchOpenAPISyncOperations
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      requestBody:
+        description: Search criteria for OpenAPI sync operations.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenAPISyncOperationSearchRequest"
+      responses:
+        "200":
+          description: OpenAPI sync operations retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPISyncOperationListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /openapi-syncs/search:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Search OpenAPI Sync Configs
+      description: Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+      operationId: searchOpenAPISyncConfigs
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      requestBody:
+        description: Search criteria for top-level OpenAPI sync configs.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenAPISyncConfigSearchRequest"
+      responses:
+        "200":
+          description: OpenAPI sync configs retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPISyncConfigListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /collections/{id}/folders:
     parameters:
@@ -2881,13 +5655,32 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Collection Folders
+      description: Returns all folders for a collection so clients can build the tree lazily.
+      operationId: listCollectionFolders
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      responses:
+        "200":
+          description: Collection folders returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionFolderListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       summary: Add Folder
       description: Adds a folder to a collection.
       operationId: addFolder
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:create]
       requestBody:
         description: Folder creation details.
         required: true
@@ -2925,13 +5718,14 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     put:
       summary: Update Folder
       description: Updates a folder.
       operationId: updateFolder
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:update]
       requestBody:
         description: Folder update details.
         required: true
@@ -2958,7 +5752,7 @@ paths:
       operationId: deleteFolder
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:delete]
       responses:
         "204":
           description: Folder deleted successfully or already deleted.
@@ -2976,13 +5770,55 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Collection Requests
+      description: Returns paginated requests for a collection, optionally filtered by folder and search query.
+      operationId: listCollectionRequests
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      parameters:
+        - name: folder_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Restrict results to a specific folder. Omit to list root-level requests only.
+        - name: include_nested
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: When true and folder_id is omitted, include requests nested in folders as well as root-level requests.
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search requests by name or URL.
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Collection requests returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionRequestListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       summary: Add Request
       description: Adds a request to a collection.
       operationId: addRequest
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:create]
       requestBody:
         description: Request creation details.
         required: true
@@ -3020,13 +5856,32 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Request
+      description: Returns a single request from a collection.
+      operationId: getCollectionRequest
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      responses:
+        "200":
+          description: Request returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
     put:
       summary: Update Request
       description: Updates a request.
       operationId: updateRequest
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:update]
       requestBody:
         description: Request update details.
         required: true
@@ -3053,7 +5908,7 @@ paths:
       operationId: deleteRequest
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:delete]
       responses:
         "204":
           description: Request deleted successfully or already deleted.
@@ -3062,14 +5917,99 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /collections/{collectionId}/requests/{requestId}/execute:
+    parameters:
+      - name: collectionId
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - name: requestId
+        in: path
+        required: true
+        description: The unique identifier of the request.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Execute Request
+      description: Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+      operationId: executeCollectionRequest
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:update]
+      requestBody:
+        description: Optional unsaved request draft overrides to execute.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecuteRequestRequest"
+      responses:
+        "200":
+          description: Request executed successfully, including upstream 4xx and 5xx responses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutedRequestResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /collections/{collectionId}/requests/{requestId}/openapi-sync-history:
+    parameters:
+      - name: collectionId
+        in: path
+        required: true
+        description: The unique identifier of the collection.
+        schema:
+          type: string
+          format: uuid
+      - name: requestId
+        in: path
+        required: true
+        description: The unique identifier of the request.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+      - $ref: "#/components/parameters/LimitParameter"
+      - $ref: "#/components/parameters/OffsetParameter"
+    get:
+      summary: List Request OpenAPI Sync History
+      description: Lists OpenAPI sync changes for the upstream binding currently associated with a request.
+      operationId: listCollectionRequestOpenAPISyncHistory
+      tags: [Collections]
+      security:
+        - BearerAuth: [collections:read]
+      responses:
+        "200":
+          description: Request OpenAPI sync history returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAPISyncChangeListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /collections/import/openapi:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
       summary: Import from OpenAPI
       description: Imports a collection from an OpenAPI specification.
       operationId: importFromOpenAPI
       tags: [Collections]
       security:
-        - BearerAuth: []
+        - BearerAuth: [collections:create]
       requestBody:
         description: OpenAPI spec to import.
         required: true
@@ -3100,13 +6040,14 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
       summary: Create or Update Flow Environment
       description: Creates or updates environment variables for a flow.
       operationId: createOrUpdateFlowEnvironment
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:update]
       requestBody:
         description: Environment variables to set.
         required: true
@@ -3139,7 +6080,7 @@ paths:
       operationId: getFlowEnvironment
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
       responses:
         "200":
           description: Environment retrieved successfully (empty object if not exists).
@@ -3157,7 +6098,7 @@ paths:
       operationId: updateFlowEnvironment
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:update]
       requestBody:
         description: Environment variables to update.
         required: true
@@ -3184,7 +6125,7 @@ paths:
       operationId: deleteFlowEnvironment
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:delete]
       responses:
         "204":
           description: Environment deleted successfully or already deleted.
@@ -3193,14 +6134,154 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /flows/{id}/publish:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Publish Flow
+      description: Snapshot the current flow definition as an immutable flow version.
+      operationId: publishFlow
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+      responses:
+        "201":
+          description: Flow published successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowVersion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{id}/versions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+      - $ref: "#/components/parameters/LimitParameter"
+      - $ref: "#/components/parameters/OffsetParameter"
+    get:
+      summary: List Flow Versions
+      description: Retrieves a paginated list of saved versions for a flow.
+      operationId: listFlowVersions
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Flow versions retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowVersionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{id}/versions/{versionId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - name: versionId
+        in: path
+        required: true
+        description: The unique identifier of the flow version.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Flow Version
+      description: Retrieves a specific saved version of a flow.
+      operationId: getFlowVersion
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Flow version retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowVersion"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{id}/versions/{versionId}/restore:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - name: versionId
+        in: path
+        required: true
+        description: The unique identifier of the flow version to restore.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Restore Flow Version
+      description: |
+        Copies a saved version's definition and metadata back into the flow.
+        The original version is preserved.
+      operationId: restoreFlowVersion
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+      responses:
+        "200":
+          description: Flow restored from version successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Flow"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /operations:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: List Available Operations
       description: Retrieves all available operations (extractors and assertions) for flow data processing.
       operationId: listOperations
       tags: [Operations]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
       responses:
         "200":
           description: Operations retrieved successfully.
@@ -3214,13 +6295,15 @@ paths:
           $ref: "#/components/responses/Unauthorized"
 
   /nodes:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: List Available Nodes
       description: Retrieves all available special nodes for flow control (delay, etc.).
       operationId: listNodes
       tags: [Nodes]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
       responses:
         "200":
           description: Nodes retrieved successfully.
@@ -3243,13 +6326,15 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: List Flow Executions
       description: Retrieves execution history for a specific flow with pagination.
       operationId: listFlowExecutions
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       parameters:
         - $ref: "#/components/parameters/LimitParameter"
         - $ref: "#/components/parameters/OffsetParameter"
@@ -3283,13 +6368,15 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Execution Details
       description: Retrieves detailed information about a specific flow execution.
       operationId: getExecution
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Execution details retrieved successfully.
@@ -3297,6 +6384,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FlowExecution"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/{flowId}/executions/{executionId}/stream:
+    parameters:
+      - name: flowId
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - name: executionId
+        in: path
+        required: true
+        description: The unique identifier of the execution.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Stream execution events
+      description: Streams real-time execution events for a specific flow execution using Server-Sent Events.
+      operationId: streamExecution
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+      responses:
+        "200":
+          description: Server-Sent Events stream of flow execution events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream of JSON event payloads prefixed with `data:`.
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -3318,13 +6442,15 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get All Node Results
       description: Retrieves execution results for all nodes in a flow execution.
       operationId: getExecutionNodeResults
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Node results retrieved successfully.
@@ -3361,13 +6487,15 @@ paths:
         description: The node ID (from flow definition).
         schema:
           type: string
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Specific Node Result
       description: Retrieves execution result for a specific node in a flow execution.
       operationId: getNodeExecutionResult
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Node result retrieved successfully.
@@ -3396,13 +6524,14 @@ paths:
           type: string
       - $ref: "#/components/parameters/LimitParameter"
       - $ref: "#/components/parameters/OffsetParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get Node Execution History
       description: Retrieves execution history for a specific node across all flow executions with pagination.
       operationId: getNodeExecutionHistory
       tags: [Flows]
       security:
-        - BearerAuth: []
+        - BearerAuth: [flows:read]
       responses:
         "200":
           description: Node execution history retrieved successfully.

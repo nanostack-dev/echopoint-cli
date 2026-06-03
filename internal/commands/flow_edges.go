@@ -11,6 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// edgeTypeSuccess is the default/primary edge type (alongside "failure").
+const edgeTypeSuccess = "success"
+
 // newFlowEdgeCmd creates the edge subcommand for flows
 func newFlowEdgeCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
@@ -53,13 +56,13 @@ Examples:
 			}
 
 			// Validate edge type
-			validTypes := []string{"success", "failure"}
+			validTypes := []string{edgeTypeSuccess, "failure"}
 			if !containsString(validTypes, edgeType) {
 				return fmt.Errorf("invalid edge type: %s (must be 'success' or 'failure')", edgeType)
 			}
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -139,7 +142,7 @@ Examples:
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}
@@ -161,7 +164,7 @@ Examples:
 	cmd.Flags().StringVar(
 		&toNode, "to", "", "Target node ID")
 	cmd.Flags().StringVar(
-		&edgeType, "type", "success", "Edge type (success or failure)")
+		&edgeType, "type", edgeTypeSuccess, "Edge type (success or failure)")
 
 	_ = cmd.MarkFlagRequired("from")
 	_ = cmd.MarkFlagRequired("to")
@@ -188,7 +191,7 @@ func newFlowEdgeRemoveCmd(state *AppState) *cobra.Command {
 			edgeID := args[1]
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -223,7 +226,7 @@ func newFlowEdgeRemoveCmd(state *AppState) *cobra.Command {
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}

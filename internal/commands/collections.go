@@ -97,7 +97,7 @@ func newCollectionsGetCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid collection id")
 			}
 
-			resp, err := state.Client.API().GetCollectionWithResponse(context.Background(), id)
+			resp, err := state.Client.API().GetCollectionWithResponse(context.Background(), id, nil)
 			if err != nil {
 				return err
 			}
@@ -151,7 +151,7 @@ func newCollectionsCreateCmd(state *AppState) *cobra.Command {
 				req.Source = &value
 			}
 
-			resp, err := state.Client.API().CreateCollectionWithResponse(context.Background(), req)
+			resp, err := state.Client.API().CreateCollectionWithResponse(context.Background(), nil, req)
 			if err != nil {
 				return err
 			}
@@ -205,7 +205,7 @@ func newCollectionsUpdateCmd(state *AppState) *cobra.Command {
 				req.Description = &description
 			}
 
-			resp, err := state.Client.API().UpdateCollectionWithResponse(context.Background(), id, req)
+			resp, err := state.Client.API().UpdateCollectionWithResponse(context.Background(), id, nil, req)
 			if err != nil {
 				return err
 			}
@@ -246,7 +246,7 @@ func newCollectionsDeleteCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid collection id")
 			}
 
-			resp, err := state.Client.API().DeleteCollectionWithResponse(context.Background(), id)
+			resp, err := state.Client.API().DeleteCollectionWithResponse(context.Background(), id, nil)
 			if err != nil {
 				return err
 			}
@@ -284,7 +284,7 @@ func newCollectionsImportCmd(state *AppState) *cobra.Command {
 			}
 
 			req := api.ImportOpenAPIRequest{
-				Spec: spec,
+				Spec: &spec,
 			}
 
 			if name != "" || cmd.Flags().Changed("tags-as-folders") {
@@ -296,7 +296,7 @@ func newCollectionsImportCmd(state *AppState) *cobra.Command {
 				req.Options = opts
 			}
 
-			resp, err := state.Client.API().ImportFromOpenAPIWithResponse(context.Background(), req)
+			resp, err := state.Client.API().ImportFromOpenAPIWithResponse(context.Background(), nil, req)
 			if err != nil {
 				return err
 			}

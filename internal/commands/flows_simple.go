@@ -38,7 +38,7 @@ This command will guide you through creating a basic flow.`,
 				},
 			}
 
-			resp, err := state.Client.API().CreateFlowWithResponse(context.Background(), req)
+			resp, err := state.Client.API().CreateFlowWithResponse(context.Background(), nil, req)
 			if err != nil {
 				return fmt.Errorf("failed to create flow: %w", err)
 			}
@@ -79,7 +79,7 @@ func newFlowShowCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid flow ID: %w", err)
 			}
 
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}

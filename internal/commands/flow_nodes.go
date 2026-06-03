@@ -16,6 +16,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// nodeTypeRequest is the "request" flow node type.
+const nodeTypeRequest = "request"
+
 // newFlowNodeCmd creates the node subcommand for flows
 func newFlowNodeCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
@@ -69,7 +72,7 @@ Examples:
 			}
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -90,17 +93,17 @@ Examples:
 			// Create node based on type
 			var newNode api.FlowNode
 			switch nodeType {
-			case "request":
+			case nodeTypeRequest:
 				if method == "" || url == "" {
 					return fmt.Errorf("--method and --url are required for request nodes")
 				}
 
 				reqNode := api.RequestFlowNode{
 					Id:          nodeID,
-					Type:        "request",
+					Type:        nodeTypeRequest,
 					DisplayName: name,
 					Data: api.RequestNodeData{
-						Method:  api.RequestNodeDataMethod(method),
+						Method:  api.HttpMethod(method),
 						Url:     url,
 						Headers: parseHeaders(headers),
 					},
@@ -188,7 +191,7 @@ Examples:
 				fmt.Fprintf(os.Stderr, "[DEBUG] UpdateFlowRequest: %s\n", string(reqJSON))
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}
@@ -256,7 +259,7 @@ func newFlowNodeRemoveCmd(state *AppState) *cobra.Command {
 			nodeID := args[1]
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -316,7 +319,7 @@ func newFlowNodeRemoveCmd(state *AppState) *cobra.Command {
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}
@@ -352,7 +355,7 @@ func newFlowNodeUpdateCmd(state *AppState) *cobra.Command {
 			nodeID := args[1]
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -374,7 +377,7 @@ func newFlowNodeUpdateCmd(state *AppState) *cobra.Command {
 							n.DisplayName = name
 						}
 						if method != "" {
-							n.Data.Method = api.RequestNodeDataMethod(method)
+							n.Data.Method = api.HttpMethod(method)
 						}
 						if url != "" {
 							n.Data.Url = url
@@ -412,7 +415,7 @@ func newFlowNodeUpdateCmd(state *AppState) *cobra.Command {
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}
@@ -489,7 +492,7 @@ Examples:
 			}
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -579,7 +582,7 @@ Examples:
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}
@@ -625,7 +628,7 @@ func newFlowNodeOutputRemoveCmd(state *AppState) *cobra.Command {
 			outputName := args[2]
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -685,7 +688,7 @@ func newFlowNodeOutputRemoveCmd(state *AppState) *cobra.Command {
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}
@@ -775,7 +778,7 @@ Available operators: equals, notEquals, contains, notContains, greaterThan, less
 			}
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -836,7 +839,7 @@ Available operators: equals, notEquals, contains, notContains, greaterThan, less
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}
@@ -894,7 +897,7 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 			}
 
 			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get flow: %w", err)
 			}
@@ -940,7 +943,7 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 				AutoLayout:     &autoLayout,
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, updateReq)
+			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
 			if err != nil {
 				return fmt.Errorf("failed to update flow: %w", err)
 			}

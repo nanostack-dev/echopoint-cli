@@ -131,7 +131,7 @@ func newFlowsExecutionGetCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid execution id")
 			}
 
-			resp, err := state.Client.API().GetExecutionWithResponse(context.Background(), flowID, executionID)
+			resp, err := state.Client.API().GetExecutionWithResponse(context.Background(), flowID, executionID, nil)
 			if err != nil {
 				return err
 			}
@@ -314,7 +314,7 @@ func newFlowsGetCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid flow id")
 			}
 
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), id)
+			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), id, nil)
 			if err != nil {
 				return err
 			}
@@ -360,7 +360,7 @@ func newFlowsCreateCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			resp, err := state.Client.API().CreateFlowWithResponse(context.Background(), req)
+			resp, err := state.Client.API().CreateFlowWithResponse(context.Background(), nil, req)
 			if err != nil {
 				return fmt.Errorf("request failed: %w", err)
 			}
@@ -418,7 +418,7 @@ func newFlowsUpdateCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			resp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), id, req)
+			resp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), id, nil, req)
 			if err != nil {
 				return err
 			}
@@ -459,7 +459,7 @@ func newFlowsDeleteCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid flow id")
 			}
 
-			resp, err := state.Client.API().DeleteFlowWithResponse(context.Background(), id)
+			resp, err := state.Client.API().DeleteFlowWithResponse(context.Background(), id, nil)
 			if err != nil {
 				return err
 			}

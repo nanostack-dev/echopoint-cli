@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"echopoint-cli/internal/api"
 	"echopoint-cli/internal/output"
@@ -24,10 +23,68 @@ func newFlowEnvCmd(state *AppState) *cobra.Command {
 	cmd.AddCommand(
 		newFlowEnvGetCmd(state),
 		newFlowEnvSetCmd(state),
+		newFlowEnvUnsetCmd(state),
 		newFlowEnvDeleteCmd(state),
 	)
 
 	return cmd
+}
+
+// newFlowEnvUnsetCmd removes specific environment variables from a flow.
+func newFlowEnvUnsetCmd(state *AppState) *cobra.Command {
+	return &cobra.Command{
+		Use:   "unset <flow-id> KEY [KEY...]",
+		Short: "Remove flow environment variables",
+		Args:  cobra.MinimumNArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireToken(state); err != nil {
+				return err
+			}
+
+			flowID, err := uuid.Parse(args[0])
+			if err != nil {
+				return fmt.Errorf("invalid flow ID: %w", err)
+			}
+
+			getResp, err := state.Client.API().GetFlowEnvironmentWithResponse(context.Background(), flowID, nil)
+			if err != nil {
+				return fmt.Errorf("failed to get environment: %w", err)
+			}
+			if getResp.JSON200 == nil {
+				return formatAPIError(getResp.HTTPResponse, getResp.Body)
+			}
+
+			vars := make(map[string]string, len(getResp.JSON200.Variables))
+			for k, v := range getResp.JSON200.Variables {
+				vars[k] = v.Value
+			}
+
+			removed := 0
+			for _, k := range args[1:] {
+				if _, ok := vars[k]; ok {
+					delete(vars, k)
+					removed++
+				}
+			}
+			if removed == 0 {
+				fmt.Println("No matching variables to remove")
+				return nil
+			}
+
+			req := api.CreateFlowEnvironmentRequest{Variables: vars}
+			resp, err := state.Client.API().
+				CreateOrUpdateFlowEnvironmentWithResponse(context.Background(), flowID, nil, req)
+			if err != nil {
+				return fmt.Errorf("failed to update environment: %w", err)
+			}
+			if resp.JSON200 == nil && resp.JSON201 == nil {
+				return formatAPIError(resp.HTTPResponse, resp.Body)
+			}
+
+			fmt.Printf("✓ Removed %d variable(s)\n", removed)
+			return nil
+		},
+	}
 }
 
 // newFlowEnvGetCmd gets environment variables for a flow
@@ -46,7 +103,7 @@ func newFlowEnvGetCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid flow ID: %w", err)
 			}
 
-			resp, err := state.Client.API().GetFlowEnvironmentWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().GetFlowEnvironmentWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to get environment: %w", err)
 			}
@@ -106,26 +163,38 @@ Examples:
 				return fmt.Errorf("invalid flow ID: %w", err)
 			}
 
-			vars := make(map[string]string)
-
-			// Parse --var flags
-			for _, v := range variables {
-				parts := strings.SplitN(v, "=", 2)
-				if len(parts) != 2 {
-					return fmt.Errorf("invalid variable format: %s (expected KEY=value)", v)
-				}
-				vars[parts[0]] = parts[1]
+			updates, err := parseVarFlags(variables)
+			if err != nil {
+				return err
+			}
+			if len(updates) == 0 {
+				return fmt.Errorf("no variables provided. Use --var KEY=value")
 			}
 
-			if len(vars) == 0 {
-				return fmt.Errorf("no variables provided. Use --var KEY=value")
+			// Merge into existing variables (read-modify-write): the API replaces
+			// the whole set, so fetch current state and apply only the changes.
+			getResp, err := state.Client.API().GetFlowEnvironmentWithResponse(context.Background(), flowID, nil)
+			if err != nil {
+				return fmt.Errorf("failed to get environment: %w", err)
+			}
+			if getResp.JSON200 == nil {
+				return formatAPIError(getResp.HTTPResponse, getResp.Body)
+			}
+
+			vars := make(map[string]string, len(getResp.JSON200.Variables)+len(updates))
+			for k, v := range getResp.JSON200.Variables {
+				vars[k] = v.Value
+			}
+			for k, v := range updates {
+				vars[k] = v
 			}
 
 			req := api.CreateFlowEnvironmentRequest{
 				Variables: vars,
 			}
 
-			resp, err := state.Client.API().CreateOrUpdateFlowEnvironmentWithResponse(context.Background(), flowID, req)
+			resp, err := state.Client.API().
+				CreateOrUpdateFlowEnvironmentWithResponse(context.Background(), flowID, nil, req)
 			if err != nil {
 				return fmt.Errorf("failed to set environment: %w", err)
 			}
@@ -133,8 +202,8 @@ Examples:
 				return formatAPIError(resp.HTTPResponse, resp.Body)
 			}
 
-			fmt.Printf("✓ Environment variables set (%d variables)\n", len(vars))
-			for key := range vars {
+			fmt.Printf("✓ Set %d variable(s)\n", len(updates))
+			for key := range updates {
 				fmt.Printf("  %s\n", key)
 			}
 
@@ -164,7 +233,7 @@ func newFlowEnvDeleteCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid flow ID: %w", err)
 			}
 
-			resp, err := state.Client.API().DeleteFlowEnvironmentWithResponse(context.Background(), flowID)
+			resp, err := state.Client.API().DeleteFlowEnvironmentWithResponse(context.Background(), flowID, nil)
 			if err != nil {
 				return fmt.Errorf("failed to delete environment: %w", err)
 			}

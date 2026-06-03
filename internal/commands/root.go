@@ -128,6 +128,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(
 		newAuthCmd(state),
 		newFlowsCmd(state),
+		newOrgCmd(state),
 		newCollectionsCmd(state),
 		newConfigCmd(state),
 		newProfileCmd(state),

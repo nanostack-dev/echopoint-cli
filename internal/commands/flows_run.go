@@ -606,7 +606,7 @@ func publishResult(
 	progressf(outputFormat, "Publishing result for execution %s...\n", executionID)
 
 	params := &api.CompleteEphemeralExecutionParams{
-		XOrganizationId: state.OrganizationID,
+		XOrganizationID: state.OrganizationID,
 	}
 
 	var lastErr error
