@@ -119,6 +119,7 @@ func newFlowsRunCmd(state *AppState) *cobra.Command {
 		flagPollTimeout    time.Duration
 		flagParallel       int
 		flagOutput         string
+		flagVerbose        bool
 	)
 
 	cmd := &cobra.Command{
@@ -184,10 +185,12 @@ Exit codes:
 				flagEnvironment, flagVersionID, flagParallel, flagOutput,
 			)
 
-			return emitOutput(cmd, state, flagOutput, results, exitCode, len(flowIDs))
+			return emitOutput(cmd, state, flagOutput, flagVerbose, results, exitCode, len(flowIDs))
 		},
 	}
 
+	cmd.Flags().BoolVar(&flagVerbose, "verbose", false,
+		"Print each node's status (name, status, duration) as the flow runs")
 	cmd.Flags().StringVar(&flagEnvironment, "environment", "", "Named environment key to overlay on flow inputs")
 	cmd.Flags().StringVar(&flagVersionID, "version-id", "",
 		"Flow version ID to execute (default: current flow definition)")
@@ -751,10 +754,10 @@ func errorResult(flowID, executionID string, exitCode int, msg string) FlowRunRe
 }
 
 func emitOutput(
-	_ *cobra.Command, _ *AppState, flagOutput string,
+	_ *cobra.Command, _ *AppState, flagOutput string, verbose bool,
 	results []FlowRunResult, exitCode int, numFlows int,
 ) error {
-	writeSummary(results, exitCode)
+	writeSummary(results, exitCode, verbose)
 
 	if summaryPath := os.Getenv("GITHUB_STEP_SUMMARY"); summaryPath != "" {
 		_ = writeGitHubStepSummary(summaryPath, results)
@@ -838,7 +841,7 @@ func (e *exitCodeError) ExitCode() int {
 	return e.code
 }
 
-func writeSummary(results []FlowRunResult, exitCode int) {
+func writeSummary(results []FlowRunResult, exitCode int, verbose bool) {
 	isGitHub := os.Getenv("GITHUB_ACTIONS") == githubActionsTrueValue
 
 	if isGitHub {
@@ -865,7 +868,21 @@ func writeSummary(results []FlowRunResult, exitCode int) {
 		}
 
 		for _, n := range r.Nodes {
-			if n.Status == statusFailed {
+			switch {
+			case verbose:
+				icon := "✓"
+				if n.Status == statusFailed {
+					icon = "✗"
+				}
+				fmt.Fprintf(os.Stderr, "  %s %s (%s) %s", icon, n.DisplayName, n.NodeID, n.Status)
+				if n.DurationMs != nil {
+					fmt.Fprintf(os.Stderr, " (%dms)", *n.DurationMs)
+				}
+				if n.Status == statusFailed && n.ErrorMsg != nil {
+					fmt.Fprintf(os.Stderr, " — %s", *n.ErrorMsg)
+				}
+				fmt.Fprintln(os.Stderr)
+			case n.Status == statusFailed:
 				nodeMsg := ""
 				if n.ErrorMsg != nil {
 					nodeMsg = ": " + *n.ErrorMsg
