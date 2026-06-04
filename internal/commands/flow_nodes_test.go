@@ -1,6 +1,40 @@
 package commands
 
-import "testing"
+import (
+	"testing"
+
+	"echopoint-cli/internal/api"
+)
+
+func requestNode(id string) api.FlowNode {
+	var n api.FlowNode
+	n.FromRequestFlowNode(api.RequestFlowNode{Id: id, Type: nodeTypeRequest})
+	return n
+}
+
+func TestFlowNodeID(t *testing.T) {
+	got, err := flowNodeID(requestNode("create-product"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "create-product" {
+		t.Errorf("expected create-product, got %q", got)
+	}
+}
+
+func TestNodeIDExists(t *testing.T) {
+	nodes := []api.FlowNode{requestNode("create-product"), requestNode("get-product")}
+
+	if exists, err := nodeIDExists(nodes, "create-product"); err != nil || !exists {
+		t.Errorf("expected existing id to be found (exists=%v err=%v)", exists, err)
+	}
+	if exists, err := nodeIDExists(nodes, "delete-product"); err != nil || exists {
+		t.Errorf("expected absent id to be missing (exists=%v err=%v)", exists, err)
+	}
+	if exists, err := nodeIDExists(nil, "anything"); err != nil || exists {
+		t.Errorf("expected no ids in an empty flow (exists=%v err=%v)", exists, err)
+	}
+}
 
 func TestParseKeyVals(t *testing.T) {
 	t.Run("parses pairs", func(t *testing.T) {

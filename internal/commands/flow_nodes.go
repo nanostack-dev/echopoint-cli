@@ -39,7 +39,7 @@ func newFlowNodeCmd(state *AppState) *cobra.Command {
 
 // newFlowNodeAddCmd adds a new node to a flow
 func newFlowNodeAddCmd(state *AppState) *cobra.Command {
-	var nodeType, name, method, url, headers, body, moduleFlowID string
+	var nodeType, name, method, url, headers, body, moduleFlowID, customID string
 	var duration int
 	var inputBindings, outputBindings []string
 
@@ -83,12 +83,25 @@ Examples:
 			flow := resp.JSON200
 			definition := flow.FlowDefinition
 
-			// Generate new node ID (UUIDv7)
-			nodeUUID, err := uuid.NewV7()
-			if err != nil {
-				return fmt.Errorf("failed to generate node ID: %w", err)
+			// Node ID: a caller-provided logical id (unique within the flow) or
+			// an auto-generated UUIDv7 when --id is omitted.
+			var nodeID string
+			if customID != "" {
+				exists, existsErr := nodeIDExists(definition.Nodes, customID)
+				if existsErr != nil {
+					return existsErr
+				}
+				if exists {
+					return fmt.Errorf("node ID %q already exists in this flow", customID)
+				}
+				nodeID = customID
+			} else {
+				nodeUUID, err := uuid.NewV7()
+				if err != nil {
+					return fmt.Errorf("failed to generate node ID: %w", err)
+				}
+				nodeID = nodeUUID.String()
 			}
-			nodeID := nodeUUID.String()
 
 			// Create node based on type
 			var newNode api.FlowNode
@@ -208,6 +221,8 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request, delay or module)")
+	cmd.Flags().StringVar(&customID, "id", "",
+		"Custom node ID, unique within the flow (auto-generated UUID if omitted)")
 	cmd.Flags().StringVar(&name, "name", "", "Node display name")
 	cmd.Flags().StringVar(&method, "method", "", "HTTP method (for request nodes)")
 	cmd.Flags().StringVar(&url, "url", "", "Request URL (for request nodes)")
@@ -959,6 +974,37 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 }
 
 // parseHeaders parses a JSON string into a map
+// flowNodeID returns a node's ID. Every flow node carries an "id" field
+// regardless of its type, so it is read generically rather than per type.
+func flowNodeID(node api.FlowNode) (string, error) {
+	raw, err := node.MarshalJSON()
+	if err != nil {
+		return "", fmt.Errorf("failed to read flow node: %w", err)
+	}
+	var probe struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return "", fmt.Errorf("failed to read flow node id: %w", err)
+	}
+	return probe.ID, nil
+}
+
+// nodeIDExists reports whether any node in the flow already uses the given ID
+// (across all node types).
+func nodeIDExists(nodes []api.FlowNode, id string) (bool, error) {
+	for _, node := range nodes {
+		existingID, err := flowNodeID(node)
+		if err != nil {
+			return false, err
+		}
+		if existingID == id {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func parseHeaders(headers string) *map[string]string {
 	if headers == "" {
 		return nil
