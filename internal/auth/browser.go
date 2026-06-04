@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -9,8 +11,32 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
+
+// fallbackTokenTTL is used only when the token's own expiry can't be read.
+const fallbackTokenTTL = time.Hour
+
+// tokenExpiry reads the `exp` claim from a JWT (without verifying the
+// signature — used only to schedule re-auth, not to trust the token) and
+// returns it as a time. Falls back to now+fallbackTokenTTL when the token is
+// not a readable JWT, so a short-lived token is never treated as longer-lived
+// than it is.
+func tokenExpiry(token string, now time.Time) time.Time {
+	parts := strings.Split(token, ".")
+	if len(parts) == 3 {
+		if payload, err := base64.RawURLEncoding.DecodeString(parts[1]); err == nil {
+			var claims struct {
+				Exp int64 `json:"exp"`
+			}
+			if json.Unmarshal(payload, &claims) == nil && claims.Exp > 0 {
+				return time.Unix(claims.Exp, 0)
+			}
+		}
+	}
+	return now.Add(fallbackTokenTTL)
+}
 
 const (
 	callbackPath    = "/callback"
@@ -88,8 +114,9 @@ func BrowserLogin(ctx context.Context, frontendURL string, debug bool) (Credenti
 	case token := <-tokenCh:
 		_ = server.Shutdown(context.Background())
 
-		// Token expires in ~1 hour
-		expiresAt := time.Now().Add(1 * time.Hour)
+		// Derive expiry from the token's own `exp` claim so long-lived
+		// sessions are not discarded after an arbitrary hour.
+		expiresAt := tokenExpiry(token, time.Now())
 
 		return Credentials{
 			AccessToken: token,
