@@ -36,6 +36,7 @@ func newFlowsCmd(state *AppState) *cobra.Command {
 		newFlowNodeCmd(state),
 		newFlowEdgeCmd(state),
 		newFlowEnvCmd(state),
+		newFlowValidateCmd(state),
 	)
 
 	return cmd
