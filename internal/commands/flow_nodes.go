@@ -39,9 +39,9 @@ func newFlowNodeCmd(state *AppState) *cobra.Command {
 
 // newFlowNodeAddCmd adds a new node to a flow
 func newFlowNodeAddCmd(state *AppState) *cobra.Command {
-	var nodeType, name, method, url, headers, body, moduleFlowID, customID string
+	var nodeType, name, method, url, headers, body, moduleFlowID, customID, runWhen string
 	var duration int
-	var inputBindings, outputBindings []string
+	var inputBindings, outputBindings, afterNodes []string
 
 	cmd := &cobra.Command{
 		Use:   "add <flow-id>",
@@ -60,7 +60,15 @@ Examples:
   echopoint flows node add <flow-id> --type module --name "Login" \
     --flow-id <child-flow-id> \
     --input email={{userEmail}} --input password={{userPassword}} \
-    --output token=authToken`,
+    --output token=authToken
+
+  # Logical id + auto-wire an edge from an existing node (no separate 'edge add')
+  echopoint flows node add <flow-id> --id get-product --after create-product \
+    --type request --name "Get Product" --method GET --url ".../products/{{create-product.productId}}"
+
+  # A cleanup node that runs even when an upstream branch has failed
+  echopoint flows node add <flow-id> --id cleanup --run-when always --after get-product \
+    --type request --name "Cleanup" --method DELETE --url ".../products/{{create-product.productId}}"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -103,93 +111,58 @@ Examples:
 				nodeID = nodeUUID.String()
 			}
 
-			// Create node based on type
-			var newNode api.FlowNode
-			switch nodeType {
-			case nodeTypeRequest:
-				if method == "" || url == "" {
-					return fmt.Errorf("--method and --url are required for request nodes")
+			// Optional run-when (on_success default, or always so cleanup nodes
+			// still run after an upstream branch has failed).
+			var runWhenPtr *api.FlowNodeRunWhen
+			if runWhen != "" {
+				if runWhen != string(api.OnSuccess) && runWhen != string(api.Always) {
+					return fmt.Errorf("invalid --run-when %q (must be on_success or always)", runWhen)
 				}
+				rw := api.FlowNodeRunWhen(runWhen)
+				runWhenPtr = &rw
+			}
 
-				reqNode := api.RequestFlowNode{
-					Id:          nodeID,
-					Type:        nodeTypeRequest,
-					DisplayName: name,
-					Data: api.RequestNodeData{
-						Method:  api.HttpMethod(method),
-						Url:     url,
-						Headers: parseHeaders(headers),
-					},
-				}
-
-				if body != "" {
-					reqNode.Data.Body = &body
-				}
-
-				newNode.FromRequestFlowNode(reqNode)
-
-			case "delay":
-				if duration <= 0 {
-					return fmt.Errorf("--duration is required for delay nodes (in milliseconds)")
-				}
-
-				delayNode := api.DelayFlowNode{
-					Id:          nodeID,
-					Type:        "delay",
-					DisplayName: name,
-					Data: api.DelayNodeData{
-						Duration: duration,
-					},
-				}
-				newNode.FromDelayFlowNode(delayNode)
-
-			case "module":
-				if moduleFlowID == "" {
-					return fmt.Errorf("--flow-id is required for module nodes")
-				}
-				childID, perr := googleuuid.Parse(moduleFlowID)
-				if perr != nil {
-					return fmt.Errorf("invalid --flow-id: %w", perr)
-				}
-
-				moduleData := api.ModuleNodeData{
-					FlowId: openapi_types.UUID(childID),
-				}
-
-				if len(inputBindings) > 0 {
-					inputs, ierr := parseKeyVals(inputBindings)
-					if ierr != nil {
-						return fmt.Errorf("invalid --input: %w", ierr)
-					}
-					bindings := make(map[string]interface{}, len(inputs))
-					for k, v := range inputs {
-						bindings[k] = v
-					}
-					moduleData.InputBindings = &bindings
-				}
-
-				if len(outputBindings) > 0 {
-					outputs, oerr := parseKeyVals(outputBindings)
-					if oerr != nil {
-						return fmt.Errorf("invalid --output: %w", oerr)
-					}
-					moduleData.OutputBindings = &outputs
-				}
-
-				moduleNode := api.ModuleFlowNode{
-					Id:          nodeID,
-					Type:        "module",
-					DisplayName: name,
-					Data:        moduleData,
-				}
-				newNode.FromModuleFlowNode(moduleNode)
-
-			default:
-				return fmt.Errorf("invalid node type: %s (must be 'request', 'delay' or 'module')", nodeType)
+			newNode, buildErr := buildFlowNode(nodeBuildInput{
+				id:             nodeID,
+				nodeType:       nodeType,
+				name:           name,
+				method:         method,
+				url:            url,
+				headers:        headers,
+				body:           body,
+				duration:       duration,
+				moduleFlowID:   moduleFlowID,
+				inputBindings:  inputBindings,
+				outputBindings: outputBindings,
+				runWhen:        runWhenPtr,
+			})
+			if buildErr != nil {
+				return buildErr
 			}
 
 			// Add node to definition
 			definition.Nodes = append(definition.Nodes, newNode)
+
+			// --after: auto-wire a success edge from each named node to this one.
+			for _, src := range afterNodes {
+				exists, existsErr := nodeIDExists(definition.Nodes, src)
+				if existsErr != nil {
+					return existsErr
+				}
+				if !exists {
+					return fmt.Errorf("--after references unknown node %q", src)
+				}
+				edgeUUID, edgeErr := uuid.NewV7()
+				if edgeErr != nil {
+					return fmt.Errorf("failed to generate edge ID: %w", edgeErr)
+				}
+				definition.Edges = append(definition.Edges, api.FlowEdge{
+					Id:     edgeUUID.String(),
+					Source: src,
+					Target: nodeID,
+					Type:   api.FlowEdgeType(edgeTypeSuccess),
+				})
+			}
 
 			// Update flow with auto-layout enabled
 			autoLayout := true
@@ -223,6 +196,10 @@ Examples:
 	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request, delay or module)")
 	cmd.Flags().StringVar(&customID, "id", "",
 		"Custom node ID, unique within the flow (auto-generated UUID if omitted)")
+	cmd.Flags().StringVar(&runWhen, "run-when", "",
+		"When the node runs: on_success (default) or always (runs even after an upstream failure, e.g. cleanup)")
+	cmd.Flags().StringArrayVar(&afterNodes, "after", nil,
+		"Add a success edge from this node id to the new node (repeatable); auto-wires the graph")
 	cmd.Flags().StringVar(&name, "name", "", "Node display name")
 	cmd.Flags().StringVar(&method, "method", "", "HTTP method (for request nodes)")
 	cmd.Flags().StringVar(&url, "url", "", "Request URL (for request nodes)")
@@ -974,6 +951,99 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 }
 
 // parseHeaders parses a JSON string into a map
+// nodeBuildInput carries the fields needed to construct a flow node.
+type nodeBuildInput struct {
+	id, nodeType, name, method, url, headers, body, moduleFlowID string
+	duration                                                     int
+	inputBindings, outputBindings                                []string
+	runWhen                                                      *api.FlowNodeRunWhen
+}
+
+// buildFlowNode constructs a FlowNode of the requested type from CLI input.
+func buildFlowNode(in nodeBuildInput) (api.FlowNode, error) {
+	var node api.FlowNode
+	switch in.nodeType {
+	case nodeTypeRequest:
+		if in.method == "" || in.url == "" {
+			return node, fmt.Errorf("--method and --url are required for request nodes")
+		}
+		reqNode := api.RequestFlowNode{
+			Id:          in.id,
+			Type:        nodeTypeRequest,
+			DisplayName: in.name,
+			RunWhen:     in.runWhen,
+			Data: api.RequestNodeData{
+				Method:  api.HttpMethod(in.method),
+				Url:     in.url,
+				Headers: parseHeaders(in.headers),
+			},
+		}
+		if in.body != "" {
+			reqNode.Data.Body = &in.body
+		}
+		node.FromRequestFlowNode(reqNode)
+	case "delay":
+		if in.duration <= 0 {
+			return node, fmt.Errorf("--duration is required for delay nodes (in milliseconds)")
+		}
+		node.FromDelayFlowNode(api.DelayFlowNode{
+			Id:          in.id,
+			Type:        "delay",
+			DisplayName: in.name,
+			RunWhen:     in.runWhen,
+			Data:        api.DelayNodeData{Duration: in.duration},
+		})
+	case "module":
+		moduleData, err := buildModuleData(in.moduleFlowID, in.inputBindings, in.outputBindings)
+		if err != nil {
+			return node, err
+		}
+		node.FromModuleFlowNode(api.ModuleFlowNode{
+			Id:          in.id,
+			Type:        "module",
+			DisplayName: in.name,
+			RunWhen:     in.runWhen,
+			Data:        moduleData,
+		})
+	default:
+		return node, fmt.Errorf("invalid node type: %s (must be 'request', 'delay' or 'module')", in.nodeType)
+	}
+	return node, nil
+}
+
+// buildModuleData assembles a module node's data from the child flow id and bindings.
+func buildModuleData(moduleFlowID string, inputBindings, outputBindings []string) (api.ModuleNodeData, error) {
+	var data api.ModuleNodeData
+	if moduleFlowID == "" {
+		return data, fmt.Errorf("--flow-id is required for module nodes")
+	}
+	childID, err := googleuuid.Parse(moduleFlowID)
+	if err != nil {
+		return data, fmt.Errorf("invalid --flow-id: %w", err)
+	}
+	data.FlowId = openapi_types.UUID(childID)
+
+	if len(inputBindings) > 0 {
+		inputs, ierr := parseKeyVals(inputBindings)
+		if ierr != nil {
+			return data, fmt.Errorf("invalid --input: %w", ierr)
+		}
+		bindings := make(map[string]interface{}, len(inputs))
+		for k, v := range inputs {
+			bindings[k] = v
+		}
+		data.InputBindings = &bindings
+	}
+	if len(outputBindings) > 0 {
+		outputs, oerr := parseKeyVals(outputBindings)
+		if oerr != nil {
+			return data, fmt.Errorf("invalid --output: %w", oerr)
+		}
+		data.OutputBindings = &outputs
+	}
+	return data, nil
+}
+
 // flowNodeID returns a node's ID. Every flow node carries an "id" field
 // regardless of its type, so it is read generically rather than per type.
 func flowNodeID(node api.FlowNode) (string, error) {
