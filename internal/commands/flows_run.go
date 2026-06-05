@@ -68,12 +68,25 @@ type FlowRunResult struct {
 
 // FlowRunNode holds a node summary for JSON output.
 type FlowRunNode struct {
-	NodeID      string  `json:"node_id"`
-	DisplayName string  `json:"display_name"`
-	NodeType    string  `json:"node_type"`
-	Status      string  `json:"status"`
-	DurationMs  *int    `json:"duration_ms"`
-	ErrorMsg    *string `json:"error_message"`
+	NodeID      string             `json:"node_id"`
+	DisplayName string             `json:"display_name"`
+	NodeType    string             `json:"node_type"`
+	Status      string             `json:"status"`
+	DurationMs  *int               `json:"duration_ms"`
+	ErrorMsg    *string            `json:"error_message"`
+	Assertions  []AssertionSummary `json:"assertions,omitempty"`
+}
+
+// AssertionSummary mirrors a runner AssertionResult so `flows run` can show what
+// each assertion compared (expected vs actual), not just whether the node failed.
+type AssertionSummary struct {
+	Index     int    `json:"index"`
+	Extractor string `json:"extractor"`
+	Operator  string `json:"operator"`
+	Expected  any    `json:"expected"`
+	Actual    any    `json:"actual"`
+	Passed    bool   `json:"passed"`
+	Error     string `json:"error,omitempty"`
 }
 
 // FlowRunOutput is the single-flow stdout JSON shape.
@@ -394,7 +407,7 @@ func runSingleFlow(
 		return errorResult(flowID, executionID.String(), exitCodeForError(pubErr), pubErr.Error())
 	}
 
-	return buildRunResult(flowID, executionID.String(), publishResp)
+	return buildRunResult(flowID, executionID.String(), publishResp, runnerResult)
 }
 
 // exitCodeForError classifies an operational error into a stable CI exit code:
@@ -655,9 +668,14 @@ func publishResult(
 	return nil, lastErr
 }
 
-func buildRunResult(flowID, executionID string, resp *api.EphemeralCompletionResponse) FlowRunResult {
+func buildRunResult(
+	flowID, executionID string,
+	resp *api.EphemeralCompletionResponse,
+	runnerResult *ephemeralResult,
+) FlowRunResult {
 	execution := resp.Execution
 	nodes := buildNodeList(resp.Nodes)
+	attachAssertions(nodes, runnerResult)
 
 	statusStr := string(execution.Status)
 	success := execution.Status == statusCompleted
@@ -709,6 +727,48 @@ func buildRunResultFromExecution(flowID, executionID string, execution api.FlowE
 		ErrorMessage: execution.ErrorMessage,
 		Nodes:        nil,
 	}
+}
+
+// attachAssertions enriches the control-plane node list with the per-assertion
+// outcomes the runner recorded locally (expected/actual/passed). The completion
+// response does not carry these, but the raw runner payload does.
+func attachAssertions(nodes []FlowRunNode, runnerResult *ephemeralResult) {
+	if runnerResult == nil || runnerResult.Result == nil {
+		return
+	}
+	byNode := extractAssertionsByNode(runnerResult.Result)
+	for i := range nodes {
+		if assertions, ok := byNode[nodes[i].NodeID]; ok {
+			nodes[i].Assertions = assertions
+		}
+	}
+}
+
+func extractAssertionsByNode(result map[string]interface{}) map[string][]AssertionSummary {
+	executionResults, ok := result["execution_results"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	out := make(map[string][]AssertionSummary, len(executionResults))
+	for nodeID, raw := range executionResults {
+		nodeMap, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		rawAssertions, ok := nodeMap["assertion_results"]
+		if !ok {
+			continue
+		}
+		encoded, err := json.Marshal(rawAssertions)
+		if err != nil {
+			continue
+		}
+		var summaries []AssertionSummary
+		if json.Unmarshal(encoded, &summaries) == nil && len(summaries) > 0 {
+			out[nodeID] = summaries
+		}
+	}
+	return out
 }
 
 func buildNodeList(nodes []api.NodeExecutionResult) []FlowRunNode {
@@ -841,6 +901,25 @@ func (e *exitCodeError) ExitCode() int {
 	return e.code
 }
 
+// writeAssertions prints each recorded assertion under its node in verbose mode,
+// showing what was compared so a pass or failure is self-explanatory.
+func writeAssertions(assertions []AssertionSummary) {
+	for _, a := range assertions {
+		icon := "✓"
+		if !a.Passed {
+			icon = "✗"
+		}
+		fmt.Fprintf(
+			os.Stderr, "      %s %s %s expected=%v actual=%v",
+			icon, a.Extractor, a.Operator, a.Expected, a.Actual,
+		)
+		if a.Error != "" {
+			fmt.Fprintf(os.Stderr, " — %s", a.Error)
+		}
+		fmt.Fprintln(os.Stderr)
+	}
+}
+
 func writeSummary(results []FlowRunResult, exitCode int, verbose bool) {
 	isGitHub := os.Getenv("GITHUB_ACTIONS") == githubActionsTrueValue
 
@@ -882,6 +961,7 @@ func writeSummary(results []FlowRunResult, exitCode int, verbose bool) {
 					fmt.Fprintf(os.Stderr, " — %s", *n.ErrorMsg)
 				}
 				fmt.Fprintln(os.Stderr)
+				writeAssertions(n.Assertions)
 			case n.Status == statusFailed:
 				nodeMsg := ""
 				if n.ErrorMsg != nil {
