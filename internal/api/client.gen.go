@@ -333,6 +333,12 @@ const (
 	DESC SortDirection = "DESC"
 )
 
+// Defines values for TagMatchMode.
+const (
+	All TagMatchMode = "all"
+	Any TagMatchMode = "any"
+)
+
 // Defines values for TriggerType.
 const (
 	TriggerTypeGit    TriggerType = "git"
@@ -776,6 +782,9 @@ type CreateFlowRequest struct {
 	// Name Human-readable name for the flow.
 	Name string `json:"name"`
 
+	// Tags Optional flat tags for the flow. Lowercased, normalized, deduplicated, and sorted on write. Omitted defaults to an empty list.
+	Tags *[]string `json:"tags,omitempty"`
+
 	// Version Version identifier for the flow.
 	Version *string `json:"version,omitempty"`
 }
@@ -1122,6 +1131,9 @@ type Flow struct {
 	// OrganizationId Organization ID that owns this flow.
 	OrganizationId string `json:"organization_id"`
 
+	// Tags Flat canonical tags associated with the flow (lowercase, normalized, deduplicated, sorted).
+	Tags []string `json:"tags"`
+
 	// UpdatedAt Timestamp when the flow was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 
@@ -1421,6 +1433,46 @@ type FlowNode struct {
 
 // FlowNodeRunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
 type FlowNodeRunWhen string
+
+// FlowSearchItem Lightweight flow returned by flow search. flow_definition is present only when requested via include_definition, keeping search payloads small.
+type FlowSearchItem struct {
+	CreatedAt      time.Time          `json:"created_at"`
+	Description    *string            `json:"description"`
+	FlowDefinition *FlowDefinition    `json:"flow_definition,omitempty"`
+	Id             openapi_types.UUID `json:"id"`
+	Name           string             `json:"name"`
+	OrganizationId string             `json:"organization_id"`
+	Tags           []string           `json:"tags"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	Version        string             `json:"version"`
+}
+
+// FlowSearchRequest defines model for FlowSearchRequest.
+type FlowSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string `json:"full_text_search,omitempty"`
+
+	// IncludeDefinition Include the full flow_definition in each result. Omitted by default to keep search payloads small.
+	IncludeDefinition *bool              `json:"include_definition,omitempty"`
+	Pagination        *PaginationRequest `json:"pagination,omitempty"`
+	SortDirection     *SortDirection     `json:"sort_direction,omitempty"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
+
+	// Tags Canonical tags to match exactly against the flow's tags.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// FlowSearchResponse defines model for FlowSearchResponse.
+type FlowSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int              `json:"count"`
+	Items []FlowSearchItem `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
+}
 
 // FlowVersion defines model for FlowVersion.
 type FlowVersion struct {
@@ -2374,6 +2426,9 @@ type SortDirection string
 // StatusCodeExtractorConfig Status code extractor requires no configuration
 type StatusCodeExtractorConfig = map[string]interface{}
 
+// TagMatchMode Whether any or all of the provided tags must match.
+type TagMatchMode string
+
 // TriggerMetadata Trigger provenance, discriminated by the sibling `trigger_type`: `manual` →
 // ManualTriggerMetadata, `git` → GitTriggerMetadata.
 type TriggerMetadata struct {
@@ -2413,6 +2468,11 @@ type UpdateFlowRequest struct {
 
 	// Name Human-readable name for the flow.
 	Name *string `json:"name,omitempty"`
+
+	// Tags Optional flat tags for the flow. Omit to preserve the current tags;
+	// send an empty array to clear all tags; send a list to replace the tag set.
+	// Lowercased, normalized, deduplicated, and sorted on write.
+	Tags *[]string `json:"tags,omitempty"`
 
 	// Version Version identifier for the flow.
 	Version *string `json:"version,omitempty"`
@@ -2967,6 +3027,12 @@ type GetFlowGenerationParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchFlowsParams defines parameters for SearchFlows.
+type SearchFlowsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetExecutionParams defines parameters for GetExecution.
 type GetExecutionParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -3299,6 +3365,9 @@ type CreateFlowJSONRequestBody = CreateFlowRequest
 
 // CreateFlowGenerationJSONRequestBody defines body for CreateFlowGeneration for application/json ContentType.
 type CreateFlowGenerationJSONRequestBody = CreateFlowGenerationRequest
+
+// SearchFlowsJSONRequestBody defines body for SearchFlows for application/json ContentType.
+type SearchFlowsJSONRequestBody = FlowSearchRequest
 
 // UpdateFlowJSONRequestBody defines body for UpdateFlow for application/json ContentType.
 type UpdateFlowJSONRequestBody = UpdateFlowRequest
@@ -4277,6 +4346,11 @@ type ClientInterface interface {
 	// GetFlowGeneration request
 	GetFlowGeneration(ctx context.Context, runId openapi_types.UUID, params *GetFlowGenerationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchFlowsWithBody request with any body
+	SearchFlowsWithBody(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SearchFlows(ctx context.Context, params *SearchFlowsParams, body SearchFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetExecution request
 	GetExecution(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *GetExecutionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -5101,6 +5175,30 @@ func (c *Client) CreateFlowGeneration(ctx context.Context, params *CreateFlowGen
 
 func (c *Client) GetFlowGeneration(ctx context.Context, runId openapi_types.UUID, params *GetFlowGenerationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetFlowGenerationRequest(c.Server, runId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SearchFlowsWithBody(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SearchFlows(ctx context.Context, params *SearchFlowsParams, body SearchFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowsRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8161,6 +8259,59 @@ func NewGetFlowGenerationRequest(server string, runId openapi_types.UUID, params
 	return req, nil
 }
 
+// NewSearchFlowsRequest calls the generic SearchFlows builder with application/json body
+func NewSearchFlowsRequest(server string, params *SearchFlowsParams, body SearchFlowsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchFlowsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchFlowsRequestWithBody generates requests for SearchFlows with any type of body
+func NewSearchFlowsRequestWithBody(server string, params *SearchFlowsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetExecutionRequest generates requests for GetExecution
 func NewGetExecutionRequest(server string, flowId openapi_types.UUID, executionId openapi_types.UUID, params *GetExecutionParams) (*http.Request, error) {
 	var err error
@@ -10978,6 +11129,11 @@ type ClientWithResponsesInterface interface {
 	// GetFlowGenerationWithResponse request
 	GetFlowGenerationWithResponse(ctx context.Context, runId openapi_types.UUID, params *GetFlowGenerationParams, reqEditors ...RequestEditorFn) (*GetFlowGenerationResponse, error)
 
+	// SearchFlowsWithBodyWithResponse request with any body
+	SearchFlowsWithBodyWithResponse(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowsResponse, error)
+
+	SearchFlowsWithResponse(ctx context.Context, params *SearchFlowsParams, body SearchFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowsResponse, error)
+
 	// GetExecutionWithResponse request
 	GetExecutionWithResponse(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *GetExecutionParams, reqEditors ...RequestEditorFn) (*GetExecutionResponse, error)
 
@@ -12087,6 +12243,31 @@ func (r GetFlowGenerationResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetFlowGenerationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type SearchFlowsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowSearchResponse
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchFlowsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchFlowsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -13800,6 +13981,23 @@ func (c *ClientWithResponses) GetFlowGenerationWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseGetFlowGenerationResponse(rsp)
+}
+
+// SearchFlowsWithBodyWithResponse request with arbitrary body returning *SearchFlowsResponse
+func (c *ClientWithResponses) SearchFlowsWithBodyWithResponse(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowsResponse, error) {
+	rsp, err := c.SearchFlowsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowsResponse(rsp)
+}
+
+func (c *ClientWithResponses) SearchFlowsWithResponse(ctx context.Context, params *SearchFlowsParams, body SearchFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowsResponse, error) {
+	rsp, err := c.SearchFlows(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowsResponse(rsp)
 }
 
 // GetExecutionWithResponse request returning *GetExecutionResponse
@@ -16022,6 +16220,53 @@ func ParseGetFlowGenerationResponse(rsp *http.Response) (*GetFlowGenerationRespo
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchFlowsResponse parses an HTTP response from a SearchFlowsWithResponse call
+func ParseSearchFlowsResponse(rsp *http.Response) (*SearchFlowsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchFlowsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 

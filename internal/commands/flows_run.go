@@ -38,6 +38,10 @@ const (
 	githubActionsTrueValue = "true"
 )
 
+// maxTagResolvedFlows caps how many flows a single --tag selection may launch, guarding
+// against an over-broad tag filter accidentally launching a huge batch from CI.
+const maxTagResolvedFlows = 50
+
 // statusForExit maps a CLI exit code to the stable status string surfaced in JSON output and
 // to the GitHub Action. Flow failures are "failed"; launch/runner/publish/timeout problems are
 // "error" so callers can distinguish a failing flow from broken infrastructure.
@@ -133,10 +137,12 @@ func newFlowsRunCmd(state *AppState) *cobra.Command {
 		flagParallel       int
 		flagOutput         string
 		flagVerbose        bool
+		flagTags           []string
+		flagMatchMode      string
 	)
 
 	cmd := &cobra.Command{
-		Use:   "run <flow-id> [<flow-id>...]",
+		Use:   "run [<flow-id>...] [--tag <tag>...]",
 		Short: "Run one or more flows using an ephemeral runner",
 		Long: `Run one or more flows locally using the ephemeral runner mode.
 
@@ -153,7 +159,7 @@ Exit codes:
   2  cancelled
   3  API / runner / contract error
   4  timeout`,
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Ephemeral execution needs an org-scoped credential for both launch
 			// (flows:execute) and result publication. The completion endpoint accepts
@@ -178,6 +184,21 @@ Exit codes:
 				return runError(cmd, state, flagOutput, nil, exitError, "--parallel must be >= 1")
 			}
 
+			// --tag selects flows by tag and is mutually exclusive with positional flow IDs.
+			// Require exactly one selection mode.
+			if len(flagTags) > 0 && len(args) > 0 {
+				return runError(cmd, state, flagOutput, nil, exitError,
+					"--tag cannot be combined with positional flow IDs; use one or the other")
+			}
+			if len(flagTags) == 0 && len(args) == 0 {
+				return runError(cmd, state, flagOutput, nil, exitError,
+					"provide at least one flow ID, or use --tag to select flows by tag")
+			}
+			if flagMatchMode != string(api.Any) && flagMatchMode != string(api.All) {
+				return runError(cmd, state, flagOutput, nil, exitError,
+					fmt.Sprintf("invalid --match-mode %q; must be %q or %q", flagMatchMode, api.Any, api.All))
+			}
+
 			if flagPollTimeout == 0 {
 				flagPollTimeout = 30 * time.Minute
 			}
@@ -191,6 +212,14 @@ Exit codes:
 			defer cancel()
 
 			flowIDs := args
+			if len(flagTags) > 0 {
+				resolved, resolveErr := resolveFlowIDsByTags(ctx, state, flagTags, flagMatchMode)
+				if resolveErr != nil {
+					return runError(cmd, state, flagOutput, nil, exitError, resolveErr.Error())
+				}
+				flowIDs = resolved
+			}
+
 			baseKey := resolveIdempotencyKey(flagIdempotencyKey, flowIDs)
 
 			results, exitCode := executeFlows(
@@ -215,8 +244,59 @@ Exit codes:
 		"Maximum time to wait for each flow execution")
 	cmd.Flags().IntVar(&flagParallel, "parallel", 1, "Maximum number of flows to run concurrently (>= 1)")
 	cmd.Flags().StringVarP(&flagOutput, "output", "o", "", "Output format: json (or empty for human)")
+	cmd.Flags().StringArrayVar(&flagTags, "tag", nil,
+		"Select flows by tag instead of by ID (repeatable). Mutually exclusive with positional flow IDs.")
+	cmd.Flags().StringVar(&flagMatchMode, "match-mode", string(api.Any),
+		`Tag match mode when using --tag: "any" (default, OR) or "all" (AND)`)
 
 	return cmd
+}
+
+// resolveFlowIDsByTags resolves flows matching the given tags into flow IDs via
+// POST /flows/search, enforcing the CLI safety cap. The resolved IDs feed the same
+// execution path used for positional flow IDs.
+func resolveFlowIDsByTags(
+	ctx context.Context,
+	state *AppState,
+	tags []string,
+	matchMode string,
+) ([]string, error) {
+	limit := int32(maxTagResolvedFlows)
+	mode := api.TagMatchMode(matchMode)
+	body := api.FlowSearchRequest{
+		Tags:         &tags,
+		TagMatchMode: &mode,
+		Pagination:   &api.PaginationRequest{Limit: &limit},
+	}
+	params := &api.SearchFlowsParams{XOrganizationID: state.OrganizationID}
+
+	resp, err := state.Client.API().SearchFlowsWithResponse(ctx, params, body)
+	if err != nil {
+		return nil, fmt.Errorf("search flows by tag: %w", err)
+	}
+	if resp.JSON200 == nil {
+		return nil, fmt.Errorf(
+			"search flows by tag: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
+		)
+	}
+
+	result := resp.JSON200
+	if result.Total > int64(maxTagResolvedFlows) {
+		return nil, fmt.Errorf(
+			"tag search matched %d flows, exceeding the CLI safety cap of %d; "+
+				"narrow the tags (or use --match-mode all) before launching",
+			result.Total, maxTagResolvedFlows,
+		)
+	}
+	if len(result.Items) == 0 {
+		return nil, fmt.Errorf("no flows matched the given tags")
+	}
+
+	ids := make([]string, 0, len(result.Items))
+	for _, item := range result.Items {
+		ids = append(ids, item.Id.String())
+	}
+	return ids, nil
 }
 
 func resolveRunnerBinary(flagValue string) (string, error) {

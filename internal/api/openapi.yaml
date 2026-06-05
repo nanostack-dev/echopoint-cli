@@ -481,6 +481,11 @@ components:
       type: string
       enum: [ ASC, DESC ]
       default: DESC
+    TagMatchMode:
+      type: string
+      enum: [ any, all ]
+      default: any
+      description: Whether any or all of the provided tags must match.
     SearchRequest:
       type: object
       properties:
@@ -1455,6 +1460,12 @@ components:
           $ref: "#/components/schemas/FlowDefinition"
         metadata:
           $ref: "#/components/schemas/FlowMetadata"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Flat canonical tags associated with the flow (lowercase, normalized, deduplicated, sorted).
+          example: ["production", "monitoring"]
         created_at:
           type: string
           format: date-time
@@ -1470,6 +1481,7 @@ components:
         - version
         - flow_definition
         - metadata
+        - tags
         - created_at
         - updated_at
 
@@ -1500,6 +1512,12 @@ components:
           description: Recompute node positions on create using backend layout.
         metadata:
           $ref: "#/components/schemas/FlowMetadata"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Optional flat tags for the flow. Lowercased, normalized, deduplicated, and sorted on write. Omitted defaults to an empty list.
+          example: ["production", "monitoring"]
       required:
         - name
         - flow_definition
@@ -1530,6 +1548,15 @@ components:
           description: Recompute node positions on update using backend layout.
         metadata:
           $ref: "#/components/schemas/FlowMetadata"
+        tags:
+          type: array
+          items:
+            type: string
+          description: |
+            Optional flat tags for the flow. Omit to preserve the current tags;
+            send an empty array to clear all tags; send a list to replace the tag set.
+            Lowercased, normalized, deduplicated, and sorted on write.
+          example: ["staging"]
 
     FlowMetadata:
       type: object
@@ -1550,6 +1577,78 @@ components:
           description: Optional default organization environment key to use when launching this flow.
           example: "staging"
       additionalProperties: true
+
+    FlowSearchRequest:
+      allOf:
+        - $ref: "#/components/schemas/SearchRequest"
+        - type: object
+          properties:
+            tags:
+              type: array
+              items:
+                type: string
+              description: Canonical tags to match exactly against the flow's tags.
+              example: ["production", "smoke"]
+            tag_match_mode:
+              $ref: "#/components/schemas/TagMatchMode"
+              description: Whether any or all of the provided tags must match.
+            include_definition:
+              type: boolean
+              default: false
+              description: >-
+                Include the full flow_definition in each result. Omitted by
+                default to keep search payloads small.
+
+    FlowSearchItem:
+      type: object
+      description: >-
+        Lightweight flow returned by flow search. flow_definition is present only
+        when requested via include_definition, keeping search payloads small.
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        version:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - organization_id
+        - name
+        - version
+        - tags
+        - created_at
+        - updated_at
+
+    FlowSearchResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FlowSearchItem"
+          required:
+            - items
 
     FlowListResponse:
       allOf:
@@ -4665,6 +4764,41 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  /flows/search:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Search Flows
+      description: |
+        Dedicated flow-domain search against canonical flows with pagination, sorting,
+        full-text search, and exact tag filtering. Returns full Flow objects.
+        Callable by bearer users and API keys scoped with flows:read.
+      operationId: searchFlows
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      requestBody:
+        description: Flow search criteria.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlowSearchRequest"
+      responses:
+        "200":
+          description: Flow search results retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowSearchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /flows/generations:
     parameters:
