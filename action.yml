@@ -509,60 +509,53 @@ runs:
           } >> "$GITHUB_OUTPUT"
         fi
 
-        # Write step summary
+        # Write a rich step summary (jq-based; falls back to basic when jq absent).
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-          {
-            echo "## Echopoint Flow Run"
-            echo ""
-            if echo "$raw" | grep -q '"results"'; then
-              # Multi-flow summary
-              echo "**Status:** $(extract 'status')"
-              echo "**Success:** $(extract 'success')"
-              echo "**Duration:** $(extract 'duration_ms') ms"
+          if command -v jq >/dev/null 2>&1 && printf '%s' "$raw" | jq -e . >/dev/null 2>&1; then
+            printf '%s' "$raw" | jq -r '
+              def esc: tostring | gsub("\\|";"\\|") | gsub("\n";" ");
+              (if has("results") then . else {status,success,exit_code,duration_ms,results:[.]} end) as $r
+              | ($r.results|length) as $total
+              | ($r.results|map(select(.success))|length) as $passed
+              | "## 🧪 Echopoint flow run\n\n"
+              + (if $r.success then "> ✅ **All \($total) flow(s) passed**\n" else "> ❌ **\($total-$passed)/\($total) flow(s) failed**\n" end)
+              + "\n- **Status:** `\($r.status)`\n- **Passed:** \($passed)/\($total)\n- **Duration:** \(($r.duration_ms//0)) ms\n\n"
+              + "| Flow | Result | Duration | Reason |\n|---|:--:|--:|---|\n"
+              + ($r.results | map("| `\(.flow_id)` | \(if .success then "✅" else "❌" end) | \(.duration_ms) ms | \(((.error_message//"")|esc)[0:140]) |") | join("\n")) + "\n"
+              + (($r.results | map(select(.success|not))) as $failed
+                 | if ($failed|length)>0 then
+                     "\n### ❌ Failure details\n"
+                     + ($failed | map(
+                         "\n<details><summary><code>\(.flow_id)</code> — \(.status)</summary>\n\n"
+                         + (if (.error_message//"")!="" then "**Reason:** \(.error_message)\n\n" else "" end)
+                         + ( ((.nodes//[])|map(select((.status//"")|ascii_downcase|test("success|passed|ok")|not))) as $bn
+                             | if ($bn|length)>0 then "**Failed nodes:**\n\n| Node | Type | Status | Error |\n|---|---|:--:|---|\n" + ($bn|map("| \(.display_name // .node_id) | \(.node_type//"") | \(.status) | \(((.error_message//"")|esc)[0:160]) |")|join("\n")) + "\n" else "" end )
+                         + ( (((.nodes//[])|map(.assertions//[])|add//[])|map(select(.passed|not))) as $fa
+                             | if ($fa|length)>0 then "\n**Failed assertions:**\n\n| Extractor | Operator | Expected | Actual |\n|---|---|---|---|\n" + ($fa|map("| \(.extractor) | \(.operator) | \((.expected|esc)) | \((.actual|esc)) |")|join("\n")) + "\n" else "" end )
+                         + "\n</details>"
+                       ) | join("\n"))
+                   else "" end)
+            ' >> "$GITHUB_STEP_SUMMARY" || echo "_(summary render failed; see raw JSON below)_" >> "$GITHUB_STEP_SUMMARY"
+            {
               echo ""
-              echo "<details><summary>Full results JSON</summary>"
+              echo "<details><summary>Raw results JSON</summary>"
+              echo ""
+              echo '```json'
+              printf '%s\n' "$raw"
+              echo '```'
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## Echopoint flow run"
+              echo ""
+              echo "Status: $(extract 'status') · Success: $(extract 'success')"
               echo ""
               echo '```json'
               echo "$raw"
               echo '```'
-              echo "</details>"
-            else
-              # Single-flow summary
-              exec_id=$(extract "execution_id")
-              status=$(extract "status")
-              success=$(extract "success")
-              duration=$(extract "duration_ms")
-              error_msg=$(echo "$raw" | grep -o '"error_message":"[^"]*"' | sed 's/"error_message":"//;s/"//')
-
-              echo "**Execution ID:** ${exec_id}"
-              echo "**Status:** ${status}"
-              echo "**Success:** ${success}"
-              echo "**Duration:** ${duration} ms"
-
-              if [ -n "$error_msg" ]; then
-                echo ""
-                echo "**Error:** ${error_msg}"
-              fi
-
-              # Node table
-              if echo "$raw" | grep -q '"nodes"'; then
-                echo ""
-                echo "### Node Results"
-                echo ""
-                echo "| Node | Status | Duration |"
-                echo "|------|--------|----------|"
-                # Extract node entries (best-effort; no jq)
-                echo "$raw" \
-                  | grep -o '"display_name":"[^"]*","node_type":"[^"]*","status":"[^"]*","duration_ms":[0-9]*' \
-                  | while IFS= read -r node; do
-                      name=$(echo "$node" | grep -o '"display_name":"[^"]*"' | sed 's/"display_name":"//;s/"//')
-                      nstatus=$(echo "$node" | grep -o '"status":"[^"]*"' | sed 's/"status":"//;s/"//')
-                      ndur=$(echo "$node" | grep -o '"duration_ms":[0-9]*' | sed 's/"duration_ms"://')
-                      echo "| ${name} | ${nstatus} | ${ndur} ms |"
-                    done
-              fi
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
         fi
 
         # Remove the temp result file now that outputs and summary are written.

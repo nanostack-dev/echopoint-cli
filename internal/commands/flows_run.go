@@ -626,6 +626,35 @@ func filteredRunnerEnv() []string {
 	return filtered
 }
 
+// extractRunnerError pulls a concise failure reason out of the runner's stderr,
+// which is line-delimited JSON logs. It returns the most specific error_message
+// or error field from the last JSON line that has one, falling back to the last
+// non-empty line.
+func extractRunnerError(stderr string) string {
+	lines := strings.Split(strings.TrimSpace(stderr), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if !strings.HasPrefix(line, "{") {
+			continue
+		}
+		var entry map[string]any
+		if json.Unmarshal([]byte(line), &entry) != nil {
+			continue
+		}
+		for _, key := range []string{"error_message", "error"} {
+			if v, ok := entry[key].(string); ok && strings.TrimSpace(v) != "" {
+				return strings.TrimSpace(v)
+			}
+		}
+	}
+	for i := len(lines) - 1; i >= 0; i-- {
+		if l := strings.TrimSpace(lines[i]); l != "" {
+			return l
+		}
+	}
+	return ""
+}
+
 func runEphemeralRunner(ctx context.Context, runnerBinary string, pkg *ephemeralPackage) (*ephemeralResult, error) {
 	pkgBytes, err := json.Marshal(pkg)
 	if err != nil {
@@ -662,6 +691,12 @@ func runEphemeralRunner(ctx context.Context, runnerBinary string, pkg *ephemeral
 			stderrStr := strings.TrimSpace(stderr.String())
 			if stderrStr != "" {
 				fmt.Fprintf(os.Stderr, "[runner stderr] %s\n", stderrStr)
+			}
+			// Surface the runner's actual failure reason (parse/validation/node
+			// error) instead of just the opaque "exit status N", so it flows into
+			// the result, JSON output, and the CI summary.
+			if reason := extractRunnerError(stderrStr); reason != "" {
+				return nil, fmt.Errorf("runner failed: %s", reason)
 			}
 			return nil, fmt.Errorf("runner exited with error: %w", err)
 		}
