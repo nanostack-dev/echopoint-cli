@@ -47,8 +47,11 @@ Use a dedicated, least-privilege organization API key for CI and store it as a r
 |-------|----------|---------|-------------|
 | `api-key` | yes | — | API key with `flows:execute` + `runner:complete`. |
 | `organization-id` | yes | — | Echopoint organization ID. |
-| `flow-id` | one of | — | A single flow ID. Mutually exclusive with `flow-ids`. |
-| `flow-ids` | one of | — | Comma- or newline-separated flow IDs. Mutually exclusive with `flow-id`. |
+| `flow-id` | one of | — | A single flow ID. Mutually exclusive with `flow-ids` / `tags`. |
+| `flow-ids` | one of | — | Comma- or newline-separated flow IDs. Mutually exclusive with `flow-id` / `tags`. |
+| `tags` | one of | — | Comma- or newline-separated flow tags; flows are selected via flow search. Mutually exclusive with `flow-id` / `flow-ids`. Also requires `flows:read`. |
+| `match-mode` | no | `any` | Tag match mode when using `tags`: `any` or `all`. |
+| `api-url` | no | CLI default | Echopoint API base URL, e.g. `https://apidev.echopoint.dev`. |
 | `environment` | no | — | Environment key for resolved inputs/env. |
 | `version-id` | no | current | Immutable flow version to run. Applies to every requested flow. |
 | `cli-version` | no | `latest` | `echopoint` CLI release to download. |
@@ -57,8 +60,9 @@ Use a dedicated, least-privilege organization API key for CI and store it as a r
 | `poll-timeout` | no | `300` | Max seconds to wait for all flows. |
 | `parallel` | no | `1` | Number of flows to run concurrently (must be ≥ 1). |
 
-Exactly one of `flow-id` or `flow-ids` is required; `parallel >= 1` is validated **before** any
-launch.
+Exactly one of `flow-id`, `flow-ids`, or `tags` is required; `parallel >= 1` is validated
+**before** any launch. Selecting by `tags` additionally requires the API key to have `flows:read`
+(the flows are resolved through flow search).
 
 ### Outputs
 
@@ -97,6 +101,19 @@ Multiple flows with bounded parallelism:
       flow_def456
       flow_ghi789
     parallel: '2'
+```
+
+Run a tagged suite against a specific environment (e.g. a post-deploy smoke gate):
+
+```yaml
+- uses: nanostack-dev/echopoint-cli@v1
+  with:
+    api-key: ${{ secrets.ECHOPOINT_API_KEY }}
+    organization-id: ${{ secrets.ECHOPOINT_ORG_ID }}
+    api-url: https://apidev.echopoint.dev
+    tags: anchor
+    match-mode: any
+    parallel: '3'
 ```
 
 Pin an environment and an immutable version:

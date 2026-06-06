@@ -30,6 +30,7 @@ func newFlowsCmd(state *AppState) *cobra.Command {
 		newFlowsExecutionCmd(state),
 		newFlowsCreateCmd(state),
 		newFlowsUpdateCmd(state),
+		newFlowsTagCmd(state),
 		newFlowsDeleteCmd(state),
 		newFlowInteractiveCmd(state),
 		newFlowShowCmd(state),

@@ -50,6 +50,20 @@ inputs:
     description: Number of flows to execute concurrently. Must be >= 1.
     required: false
     default: '1'
+  tags:
+    description: >
+      Comma- or newline-separated flow tags to run. Flows are selected via flow
+      search. Mutually exclusive with flow-id / flow-ids.
+    required: false
+  match-mode:
+    description: 'Tag match mode when using tags: any (default) or all.'
+    required: false
+    default: any
+  api-url:
+    description: >
+      Echopoint API base URL (e.g. https://apidev.echopoint.dev). Defaults to the
+      CLI default when omitted.
+    required: false
 
 outputs:
   execution-id:
@@ -87,17 +101,28 @@ runs:
       run: |
         set -euo pipefail
 
-        # Exactly one of flow-id / flow-ids must be set
+        # Exactly one selection mode: flow-id / flow-ids / tags
         flow_id="${{ inputs.flow-id }}"
         flow_ids="${{ inputs.flow-ids }}"
+        tags="${{ inputs.tags }}"
 
-        if [ -z "$flow_id" ] && [ -z "$flow_ids" ]; then
-          echo "::error::Either 'flow-id' or 'flow-ids' must be provided."
+        selection_count=0
+        [ -n "$flow_id" ]  && selection_count=$((selection_count + 1))
+        [ -n "$flow_ids" ] && selection_count=$((selection_count + 1))
+        [ -n "$tags" ]     && selection_count=$((selection_count + 1))
+
+        if [ "$selection_count" -eq 0 ]; then
+          echo "::error::One of 'flow-id', 'flow-ids', or 'tags' must be provided."
+          exit 3
+        fi
+        if [ "$selection_count" -gt 1 ]; then
+          echo "::error::'flow-id', 'flow-ids', and 'tags' are mutually exclusive; provide exactly one."
           exit 3
         fi
 
-        if [ -n "$flow_id" ] && [ -n "$flow_ids" ]; then
-          echo "::error::'flow-id' and 'flow-ids' are mutually exclusive; provide exactly one."
+        match_mode="${{ inputs.match-mode }}"
+        if [ -n "$match_mode" ] && [ "$match_mode" != "any" ] && [ "$match_mode" != "all" ]; then
+          echo "::error::'match-mode' must be 'any' or 'all', got: $match_mode"
           exit 3
         fi
 
@@ -354,8 +379,27 @@ runs:
       env:
         ECHOPOINT_API_KEY: ${{ inputs.api-key }}
         ECHOPOINT_ORGANIZATION_ID: ${{ inputs.organization-id }}
+        ECHOPOINT_API_URL: ${{ inputs.api-url }}
       run: |
         set -uo pipefail
+
+        # Build the selector: either positional flow IDs or --tag flags.
+        selector_args=()
+        tags="${{ inputs.tags }}"
+        if [ -n "$tags" ]; then
+          while IFS= read -r tag; do
+            tag="$(echo "$tag" | tr -d '[:space:]')"
+            [ -z "$tag" ] && continue
+            selector_args+=(--tag "$tag")
+          done < <(echo "$tags" | tr ',' '\n')
+          match_mode="${{ inputs.match-mode }}"
+          if [ -n "$match_mode" ]; then
+            selector_args+=(--match-mode "$match_mode")
+          fi
+        else
+          # shellcheck disable=SC2206
+          selector_args=(${{ steps.flow-ids.outputs.args }})
+        fi
 
         # Build optional flags
         extra_flags=()
@@ -385,13 +429,10 @@ runs:
           extra_flags+=(--runner-binary "$runner_binary")
         fi
 
-        flow_args="${{ steps.flow-ids.outputs.args }}"
-
         # Run CLI and capture JSON output (stdout) while letting human-readable
         # progress/errors (stderr) flow to the workflow log. Preserve exit code without
         # aborting. The CLI writes exactly one JSON object to stdout under -o json.
-        # shellcheck disable=SC2086
-        json_output=$(echopoint flows run $flow_args \
+        json_output=$(echopoint flows run "${selector_args[@]}" \
           -o json \
           "${extra_flags[@]}") || cli_exit=$?
         cli_exit="${cli_exit:-0}"

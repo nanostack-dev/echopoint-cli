@@ -36,6 +36,24 @@ echopoint flows create-interactive --name "My Flow"
 echopoint flows update <flow-id> --file updated-flow.json
 ```
 
+### Tag Flows
+Add or remove tags on flows. Select flows by ID, or by a search filter (the same
+search that backs the list). A filter is required for search selection — tagging
+every flow in the org is intentionally not supported.
+```bash
+# tag specific flows
+echopoint flows tag <flow-id> <flow-id> --add anchor
+
+# tag every flow matched by a search filter
+echopoint flows tag --query anchor --add anchor
+echopoint flows tag --match-tag staging --match-mode any --add anchor
+
+# remove a tag
+echopoint flows tag <flow-id> --remove deprecated
+```
+Tags are merged with each flow's existing tags; no other fields change. Tags are
+lowercased and de-duplicated server-side.
+
 ### Delete Flow
 ```bash
 echopoint flows delete <flow-id>
