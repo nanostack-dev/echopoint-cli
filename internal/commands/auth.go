@@ -15,7 +15,7 @@ import (
 
 func newAuthCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "auth",
+		Use:   authCommandName,
 		Short: "Manage authentication",
 	}
 

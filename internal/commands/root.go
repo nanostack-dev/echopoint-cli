@@ -142,14 +142,31 @@ func NewRootCmd() *cobra.Command {
 // requiresToken reports whether a command needs a resolved session token in
 // PersistentPreRunE. Auth, profile, config, version, and update commands manage
 // their own state and must run without valid credentials.
+//
+// The auth/profile/config groups match anywhere in the parent chain so their
+// subcommands (e.g. "auth login") also skip token resolution. The top-level
+// self-management commands "version" and "update" match ONLY when they are a
+// direct child of root — otherwise a subcommand named "update" (notably
+// "flows update") would wrongly skip token resolution and then fail its own
+// requireToken check, making it impossible to authenticate.
 func requiresToken(cmd *cobra.Command) bool {
 	for c := cmd; c != nil; c = c.Parent() {
 		switch c.Name() {
-		case "auth", "profile", "config", "version", "update":
+		case authCommandName, profileCommandName, configCommandName:
 			return false
+		case versionCommandName, updateCommandName:
+			if isRootChild(c) {
+				return false
+			}
 		}
 	}
 	return true
+}
+
+// isRootChild reports whether c is a direct child of the root command.
+func isRootChild(c *cobra.Command) bool {
+	parent := c.Parent()
+	return parent != nil && parent.Parent() == nil
 }
 
 func resolveProfile(flagProfile string) string {

@@ -47,7 +47,7 @@ func Version() string {
 func newVersionCmd() *cobra.Command {
 	var short bool
 	cmd := &cobra.Command{
-		Use:   "version",
+		Use:   versionCommandName,
 		Short: "Show the CLI version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if short {
