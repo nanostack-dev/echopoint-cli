@@ -466,19 +466,26 @@ runs:
 
         raw=$(cat "$json_file")
 
-        # Helper: extract a top-level JSON key value with basic sed (no jq dependency)
+        # Helper: extract the first JSON key value without grep|head, which can
+        # trip GitHub's implicit bash -e -o pipefail on large one-line JSON.
         extract() {
-          echo "$raw" | grep -o "\"$1\":[^,}]*" | head -1 | sed -E 's/"[^"]+": *"?([^",}]*)"?.*/\1/'
+          local matches first
+          matches=$(printf '%s' "$raw" | grep -o "\"$1\":[^,}]*" || true)
+          first=${matches%%$'\n'*}
+          if [ -z "$first" ]; then
+            return 0
+          fi
+          printf '%s\n' "$first" | sed -E 's/"[^"]+": *"?([^",}]*)"?.*/\1/'
         }
 
         # Detect single vs multi result by presence of "results" array key
-        if echo "$raw" | grep -q '"results"'; then
+        if [[ "$raw" == *'"results"'* ]]; then
           # Multi-flow output
           status=$(extract "status")
           success=$(extract "success")
           # Build comma-separated execution-ids from results array
-          exec_ids=$(echo "$raw" \
-            | grep -o '"execution_id":"[^"]*"' \
+          exec_matches=$(printf '%s' "$raw" | grep -o '"execution_id":"[^"]*"' || true)
+          exec_ids=$(printf '%s\n' "$exec_matches" \
             | sed 's/"execution_id":"//;s/"//' \
             | tr '\n' ',' \
             | sed 's/,$//')

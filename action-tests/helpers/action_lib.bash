@@ -133,18 +133,32 @@ build_artifact_url() {
 parse_outputs_single() {
   local raw="$1"
 
-  EXEC_ID=$(echo "$raw" | grep -o '"execution_id": *"[^"]*"' | head -1 | sed 's/"execution_id": *"//;s/"//')
-  STATUS=$(echo "$raw"  | grep -o '"status": *"[^"]*"'       | head -1 | sed 's/"status": *"//;s/"//')
-  SUCCESS=$(echo "$raw" | grep -o '"success": *[^,}]*'       | head -1 | sed 's/"success": *//;s/[[:space:]]//g')
+  EXEC_ID=$(extract_json_value "$raw" 'execution_id')
+  STATUS=$(extract_json_value "$raw" 'status')
+  SUCCESS=$(extract_json_value "$raw" 'success')
 }
 
 parse_outputs_multi() {
   local raw="$1"
 
-  STATUS=$(echo "$raw"   | grep -o '"status": *"[^"]*"' | head -1 | sed 's/"status": *"//;s/"//')
-  SUCCESS=$(echo "$raw"  | grep -o '"success": *[^,}]*' | head -1 | sed 's/"success": *//;s/[[:space:]]//g')
-  EXEC_IDS=$(echo "$raw" \
-    | grep -o '"execution_id": *"[^"]*"' \
+  STATUS=$(extract_json_value "$raw" 'status')
+  SUCCESS=$(extract_json_value "$raw" 'success')
+  local exec_matches
+  exec_matches=$(printf '%s' "$raw" | grep -o '"execution_id": *"[^"]*"' || true)
+  EXEC_IDS=$(printf '%s\n' "$exec_matches" \
     | sed 's/"execution_id": *"//;s/"//' \
     | tr '\n' ',' | sed 's/,$//')
+}
+
+extract_json_value() {
+  local raw="$1"
+  local key="$2"
+  local matches first
+
+  matches=$(printf '%s' "$raw" | grep -o "\"${key}\": *[^,}]*" || true)
+  first=${matches%%$'\n'*}
+  if [ -z "$first" ]; then
+    return 0
+  fi
+  printf '%s\n' "$first" | sed -E 's/"[^"]+": *"?([^",}]*)"?.*/\1/' | tr -d '[:space:]'
 }

@@ -399,6 +399,21 @@ print('OK')
   [ "$STATUS" = "completed" ]
 }
 
+@test "4.4.6 compact multi-flow JSON parses under pipefail" {
+  raw=$(tr -d '\n' < "$FIXTURES_DIR/multi_partial_failed.json")
+
+  run bash -o pipefail -c '
+    set -euo pipefail
+    source "$1"
+    parse_outputs_multi "$2"
+    [ "$STATUS" = "failed" ]
+    [ "$SUCCESS" = "false" ]
+    [ "$EXEC_IDS" = "exec-111,exec-222" ]
+  ' bash "$(dirname "$BATS_TEST_FILENAME")/helpers/action_lib.bash" "$raw"
+
+  [ "$status" -eq 0 ]
+}
+
 # -----------------------------------------------------------------------
 # 4.4.7 Invalid parallel fails before invoking CLI
 # -----------------------------------------------------------------------
