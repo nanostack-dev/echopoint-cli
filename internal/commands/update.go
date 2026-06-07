@@ -16,7 +16,7 @@ func newUpdateCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "update",
+		Use:   updateCommandName,
 		Short: "Update the CLI to the latest release",
 		Long: `Download and install the latest echopoint CLI release from GitHub.
 

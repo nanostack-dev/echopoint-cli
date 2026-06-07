@@ -152,9 +152,9 @@ func NewRootCmd() *cobra.Command {
 func requiresToken(cmd *cobra.Command) bool {
 	for c := cmd; c != nil; c = c.Parent() {
 		switch c.Name() {
-		case "auth", "profile", "config":
+		case authCommandName, profileCommandName, configCommandName:
 			return false
-		case "version", "update":
+		case versionCommandName, updateCommandName:
 			if isRootChild(c) {
 				return false
 			}

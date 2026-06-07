@@ -12,7 +12,7 @@ import (
 
 func newConfigCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "config",
+		Use:   configCommandName,
 		Short: "Manage CLI configuration",
 	}
 

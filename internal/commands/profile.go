@@ -12,12 +12,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// listVerb is the cobra Use string for the profile list subcommand.
-const listVerb = "list"
-
 func newProfileCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "profile",
+		Use:   profileCommandName,
 		Short: "Manage configuration profiles",
 		Long: `Manage configuration profiles.
 

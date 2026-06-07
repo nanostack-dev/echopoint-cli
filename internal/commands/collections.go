@@ -36,7 +36,7 @@ func newCollectionsListCmd(state *AppState) *cobra.Command {
 	var offset int32
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   listVerb,
 		Short: "List collections",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -130,7 +130,7 @@ func newCollectionsCreateCmd(state *AppState) *cobra.Command {
 	var source string
 
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   createVerb,
 		Short: "Create a collection",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {

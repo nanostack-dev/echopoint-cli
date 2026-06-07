@@ -18,7 +18,7 @@ import (
 
 func newFlowsCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "flows",
+		Use:   flowsCommandName,
 		Short: "Manage flows",
 	}
 
@@ -258,7 +258,7 @@ func newFlowsListCmd(state *AppState) *cobra.Command {
 	var offset int32
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   listVerb,
 		Short: "List flows",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -347,7 +347,7 @@ func newFlowsCreateCmd(state *AppState) *cobra.Command {
 	var file string
 
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   createVerb,
 		Short: "Create a flow from JSON",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
