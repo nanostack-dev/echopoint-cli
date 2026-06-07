@@ -62,6 +62,7 @@ func statusForExit(code int) string {
 type FlowRunResult struct {
 	ExecutionID  string        `json:"execution_id"`
 	FlowID       string        `json:"flow_id"`
+	FlowURL      string        `json:"flow_url,omitempty"`
 	Status       string        `json:"status"`
 	Success      bool          `json:"success"`
 	ExitCode     int           `json:"exit_code"`
@@ -437,7 +438,23 @@ func executeFlows(
 		wg.Wait()
 	}
 
+	// Stamp the web URL for each flow so JSON consumers (and the GitHub summary)
+	// can link straight to the flow in the app instead of showing a bare id.
+	for i := range results {
+		results[i].FlowURL = flowWebURL(state.Config.FrontendURL, results[i].FlowID)
+	}
+
 	return results, aggregateExitCode(results)
+}
+
+// flowWebURL builds the app link for a flow, e.g.
+// https://app.echopoint.dev/flows/<id>. Returns "" when either part is missing.
+func flowWebURL(frontendURL, flowID string) string {
+	frontendURL = strings.TrimRight(strings.TrimSpace(frontendURL), "/")
+	if frontendURL == "" || flowID == "" {
+		return ""
+	}
+	return frontendURL + "/flows/" + flowID
 }
 
 func runSingleFlow(
@@ -1109,7 +1126,11 @@ func writeGitHubStepSummary(path string, results []FlowRunResult) error {
 		if r.ErrorMessage != nil {
 			errStr = *r.ErrorMessage
 		}
-		fmt.Fprintf(f, "| %s | %s | %dms | %s |\n", r.FlowID, r.Status, r.DurationMs, errStr)
+		flowCell := fmt.Sprintf("`%s`", r.FlowID)
+		if r.FlowURL != "" {
+			flowCell = fmt.Sprintf("[`%s`](%s)", r.FlowID, r.FlowURL)
+		}
+		fmt.Fprintf(f, "| %s | %s | %dms | %s |\n", flowCell, r.Status, r.DurationMs, errStr)
 	}
 
 	return nil

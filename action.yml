@@ -514,6 +514,7 @@ runs:
           if command -v jq >/dev/null 2>&1 && printf '%s' "$raw" | jq -e . >/dev/null 2>&1; then
             printf '%s' "$raw" | jq -r '
               def esc: tostring | gsub("\\|";"\\|") | gsub("\n";" ");
+              def flowcell: if ((.flow_url//"")|length)>0 then "[`\(.flow_id)`](\(.flow_url))" else "`\(.flow_id)`" end;
               (if has("results") then . else {status,success,exit_code,duration_ms,results:[.]} end) as $r
               | ($r.results|length) as $total
               | ($r.results|map(select(.success))|length) as $passed
@@ -521,12 +522,12 @@ runs:
               + (if $r.success then "> ✅ **All \($total) flow(s) passed**\n" else "> ❌ **\($total-$passed)/\($total) flow(s) failed**\n" end)
               + "\n- **Status:** `\($r.status)`\n- **Passed:** \($passed)/\($total)\n- **Duration:** \(($r.duration_ms//0)) ms\n\n"
               + "| Flow | Result | Duration | Reason |\n|---|:--:|--:|---|\n"
-              + ($r.results | map("| `\(.flow_id)` | \(if .success then "✅" else "❌" end) | \(.duration_ms) ms | \(((.error_message//"")|esc)[0:140]) |") | join("\n")) + "\n"
+              + ($r.results | map("| \(flowcell) | \(if .success then "✅" else "❌" end) | \(.duration_ms) ms | \(((.error_message//"")|esc)[0:140]) |") | join("\n")) + "\n"
               + (($r.results | map(select(.success|not))) as $failed
                  | if ($failed|length)>0 then
                      "\n### ❌ Failure details\n"
                      + ($failed | map(
-                         "\n<details><summary><code>\(.flow_id)</code> — \(.status)</summary>\n\n"
+                         "\n<details><summary>\(flowcell) — \(.status)</summary>\n\n"
                          + (if (.error_message//"")!="" then "**Reason:** \(.error_message)\n\n" else "" end)
                          + ( ((.nodes//[])|map(select((.status//"")|ascii_downcase|test("success|passed|ok")|not))) as $bn
                              | if ($bn|length)>0 then "**Failed nodes:**\n\n| Node | Type | Status | Error |\n|---|---|:--:|---|\n" + ($bn|map("| \(.display_name // .node_id) | \(.node_type//"") | \(.status) | \(((.error_message//"")|esc)[0:160]) |")|join("\n")) + "\n" else "" end )
