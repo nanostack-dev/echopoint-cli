@@ -173,10 +173,10 @@ components:
           type: string
           description: The specific field that caused the error (optional).
           example: "name"
-        details:
+        metadata:
           type: object
           additionalProperties: true
-          description: Additional details about the error (optional).
+          description: Additional metadata about the error (optional).
           example: { "minLength": 2 }
       required:
         - code
