@@ -75,6 +75,7 @@ latest release.
 - JSON/YAML/Table output formats
 - Configuration profiles for switching between environments
 - Built-in self-update from GitHub releases
+- MCP server (`echopoint mcp`) exposing echopoint operations as tools for AI clients
 
 ## Quick Start
 
@@ -94,6 +95,15 @@ echopoint flows node add <flow-id> --type request --name "Login" --method POST -
 # Set environment variables
 echopoint flows env set <flow-id> --var API_KEY=secret --var BASE_URL=https://api.example.com
 ```
+
+## MCP Server
+
+`echopoint mcp` runs a Model Context Protocol server over stdio so an
+MCP-compatible AI client (Claude Desktop, Cursor, ...) can drive echopoint with
+its own model. Tools are derived from the OpenAPI contract — operations annotated
+`x-ai-tool: true` become tools — and every call runs as you, through your stored
+credentials. See [docs/mcp.md](docs/mcp.md) for setup and the Claude Desktop
+config snippet.
 
 ## Authentication
 

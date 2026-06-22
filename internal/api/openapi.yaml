@@ -4039,6 +4039,8 @@ paths:
       summary: List Webhook Endpoints
       description: Lists webhook endpoints for the current organization.
       operationId: listWebhooks
+      x-ai-tool: true
+      x-ai-description: "List webhook endpoints in the organization."
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:read]
@@ -4428,6 +4430,8 @@ paths:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
       operationId: launchFlow
+      x-ai-tool: true
+      x-ai-description: "Launch (run) a flow execution asynchronously by flow id. Returns the created execution. Use when the user asks to run, trigger, or test a flow."
       summary: Launch a flow execution
       description: |
         Launches a flow execution asynchronously and returns the created execution.
@@ -4722,6 +4726,8 @@ paths:
       summary: List Flows
       description: Retrieves a paginated list of flows for the authenticated user.
       operationId: listFlows
+      x-ai-tool: true
+      x-ai-description: "List flows in the organization. Returns flow ids, names, and metadata. Use to discover available flows."
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -4775,6 +4781,8 @@ paths:
         full-text search, and exact tag filtering. Returns full Flow objects.
         Callable by bearer users and API keys scoped with flows:read.
       operationId: searchFlows
+      x-ai-tool: true
+      x-ai-description: "Search flows by name or attributes with filters and pagination."
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -5073,6 +5081,8 @@ paths:
       summary: Get Flow
       description: Retrieves details of a specific flow by ID.
       operationId: getFlow
+      x-ai-tool: true
+      x-ai-description: "Get a single flow's full definition by id (nodes, edges, configuration)."
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -5170,6 +5180,8 @@ paths:
       summary: Get current user and organization context
       description: Returns the authenticated user profile and resolved organization context.
       operationId: getMe
+      x-ai-tool: true
+      x-ai-description: "Get the current authenticated user and organization context (who am I). Call first to establish identity before other actions."
       tags: [ Auth ]
       security:
         - BearerAuth: []
@@ -5459,6 +5471,8 @@ paths:
       summary: List Collections
       description: Retrieves a paginated list of collections for the authenticated user.
       operationId: listCollections
+      x-ai-tool: true
+      x-ai-description: "List API request collections in the organization."
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
@@ -5516,6 +5530,8 @@ paths:
       summary: Get Collection
       description: Retrieves a collection with all folders and requests (flat arrays).
       operationId: getCollection
+      x-ai-tool: true
+      x-ai-description: "Get a single collection by id, including its folders and saved requests."
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
