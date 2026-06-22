@@ -10,6 +10,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
@@ -109,7 +110,8 @@ func buildTool(method, path string, pathParams openapi3.Parameters, op *openapi3
 	}
 
 	if body := jsonBodySchema(op.RequestBody); body != nil {
-		for name, ref := range body.Properties {
+		bodyProps, bodyRequired := effectiveObject(body)
+		for name, ref := range bodyProps {
 			if _, clash := props[name]; clash {
 				return toolDef{}, fmt.Errorf("body field %q collides with a parameter", name)
 			}
@@ -117,7 +119,7 @@ func buildTool(method, path string, pathParams openapi3.Parameters, op *openapi3
 			locs[name] = locBody
 		}
 		if op.RequestBody.Value.Required {
-			required = append(required, body.Required...)
+			required = append(required, bodyRequired...)
 		}
 	}
 
@@ -190,17 +192,45 @@ func schemaToMap(ref *openapi3.SchemaRef) map[string]any {
 	if s.Items != nil {
 		m["items"] = schemaToMap(s.Items)
 	}
-	if len(s.Properties) > 0 {
+	props, required := effectiveObject(s)
+	if len(props) > 0 {
 		p := map[string]any{}
-		for name, pref := range s.Properties {
+		for name, pref := range props {
 			p[name] = schemaToMap(pref)
 		}
 		m["properties"] = p
 	}
-	if len(s.Required) > 0 {
-		m["required"] = s.Required
+	if len(required) > 0 {
+		m["required"] = required
 	}
 	return m
+}
+
+// effectiveObject returns a schema's properties and required fields with any
+// allOf members merged in (recursively). OpenAPI composes request/response
+// objects with allOf (e.g. FlowSearchRequest = SearchRequest + extras); without
+// flattening, the inherited fields would be invisible to the tool schema. Later
+// members and the schema's own properties win on name conflicts.
+func effectiveObject(s *openapi3.Schema) (openapi3.Schemas, []string) {
+	props := openapi3.Schemas{}
+	var required []string
+
+	var merge func(sub *openapi3.Schema)
+	merge = func(sub *openapi3.Schema) {
+		if sub == nil {
+			return
+		}
+		for _, ref := range sub.AllOf {
+			if ref != nil {
+				merge(ref.Value)
+			}
+		}
+		maps.Copy(props, sub.Properties)
+		required = append(required, sub.Required...)
+	}
+	merge(s)
+
+	return props, required
 }
 
 // mergeParams returns base parameters overlaid with override; an override
