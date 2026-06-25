@@ -120,6 +120,28 @@ echopoint auth login --token "<SESSION_JWT>"
 ECHOPOINT_TOKEN="<SESSION_JWT>" echopoint flows list
 ```
 
+### Organization API Key
+
+Store an organization API key (no browser) and use it for subsequent commands:
+
+```bash
+echopoint auth login --api-key "<ORG_API_KEY>"
+```
+
+The organization is resolved from the key, so no organization id is required.
+A session and an API key can both be stored on the same profile — the **session
+(Bearer) is preferred** when both are present. Pass `--default` to prefer the
+API key instead:
+
+```bash
+echopoint auth login --api-key "<ORG_API_KEY>" --default
+```
+
+Resolution order for each command: an explicit `--api-key` / `ECHOPOINT_API_KEY`
+wins, then the stored credential per the profile's preference (session by
+default, API key when preferred or when no session is stored). `echopoint auth
+status` shows what's stored and which is preferred.
+
 ## Profiles
 
 By default the CLI talks to `https://api.echopoint.dev`. Profiles let you point
