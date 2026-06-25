@@ -37,6 +37,12 @@ func NewServer(cli *client.Client, version string) (*mcpsdk.Server, error) {
 			makeHandler(cli, td),
 		)
 	}
+
+	// build_flow is the one hand-written tool: an ergonomic, validated
+	// alternative to the raw create_flow document.
+	if err := addBuildFlowTool(srv, cli); err != nil {
+		return nil, err
+	}
 	return srv, nil
 }
 

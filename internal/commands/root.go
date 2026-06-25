@@ -146,8 +146,9 @@ func NewRootCmd() *cobra.Command {
 }
 
 // requiresToken reports whether a command needs a resolved session token in
-// PersistentPreRunE. Auth, profile, config, version, and update commands manage
-// their own state and must run without valid credentials.
+// PersistentPreRunE. Auth, profile, config, version, update, and mcp commands
+// manage their own state and must run without valid credentials — mcp in
+// particular resolves auth itself (and may trigger browser sign-in) at launch.
 //
 // The auth/profile/config groups match anywhere in the parent chain so their
 // subcommands (e.g. "auth login") also skip token resolution. The top-level
@@ -160,7 +161,7 @@ func requiresToken(cmd *cobra.Command) bool {
 		switch c.Name() {
 		case authCommandName, profileCommandName, configCommandName:
 			return false
-		case versionCommandName, updateCommandName:
+		case versionCommandName, updateCommandName, mcpCommandName:
 			if isRootChild(c) {
 				return false
 			}

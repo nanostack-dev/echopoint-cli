@@ -32,6 +32,10 @@ const (
 	extAIDanger = "x-ai-danger"
 )
 
+// schemaTypeObject is the JSON Schema object type, repeated across generated
+// tool schemas.
+const schemaTypeObject = "object"
+
 // toolDef is a single MCP tool derived from an annotated OpenAPI operation.
 type toolDef struct {
 	Name         string              // snake_case operationId
@@ -124,7 +128,7 @@ func buildTool(method, path string, pathParams openapi3.Parameters, op *openapi3
 	}
 
 	schema := map[string]any{
-		"type":       "object",
+		"type":       schemaTypeObject,
 		"properties": props,
 	}
 	if len(required) > 0 {
