@@ -71,6 +71,21 @@ key can both be stored; the session is preferred when both are present. Use
 // credentials, preserving any existing session token. The API key becomes the
 // preferred method only when --default is set.
 func storeAPIKeyCredential(state *AppState, apiKey, organizationID string, setDefault bool) error {
+	// Resolve the organization from the key itself when not given explicitly, so
+	// subsequent requests can send X-Organization-Id without the user supplying it.
+	if organizationID == "" {
+		resolved, resolveErr := resolveAPIKeyOrganizationID(
+			state.Config.API.BaseURL, apiKey, state.Config.API.Timeout,
+		)
+		if resolveErr != nil {
+			fmt.Fprintf(os.Stderr,
+				"Warning: could not resolve organization from API key "+
+					"(pass --organization-id to set it): %v\n", resolveErr)
+		} else {
+			organizationID = resolved
+		}
+	}
+
 	creds := loadOrEmptyCredentials(state.Profile)
 	creds.APIKey = apiKey
 	if organizationID != "" {
@@ -87,6 +102,9 @@ func storeAPIKeyCredential(state *AppState, apiKey, organizationID string, setDe
 
 	fmt.Fprintf(os.Stdout, "\n✓ Stored API key (profile: %s)\n", state.Profile)
 	fmt.Fprintf(os.Stdout, "Credentials saved to %s\n", path)
+	if creds.OrganizationID != "" {
+		fmt.Fprintf(os.Stdout, "Organization: %s\n", creds.OrganizationID)
+	}
 	if creds.AccessToken != "" {
 		preferred := "session (Bearer)"
 		if creds.PreferAPIKey {
@@ -272,6 +290,37 @@ func resolveDefaultOrganizationID(baseURL string, token string, timeout time.Dur
 	}
 
 	return payload.User.Organizations[0].Id, nil
+}
+
+// resolveAPIKeyOrganizationID asks /api-keys/self for the organization the API
+// key is scoped to. The endpoint resolves the organization from the key, so no
+// X-Organization-Id header is required.
+func resolveAPIKeyOrganizationID(baseURL, apiKey string, timeout time.Duration) (string, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api-keys/self", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("X-Api-Key", apiKey)
+
+	httpClient := &http.Client{Timeout: timeout}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("resolve organization failed with status %d", resp.StatusCode)
+	}
+
+	var payload struct {
+		OrganizationID string `json:"organization_id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+
+	return payload.OrganizationID, nil
 }
 
 func newAuthLogoutCmd(state *AppState) *cobra.Command {
