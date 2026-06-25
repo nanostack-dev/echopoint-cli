@@ -15,6 +15,8 @@ tags:
     description: Webhook analytics and metrics operations.
   - name: Flows
     description: Manage Requests flows
+  - name: Schedules
+    description: Recurring flow schedules (scheduled runs / monitors) and their run history
   - name: Collections
     description: Manage request collections with folders and requests
   - name: Resources
@@ -249,10 +251,10 @@ components:
           type: string
           nullable: true
           description: User display name from Nanostack product user profile when available.
-        product_user_id:
+        user_id:
           type: string
           nullable: true
-          description: Nanostack product user identifier.
+          description: Nanostack user identifier.
         organizations:
           type: array
           items:
@@ -382,8 +384,11 @@ components:
 
     ApiKeyPermissionType:
       type: string
-      enum: [custom, runner]
-      description: The API key permission set to return.
+      enum: [custom, runner, ci]
+      description: >-
+        The API key permission catalog to return. `custom` is the full grantable
+        catalog, `runner` is runner-only scopes, and `ci` is the curated preset
+        for CI/CD (flow execution + ephemeral runner completion).
 
     ApiKeyCreateResponse:
       allOf:
@@ -1684,6 +1689,29 @@ components:
           required:
             - items
 
+    FlowTagListResponse:
+      type: object
+      description: Current canonical flow tags for the authenticated organization.
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+          description: Alphabetically sorted canonical tags. At most 100 tags are returned.
+          example: ["monitoring", "production", "smoke"]
+        count:
+          type: integer
+          description: Number of tags returned in this response.
+        limit:
+          type: integer
+          description: Maximum number of distinct flow tags allowed per organization.
+          example: 100
+      required:
+        - items
+        - count
+        - limit
+
     FlowVersion:
       type: object
       properties:
@@ -2133,11 +2161,12 @@ components:
       description: Controls whether a node runs only in the normal success path or also after the main flow has already failed.
     TriggerType:
       type: string
-      enum: [manual, git]
+      enum: [manual, git, scheduled]
       description: |
         How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
-        (e.g. GitHub Actions) carrying source-control provenance. The shape of `trigger_metadata`
-        is determined by this value.
+        (e.g. GitHub Actions) carrying source-control provenance; `scheduled` is an app-owned flow
+        schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
+        by this value.
     ManualTriggerMetadata:
       type: object
       description: |
@@ -2185,13 +2214,44 @@ components:
           type: string
           description: User/identity that triggered the CI run.
 
+    ScheduledTriggerMetadata:
+      type: object
+      description: |
+        Provenance for a `scheduled` launch produced by an app-owned flow schedule. Identifies
+        the schedule, the run it fired under, the resolved flow, and the due timestamp so an
+        execution can be traced back to its monitor. The authoritative run linkage is the
+        execution's first-class `schedule_run_id` field; this metadata is display provenance.
+      properties:
+        schedule_id:
+          type: string
+          format: uuid
+          description: Flow schedule that owns this launch.
+        schedule_run_id:
+          type: string
+          format: uuid
+          description: Schedule run (one per fire) this launch belongs to.
+        flow_id:
+          type: string
+          format: uuid
+          description: Flow resolved for this launch.
+        due_at:
+          type: string
+          format: date-time
+          description: Scheduled due time of the run in UTC.
+      required:
+        - schedule_id
+        - schedule_run_id
+        - flow_id
+        - due_at
+
     TriggerMetadata:
       description: |
         Trigger provenance, discriminated by the sibling `trigger_type`: `manual` →
-        ManualTriggerMetadata, `git` → GitTriggerMetadata.
+        ManualTriggerMetadata, `git` → GitTriggerMetadata, `scheduled` → ScheduledTriggerMetadata.
       oneOf:
         - $ref: "#/components/schemas/GitTriggerMetadata"
         - $ref: "#/components/schemas/ManualTriggerMetadata"
+        - $ref: "#/components/schemas/ScheduledTriggerMetadata"
 
     RunnerType:
       type: string
@@ -2397,7 +2457,10 @@ components:
     RunnerJobProgressEventPayload:
       type: object
       additionalProperties: true
-      description: Progress payload mirroring the execution SSE event body for the given event type.
+      description: |
+        Progress payload mirroring the execution SSE event body for the given event type.
+        For a node-completed event, `result.response.assertion_results` is an array of
+        AssertionResult (every assertion evaluated, with expected/actual/passed).
 
     RunnerJobProgressEvent:
       type: object
@@ -2580,6 +2643,15 @@ components:
         environment_key:
           type: string
           description: Named environment overlaid when resolving this execution's inputs.
+        schedule_run_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Schedule run that launched this execution; null for manual/CI launches.
+        timeout_seconds:
+          type: integer
+          nullable: true
+          description: Per-execution wall-clock bound enforced by the execution layer.
         started_at:
           type: string
           format: date-time
@@ -2623,6 +2695,39 @@ components:
         - created_at
         - updated_at
 
+    AssertionResult:
+      type: object
+      description: |
+        Outcome of evaluating a single node assertion. Recorded for every assertion
+        (pass or fail). Appears in the `assertion_results` array of a request node's
+        `result` (see NodeExecutionResult.result) and in the node `response` of a
+        node-completed progress/SSE event.
+      properties:
+        index:
+          type: integer
+          description: Zero-based position of the assertion on the node.
+        extractor:
+          type: string
+          description: Extractor that produced the actual value (e.g. statusCode, jsonPath).
+        operator:
+          type: string
+          description: Operator applied (e.g. equals, contains, regex, between).
+        expected:
+          description: The expected value the operator compared against (any JSON type).
+        actual:
+          description: The value extracted from the response (any JSON type; absent when the extractor errored).
+        passed:
+          type: boolean
+          description: Whether the assertion held.
+        error:
+          type: string
+          description: Present when the extractor or operator errored.
+      required:
+        - index
+        - extractor
+        - operator
+        - passed
+
     NodeExecutionResult:
       type: object
       description: |
@@ -2656,7 +2761,9 @@ components:
           description: |
             Complete polymorphic result from flow engine.
             Contains RequestExecutionResult, DelayExecutionResult, or ModuleExecutionResult based on node_type.
-            Includes all data: request/response, assertions, extracted outputs, etc.
+            Includes all data: request/response, extracted outputs, etc. For request nodes,
+            `assertion_results` is an array of AssertionResult recording every assertion
+            evaluated (expected/actual/passed), present whether the node passed or failed.
         status:
           $ref: "#/components/schemas/NodeExecutionStatus"
         started_at:
@@ -4040,6 +4147,427 @@ components:
           $ref: "#/components/schemas/NamedEnvironmentVariablesInput"
           description: Named organization environment overlays selected at launch time.
 
+    # ---------------------------------------------------------------------------
+    # Flow schedules (scheduled flow runs / monitors)
+    # ---------------------------------------------------------------------------
+
+    ScheduleOccurrenceStatus:
+      type: string
+      enum: [pending, running, succeeded, failed, partial, no_match]
+      description: |
+        Aggregate status of a schedule run, derived from the executions launched for it
+        plus any recorded launch failures.
+    OrganizationMember:
+      type: object
+      description: A member of the current organization, as seen by echopoint (proxied from anchor).
+      properties:
+        user_id:
+          type: string
+          description: Unique identifier of the product user (KSUID).
+        email:
+          type: string
+          format: email
+          description: Email address of the member; usable as an alert recipient.
+        name:
+          type: string
+          nullable: true
+          description: Display name of the member, when set.
+        role:
+          $ref: "#/components/schemas/OrganizationMemberRole"
+      required:
+        - user_id
+        - email
+        - role
+
+    OrganizationMemberRole:
+      type: object
+      description: The role assigned to the member within the organization.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+
+    OrganizationMemberListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationMember"
+        count:
+          type: integer
+        total:
+          type: integer
+          format: int64
+      required:
+        - items
+        - count
+        - total
+
+    FlowSchedule:
+      type: object
+      description: A recurring schedule that launches the tag-selected suite of flows resolved at each due tick.
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tag selector resolved to matching flows at each due tick.
+        tag_match_mode:
+          $ref: "#/components/schemas/TagMatchMode"
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        cron_expression:
+          type: string
+          description: |
+            Standard 5-field cron expression (minute hour day-of-month month day-of-week)
+            evaluated in `timezone`.
+        starts_at:
+          type: string
+          format: date-time
+          description: UTC anchor for the recurrence.
+        timezone:
+          type: string
+          description: IANA timezone name stored for display and anchoring; due times remain UTC.
+        next_run_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Next due time in UTC; null when paused with no future occurrence computed.
+        runner_type:
+          $ref: "#/components/schemas/RunnerType"
+        environment_key:
+          type: string
+        timeout_seconds:
+          type: integer
+          format: int32
+          description: Per-run-item timeout in seconds.
+        recipient_emails:
+          type: array
+          description: |
+            Email addresses alerted when a scheduled run fails. May be members or
+            ad-hoc addresses; an empty set disables alerting for this schedule.
+          items:
+            type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - organization_id
+        - tags
+        - tag_match_mode
+        - name
+        - enabled
+        - cron_expression
+        - starts_at
+        - timezone
+        - runner_type
+        - environment_key
+        - timeout_seconds
+        - recipient_emails
+        - created_by
+        - created_at
+        - updated_at
+
+    CreateFlowScheduleRequest:
+      type: object
+      description: |
+        Create a flow schedule. The schedule targets the suite of flows matching `tags`
+        (with `tag_match_mode`), resolved at each due tick.
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        tag_match_mode:
+          $ref: "#/components/schemas/TagMatchMode"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+          default: true
+        cron_expression:
+          type: string
+          description: Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional UTC anchor; defaults to creation time when omitted.
+        runner_type:
+          $ref: "#/components/schemas/RunnerType"
+        environment_key:
+          type: string
+        timeout_seconds:
+          type: integer
+          format: int32
+          minimum: 1
+        recipient_emails:
+          type: array
+          description: |
+            Email addresses alerted when a scheduled run fails. May be members or
+            ad-hoc addresses. Each must be a valid email; an empty/omitted set
+            disables alerting.
+          items:
+            type: string
+      required:
+        - tags
+        - name
+        - cron_expression
+        - runner_type
+
+    UpdateFlowScheduleRequest:
+      type: object
+      description: |
+        Replace the mutable configuration of a schedule. The tag selector is resolved to matching
+        flows at each due tick, same as creation.
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        tag_match_mode:
+          $ref: "#/components/schemas/TagMatchMode"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        cron_expression:
+          type: string
+          description: Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        runner_type:
+          $ref: "#/components/schemas/RunnerType"
+        environment_key:
+          type: string
+        timeout_seconds:
+          type: integer
+          format: int32
+          minimum: 1
+        recipient_emails:
+          type: array
+          description: |
+            Email addresses alerted when a scheduled run fails. May be members or
+            ad-hoc addresses. Each must be a valid email; an empty/omitted set
+            disables alerting.
+          items:
+            type: string
+      required:
+        - tags
+        - name
+        - cron_expression
+        - runner_type
+
+    FlowScheduleListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FlowSchedule"
+          required:
+            - items
+
+    FlowScheduleRun:
+      type: object
+      description: |
+        One fire of a schedule (suite run). Records fire-time facts; `status`,
+        `started_at`, and `completed_at` are derived from the executions launched for
+        this run (linked via the execution's `schedule_run_id`).
+      properties:
+        id:
+          type: string
+          format: uuid
+        schedule_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        due_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Derived earliest start of the run's executions.
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Derived latest completion once the run is terminal.
+        matched_flow_count:
+          type: integer
+          format: int32
+          description: Number of flows the tag selector matched when the run fired.
+        launch_failures:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleLaunchFailure"
+          description: Flows that could not be launched when the run fired.
+        status:
+          $ref: "#/components/schemas/ScheduleOccurrenceStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - schedule_id
+        - organization_id
+        - due_at
+        - matched_flow_count
+        - launch_failures
+        - status
+        - created_at
+        - updated_at
+
+    ScheduleLaunchFailure:
+      type: object
+      description: |
+        A flow that could not be launched when a schedule run fired (flow deleted between
+        resolve and launch, validation failed, ...). Counts as a failure in the run's
+        derived status.
+      properties:
+        flow_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        code:
+          type: string
+      required:
+        - flow_id
+        - reason
+        - code
+
+    ScheduleRunExecution:
+      type: object
+      description: Lightweight projection of an execution launched by a schedule run.
+      properties:
+        id:
+          type: string
+          format: uuid
+        flow_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/ExecutionStatus"
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        error_code:
+          type: string
+          nullable: true
+      required:
+        - id
+        - flow_id
+        - status
+        - started_at
+
+    FlowScheduleRunDetail:
+      type: object
+      description: A schedule run together with the executions it launched.
+      properties:
+        run:
+          $ref: "#/components/schemas/FlowScheduleRun"
+        executions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleRunExecution"
+      required:
+        - run
+        - executions
+
+    FlowScheduleRunListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FlowScheduleRun"
+          required:
+            - items
+
+
+    ScheduleTagPreviewRequest:
+      type: object
+      description: Resolve which organization flows currently match a tag selector.
+      properties:
+        tags:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        tag_match_mode:
+          $ref: "#/components/schemas/TagMatchMode"
+      required:
+        - tags
+
+    ScheduleTagPreviewResponse:
+      type: object
+      description: Flows currently matching a tag selector.
+      properties:
+        matched_flow_count:
+          type: integer
+          format: int32
+          description: Total flows matching the selector.
+        flows:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowSearchItem"
+      required:
+        - matched_flow_count
+        - flows
+
   requestBodies:
     WebhookAnyPayload:
       description: Webhook payload in various formats.
@@ -4066,6 +4594,7 @@ paths:
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:read]
+        - ApiKeys: [webhooks:read]
       responses:
         "200":
           description: Webhook endpoints retrieved successfully.
@@ -4083,9 +4612,11 @@ paths:
       summary: Create Webhook Endpoint
       description: Creates a new webhook endpoint for receiving webhook requests.
       operationId: createWebhook
+      x-ai-tool: true
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:create]
+        - ApiKeys: [webhooks:create]
       requestBody:
         description: Webhook endpoint details.
         required: true
@@ -4113,9 +4644,11 @@ paths:
       summary: Get Webhook Endpoint
       description: Retrieves details of a specific webhook endpoint.
       operationId: getWebhook
+      x-ai-tool: true
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:read]
+        - ApiKeys: [webhooks:read]
       responses:
         "200":
           description: Webhook endpoint details retrieved successfully.
@@ -4129,9 +4662,11 @@ paths:
       summary: Delete Webhook Endpoint
       description: Deletes a webhook endpoint. This is a destructive operation.
       operationId: deleteWebhook
+      x-ai-tool: true
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:delete]
+        - ApiKeys: [webhooks:delete]
       responses:
         "204":
           description: Webhook endpoint deleted successfully or already deleted.
@@ -4143,9 +4678,11 @@ paths:
       summary: Search Resources
       description: Cross-domain resource discovery across persisted flow-relevant resources.
       operationId: searchResources
+      x-ai-tool: true
       tags: [Resources]
       security:
         - BearerAuth: []
+        - ApiKeys: []
       requestBody:
         description: Search criteria for cross-domain resources.
         required: true
@@ -4176,6 +4713,7 @@ paths:
         Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant.
         Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
       operationId: resyncResourceSearch
+      x-ai-danger: "Admin route - requires a privileged session."
       tags: [Administration]
       security:
         - BearerAuth: []
@@ -4187,6 +4725,39 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /administrations/flow-schedules/{scheduleId}/run:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        description: The unique identifier of the schedule to run immediately.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Run Flow Schedule Now
+      description: |-
+        Runs a single flow schedule immediately instead of waiting for its next cron tick.
+        Processes the schedule inline — creates the occurrence, advances next_run_at, and
+        launches pending run items. Reserved for operator use; the caller must authenticate
+        with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
+        not accepted on admin routes.
+      operationId: runFlowScheduleNow
+      x-ai-danger: "Admin route - requires a privileged session."
+      tags: [Administration]
+      security:
+        - BearerAuth: []
+      responses:
+        "202":
+          description: Schedule run completed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /webhooks/{id}/requests/search:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
@@ -4195,9 +4766,11 @@ paths:
       summary: Search Webhook Requests
       description: Server-side search with pagination, filtering and sorting for a webhook's requests.
       operationId: searchWebhookRequests
+      x-ai-tool: true
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:read]
+        - ApiKeys: [webhooks:read]
       requestBody:
         description: Search criteria for webhook requests.
         required: true
@@ -4224,9 +4797,11 @@ paths:
       summary: Search Webhook Endpoints
       description: Server-side search with pagination, filtering and sorting for webhook endpoints.
       operationId: searchWebhooks
+      x-ai-tool: true
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:read]
+        - ApiKeys: [webhooks:read]
       requestBody:
         description: Search criteria for webhook endpoints.
         required: true
@@ -4266,6 +4841,7 @@ paths:
       summary: Stream Webhook Requests
       description: Stream webhook requests in real-time using Server-Sent Events.
       operationId: streamWebhookRequests
+      x-ai-danger: "SSE stream - long-lived, incompatible with request/response tools."
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:read]
@@ -4286,9 +4862,11 @@ paths:
       summary: Get Request Volumes
       description: Returns request counts over time for the selected datetime range.
       operationId: getWebhookRequestVolumes
+      x-ai-tool: true
       tags: [Analytics]
       security:
         - BearerAuth: [webhooks:read]
+        - ApiKeys: [webhooks:read]
       parameters:
         - name: from
           in: query
@@ -4326,9 +4904,11 @@ paths:
       summary: Get Method Distribution
       description: Returns distribution of HTTP methods for the selected datetime range.
       operationId: getWebhookMethodDistribution
+      x-ai-tool: true
       tags: [Analytics]
       security:
         - BearerAuth: [webhooks:read]
+        - ApiKeys: [webhooks:read]
       parameters:
         - name: from
           in: query
@@ -4364,6 +4944,7 @@ paths:
       summary: Receive Webhook via GET
       description: Receives and processes webhook requests sent via GET method.
       operationId: receiveWebhookGet
+      x-ai-danger: "Public webhook ingestion - data-plane endpoint, not a control action."
       tags: [Webhook]
       requestBody:
         $ref: "#/components/requestBodies/WebhookAnyPayload"
@@ -4380,6 +4961,7 @@ paths:
       summary: Receive Webhook via POST
       description: Receives and processes webhook requests sent via POST method.
       operationId: receiveWebhookPost
+      x-ai-danger: "Public webhook ingestion - data-plane endpoint, not a control action."
       tags: [Webhook]
       requestBody:
         $ref: "#/components/requestBodies/WebhookAnyPayload"
@@ -4396,6 +4978,7 @@ paths:
       summary: Receive Webhook via PUT
       description: Receives and processes webhook requests sent via PUT method.
       operationId: receiveWebhookPut
+      x-ai-danger: "Public webhook ingestion - data-plane endpoint, not a control action."
       tags: [Webhook]
       requestBody:
         $ref: "#/components/requestBodies/WebhookAnyPayload"
@@ -4412,6 +4995,7 @@ paths:
       summary: Receive Webhook via PATCH
       description: Receives and processes webhook requests sent via PATCH method.
       operationId: receiveWebhookPatch
+      x-ai-danger: "Public webhook ingestion - data-plane endpoint, not a control action."
       tags: [Webhook]
       requestBody:
         $ref: "#/components/requestBodies/WebhookAnyPayload"
@@ -4428,6 +5012,7 @@ paths:
       summary: Receive Webhook via DELETE
       description: Receives and processes webhook requests sent via DELETE method.
       operationId: receiveWebhookDelete
+      x-ai-danger: "Public webhook ingestion - data-plane endpoint, not a control action."
       tags: [Webhook]
       requestBody:
         $ref: "#/components/requestBodies/WebhookAnyPayload"
@@ -4531,6 +5116,7 @@ paths:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
       operationId: completeEphemeralExecution
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
       summary: Complete an ephemeral execution
       description: |
         Reports the terminal result for an ephemeral execution produced by a caller-owned
@@ -4544,6 +5130,10 @@ paths:
         - Runner
       security:
         - ApiKeys: [runner:complete]
+        # A trusted operator's bearer (flows:execute) may also publish ephemeral
+        # results: it already launches the execution, so the CLI can run+complete
+        # with a single session credential without minting a runner API key.
+        - BearerAuth: [flows:execute]
       requestBody:
         required: true
         content:
@@ -4575,6 +5165,7 @@ paths:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       operationId: listLiveRunners
+      x-ai-tool: true
       summary: List live self-hosted runners
       description: |
         Returns the currently live self-hosted runners observed for the active organization,
@@ -4583,6 +5174,7 @@ paths:
         - Runner
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Live self-hosted runners for the organization.
@@ -4602,6 +5194,7 @@ paths:
   /runner/jobs/next:
     post:
       operationId: nextRunnerJob
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
       summary: Claim the next runner job
       description: |
         Long-polls for work, refreshes runner liveness, and atomically claims one queued runner job
@@ -4639,6 +5232,7 @@ paths:
       - $ref: "#/components/parameters/RunnerJobIDParameter"
     post:
       operationId: completeRunnerJob
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
       summary: Complete a claimed runner job
       description: |
         Accepts a one-shot terminal runner completion report for a previously claimed runner job.
@@ -4673,6 +5267,7 @@ paths:
       - $ref: "#/components/parameters/RunnerJobIDParameter"
     post:
       operationId: sendRunnerJobEvents
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
       summary: Append progress events for a claimed runner job
       description: |
         Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
@@ -4709,6 +5304,7 @@ paths:
   /runner/jobs/heartbeat:
     post:
       operationId: heartbeatRunnerJobs
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
       summary: Renew leases for active runner jobs
       description: |
         Refreshes the lease for the claimed runner jobs that are still actively executing
@@ -4753,6 +5349,7 @@ paths:
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       parameters:
         - $ref: "#/components/parameters/LimitParameter"
         - $ref: "#/components/parameters/OffsetParameter"
@@ -4771,9 +5368,11 @@ paths:
       summary: Create Flow
       description: Creates a new flow for the authenticated user.
       operationId: createFlow
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:create]
+        - ApiKeys: [flows:create]
       requestBody:
         description: Flow creation details.
         required: true
@@ -4800,7 +5399,8 @@ paths:
       summary: Search Flows
       description: |
         Dedicated flow-domain search against canonical flows with pagination, sorting,
-        full-text search, and exact tag filtering. Returns full Flow objects.
+        full-text search, and exact tag filtering. Returns lightweight flow items;
+        flow_definition is omitted unless requested via `include_definition`.
         Callable by bearer users and API keys scoped with flows:read.
       operationId: searchFlows
       x-ai-tool: true
@@ -4830,6 +5430,33 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /flows/tags:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Flow Tags
+      description: >-
+        Returns the current canonical flow tags for the authenticated organization.
+        Tags are derived from persisted flow tag arrays and capped at 100 distinct
+        tags per organization so clients can filter locally for autocomplete.
+      operationId: listFlowTags
+      x-ai-tool: true
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      responses:
+        "200":
+          description: Flow tags retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowTagListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /flows/generations:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -4837,9 +5464,11 @@ paths:
       summary: Start Flow Generation
       description: Starts an asynchronous AI-assisted flow generation run.
       operationId: createFlowGeneration
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       requestBody:
         required: true
         content:
@@ -4874,9 +5503,11 @@ paths:
       summary: Get Flow Generation
       description: Retrieves the current status and result of an AI-assisted flow generation run.
       operationId: getFlowGeneration
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Flow generation status retrieved successfully.
@@ -4903,9 +5534,11 @@ paths:
       summary: Ensure Flow Generation Session
       description: Creates or returns the active AI generation session for the current user and flow.
       operationId: ensureFlowGenerationSession
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       responses:
         "200":
           description: Active generation session returned successfully.
@@ -4932,9 +5565,11 @@ paths:
       summary: Get Flow Generation Session
       description: Retrieves the current session state, latest run, and recent chat messages.
       operationId: getFlowGenerationSession
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Session retrieved successfully.
@@ -4961,9 +5596,11 @@ paths:
       summary: List Flow Generation Session Messages
       description: Returns a paginated list of messages for the session, ordered oldest to newest. Use the `before` cursor to page backward through older messages.
       operationId: listFlowGenerationSessionMessages
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       parameters:
         - name: limit
           in: query
@@ -4996,9 +5633,11 @@ paths:
       summary: Send Flow Generation Session Message
       description: Persists a user message and starts a linked AI generation run for the session.
       operationId: createFlowGenerationSessionMessage
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       requestBody:
         required: true
         content:
@@ -5035,6 +5674,7 @@ paths:
       summary: Stream flow generation session events
       description: Streams real-time AI session events for a specific flow generation session using Server-Sent Events.
       operationId: streamFlowGenerationSession
+      x-ai-danger: "SSE stream - long-lived, incompatible with request/response tools."
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -5072,9 +5712,11 @@ paths:
       summary: Restore flow from AI session run snapshot
       description: Restores the current flow to the snapshot captured before the specified AI session run applied its changes.
       operationId: restoreFlowGenerationSessionRun
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       responses:
         "200":
           description: Flow restored successfully from the selected AI session run snapshot.
@@ -5108,6 +5750,7 @@ paths:
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Flow retrieved successfully.
@@ -5123,9 +5766,11 @@ paths:
       summary: Update Flow
       description: Updates an existing flow.
       operationId: updateFlow
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       requestBody:
         description: Flow update details.
         required: true
@@ -5150,9 +5795,11 @@ paths:
       summary: Delete Flow
       description: Deletes a flow. This is a destructive operation.
       operationId: deleteFlow
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:delete]
+        - ApiKeys: [flows:delete]
       responses:
         "204":
           description: Flow deleted successfully or already deleted.
@@ -5180,9 +5827,11 @@ paths:
       summary: Export Flow
       description: Returns the raw flow definition JSON formatted for the flow engine.
       operationId: exportFlow
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Flow definition exported successfully.
@@ -5202,8 +5851,7 @@ paths:
       summary: Get current user and organization context
       description: Returns the authenticated user profile and resolved organization context.
       operationId: getMe
-      x-ai-tool: true
-      x-ai-description: "Get the current authenticated user and organization context (who am I). Call first to establish identity before other actions."
+      x-ai-danger: "User identity route - API-key callers use get_current_api_key instead."
       tags: [ Auth ]
       security:
         - BearerAuth: []
@@ -5226,9 +5874,11 @@ paths:
       summary: Create or Update Organization Environment
       description: Creates or updates the organization base environment and named environment overlays.
       operationId: createOrUpdateOrganizationEnvironment
+      x-ai-tool: true
       tags: [Organization]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       requestBody:
         required: true
         content:
@@ -5256,9 +5906,11 @@ paths:
       summary: Get Organization Environment
       description: Retrieves the organization base environment and named environment overlays.
       operationId: getOrganizationEnvironment
+      x-ai-tool: true
       tags: [Organization]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Organization environment retrieved successfully.
@@ -5272,9 +5924,11 @@ paths:
       summary: Update Organization Environment
       description: Replaces the organization base environment and named environment overlays.
       operationId: updateOrganizationEnvironment
+      x-ai-tool: true
       tags: [Organization]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       requestBody:
         required: true
         content:
@@ -5296,9 +5950,11 @@ paths:
       summary: Delete Organization Environment
       description: Deletes the organization environment and its named overlays.
       operationId: deleteOrganizationEnvironment
+      x-ai-tool: true
       tags: [Organization]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       responses:
         "204":
           description: Organization environment deleted successfully or already deleted.
@@ -5310,6 +5966,7 @@ paths:
       summary: Initialize current user organization
       description: Creates initial organization and membership when a synced user has no organizations.
       operationId: initUser
+      x-ai-danger: "User provisioning route - not an agent action."
       tags: [ Auth ]
       security:
         - BearerAuth: []
@@ -5332,6 +5989,7 @@ paths:
       summary: List API Keys
       description: Lists API keys for the current organization.
       operationId: listAPIKeys
+      x-ai-danger: "API key management - kept off the agent surface."
       tags: [Auth]
       security:
         - BearerAuth: [api_key:read]
@@ -5357,6 +6015,7 @@ paths:
       summary: Create API Key
       description: Creates a new API key for the current organization.
       operationId: createAPIKey
+      x-ai-danger: "API key management - an API-key principal minting keys is privilege escalation."
       tags: [Auth]
       security:
         - BearerAuth: [api_key:create]
@@ -5390,6 +6049,7 @@ paths:
       summary: Search API Keys
       description: Server-side search with pagination, filtering and sorting for organization API keys.
       operationId: searchAPIKeys
+      x-ai-danger: "API key management - kept off the agent surface."
       tags: [Auth]
       security:
         - BearerAuth: [api_key:read]
@@ -5424,9 +6084,11 @@ paths:
       summary: List Available Permissions
       description: Lists product permissions that can be assigned to Echopoint API keys for the requested type.
       operationId: listPermissions
+      x-ai-tool: true
       tags: [Auth]
       security:
         - BearerAuth: [api_key:create]
+        - ApiKeys: [api_key:create]
       responses:
         "200":
           description: Permissions retrieved successfully.
@@ -5442,6 +6104,8 @@ paths:
           $ref: "#/components/responses/InternalServerError"
 
   /api-keys/self:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get current API key identity
       description: >-
@@ -5476,6 +6140,7 @@ paths:
       summary: Get API Key
       description: Retrieves details for a single API key in the current organization.
       operationId: getAPIKey
+      x-ai-danger: "API key management - kept off the agent surface."
       tags: [Auth]
       security:
         - BearerAuth: [api_key:read]
@@ -5498,6 +6163,7 @@ paths:
       summary: Delete API Key
       description: Revokes an API key for the current organization.
       operationId: deleteAPIKey
+      x-ai-danger: "API key management - an API-key principal revoking keys is privilege escalation."
       tags: [Auth]
       security:
         - BearerAuth: [api_key:delete]
@@ -5525,6 +6191,7 @@ paths:
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       parameters:
         - $ref: "#/components/parameters/LimitParameter"
         - $ref: "#/components/parameters/OffsetParameter"
@@ -5543,9 +6210,11 @@ paths:
       summary: Create Collection
       description: Creates a new collection for the authenticated user.
       operationId: createCollection
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:create]
+        - ApiKeys: [collections:create]
       requestBody:
         description: Collection creation details.
         required: true
@@ -5584,6 +6253,7 @@ paths:
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       responses:
         "200":
           description: Collection retrieved successfully.
@@ -5599,9 +6269,11 @@ paths:
       summary: Update Collection
       description: Updates collection metadata.
       operationId: updateCollection
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:update]
+        - ApiKeys: [collections:update]
       requestBody:
         description: Collection update details.
         required: true
@@ -5626,9 +6298,11 @@ paths:
       summary: Delete Collection
       description: Deletes a collection and all its contents.
       operationId: deleteCollection
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:delete]
+        - ApiKeys: [collections:delete]
       responses:
         "204":
           description: Collection deleted successfully or already deleted.
@@ -5649,9 +6323,11 @@ paths:
       summary: Get OpenAPI Sync Config
       description: Retrieves the OpenAPI sync config for a collection.
       operationId: getOpenAPISyncConfig
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       responses:
         "200":
           description: OpenAPI sync config retrieved successfully.
@@ -5678,9 +6354,11 @@ paths:
       summary: Run OpenAPI Sync Now
       description: Triggers an immediate OpenAPI sync run for a collection and returns the updated sync config when the run completes.
       operationId: runOpenAPISyncNow
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:update]
+        - ApiKeys: [collections:update]
       requestBody:
         required: false
         content:
@@ -5717,9 +6395,11 @@ paths:
       summary: List OpenAPI Sync History
       description: Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
       operationId: listOpenAPISyncHistory
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       parameters:
         - $ref: "#/components/parameters/LimitParameter"
         - $ref: "#/components/parameters/OffsetParameter"
@@ -5738,9 +6418,11 @@ paths:
       summary: Create or Update OpenAPI Sync Config
       description: Creates or updates the OpenAPI sync config for a collection. Sync currently runs every 5 minutes.
       operationId: createOrUpdateOpenAPISyncConfig
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:update]
+        - ApiKeys: [collections:update]
       requestBody:
         description: OpenAPI sync config details.
         required: true
@@ -5765,9 +6447,11 @@ paths:
       summary: Delete OpenAPI Sync Config
       description: Deletes the OpenAPI sync config for a collection.
       operationId: deleteOpenAPISyncConfig
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:delete]
+        - ApiKeys: [collections:delete]
       responses:
         "204":
           description: OpenAPI sync config deleted successfully or already deleted.
@@ -5790,9 +6474,11 @@ paths:
       summary: Search OpenAPI Sync Operations
       description: Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
       operationId: searchOpenAPISyncOperations
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       requestBody:
         description: Search criteria for OpenAPI sync operations.
         required: true
@@ -5821,9 +6507,11 @@ paths:
       summary: Search OpenAPI Sync Configs
       description: Server-side search with pagination and sorting for top-level OpenAPI sync configs.
       operationId: searchOpenAPISyncConfigs
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       requestBody:
         description: Search criteria for top-level OpenAPI sync configs.
         required: true
@@ -5859,9 +6547,11 @@ paths:
       summary: List Collection Folders
       description: Returns all folders for a collection so clients can build the tree lazily.
       operationId: listCollectionFolders
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       responses:
         "200":
           description: Collection folders returned successfully.
@@ -5877,9 +6567,11 @@ paths:
       summary: Add Folder
       description: Adds a folder to a collection.
       operationId: addFolder
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:create]
+        - ApiKeys: [collections:create]
       requestBody:
         description: Folder creation details.
         required: true
@@ -5922,9 +6614,11 @@ paths:
       summary: Update Folder
       description: Updates a folder.
       operationId: updateFolder
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:update]
+        - ApiKeys: [collections:update]
       requestBody:
         description: Folder update details.
         required: true
@@ -5949,9 +6643,11 @@ paths:
       summary: Delete Folder
       description: Deletes a folder (requests moved to collection root).
       operationId: deleteFolder
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:delete]
+        - ApiKeys: [collections:delete]
       responses:
         "204":
           description: Folder deleted successfully or already deleted.
@@ -5974,9 +6670,11 @@ paths:
       summary: List Collection Requests
       description: Returns paginated requests for a collection, optionally filtered by folder and search query.
       operationId: listCollectionRequests
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       parameters:
         - name: folder_id
           in: query
@@ -6015,9 +6713,11 @@ paths:
       summary: Add Request
       description: Adds a request to a collection.
       operationId: addRequest
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:create]
+        - ApiKeys: [collections:create]
       requestBody:
         description: Request creation details.
         required: true
@@ -6060,9 +6760,11 @@ paths:
       summary: Get Request
       description: Returns a single request from a collection.
       operationId: getCollectionRequest
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       responses:
         "200":
           description: Request returned successfully.
@@ -6078,9 +6780,11 @@ paths:
       summary: Update Request
       description: Updates a request.
       operationId: updateRequest
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:update]
+        - ApiKeys: [collections:update]
       requestBody:
         description: Request update details.
         required: true
@@ -6105,9 +6809,11 @@ paths:
       summary: Delete Request
       description: Deletes a request.
       operationId: deleteRequest
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:delete]
+        - ApiKeys: [collections:delete]
       responses:
         "204":
           description: Request deleted successfully or already deleted.
@@ -6137,9 +6843,11 @@ paths:
       summary: Execute Request
       description: Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
       operationId: executeCollectionRequest
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:update]
+        - ApiKeys: [collections:update]
       requestBody:
         description: Optional unsaved request draft overrides to execute.
         required: true
@@ -6184,9 +6892,11 @@ paths:
       summary: List Request OpenAPI Sync History
       description: Lists OpenAPI sync changes for the upstream binding currently associated with a request.
       operationId: listCollectionRequestOpenAPISyncHistory
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:read]
+        - ApiKeys: [collections:read]
       responses:
         "200":
           description: Request OpenAPI sync history returned successfully.
@@ -6206,9 +6916,11 @@ paths:
       summary: Import from OpenAPI
       description: Imports a collection from an OpenAPI specification.
       operationId: importFromOpenAPI
+      x-ai-tool: true
       tags: [Collections]
       security:
         - BearerAuth: [collections:create]
+        - ApiKeys: [collections:create]
       requestBody:
         description: OpenAPI spec to import.
         required: true
@@ -6244,9 +6956,11 @@ paths:
       summary: Create or Update Flow Environment
       description: Creates or updates environment variables for a flow.
       operationId: createOrUpdateFlowEnvironment
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       requestBody:
         description: Environment variables to set.
         required: true
@@ -6277,9 +6991,11 @@ paths:
       summary: Get Flow Environment
       description: Retrieves environment variables for a flow.
       operationId: getFlowEnvironment
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Environment retrieved successfully (empty object if not exists).
@@ -6295,9 +7011,11 @@ paths:
       summary: Update Flow Environment
       description: Updates environment variables for a flow.
       operationId: updateFlowEnvironment
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       requestBody:
         description: Environment variables to update.
         required: true
@@ -6322,9 +7040,11 @@ paths:
       summary: Delete Flow Environment
       description: Deletes environment variables for a flow.
       operationId: deleteFlowEnvironment
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:delete]
+        - ApiKeys: [flows:delete]
       responses:
         "204":
           description: Environment deleted successfully or already deleted.
@@ -6347,9 +7067,11 @@ paths:
       summary: Publish Flow
       description: Snapshot the current flow definition as an immutable flow version.
       operationId: publishFlow
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       responses:
         "201":
           description: Flow published successfully.
@@ -6380,9 +7102,11 @@ paths:
       summary: List Flow Versions
       description: Retrieves a paginated list of saved versions for a flow.
       operationId: listFlowVersions
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Flow versions retrieved successfully.
@@ -6416,9 +7140,11 @@ paths:
       summary: Get Flow Version
       description: Retrieves a specific saved version of a flow.
       operationId: getFlowVersion
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Flow version retrieved successfully.
@@ -6454,9 +7180,11 @@ paths:
         Copies a saved version's definition and metadata back into the flow.
         The original version is preserved.
       operationId: restoreFlowVersion
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
       responses:
         "200":
           description: Flow restored from version successfully.
@@ -6478,9 +7206,11 @@ paths:
       summary: List Available Operations
       description: Retrieves all available operations (extractors and assertions) for flow data processing.
       operationId: listOperations
+      x-ai-tool: true
       tags: [Operations]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Operations retrieved successfully.
@@ -6500,9 +7230,11 @@ paths:
       summary: List Available Nodes
       description: Retrieves all available special nodes for flow control (delay, etc.).
       operationId: listNodes
+      x-ai-tool: true
       tags: [Nodes]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Nodes retrieved successfully.
@@ -6530,6 +7262,7 @@ paths:
       summary: List Flow Executions
       description: Retrieves execution history for a specific flow with pagination.
       operationId: listFlowExecutions
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -6572,6 +7305,7 @@ paths:
       summary: Get Execution Details
       description: Retrieves detailed information about a specific flow execution.
       operationId: getExecution
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -6609,6 +7343,7 @@ paths:
       summary: Stream execution events
       description: Streams real-time execution events for a specific flow execution using Server-Sent Events.
       operationId: streamExecution
+      x-ai-danger: "SSE stream - long-lived, incompatible with request/response tools."
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -6646,6 +7381,7 @@ paths:
       summary: Get All Node Results
       description: Retrieves execution results for all nodes in a flow execution.
       operationId: getExecutionNodeResults
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -6691,6 +7427,7 @@ paths:
       summary: Get Specific Node Result
       description: Retrieves execution result for a specific node in a flow execution.
       operationId: getNodeExecutionResult
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
@@ -6728,9 +7465,11 @@ paths:
       summary: Get Node Execution History
       description: Retrieves execution history for a specific node across all flow executions with pagination.
       operationId: getNodeExecutionHistory
+      x-ai-tool: true
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Node execution history retrieved successfully.
@@ -6740,5 +7479,366 @@ paths:
                 $ref: "#/components/schemas/NodeExecutionHistoryResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /members:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Organization Members
+      description: |
+        Lists the members of the current organization (proxied from anchor).
+        Backs the recipient picker for schedule failure alerts; returns each
+        member's email, display name, and role. Supports a full-text `search`
+        term for type-ahead.
+      operationId: listOrganizationMembers
+      x-ai-tool: true
+      tags: [Members]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+        - name: search
+          in: query
+          required: false
+          description: Full-text search term matched against member name/email.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Organization members retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationMemberListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /flow-schedules:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Flow Schedules
+      description: |
+        Lists flow schedules for the organization with optional filtering by enabled state.
+        Callable by bearer users and API keys scoped with flows:read.
+      operationId: listFlowSchedules
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+        - name: enabled
+          in: query
+          required: false
+          description: Filter by enabled/paused state.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Flow schedules retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowScheduleListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create Flow Schedule
+      description: |
+        Creates a tag-suite schedule targeting the flows matching the tag selector.
+        Callable by bearer users and API keys scoped with flows:update.
+      operationId: createFlowSchedule
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlowScheduleRequest"
+      responses:
+        "201":
+          description: Flow schedule created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowSchedule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flow-schedules/preview-tags:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Preview Tag-Suite Flows
+      description: |
+        Resolves which organization flows currently match a tag selector, reporting truncation
+        against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+      operationId: previewScheduleTags
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleTagPreviewRequest"
+      responses:
+        "200":
+          description: Matching flows resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleTagPreviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /flow-schedules/{scheduleId}:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        description: The unique identifier of the schedule.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Flow Schedule
+      operationId: getFlowSchedule
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      responses:
+        "200":
+          description: Flow schedule retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowSchedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update Flow Schedule
+      operationId: updateFlowSchedule
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFlowScheduleRequest"
+      responses:
+        "200":
+          description: Flow schedule updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowSchedule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Flow Schedule
+      description: Deletes a schedule and prevents future launches; prior execution history is preserved.
+      operationId: deleteFlowSchedule
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      responses:
+        "204":
+          description: Flow schedule deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /flow-schedules/{scheduleId}/pause:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        description: The unique identifier of the schedule.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Pause Flow Schedule
+      description: Disables a schedule so the scheduler stops launching future due runs.
+      operationId: pauseFlowSchedule
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      responses:
+        "200":
+          description: Flow schedule paused successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowSchedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flow-schedules/{scheduleId}/resume:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        description: The unique identifier of the schedule.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Resume Flow Schedule
+      description: Enables a paused schedule and recomputes next_run_at so the next occurrence is in the future.
+      operationId: resumeFlowSchedule
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      responses:
+        "200":
+          description: Flow schedule resumed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowSchedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flow-schedules/{scheduleId}/runs:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        description: The unique identifier of the schedule.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Schedule Run Occurrences
+      description: Lists schedule run occurrences (one per due tick) most recent first.
+      operationId: listFlowScheduleRuns
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Schedule run occurrences retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowScheduleRunListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flow-schedules/{scheduleId}/runs/{runId}:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        description: The unique identifier of the schedule.
+        schema:
+          type: string
+          format: uuid
+      - name: runId
+        in: path
+        required: true
+        description: The unique identifier of the schedule run occurrence.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Schedule Run Occurrence
+      description: Returns a schedule run occurrence together with its per-flow run items.
+      operationId: getFlowScheduleRun
+      x-ai-tool: true
+      tags: [Schedules]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      responses:
+        "200":
+          description: Schedule run occurrence retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowScheduleRunDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"

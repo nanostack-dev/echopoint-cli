@@ -26,6 +26,7 @@ const (
 
 // Defines values for ApiKeyPermissionType.
 const (
+	Ci     ApiKeyPermissionType = "ci"
 	Custom ApiKeyPermissionType = "custom"
 	Runner ApiKeyPermissionType = "runner"
 )
@@ -327,6 +328,16 @@ const (
 	SelfHosted RunnerType = "self_hosted"
 )
 
+// Defines values for ScheduleOccurrenceStatus.
+const (
+	Failed    ScheduleOccurrenceStatus = "failed"
+	NoMatch   ScheduleOccurrenceStatus = "no_match"
+	Partial   ScheduleOccurrenceStatus = "partial"
+	Pending   ScheduleOccurrenceStatus = "pending"
+	Running   ScheduleOccurrenceStatus = "running"
+	Succeeded ScheduleOccurrenceStatus = "succeeded"
+)
+
 // Defines values for SortDirection.
 const (
 	ASC  SortDirection = "ASC"
@@ -341,8 +352,9 @@ const (
 
 // Defines values for TriggerType.
 const (
-	TriggerTypeGit    TriggerType = "git"
-	TriggerTypeManual TriggerType = "manual"
+	TriggerTypeGit       TriggerType = "git"
+	TriggerTypeManual    TriggerType = "manual"
+	TriggerTypeScheduled TriggerType = "scheduled"
 )
 
 // Defines values for WebhookRequestSearchRequestSortBy.
@@ -474,7 +486,7 @@ type ApiKeyListResponse struct {
 	Total int64 `json:"total"`
 }
 
-// ApiKeyPermissionType The API key permission set to return.
+// ApiKeyPermissionType The API key permission catalog to return. `custom` is the full grantable catalog, `runner` is runner-only scopes, and `ci` is the curated preset for CI/CD (flow execution + ephemeral runner completion).
 type ApiKeyPermissionType string
 
 // ApiKeySearchRequest defines model for ApiKeySearchRequest.
@@ -801,6 +813,36 @@ type CreateFlowRequest struct {
 	Version *string `json:"version,omitempty"`
 }
 
+// CreateFlowScheduleRequest Create a flow schedule. The schedule targets the suite of flows matching `tags`
+// (with `tag_match_mode`), resolved at each due tick.
+type CreateFlowScheduleRequest struct {
+	// CronExpression Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
+	CronExpression string  `json:"cron_expression"`
+	Description    *string `json:"description"`
+	Enabled        *bool   `json:"enabled,omitempty"`
+	EnvironmentKey *string `json:"environment_key,omitempty"`
+	Name           string  `json:"name"`
+
+	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
+	// ad-hoc addresses. Each must be a valid email; an empty/omitted set
+	// disables alerting.
+	RecipientEmails *[]string `json:"recipient_emails,omitempty"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` returns an execution package for a short-lived
+	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	RunnerType RunnerType `json:"runner_type"`
+
+	// StartsAt Optional UTC anchor; defaults to creation time when omitted.
+	StartsAt *time.Time `json:"starts_at"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode   *TagMatchMode `json:"tag_match_mode,omitempty"`
+	Tags           []string      `json:"tags"`
+	TimeoutSeconds *int32        `json:"timeout_seconds,omitempty"`
+}
+
 // CreateFolderRequest defines model for CreateFolderRequest.
 type CreateFolderRequest struct {
 	// Description Optional folder description
@@ -864,8 +906,8 @@ type CurrentUser struct {
 	// Organizations The user's active organization memberships.
 	Organizations []CurrentUserOrganization `json:"organizations"`
 
-	// ProductUserId Nanostack product user identifier.
-	ProductUserId *string `json:"product_user_id"`
+	// UserId Nanostack user identifier.
+	UserId *string `json:"user_id"`
 }
 
 // CurrentUserOrganization defines model for CurrentUserOrganization.
@@ -1229,18 +1271,25 @@ type FlowExecution struct {
 	// RunnerType Execution backend selected for this execution.
 	RunnerType *RunnerType `json:"runner_type"`
 
+	// ScheduleRunId Schedule run that launched this execution; null for manual/CI launches.
+	ScheduleRunId *openapi_types.UUID `json:"schedule_run_id"`
+
 	// StartedAt When the execution started
 	StartedAt time.Time `json:"started_at"`
 
 	// Status Status of a flow execution
 	Status ExecutionStatus `json:"status"`
 
+	// TimeoutSeconds Per-execution wall-clock bound enforced by the execution layer.
+	TimeoutSeconds *int `json:"timeout_seconds"`
+
 	// TriggerMetadata Trigger provenance; shape determined by trigger_type.
 	TriggerMetadata *TriggerMetadata `json:"trigger_metadata"`
 
 	// TriggerType How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
-	// (e.g. GitHub Actions) carrying source-control provenance. The shape of `trigger_metadata`
-	// is determined by this value.
+	// (e.g. GitHub Actions) carrying source-control provenance; `scheduled` is an app-owned flow
+	// schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
+	// by this value.
 	TriggerType *TriggerType `json:"trigger_type,omitempty"`
 	UpdatedAt   time.Time    `json:"updated_at"`
 }
@@ -1446,6 +1495,108 @@ type FlowNode struct {
 // FlowNodeRunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
 type FlowNodeRunWhen string
 
+// FlowSchedule A recurring schedule that launches the tag-selected suite of flows resolved at each due tick.
+type FlowSchedule struct {
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy string    `json:"created_by"`
+
+	// CronExpression Standard 5-field cron expression (minute hour day-of-month month day-of-week)
+	// evaluated in `timezone`.
+	CronExpression string             `json:"cron_expression"`
+	Description    *string            `json:"description"`
+	Enabled        bool               `json:"enabled"`
+	EnvironmentKey string             `json:"environment_key"`
+	Id             openapi_types.UUID `json:"id"`
+	Name           string             `json:"name"`
+
+	// NextRunAt Next due time in UTC; null when paused with no future occurrence computed.
+	NextRunAt      *time.Time `json:"next_run_at"`
+	OrganizationId string     `json:"organization_id"`
+
+	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
+	// ad-hoc addresses; an empty set disables alerting for this schedule.
+	RecipientEmails []string `json:"recipient_emails"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` returns an execution package for a short-lived
+	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	RunnerType RunnerType `json:"runner_type"`
+
+	// StartsAt UTC anchor for the recurrence.
+	StartsAt time.Time `json:"starts_at"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode TagMatchMode `json:"tag_match_mode"`
+
+	// Tags Tag selector resolved to matching flows at each due tick.
+	Tags []string `json:"tags"`
+
+	// TimeoutSeconds Per-run-item timeout in seconds.
+	TimeoutSeconds int32 `json:"timeout_seconds"`
+
+	// Timezone IANA timezone name stored for display and anchoring; due times remain UTC.
+	Timezone  string    `json:"timezone"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// FlowScheduleListResponse defines model for FlowScheduleListResponse.
+type FlowScheduleListResponse struct {
+	// Count The number of items returned in this response.
+	Count int            `json:"count"`
+	Items []FlowSchedule `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
+}
+
+// FlowScheduleRun One fire of a schedule (suite run). Records fire-time facts; `status`,
+// `started_at`, and `completed_at` are derived from the executions launched for
+// this run (linked via the execution's `schedule_run_id`).
+type FlowScheduleRun struct {
+	// CompletedAt Derived latest completion once the run is terminal.
+	CompletedAt *time.Time         `json:"completed_at"`
+	CreatedAt   time.Time          `json:"created_at"`
+	DueAt       time.Time          `json:"due_at"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// LaunchFailures Flows that could not be launched when the run fired.
+	LaunchFailures []ScheduleLaunchFailure `json:"launch_failures"`
+
+	// MatchedFlowCount Number of flows the tag selector matched when the run fired.
+	MatchedFlowCount int32              `json:"matched_flow_count"`
+	OrganizationId   string             `json:"organization_id"`
+	ScheduleId       openapi_types.UUID `json:"schedule_id"`
+
+	// StartedAt Derived earliest start of the run's executions.
+	StartedAt *time.Time `json:"started_at"`
+
+	// Status Aggregate status of a schedule run, derived from the executions launched for it
+	// plus any recorded launch failures.
+	Status    ScheduleOccurrenceStatus `json:"status"`
+	UpdatedAt time.Time                `json:"updated_at"`
+}
+
+// FlowScheduleRunDetail A schedule run together with the executions it launched.
+type FlowScheduleRunDetail struct {
+	Executions []ScheduleRunExecution `json:"executions"`
+
+	// Run One fire of a schedule (suite run). Records fire-time facts; `status`,
+	// `started_at`, and `completed_at` are derived from the executions launched for
+	// this run (linked via the execution's `schedule_run_id`).
+	Run FlowScheduleRun `json:"run"`
+}
+
+// FlowScheduleRunListResponse defines model for FlowScheduleRunListResponse.
+type FlowScheduleRunListResponse struct {
+	// Count The number of items returned in this response.
+	Count int               `json:"count"`
+	Items []FlowScheduleRun `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
+}
+
 // FlowSearchItem Lightweight flow returned by flow search. flow_definition is present only when requested via include_definition, keeping search payloads small.
 type FlowSearchItem struct {
 	CreatedAt      time.Time          `json:"created_at"`
@@ -1484,6 +1635,18 @@ type FlowSearchResponse struct {
 
 	// Total Total number of matching items.
 	Total int64 `json:"total"`
+}
+
+// FlowTagListResponse Current canonical flow tags for the authenticated organization.
+type FlowTagListResponse struct {
+	// Count Number of tags returned in this response.
+	Count int `json:"count"`
+
+	// Items Alphabetically sorted canonical tags. At most 100 tags are returned.
+	Items []string `json:"items"`
+
+	// Limit Maximum number of distinct flow tags allowed per organization.
+	Limit int `json:"limit"`
 }
 
 // FlowVersion defines model for FlowVersion.
@@ -1595,8 +1758,9 @@ type LaunchFlowRequest struct {
 	TriggerMetadata *TriggerMetadata `json:"trigger_metadata"`
 
 	// TriggerType How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
-	// (e.g. GitHub Actions) carrying source-control provenance. The shape of `trigger_metadata`
-	// is determined by this value.
+	// (e.g. GitHub Actions) carrying source-control provenance; `scheduled` is an app-owned flow
+	// schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
+	// by this value.
 	TriggerType *TriggerType `json:"trigger_type,omitempty"`
 
 	// VersionId Optional flow version ID to execute. When omitted, the current flow definition
@@ -1798,7 +1962,9 @@ type NodeExecutionResult struct {
 
 	// Result Complete polymorphic result from flow engine.
 	// Contains RequestExecutionResult, DelayExecutionResult, or ModuleExecutionResult based on node_type.
-	// Includes all data: request/response, assertions, extracted outputs, etc.
+	// Includes all data: request/response, extracted outputs, etc. For request nodes,
+	// `assertion_results` is an array of AssertionResult recording every assertion
+	// evaluated (expected/actual/passed), present whether the node passed or failed.
 	Result *map[string]interface{} `json:"result"`
 
 	// SkipReason Present when the node was skipped rather than executed.
@@ -2032,6 +2198,34 @@ type OperationType string
 
 // OperatorType Operator to apply in assertions
 type OperatorType string
+
+// OrganizationMember A member of the current organization, as seen by echopoint (proxied from anchor).
+type OrganizationMember struct {
+	// Email Email address of the member; usable as an alert recipient.
+	Email openapi_types.Email `json:"email"`
+
+	// Name Display name of the member, when set.
+	Name *string `json:"name"`
+
+	// Role The role assigned to the member within the organization.
+	Role OrganizationMemberRole `json:"role"`
+
+	// UserId Unique identifier of the product user (KSUID).
+	UserId string `json:"user_id"`
+}
+
+// OrganizationMemberListResponse defines model for OrganizationMemberListResponse.
+type OrganizationMemberListResponse struct {
+	Count int                  `json:"count"`
+	Items []OrganizationMember `json:"items"`
+	Total int64                `json:"total"`
+}
+
+// OrganizationMemberRole The role assigned to the member within the organization.
+type OrganizationMemberRole struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
 
 // Output defines model for Output.
 type Output struct {
@@ -2400,6 +2594,8 @@ type RunnerJobPayload struct {
 // RunnerJobProgressEvent defines model for RunnerJobProgressEvent.
 type RunnerJobProgressEvent struct {
 	// Payload Progress payload mirroring the execution SSE event body for the given event type.
+	// For a node-completed event, `result.response.assertion_results` is an array of
+	// AssertionResult (every assertion evaluated, with expected/actual/passed).
 	Payload RunnerJobProgressEventPayload `json:"payload"`
 
 	// Sequence Monotonic per-job event sequence number assigned by the runner.
@@ -2410,6 +2606,8 @@ type RunnerJobProgressEvent struct {
 }
 
 // RunnerJobProgressEventPayload Progress payload mirroring the execution SSE event body for the given event type.
+// For a node-completed event, `result.response.assertion_results` is an array of
+// AssertionResult (every assertion evaluated, with expected/actual/passed).
 type RunnerJobProgressEventPayload map[string]interface{}
 
 // RunnerJobProgressEventType Incremental execution event reported by a claimed self-hosted runner.
@@ -2423,6 +2621,65 @@ type RunnerJobTerminalStatus string
 // customer runner, and `ephemeral` returns an execution package for a short-lived
 // caller-owned runner (e.g. CI) to execute locally and then publish results.
 type RunnerType string
+
+// ScheduleLaunchFailure A flow that could not be launched when a schedule run fired (flow deleted between
+// resolve and launch, validation failed, ...). Counts as a failure in the run's
+// derived status.
+type ScheduleLaunchFailure struct {
+	Code   string             `json:"code"`
+	FlowId openapi_types.UUID `json:"flow_id"`
+	Reason string             `json:"reason"`
+}
+
+// ScheduleOccurrenceStatus Aggregate status of a schedule run, derived from the executions launched for it
+// plus any recorded launch failures.
+type ScheduleOccurrenceStatus string
+
+// ScheduleRunExecution Lightweight projection of an execution launched by a schedule run.
+type ScheduleRunExecution struct {
+	CompletedAt  *time.Time         `json:"completed_at"`
+	ErrorCode    *string            `json:"error_code"`
+	ErrorMessage *string            `json:"error_message"`
+	FlowId       openapi_types.UUID `json:"flow_id"`
+	Id           openapi_types.UUID `json:"id"`
+	StartedAt    time.Time          `json:"started_at"`
+
+	// Status Status of a flow execution
+	Status ExecutionStatus `json:"status"`
+}
+
+// ScheduleTagPreviewRequest Resolve which organization flows currently match a tag selector.
+type ScheduleTagPreviewRequest struct {
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
+	Tags         []string      `json:"tags"`
+}
+
+// ScheduleTagPreviewResponse Flows currently matching a tag selector.
+type ScheduleTagPreviewResponse struct {
+	Flows []FlowSearchItem `json:"flows"`
+
+	// MatchedFlowCount Total flows matching the selector.
+	MatchedFlowCount int32 `json:"matched_flow_count"`
+}
+
+// ScheduledTriggerMetadata Provenance for a `scheduled` launch produced by an app-owned flow schedule. Identifies
+// the schedule, the run it fired under, the resolved flow, and the due timestamp so an
+// execution can be traced back to its monitor. The authoritative run linkage is the
+// execution's first-class `schedule_run_id` field; this metadata is display provenance.
+type ScheduledTriggerMetadata struct {
+	// DueAt Scheduled due time of the run in UTC.
+	DueAt time.Time `json:"due_at"`
+
+	// FlowId Flow resolved for this launch.
+	FlowId openapi_types.UUID `json:"flow_id"`
+
+	// ScheduleId Flow schedule that owns this launch.
+	ScheduleId openapi_types.UUID `json:"schedule_id"`
+
+	// ScheduleRunId Schedule run (one per fire) this launch belongs to.
+	ScheduleRunId openapi_types.UUID `json:"schedule_run_id"`
+}
 
 // SearchRequest Generic search request template
 type SearchRequest struct {
@@ -2442,14 +2699,15 @@ type StatusCodeExtractorConfig = map[string]interface{}
 type TagMatchMode string
 
 // TriggerMetadata Trigger provenance, discriminated by the sibling `trigger_type`: `manual` →
-// ManualTriggerMetadata, `git` → GitTriggerMetadata.
+// ManualTriggerMetadata, `git` → GitTriggerMetadata, `scheduled` → ScheduledTriggerMetadata.
 type TriggerMetadata struct {
 	union json.RawMessage
 }
 
 // TriggerType How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
-// (e.g. GitHub Actions) carrying source-control provenance. The shape of `trigger_metadata`
-// is determined by this value.
+// (e.g. GitHub Actions) carrying source-control provenance; `scheduled` is an app-owned flow
+// schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
+// by this value.
 type TriggerType string
 
 // UpdateCollectionRequest defines model for UpdateCollectionRequest.
@@ -2488,6 +2746,34 @@ type UpdateFlowRequest struct {
 
 	// Version Version identifier for the flow.
 	Version *string `json:"version,omitempty"`
+}
+
+// UpdateFlowScheduleRequest Replace the mutable configuration of a schedule. The tag selector is resolved to matching
+// flows at each due tick, same as creation.
+type UpdateFlowScheduleRequest struct {
+	// CronExpression Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
+	CronExpression string  `json:"cron_expression"`
+	Description    *string `json:"description"`
+	Enabled        *bool   `json:"enabled,omitempty"`
+	EnvironmentKey *string `json:"environment_key,omitempty"`
+	Name           string  `json:"name"`
+
+	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
+	// ad-hoc addresses. Each must be a valid email; an empty/omitted set
+	// disables alerting.
+	RecipientEmails *[]string `json:"recipient_emails,omitempty"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` returns an execution package for a short-lived
+	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	RunnerType RunnerType `json:"runner_type"`
+	StartsAt   *time.Time `json:"starts_at"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode   *TagMatchMode `json:"tag_match_mode,omitempty"`
+	Tags           []string      `json:"tags"`
+	TimeoutSeconds *int32        `json:"timeout_seconds,omitempty"`
 }
 
 // UpdateFolderRequest defines model for UpdateFolderRequest.
@@ -2724,7 +3010,7 @@ type XMLPathExtractorConfig struct {
 // ApiKeyIdParameter defines model for ApiKeyIdParameter.
 type ApiKeyIdParameter = string
 
-// ApiKeyPermissionTypeParameter The API key permission set to return.
+// ApiKeyPermissionTypeParameter The API key permission catalog to return. `custom` is the full grantable catalog, `runner` is runner-only scopes, and `ci` is the curated preset for CI/CD (flow execution + ephemeral runner completion).
 type ApiKeyPermissionTypeParameter = ApiKeyPermissionType
 
 // LimitParameter defines model for LimitParameter.
@@ -2760,6 +3046,12 @@ type NotFound = ApiErrorResponse
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ApiErrorResponse
 
+// RunFlowScheduleNowParams defines parameters for RunFlowScheduleNow.
+type RunFlowScheduleNowParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ResyncResourceSearchParams defines parameters for ResyncResourceSearch.
 type ResyncResourceSearchParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -2786,6 +3078,12 @@ type CreateAPIKeyParams struct {
 
 // SearchAPIKeysParams defines parameters for SearchAPIKeys.
 type SearchAPIKeysParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetCurrentAPIKeyParams defines parameters for GetCurrentAPIKey.
+type GetCurrentAPIKeyParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -3009,6 +3307,81 @@ type StreamFlowGenerationSessionParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListFlowSchedulesParams defines parameters for ListFlowSchedules.
+type ListFlowSchedulesParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip.
+	Offset OffsetParameter `form:"offset" json:"offset"`
+
+	// Enabled Filter by enabled/paused state.
+	Enabled *bool `form:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// CreateFlowScheduleParams defines parameters for CreateFlowSchedule.
+type CreateFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PreviewScheduleTagsParams defines parameters for PreviewScheduleTags.
+type PreviewScheduleTagsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteFlowScheduleParams defines parameters for DeleteFlowSchedule.
+type DeleteFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetFlowScheduleParams defines parameters for GetFlowSchedule.
+type GetFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// UpdateFlowScheduleParams defines parameters for UpdateFlowSchedule.
+type UpdateFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PauseFlowScheduleParams defines parameters for PauseFlowSchedule.
+type PauseFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ResumeFlowScheduleParams defines parameters for ResumeFlowSchedule.
+type ResumeFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListFlowScheduleRunsParams defines parameters for ListFlowScheduleRuns.
+type ListFlowScheduleRunsParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip.
+	Offset OffsetParameter `form:"offset" json:"offset"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetFlowScheduleRunParams defines parameters for GetFlowScheduleRun.
+type GetFlowScheduleRunParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListFlowsParams defines parameters for ListFlows.
 type ListFlowsParams struct {
 	// Limit Maximum number of items per page.
@@ -3041,6 +3414,12 @@ type GetFlowGenerationParams struct {
 
 // SearchFlowsParams defines parameters for SearchFlows.
 type SearchFlowsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListFlowTagsParams defines parameters for ListFlowTags.
+type ListFlowTagsParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -3189,6 +3568,21 @@ type GetFlowVersionParams struct {
 
 // RestoreFlowVersionParams defines parameters for RestoreFlowVersion.
 type RestoreFlowVersionParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListOrganizationMembersParams defines parameters for ListOrganizationMembers.
+type ListOrganizationMembersParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip.
+	Offset OffsetParameter `form:"offset" json:"offset"`
+
+	// Search Full-text search term matched against member name/email.
+	Search *string `form:"search,omitempty" json:"search,omitempty"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -3371,6 +3765,15 @@ type AddRequestJSONRequestBody = CreateRequestRequest
 
 // CreateFlowGenerationSessionMessageJSONRequestBody defines body for CreateFlowGenerationSessionMessage for application/json ContentType.
 type CreateFlowGenerationSessionMessageJSONRequestBody = CreateFlowGenerationSessionMessageRequest
+
+// CreateFlowScheduleJSONRequestBody defines body for CreateFlowSchedule for application/json ContentType.
+type CreateFlowScheduleJSONRequestBody = CreateFlowScheduleRequest
+
+// PreviewScheduleTagsJSONRequestBody defines body for PreviewScheduleTags for application/json ContentType.
+type PreviewScheduleTagsJSONRequestBody = ScheduleTagPreviewRequest
+
+// UpdateFlowScheduleJSONRequestBody defines body for UpdateFlowSchedule for application/json ContentType.
+type UpdateFlowScheduleJSONRequestBody = UpdateFlowScheduleRequest
 
 // CreateFlowJSONRequestBody defines body for CreateFlow for application/json ContentType.
 type CreateFlowJSONRequestBody = CreateFlowRequest
@@ -4079,6 +4482,32 @@ func (t *TriggerMetadata) MergeManualTriggerMetadata(v ManualTriggerMetadata) er
 	return err
 }
 
+// AsScheduledTriggerMetadata returns the union data inside the TriggerMetadata as a ScheduledTriggerMetadata
+func (t TriggerMetadata) AsScheduledTriggerMetadata() (ScheduledTriggerMetadata, error) {
+	var body ScheduledTriggerMetadata
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromScheduledTriggerMetadata overwrites any union data inside the TriggerMetadata as the provided ScheduledTriggerMetadata
+func (t *TriggerMetadata) FromScheduledTriggerMetadata(v ScheduledTriggerMetadata) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeScheduledTriggerMetadata performs a merge with any union data inside the TriggerMetadata, using the provided ScheduledTriggerMetadata
+func (t *TriggerMetadata) MergeScheduledTriggerMetadata(v ScheduledTriggerMetadata) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t TriggerMetadata) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
@@ -4212,6 +4641,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// RunFlowScheduleNow request
+	RunFlowScheduleNow(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ResyncResourceSearch request
 	ResyncResourceSearch(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -4229,7 +4661,7 @@ type ClientInterface interface {
 	SearchAPIKeys(ctx context.Context, params *SearchAPIKeysParams, body SearchAPIKeysJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetCurrentAPIKey request
-	GetCurrentAPIKey(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetCurrentAPIKey(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteAPIKey request
 	DeleteAPIKey(ctx context.Context, id ApiKeyIdParameter, params *DeleteAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4345,6 +4777,42 @@ type ClientInterface interface {
 	// StreamFlowGenerationSession request
 	StreamFlowGenerationSession(ctx context.Context, sessionId openapi_types.UUID, params *StreamFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListFlowSchedules request
+	ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateFlowScheduleWithBody request with any body
+	CreateFlowScheduleWithBody(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateFlowSchedule(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PreviewScheduleTagsWithBody request with any body
+	PreviewScheduleTagsWithBody(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PreviewScheduleTags(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteFlowSchedule request
+	DeleteFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetFlowSchedule request
+	GetFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateFlowScheduleWithBody request with any body
+	UpdateFlowScheduleWithBody(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PauseFlowSchedule request
+	PauseFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResumeFlowSchedule request
+	ResumeFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListFlowScheduleRuns request
+	ListFlowScheduleRuns(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetFlowScheduleRun request
+	GetFlowScheduleRun(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListFlows request
 	ListFlows(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -4365,6 +4833,9 @@ type ClientInterface interface {
 	SearchFlowsWithBody(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	SearchFlows(ctx context.Context, params *SearchFlowsParams, body SearchFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListFlowTags request
+	ListFlowTags(ctx context.Context, params *ListFlowTagsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetExecution request
 	GetExecution(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *GetExecutionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4439,6 +4910,9 @@ type ClientInterface interface {
 
 	// GetMe request
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListOrganizationMembers request
+	ListOrganizationMembers(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListNodes request
 	ListNodes(ctx context.Context, params *ListNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4552,6 +5026,18 @@ type ClientInterface interface {
 	StreamWebhookRequests(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
+func (c *Client) RunFlowScheduleNow(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRunFlowScheduleNowRequest(c.Server, scheduleId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ResyncResourceSearch(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewResyncResourceSearchRequest(c.Server, params)
 	if err != nil {
@@ -4624,8 +5110,8 @@ func (c *Client) SearchAPIKeys(ctx context.Context, params *SearchAPIKeysParams,
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetCurrentAPIKey(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetCurrentAPIKeyRequest(c.Server)
+func (c *Client) GetCurrentAPIKey(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCurrentAPIKeyRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -5140,6 +5626,162 @@ func (c *Client) StreamFlowGenerationSession(ctx context.Context, sessionId open
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlowSchedulesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateFlowScheduleWithBody(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFlowScheduleRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateFlowSchedule(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFlowScheduleRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PreviewScheduleTagsWithBody(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewScheduleTagsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PreviewScheduleTags(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewScheduleTagsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteFlowScheduleRequest(c.Server, scheduleId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFlowScheduleRequest(c.Server, scheduleId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateFlowScheduleWithBody(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateFlowScheduleRequestWithBody(c.Server, scheduleId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateFlowScheduleRequest(c.Server, scheduleId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PauseFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPauseFlowScheduleRequest(c.Server, scheduleId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResumeFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResumeFlowScheduleRequest(c.Server, scheduleId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListFlowScheduleRuns(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlowScheduleRunsRequest(c.Server, scheduleId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetFlowScheduleRun(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFlowScheduleRunRequest(c.Server, scheduleId, runId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListFlows(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowsRequest(c.Server, params)
 	if err != nil {
@@ -5226,6 +5868,18 @@ func (c *Client) SearchFlowsWithBody(ctx context.Context, params *SearchFlowsPar
 
 func (c *Client) SearchFlows(ctx context.Context, params *SearchFlowsParams, body SearchFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSearchFlowsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListFlowTags(ctx context.Context, params *ListFlowTagsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlowTagsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -5538,6 +6192,18 @@ func (c *Client) InitUser(ctx context.Context, reqEditors ...RequestEditorFn) (*
 
 func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMeRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListOrganizationMembers(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOrganizationMembersRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -6040,6 +6706,53 @@ func (c *Client) StreamWebhookRequests(ctx context.Context, id WebhookIdParamete
 	return c.Client.Do(req)
 }
 
+// NewRunFlowScheduleNowRequest generates requests for RunFlowScheduleNow
+func NewRunFlowScheduleNowRequest(server string, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/administrations/flow-schedules/%s/run", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewResyncResourceSearchRequest generates requests for ResyncResourceSearch
 func NewResyncResourceSearchRequest(server string, params *ResyncResourceSearchParams) (*http.Request, error) {
 	var err error
@@ -6257,7 +6970,7 @@ func NewSearchAPIKeysRequestWithBody(server string, params *SearchAPIKeysParams,
 }
 
 // NewGetCurrentAPIKeyRequest generates requests for GetCurrentAPIKey
-func NewGetCurrentAPIKeyRequest(server string) (*http.Request, error) {
+func NewGetCurrentAPIKeyRequest(server string, params *GetCurrentAPIKeyParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -6278,6 +6991,19 @@ func NewGetCurrentAPIKeyRequest(server string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
 	}
 
 	return req, nil
@@ -8090,6 +8816,577 @@ func NewStreamFlowGenerationSessionRequest(server string, sessionId openapi_type
 	return req, nil
 }
 
+// NewListFlowSchedulesRequest generates requests for ListFlowSchedules
+func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, params.Limit); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "offset", runtime.ParamLocationQuery, params.Offset); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Enabled != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "enabled", runtime.ParamLocationQuery, *params.Enabled); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateFlowScheduleRequest calls the generic CreateFlowSchedule builder with application/json body
+func NewCreateFlowScheduleRequest(server string, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateFlowScheduleRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateFlowScheduleRequestWithBody generates requests for CreateFlowSchedule with any type of body
+func NewCreateFlowScheduleRequestWithBody(server string, params *CreateFlowScheduleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPreviewScheduleTagsRequest calls the generic PreviewScheduleTags builder with application/json body
+func NewPreviewScheduleTagsRequest(server string, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPreviewScheduleTagsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewPreviewScheduleTagsRequestWithBody generates requests for PreviewScheduleTags with any type of body
+func NewPreviewScheduleTagsRequestWithBody(server string, params *PreviewScheduleTagsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/preview-tags")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteFlowScheduleRequest generates requests for DeleteFlowSchedule
+func NewDeleteFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetFlowScheduleRequest generates requests for GetFlowSchedule
+func NewGetFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *GetFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUpdateFlowScheduleRequest calls the generic UpdateFlowSchedule builder with application/json body
+func NewUpdateFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateFlowScheduleRequestWithBody(server, scheduleId, params, "application/json", bodyReader)
+}
+
+// NewUpdateFlowScheduleRequestWithBody generates requests for UpdateFlowSchedule with any type of body
+func NewUpdateFlowScheduleRequestWithBody(server string, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPauseFlowScheduleRequest generates requests for PauseFlowSchedule
+func NewPauseFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/%s/pause", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewResumeFlowScheduleRequest generates requests for ResumeFlowSchedule
+func NewResumeFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/%s/resume", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListFlowScheduleRunsRequest generates requests for ListFlowScheduleRuns
+func NewListFlowScheduleRunsRequest(server string, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/%s/runs", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, params.Limit); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "offset", runtime.ParamLocationQuery, params.Offset); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetFlowScheduleRunRequest generates requests for GetFlowScheduleRun
+func NewGetFlowScheduleRunRequest(server string, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "scheduleId", runtime.ParamLocationPath, scheduleId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "runId", runtime.ParamLocationPath, runId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flow-schedules/%s/runs/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewListFlowsRequest generates requests for ListFlows
 func NewListFlowsRequest(server string, params *ListFlowsParams) (*http.Request, error) {
 	var err error
@@ -8349,6 +9646,46 @@ func NewSearchFlowsRequestWithBody(server string, params *SearchFlowsParams, con
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListFlowTagsRequest generates requests for ListFlowTags
+func NewListFlowTagsRequest(server string, params *ListFlowTagsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/tags")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if params != nil {
 
@@ -9586,6 +10923,92 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListOrganizationMembersRequest generates requests for ListOrganizationMembers
+func NewListOrganizationMembersRequest(server string, params *ListOrganizationMembersParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/members")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, params.Limit); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "offset", runtime.ParamLocationQuery, params.Offset); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
 	}
 
 	return req, nil
@@ -11037,6 +12460,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// RunFlowScheduleNowWithResponse request
+	RunFlowScheduleNowWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*RunFlowScheduleNowResponse, error)
+
 	// ResyncResourceSearchWithResponse request
 	ResyncResourceSearchWithResponse(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*ResyncResourceSearchResponse, error)
 
@@ -11054,7 +12480,7 @@ type ClientWithResponsesInterface interface {
 	SearchAPIKeysWithResponse(ctx context.Context, params *SearchAPIKeysParams, body SearchAPIKeysJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchAPIKeysResponse, error)
 
 	// GetCurrentAPIKeyWithResponse request
-	GetCurrentAPIKeyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error)
+	GetCurrentAPIKeyWithResponse(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error)
 
 	// DeleteAPIKeyWithResponse request
 	DeleteAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *DeleteAPIKeyParams, reqEditors ...RequestEditorFn) (*DeleteAPIKeyResponse, error)
@@ -11170,6 +12596,42 @@ type ClientWithResponsesInterface interface {
 	// StreamFlowGenerationSessionWithResponse request
 	StreamFlowGenerationSessionWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *StreamFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*StreamFlowGenerationSessionResponse, error)
 
+	// ListFlowSchedulesWithResponse request
+	ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error)
+
+	// CreateFlowScheduleWithBodyWithResponse request with any body
+	CreateFlowScheduleWithBodyWithResponse(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error)
+
+	CreateFlowScheduleWithResponse(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error)
+
+	// PreviewScheduleTagsWithBodyWithResponse request with any body
+	PreviewScheduleTagsWithBodyWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error)
+
+	PreviewScheduleTagsWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error)
+
+	// DeleteFlowScheduleWithResponse request
+	DeleteFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*DeleteFlowScheduleResponse, error)
+
+	// GetFlowScheduleWithResponse request
+	GetFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleResponse, error)
+
+	// UpdateFlowScheduleWithBodyWithResponse request with any body
+	UpdateFlowScheduleWithBodyWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error)
+
+	UpdateFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error)
+
+	// PauseFlowScheduleWithResponse request
+	PauseFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*PauseFlowScheduleResponse, error)
+
+	// ResumeFlowScheduleWithResponse request
+	ResumeFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*ResumeFlowScheduleResponse, error)
+
+	// ListFlowScheduleRunsWithResponse request
+	ListFlowScheduleRunsWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error)
+
+	// GetFlowScheduleRunWithResponse request
+	GetFlowScheduleRunWithResponse(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleRunResponse, error)
+
 	// ListFlowsWithResponse request
 	ListFlowsWithResponse(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*ListFlowsResponse, error)
 
@@ -11190,6 +12652,9 @@ type ClientWithResponsesInterface interface {
 	SearchFlowsWithBodyWithResponse(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowsResponse, error)
 
 	SearchFlowsWithResponse(ctx context.Context, params *SearchFlowsParams, body SearchFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowsResponse, error)
+
+	// ListFlowTagsWithResponse request
+	ListFlowTagsWithResponse(ctx context.Context, params *ListFlowTagsParams, reqEditors ...RequestEditorFn) (*ListFlowTagsResponse, error)
 
 	// GetExecutionWithResponse request
 	GetExecutionWithResponse(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *GetExecutionParams, reqEditors ...RequestEditorFn) (*GetExecutionResponse, error)
@@ -11264,6 +12729,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetMeWithResponse request
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
+
+	// ListOrganizationMembersWithResponse request
+	ListOrganizationMembersWithResponse(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error)
 
 	// ListNodesWithResponse request
 	ListNodesWithResponse(ctx context.Context, params *ListNodesParams, reqEditors ...RequestEditorFn) (*ListNodesResponse, error)
@@ -11375,6 +12843,30 @@ type ClientWithResponsesInterface interface {
 
 	// StreamWebhookRequestsWithResponse request
 	StreamWebhookRequestsWithResponse(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*StreamWebhookRequestsResponse, error)
+}
+
+type RunFlowScheduleNowResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r RunFlowScheduleNowResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RunFlowScheduleNowResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type ResyncResourceSearchResponse struct {
@@ -12234,6 +13726,256 @@ func (r StreamFlowGenerationSessionResponse) StatusCode() int {
 	return 0
 }
 
+type ListFlowSchedulesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowScheduleListResponse
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFlowSchedulesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFlowSchedulesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *FlowSchedule
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PreviewScheduleTagsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ScheduleTagPreviewResponse
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+}
+
+// Status returns HTTPResponse.Status
+func (r PreviewScheduleTagsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PreviewScheduleTagsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowSchedule
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r GetFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowSchedule
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PauseFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowSchedule
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r PauseFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PauseFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ResumeFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowSchedule
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r ResumeFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResumeFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListFlowScheduleRunsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowScheduleRunListResponse
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFlowScheduleRunsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFlowScheduleRunsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetFlowScheduleRunResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowScheduleRunDetail
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+}
+
+// Status returns HTTPResponse.Status
+func (r GetFlowScheduleRunResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetFlowScheduleRunResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListFlowsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12350,6 +14092,30 @@ func (r SearchFlowsResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r SearchFlowsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListFlowTagsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowTagListResponse
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFlowTagsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFlowTagsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -12886,6 +14652,31 @@ func (r GetMeResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetMeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListOrganizationMembersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *OrganizationMemberListResponse
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOrganizationMembersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOrganizationMembersResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -13595,6 +15386,15 @@ func (r StreamWebhookRequestsResponse) StatusCode() int {
 	return 0
 }
 
+// RunFlowScheduleNowWithResponse request returning *RunFlowScheduleNowResponse
+func (c *ClientWithResponses) RunFlowScheduleNowWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*RunFlowScheduleNowResponse, error) {
+	rsp, err := c.RunFlowScheduleNow(ctx, scheduleId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRunFlowScheduleNowResponse(rsp)
+}
+
 // ResyncResourceSearchWithResponse request returning *ResyncResourceSearchResponse
 func (c *ClientWithResponses) ResyncResourceSearchWithResponse(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*ResyncResourceSearchResponse, error) {
 	rsp, err := c.ResyncResourceSearch(ctx, params, reqEditors...)
@@ -13648,8 +15448,8 @@ func (c *ClientWithResponses) SearchAPIKeysWithResponse(ctx context.Context, par
 }
 
 // GetCurrentAPIKeyWithResponse request returning *GetCurrentAPIKeyResponse
-func (c *ClientWithResponses) GetCurrentAPIKeyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error) {
-	rsp, err := c.GetCurrentAPIKey(ctx, reqEditors...)
+func (c *ClientWithResponses) GetCurrentAPIKeyWithResponse(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error) {
+	rsp, err := c.GetCurrentAPIKey(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14022,6 +15822,120 @@ func (c *ClientWithResponses) StreamFlowGenerationSessionWithResponse(ctx contex
 	return ParseStreamFlowGenerationSessionResponse(rsp)
 }
 
+// ListFlowSchedulesWithResponse request returning *ListFlowSchedulesResponse
+func (c *ClientWithResponses) ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error) {
+	rsp, err := c.ListFlowSchedules(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFlowSchedulesResponse(rsp)
+}
+
+// CreateFlowScheduleWithBodyWithResponse request with arbitrary body returning *CreateFlowScheduleResponse
+func (c *ClientWithResponses) CreateFlowScheduleWithBodyWithResponse(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error) {
+	rsp, err := c.CreateFlowScheduleWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFlowScheduleResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateFlowScheduleWithResponse(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error) {
+	rsp, err := c.CreateFlowSchedule(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFlowScheduleResponse(rsp)
+}
+
+// PreviewScheduleTagsWithBodyWithResponse request with arbitrary body returning *PreviewScheduleTagsResponse
+func (c *ClientWithResponses) PreviewScheduleTagsWithBodyWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error) {
+	rsp, err := c.PreviewScheduleTagsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewScheduleTagsResponse(rsp)
+}
+
+func (c *ClientWithResponses) PreviewScheduleTagsWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error) {
+	rsp, err := c.PreviewScheduleTags(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewScheduleTagsResponse(rsp)
+}
+
+// DeleteFlowScheduleWithResponse request returning *DeleteFlowScheduleResponse
+func (c *ClientWithResponses) DeleteFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*DeleteFlowScheduleResponse, error) {
+	rsp, err := c.DeleteFlowSchedule(ctx, scheduleId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFlowScheduleResponse(rsp)
+}
+
+// GetFlowScheduleWithResponse request returning *GetFlowScheduleResponse
+func (c *ClientWithResponses) GetFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleResponse, error) {
+	rsp, err := c.GetFlowSchedule(ctx, scheduleId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetFlowScheduleResponse(rsp)
+}
+
+// UpdateFlowScheduleWithBodyWithResponse request with arbitrary body returning *UpdateFlowScheduleResponse
+func (c *ClientWithResponses) UpdateFlowScheduleWithBodyWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error) {
+	rsp, err := c.UpdateFlowScheduleWithBody(ctx, scheduleId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateFlowScheduleResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error) {
+	rsp, err := c.UpdateFlowSchedule(ctx, scheduleId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateFlowScheduleResponse(rsp)
+}
+
+// PauseFlowScheduleWithResponse request returning *PauseFlowScheduleResponse
+func (c *ClientWithResponses) PauseFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*PauseFlowScheduleResponse, error) {
+	rsp, err := c.PauseFlowSchedule(ctx, scheduleId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePauseFlowScheduleResponse(rsp)
+}
+
+// ResumeFlowScheduleWithResponse request returning *ResumeFlowScheduleResponse
+func (c *ClientWithResponses) ResumeFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*ResumeFlowScheduleResponse, error) {
+	rsp, err := c.ResumeFlowSchedule(ctx, scheduleId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResumeFlowScheduleResponse(rsp)
+}
+
+// ListFlowScheduleRunsWithResponse request returning *ListFlowScheduleRunsResponse
+func (c *ClientWithResponses) ListFlowScheduleRunsWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error) {
+	rsp, err := c.ListFlowScheduleRuns(ctx, scheduleId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFlowScheduleRunsResponse(rsp)
+}
+
+// GetFlowScheduleRunWithResponse request returning *GetFlowScheduleRunResponse
+func (c *ClientWithResponses) GetFlowScheduleRunWithResponse(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleRunResponse, error) {
+	rsp, err := c.GetFlowScheduleRun(ctx, scheduleId, runId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetFlowScheduleRunResponse(rsp)
+}
+
 // ListFlowsWithResponse request returning *ListFlowsResponse
 func (c *ClientWithResponses) ListFlowsWithResponse(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*ListFlowsResponse, error) {
 	rsp, err := c.ListFlows(ctx, params, reqEditors...)
@@ -14089,6 +16003,15 @@ func (c *ClientWithResponses) SearchFlowsWithResponse(ctx context.Context, param
 		return nil, err
 	}
 	return ParseSearchFlowsResponse(rsp)
+}
+
+// ListFlowTagsWithResponse request returning *ListFlowTagsResponse
+func (c *ClientWithResponses) ListFlowTagsWithResponse(ctx context.Context, params *ListFlowTagsParams, reqEditors ...RequestEditorFn) (*ListFlowTagsResponse, error) {
+	rsp, err := c.ListFlowTags(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFlowTagsResponse(rsp)
 }
 
 // GetExecutionWithResponse request returning *GetExecutionResponse
@@ -14319,6 +16242,15 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 		return nil, err
 	}
 	return ParseGetMeResponse(rsp)
+}
+
+// ListOrganizationMembersWithResponse request returning *ListOrganizationMembersResponse
+func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error) {
+	rsp, err := c.ListOrganizationMembers(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOrganizationMembersResponse(rsp)
 }
 
 // ListNodesWithResponse request returning *ListNodesResponse
@@ -14676,6 +16608,46 @@ func (c *ClientWithResponses) StreamWebhookRequestsWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseStreamWebhookRequestsResponse(rsp)
+}
+
+// ParseRunFlowScheduleNowResponse parses an HTTP response from a RunFlowScheduleNowWithResponse call
+func ParseRunFlowScheduleNowResponse(rsp *http.Response) (*RunFlowScheduleNowResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RunFlowScheduleNowResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseResyncResourceSearchResponse parses an HTTP response from a ResyncResourceSearchWithResponse call
@@ -16197,6 +18169,476 @@ func ParseStreamFlowGenerationSessionResponse(rsp *http.Response) (*StreamFlowGe
 	return response, nil
 }
 
+// ParseListFlowSchedulesResponse parses an HTTP response from a ListFlowSchedulesWithResponse call
+func ParseListFlowSchedulesResponse(rsp *http.Response) (*ListFlowSchedulesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFlowSchedulesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowScheduleListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateFlowScheduleResponse parses an HTTP response from a CreateFlowScheduleWithResponse call
+func ParseCreateFlowScheduleResponse(rsp *http.Response) (*CreateFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest FlowSchedule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePreviewScheduleTagsResponse parses an HTTP response from a PreviewScheduleTagsWithResponse call
+func ParsePreviewScheduleTagsResponse(rsp *http.Response) (*PreviewScheduleTagsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PreviewScheduleTagsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ScheduleTagPreviewResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFlowScheduleResponse parses an HTTP response from a DeleteFlowScheduleWithResponse call
+func ParseDeleteFlowScheduleResponse(rsp *http.Response) (*DeleteFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetFlowScheduleResponse parses an HTTP response from a GetFlowScheduleWithResponse call
+func ParseGetFlowScheduleResponse(rsp *http.Response) (*GetFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowSchedule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateFlowScheduleResponse parses an HTTP response from a UpdateFlowScheduleWithResponse call
+func ParseUpdateFlowScheduleResponse(rsp *http.Response) (*UpdateFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowSchedule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePauseFlowScheduleResponse parses an HTTP response from a PauseFlowScheduleWithResponse call
+func ParsePauseFlowScheduleResponse(rsp *http.Response) (*PauseFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PauseFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowSchedule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResumeFlowScheduleResponse parses an HTTP response from a ResumeFlowScheduleWithResponse call
+func ParseResumeFlowScheduleResponse(rsp *http.Response) (*ResumeFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResumeFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowSchedule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListFlowScheduleRunsResponse parses an HTTP response from a ListFlowScheduleRunsWithResponse call
+func ParseListFlowScheduleRunsResponse(rsp *http.Response) (*ListFlowScheduleRunsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFlowScheduleRunsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowScheduleRunListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetFlowScheduleRunResponse parses an HTTP response from a GetFlowScheduleRunWithResponse call
+func ParseGetFlowScheduleRunResponse(rsp *http.Response) (*GetFlowScheduleRunResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetFlowScheduleRunResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowScheduleRunDetail
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListFlowsResponse parses an HTTP response from a ListFlowsWithResponse call
 func ParseListFlowsResponse(rsp *http.Response) (*ListFlowsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -16391,6 +18833,46 @@ func ParseSearchFlowsResponse(rsp *http.Response) (*SearchFlowsResponse, error) 
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListFlowTagsResponse parses an HTTP response from a ListFlowTagsWithResponse call
+func ParseListFlowTagsResponse(rsp *http.Response) (*ListFlowTagsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFlowTagsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowTagListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -17341,6 +19823,53 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListOrganizationMembersResponse parses an HTTP response from a ListOrganizationMembersWithResponse call
+func ParseListOrganizationMembersResponse(rsp *http.Response) (*ListOrganizationMembersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOrganizationMembersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationMemberListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 

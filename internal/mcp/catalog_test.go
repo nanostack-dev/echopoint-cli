@@ -19,9 +19,10 @@ func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
 		byName[td.Name] = td
 	}
 
+	// A representative set of operations that must be exposed as tools.
 	want := []string{
-		"get_me", "list_flows", "get_flow", "search_flows",
-		"launch_flow", "list_collections", "get_collection", "list_webhooks",
+		"list_flows", "get_flow", "search_flows", "launch_flow", "create_flow",
+		"delete_flow", "list_collections", "get_collection", "list_webhooks",
 		"get_current_api_key",
 	}
 	for _, n := range want {
@@ -29,12 +30,19 @@ func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
 			t.Errorf("missing expected tool %q", n)
 		}
 	}
-	if len(tools) != len(want) {
-		names := make([]string, len(tools))
-		for i, td := range tools {
-			names[i] = td.Name
+
+	// Operations marked x-ai-danger must never be exposed.
+	for _, n := range []string{
+		"get_me", "create_api_key", "delete_api_key", "next_runner_job",
+		"stream_execution", "receive_webhook_post",
+	} {
+		if _, ok := byName[n]; ok {
+			t.Errorf("danger-excluded operation %q must not be a tool", n)
 		}
-		t.Errorf("got %d tools, want %d: %v", len(tools), len(want), names)
+	}
+
+	if len(tools) < 50 {
+		t.Errorf("got %d tools, expected the broad annotated set (>=50)", len(tools))
 	}
 
 	// launch_flow exercises the param+body merge.

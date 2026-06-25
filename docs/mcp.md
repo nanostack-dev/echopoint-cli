@@ -75,18 +75,20 @@ The standard flags apply: `--profile`, `--api-url`, `--api-key`. To point a
 client at a non-default environment, add them to `args` (e.g.
 `"args": ["mcp", "--profile", "staging"]`).
 
-## Tools (v1)
+## Tools
 
-| Tool | Operation | Notes |
-|------|-----------|-------|
-| `get_me` | getMe | Current user/org context |
-| `list_flows` | listFlows | |
-| `get_flow` | getFlow | |
-| `search_flows` | searchFlows | |
-| `launch_flow` | launchFlow | Runs a flow asynchronously |
-| `list_collections` | listCollections | |
-| `get_collection` | getCollection | |
-| `list_webhooks` | listWebhooks | |
-| `get_current_api_key` | getCurrentAPIKey | Identity (org + permissions) of the authenticating API key |
+Most echopoint operations are exposed — flows, collections, webhooks, requests,
+folders, environments, schedules, executions, generation, plus
+`get_current_api_key` (the authenticating key's org + permissions).
 
-The set grows by annotating more operations in the contract.
+Every operation in the contract declares its intent explicitly: `x-ai-tool`
+(exposed) or `x-ai-danger` with a reason (deliberately excluded). The excluded
+set:
+
+- **API key management** — an API-key principal minting/revoking keys is privilege escalation
+- **Runner protocol** — machine-to-machine job claim/complete, not an agent action
+- **SSE streams** — long-lived, incompatible with request/response tools
+- **Public webhook ingestion**, **admin routes**, `/me`, `/init`
+
+The tool set tracks the contract: annotate an operation `x-ai-tool` (and resync)
+to expose it.
