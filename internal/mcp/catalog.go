@@ -54,7 +54,7 @@ func buildCatalog(spec []byte) ([]toolDef, error) {
 	for _, path := range doc.Paths.InMatchingOrder() {
 		item := doc.Paths.Find(path)
 		for method, op := range item.Operations() {
-			if !truthy(op.Extensions[extAITool]) || truthy(op.Extensions[extAIDanger]) {
+			if !truthy(op.Extensions[extAITool]) || present(op.Extensions[extAIDanger]) {
 				continue
 			}
 			td, err := buildTool(method, path, item.Parameters, op)
@@ -264,6 +264,19 @@ func truthy(v any) bool {
 		return x
 	case string:
 		return x == "true"
+	}
+	return false
+}
+
+// present reports whether an extension is set in a way that marks it active:
+// a bool true or any non-empty string. Used for x-ai-danger, whose value is a
+// reason string explaining why an operation is excluded from the tool surface.
+func present(v any) bool {
+	switch x := v.(type) {
+	case bool:
+		return x
+	case string:
+		return x != ""
 	}
 	return false
 }
