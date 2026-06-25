@@ -230,8 +230,11 @@ func resolveToken(flagToken, profile string) (string, error) {
 }
 
 func requireToken(state *AppState) error {
-	if state.Token == "" {
-		return fmt.Errorf("authentication required: run 'echopoint auth login' or set ECHOPOINT_TOKEN")
+	if state.Token == "" && state.APIKey == "" {
+		return fmt.Errorf(
+			"authentication required: sign in with 'echopoint auth login', " +
+				"store an organization API key with 'echopoint auth login --api-key <key>', " +
+				"or set ECHOPOINT_API_KEY")
 	}
 	return nil
 }

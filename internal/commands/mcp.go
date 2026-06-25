@@ -26,7 +26,9 @@ func newMcpCmd(state *AppState) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if state.Token == "" && state.APIKey == "" {
 				return fmt.Errorf(
-					"authentication required: run 'echopoint auth login' or set ECHOPOINT_API_KEY")
+					"authentication required: sign in with 'echopoint auth login', " +
+						"store an organization API key with 'echopoint auth login --api-key <key>', " +
+						"or set ECHOPOINT_API_KEY")
 			}
 			srv, err := mcp.NewServer(state.Client, Version())
 			if err != nil {
