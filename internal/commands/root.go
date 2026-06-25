@@ -67,7 +67,8 @@ func NewRootCmd() *cobra.Command {
 				outputValue = envOutput
 			}
 
-			// Resolve API key (flag > env var). API key takes precedence over Bearer token.
+			// Resolve API key (flag > env var). An explicit API key takes precedence
+			// over a Bearer token.
 			apiKey := resolveAPIKey(flagAPIKey)
 			organizationID := resolveOrganizationIDFlag(flagOrganizationID, cfg.Profile)
 
@@ -79,6 +80,10 @@ func NewRootCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				// Fall back to a stored API key per the profile's preference: a
+				// stored session (Bearer) is the default when both are present,
+				// unless the API key is marked preferred or no session is available.
+				apiKey = resolveStoredAPIKey(cfg.Profile, token)
 			}
 
 			state.Config = cfg
@@ -236,6 +241,31 @@ func resolveAPIKey(flagValue string) string {
 		return strings.TrimSpace(flagValue)
 	}
 	return strings.TrimSpace(os.Getenv("ECHOPOINT_API_KEY"))
+}
+
+// resolveStoredAPIKey returns a stored organization API key when it should be
+// used over a stored session: either the profile prefers the API key, or no
+// Bearer token is available. Returns "" to keep using the Bearer session.
+func resolveStoredAPIKey(profile, bearerToken string) string {
+	creds, _, err := auth.LoadCredentials(profile)
+	if err != nil {
+		return ""
+	}
+	return preferredStoredAPIKey(creds, bearerToken)
+}
+
+// preferredStoredAPIKey decides, for a loaded credential set, whether the stored
+// API key should be used instead of the Bearer session. A session is the
+// default when both are present; the API key wins only when it is marked
+// preferred or no session token is available.
+func preferredStoredAPIKey(creds *auth.Credentials, bearerToken string) string {
+	if creds == nil || creds.APIKey == "" {
+		return ""
+	}
+	if creds.PreferAPIKey || bearerToken == "" {
+		return creds.APIKey
+	}
+	return ""
 }
 
 func resolveOrganizationIDFlag(flagValue, profile string) string {

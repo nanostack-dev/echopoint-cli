@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"echopoint-cli/internal/auth"
@@ -32,60 +33,124 @@ func newAuthCmd(state *AppState) *cobra.Command {
 func newAuthLoginCmd(state *AppState) *cobra.Command {
 	var debug bool
 	var local bool
+	var apiKey string
+	var organizationID string
+	var setDefault bool
 
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Sign in via browser",
-		Long: `Open your browser to sign in to Echopoint.
+		Short: "Sign in via browser, or store an organization API key",
+		Long: `Sign in to Echopoint.
 
-This uses the same authentication flow as the web frontend.
-A browser window will open where you can sign in, and the CLI
-will automatically receive your session token.`,
+By default this opens your browser and stores a session (Bearer) token.
+
+Pass --api-key to store an organization API key instead. A session and an API
+key can both be stored; the session is preferred when both are present. Use
+--default with --api-key to prefer the API key instead.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Frontend URL comes from the active profile; --local and the legacy
-			// localhost API both fall back to the local frontend.
-			frontendURL := state.Config.FrontendURL
-			if frontendURL == "" {
-				frontendURL = "https://dev.echopoint.dev"
+			if apiKey != "" {
+				return storeAPIKeyCredential(state, apiKey, organizationID, setDefault)
 			}
-			if local || state.Config.API.BaseURL == "http://localhost:8080" {
-				frontendURL = "http://localhost:3001"
-			}
-
-			creds, err := auth.BrowserLogin(cmd.Context(), frontendURL, debug)
-			if err != nil {
-				return err
-			}
-
-			orgID, orgErr := resolveDefaultOrganizationID(
-				state.Config.API.BaseURL,
-				creds.AccessToken,
-				state.Config.API.Timeout,
-			)
-			if orgErr != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to resolve default organization: %v\n", orgErr)
-			} else {
-				creds.OrganizationID = orgID
-			}
-
-			path, err := auth.SaveCredentials(state.Profile, creds)
-			if err != nil {
-				return err
-			}
-
-			fmt.Fprintf(os.Stdout, "\n✓ Successfully authenticated! (profile: %s)\n", state.Profile)
-			fmt.Fprintf(os.Stdout, "Credentials saved to %s\n", path)
-			if creds.OrganizationID != "" {
-				fmt.Fprintf(os.Stdout, "Default organization: %s\n", creds.OrganizationID)
-			}
-			return nil
+			return browserLogin(cmd, state, local, debug)
 		},
 	}
 
 	cmd.Flags().BoolVar(&debug, "debug", false, "Print debug information")
 	cmd.Flags().BoolVar(&local, "local", false, "Use localhost:3001 for authentication")
+	cmd.Flags().StringVar(&apiKey, "api-key", "",
+		"Store an organization API key instead of signing in via browser")
+	cmd.Flags().StringVar(&organizationID, "organization-id", "",
+		"Organization id to store with the API key (optional; resolved from the key when omitted)")
+	cmd.Flags().BoolVar(&setDefault, "default", false,
+		"Prefer this API key over a stored session when both are present")
 
 	return cmd
+}
+
+// storeAPIKeyCredential persists an organization API key into the profile's
+// credentials, preserving any existing session token. The API key becomes the
+// preferred method only when --default is set.
+func storeAPIKeyCredential(state *AppState, apiKey, organizationID string, setDefault bool) error {
+	creds := loadOrEmptyCredentials(state.Profile)
+	creds.APIKey = apiKey
+	if organizationID != "" {
+		creds.OrganizationID = organizationID
+	}
+	if setDefault {
+		creds.PreferAPIKey = true
+	}
+
+	path, err := auth.SaveCredentials(state.Profile, creds)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stdout, "\n✓ Stored API key (profile: %s)\n", state.Profile)
+	fmt.Fprintf(os.Stdout, "Credentials saved to %s\n", path)
+	if creds.AccessToken != "" {
+		preferred := "session (Bearer)"
+		if creds.PreferAPIKey {
+			preferred = "API key"
+		}
+		fmt.Fprintf(os.Stdout, "A session and an API key are both stored; preferred: %s\n", preferred)
+	}
+	return nil
+}
+
+func browserLogin(cmd *cobra.Command, state *AppState, local, debug bool) error {
+	// Frontend URL comes from the active profile; --local and the legacy
+	// localhost API both fall back to the local frontend.
+	frontendURL := state.Config.FrontendURL
+	if frontendURL == "" {
+		frontendURL = "https://dev.echopoint.dev"
+	}
+	if local || state.Config.API.BaseURL == "http://localhost:8080" {
+		frontendURL = "http://localhost:3001"
+	}
+
+	creds, err := auth.BrowserLogin(cmd.Context(), frontendURL, debug)
+	if err != nil {
+		return err
+	}
+
+	// Preserve a previously stored API key, but make the fresh session the
+	// preferred method.
+	existing := loadOrEmptyCredentials(state.Profile)
+	creds.APIKey = existing.APIKey
+	creds.PreferAPIKey = false
+
+	orgID, orgErr := resolveDefaultOrganizationID(
+		state.Config.API.BaseURL,
+		creds.AccessToken,
+		state.Config.API.Timeout,
+	)
+	if orgErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to resolve default organization: %v\n", orgErr)
+	} else {
+		creds.OrganizationID = orgID
+	}
+
+	path, err := auth.SaveCredentials(state.Profile, creds)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stdout, "\n✓ Successfully authenticated! (profile: %s)\n", state.Profile)
+	fmt.Fprintf(os.Stdout, "Credentials saved to %s\n", path)
+	if creds.OrganizationID != "" {
+		fmt.Fprintf(os.Stdout, "Default organization: %s\n", creds.OrganizationID)
+	}
+	return nil
+}
+
+// loadOrEmptyCredentials returns the stored credentials for a profile, or an
+// empty value when none exist or they cannot be read.
+func loadOrEmptyCredentials(profile string) auth.Credentials {
+	existing, _, err := auth.LoadCredentials(profile)
+	if err != nil || existing == nil {
+		return auth.Credentials{}
+	}
+	return *existing
 }
 
 func newAuthHelpCmd(state *AppState) *cobra.Command {
@@ -142,13 +207,32 @@ func newAuthStatusCmd(state *AppState) *cobra.Command {
 			}
 
 			fmt.Fprintf(os.Stdout, "Credentials: %s\n", path)
+
+			methods := []string{}
+			if creds.AccessToken != "" {
+				methods = append(methods, "session (Bearer)")
+			}
+			if creds.APIKey != "" {
+				methods = append(methods, "API key")
+			}
+			fmt.Fprintf(os.Stdout, "Stored: %s\n", strings.Join(methods, ", "))
+			if creds.AccessToken != "" && creds.APIKey != "" {
+				preferred := "session (Bearer)"
+				if creds.PreferAPIKey {
+					preferred = "API key"
+				}
+				fmt.Fprintf(os.Stdout, "Preferred: %s\n", preferred)
+			}
+
 			if creds.OrganizationID != "" {
 				fmt.Fprintf(os.Stdout, "Organization: %s\n", creds.OrganizationID)
 			}
-			if creds.ExpiresAt != nil {
-				fmt.Fprintf(os.Stdout, "Expires: %s\n", creds.ExpiresAt.Format(time.RFC3339))
-			} else {
-				fmt.Fprintln(os.Stdout, "Expires: unknown")
+			if creds.AccessToken != "" {
+				if creds.ExpiresAt != nil {
+					fmt.Fprintf(os.Stdout, "Session expires: %s\n", creds.ExpiresAt.Format(time.RFC3339))
+				} else {
+					fmt.Fprintln(os.Stdout, "Session expires: unknown")
+				}
 			}
 			return nil
 		},
