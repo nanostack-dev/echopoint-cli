@@ -273,6 +273,28 @@ components:
         - user
         - membership_status
 
+    ApiKeyIdentity:
+      type: object
+      description: >-
+        Identity of an organization API key: the organization it is scoped to
+        and the permissions granted to it.
+      properties:
+        api_key_id:
+          type: string
+          description: Public identifier of the API key.
+        organization_id:
+          type: string
+          description: Organization the key is scoped to.
+        permissions:
+          type: array
+          items:
+            type: string
+          description: Permissions granted to the key.
+      required:
+        - api_key_id
+        - organization_id
+        - permissions
+
     InitResponse:
       type: object
       description: Response for provisioning initialization.
@@ -5412,6 +5434,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PermissionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api-keys/self:
+    get:
+      summary: Get current API key identity
+      description: >-
+        Returns the identity of the organization API key authenticating the
+        request: its organization and the permissions granted to it. Only
+        organization API key authentication is accepted.
+      operationId: getCurrentAPIKey
+      x-ai-tool: true
+      x-ai-description: "Get the identity of the current API key (who am I): its organization and granted permissions. Call first when authenticated via API key to learn your scope."
+      tags: [Auth]
+      security:
+        - ApiKeys: []
+      responses:
+        "200":
+          description: Current API key identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyIdentity"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

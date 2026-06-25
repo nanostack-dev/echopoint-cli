@@ -87,5 +87,6 @@ client at a non-default environment, add them to `args` (e.g.
 | `list_collections` | listCollections | |
 | `get_collection` | getCollection | |
 | `list_webhooks` | listWebhooks | |
+| `get_current_api_key` | getCurrentAPIKey | Identity (org + permissions) of the authenticating API key |
 
 The set grows by annotating more operations in the contract.

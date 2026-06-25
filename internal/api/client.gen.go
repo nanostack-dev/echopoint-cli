@@ -452,6 +452,18 @@ type ApiKeyFilter struct {
 	Names []string `json:"names,omitempty"`
 }
 
+// ApiKeyIdentity Identity of an organization API key: the organization it is scoped to and the permissions granted to it.
+type ApiKeyIdentity struct {
+	// ApiKeyId Public identifier of the API key.
+	ApiKeyId string `json:"api_key_id"`
+
+	// OrganizationId Organization the key is scoped to.
+	OrganizationId string `json:"organization_id"`
+
+	// Permissions Permissions granted to the key.
+	Permissions []string `json:"permissions"`
+}
+
 // ApiKeyListResponse defines model for ApiKeyListResponse.
 type ApiKeyListResponse struct {
 	// Count The number of items returned in this response.
@@ -4216,6 +4228,9 @@ type ClientInterface interface {
 
 	SearchAPIKeys(ctx context.Context, params *SearchAPIKeysParams, body SearchAPIKeysJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetCurrentAPIKey request
+	GetCurrentAPIKey(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteAPIKey request
 	DeleteAPIKey(ctx context.Context, id ApiKeyIdParameter, params *DeleteAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -4599,6 +4614,18 @@ func (c *Client) SearchAPIKeysWithBody(ctx context.Context, params *SearchAPIKey
 
 func (c *Client) SearchAPIKeys(ctx context.Context, params *SearchAPIKeysParams, body SearchAPIKeysJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSearchAPIKeysRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetCurrentAPIKey(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCurrentAPIKeyRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -6224,6 +6251,33 @@ func NewSearchAPIKeysRequestWithBody(server string, params *SearchAPIKeysParams,
 
 		req.Header.Set("X-Organization-ID", headerParam0)
 
+	}
+
+	return req, nil
+}
+
+// NewGetCurrentAPIKeyRequest generates requests for GetCurrentAPIKey
+func NewGetCurrentAPIKeyRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api-keys/self")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
 	}
 
 	return req, nil
@@ -10999,6 +11053,9 @@ type ClientWithResponsesInterface interface {
 
 	SearchAPIKeysWithResponse(ctx context.Context, params *SearchAPIKeysParams, body SearchAPIKeysJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchAPIKeysResponse, error)
 
+	// GetCurrentAPIKeyWithResponse request
+	GetCurrentAPIKeyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error)
+
 	// DeleteAPIKeyWithResponse request
 	DeleteAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *DeleteAPIKeyParams, reqEditors ...RequestEditorFn) (*DeleteAPIKeyResponse, error)
 
@@ -11415,6 +11472,31 @@ func (r SearchAPIKeysResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r SearchAPIKeysResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetCurrentAPIKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ApiKeyIdentity
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON500      *InternalServerError
+}
+
+// Status returns HTTPResponse.Status
+func (r GetCurrentAPIKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetCurrentAPIKeyResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -13565,6 +13647,15 @@ func (c *ClientWithResponses) SearchAPIKeysWithResponse(ctx context.Context, par
 	return ParseSearchAPIKeysResponse(rsp)
 }
 
+// GetCurrentAPIKeyWithResponse request returning *GetCurrentAPIKeyResponse
+func (c *ClientWithResponses) GetCurrentAPIKeyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error) {
+	rsp, err := c.GetCurrentAPIKey(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetCurrentAPIKeyResponse(rsp)
+}
+
 // DeleteAPIKeyWithResponse request returning *DeleteAPIKeyResponse
 func (c *ClientWithResponses) DeleteAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *DeleteAPIKeyParams, reqEditors ...RequestEditorFn) (*DeleteAPIKeyResponse, error) {
 	rsp, err := c.DeleteAPIKey(ctx, id, params, reqEditors...)
@@ -14755,6 +14846,53 @@ func ParseSearchAPIKeysResponse(rsp *http.Response) (*SearchAPIKeysResponse, err
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetCurrentAPIKeyResponse parses an HTTP response from a GetCurrentAPIKeyWithResponse call
+func ParseGetCurrentAPIKeyResponse(rsp *http.Response) (*GetCurrentAPIKeyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetCurrentAPIKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ApiKeyIdentity
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized

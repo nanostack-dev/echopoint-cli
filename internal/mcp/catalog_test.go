@@ -22,6 +22,7 @@ func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
 	want := []string{
 		"get_me", "list_flows", "get_flow", "search_flows",
 		"launch_flow", "list_collections", "get_collection", "list_webhooks",
+		"get_current_api_key",
 	}
 	for _, n := range want {
 		if _, ok := byName[n]; !ok {
