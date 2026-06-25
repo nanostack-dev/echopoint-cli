@@ -6,6 +6,7 @@ const (
 	createVerb         = "create"
 	flowsCommandName   = "flows"
 	listVerb           = "list"
+	mcpCommandName     = "mcp"
 	profileCommandName = "profile"
 	updateCommandName  = "update"
 	versionCommandName = "version"
