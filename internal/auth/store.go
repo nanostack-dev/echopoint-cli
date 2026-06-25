@@ -15,7 +15,9 @@ import (
 const credentialsSubdir = "credentials"
 
 type Credentials struct {
-	AccessToken    string     `json:"access_token"`
+	AccessToken    string     `json:"access_token,omitempty"`
+	APIKey         string     `json:"api_key,omitempty"`
+	PreferAPIKey   bool       `json:"prefer_api_key,omitempty"`
 	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 	OrganizationID string     `json:"organization_id,omitempty"`
 }
@@ -82,7 +84,7 @@ func LoadCredentials(profile string) (*Credentials, string, error) {
 		return nil, "", err
 	}
 
-	if creds.AccessToken == "" {
+	if creds.AccessToken == "" && creds.APIKey == "" {
 		return nil, path, nil
 	}
 

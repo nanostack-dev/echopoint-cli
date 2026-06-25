@@ -75,6 +75,7 @@ latest release.
 - JSON/YAML/Table output formats
 - Configuration profiles for switching between environments
 - Built-in self-update from GitHub releases
+- MCP server (`echopoint mcp`) exposing echopoint operations as tools for AI clients
 
 ## Quick Start
 
@@ -94,6 +95,15 @@ echopoint flows node add <flow-id> --type request --name "Login" --method POST -
 # Set environment variables
 echopoint flows env set <flow-id> --var API_KEY=secret --var BASE_URL=https://api.example.com
 ```
+
+## MCP Server
+
+`echopoint mcp` runs a Model Context Protocol server over stdio so an
+MCP-compatible AI client (Claude Desktop, Cursor, ...) can drive echopoint with
+its own model. Tools are derived from the OpenAPI contract — operations annotated
+`x-ai-tool: true` become tools — and every call runs as you, through your stored
+credentials. See [docs/mcp.md](docs/mcp.md) for setup and the Claude Desktop
+config snippet.
 
 ## Authentication
 
@@ -119,6 +129,28 @@ echopoint auth login --token "<SESSION_JWT>"
 ```bash
 ECHOPOINT_TOKEN="<SESSION_JWT>" echopoint flows list
 ```
+
+### Organization API Key
+
+Store an organization API key (no browser) and use it for subsequent commands:
+
+```bash
+echopoint auth login --api-key "<ORG_API_KEY>"
+```
+
+The organization is resolved from the key, so no organization id is required.
+A session and an API key can both be stored on the same profile — the **session
+(Bearer) is preferred** when both are present. Pass `--default` to prefer the
+API key instead:
+
+```bash
+echopoint auth login --api-key "<ORG_API_KEY>" --default
+```
+
+Resolution order for each command: an explicit `--api-key` / `ECHOPOINT_API_KEY`
+wins, then the stored credential per the profile's preference (session by
+default, API key when preferred or when no session is stored). `echopoint auth
+status` shows what's stored and which is preferred.
 
 ## Profiles
 
