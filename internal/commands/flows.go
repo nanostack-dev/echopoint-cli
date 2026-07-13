@@ -45,6 +45,7 @@ func newFlowsCmd(state *AppState) *cobra.Command {
 
 func newFlowsLaunchCmd(state *AppState) *cobra.Command {
 	var runnerType string
+	var environmentKey string
 
 	cmd := &cobra.Command{
 		Use:   "launch <flow-id>",
@@ -60,7 +61,7 @@ func newFlowsLaunchCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid flow id")
 			}
 
-			requestBody, err := launchFlowRequestBody(runnerType)
+			requestBody, err := launchFlowRequestBody(runnerType, environmentKey)
 			if err != nil {
 				return err
 			}
@@ -97,6 +98,8 @@ func newFlowsLaunchCmd(state *AppState) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&runnerType, "runner", "cloud", "Runner backend: cloud or self_hosted")
+	cmd.Flags().
+		StringVar(&environmentKey, "environment", "", "Named organization environment to overlay before flow variables (e.g. dev)")
 	return cmd
 }
 
@@ -211,7 +214,7 @@ func newFlowsExecutionListCmd(state *AppState) *cobra.Command {
 	return cmd
 }
 
-func launchFlowRequestBody(runnerType string) ([]byte, error) {
+func launchFlowRequestBody(runnerType, environmentKey string) ([]byte, error) {
 	normalized := strings.TrimSpace(strings.ToLower(runnerType))
 	if normalized == "" {
 		normalized = "cloud"
@@ -221,6 +224,9 @@ func launchFlowRequestBody(runnerType string) ([]byte, error) {
 	}
 
 	payload := api.LaunchFlowRequest{RunnerType: runnerTypePtr(api.RunnerType(normalized))}
+	if env := strings.TrimSpace(environmentKey); env != "" {
+		payload.EnvironmentKey = &env
+	}
 	return json.Marshal(payload)
 }
 
