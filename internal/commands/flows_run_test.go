@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -125,38 +123,6 @@ func publishResponse() api.EphemeralCompletionResponse {
 // buildFakeRunner builds a tiny shell script (or bat on Windows) that acts
 // as echopoint-runner in ephemeral mode.  It reads stdin, writes a completed
 // result JSON to stdout, and exits 0.
-func buildFakeRunner(t *testing.T, exitCode int, resultJSON string) string {
-	t.Helper()
-	dir := t.TempDir()
-
-	if runtime.GOOS == "windows" {
-		script := filepath.Join(dir, "echopoint-runner.bat")
-		os.WriteFile(script, []byte(fmt.Sprintf(`@echo off
-echo %s
-exit /b %d`, resultJSON, exitCode)), 0o755)
-		return script
-	}
-
-	script := filepath.Join(dir, "echopoint-runner")
-	content := fmt.Sprintf("#!/bin/sh\ncat > /dev/null\nprintf '%%s' '%s'\nexit %d\n", resultJSON, exitCode)
-	os.WriteFile(script, []byte(content), 0o755)
-	return script
-}
-
-func successRunnerResult() ephemeralResult {
-	now := time.Now().UTC()
-	return ephemeralResult{
-		Status:      "completed",
-		StartedAt:   now.Format(time.RFC3339),
-		CompletedAt: now.Add(time.Second).Format(time.RFC3339),
-		DurationMs:  1000,
-		Result: map[string]interface{}{
-			"execution_results": map[string]interface{}{},
-			"final_outputs":     map[string]interface{}{},
-			"success":           true,
-		},
-	}
-}
 
 // ── auth resolution unit tests ────────────────────────────────────────────────
 
@@ -335,7 +301,7 @@ func TestFlowRunOutput_Success_JSON(t *testing.T) {
 		t.Fatalf("print JSON: %v", err)
 	}
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
 		t.Fatalf("parse JSON output: %v", err)
 	}
@@ -378,7 +344,7 @@ func TestFlowRunOutput_FlowFailure_JSON(t *testing.T) {
 		t.Fatalf("print JSON: %v", err)
 	}
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
 		t.Fatalf("parse JSON output: %v", err)
 	}
@@ -412,7 +378,7 @@ func TestMultiFlowRunOutput_JSON(t *testing.T) {
 		t.Fatalf("print JSON: %v", err)
 	}
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
 		t.Fatalf("parse JSON: %v", err)
 	}
@@ -420,7 +386,7 @@ func TestMultiFlowRunOutput_JSON(t *testing.T) {
 	if parsed["success"] != false {
 		t.Errorf("aggregate success should be false")
 	}
-	resultsArr, ok := parsed["results"].([]interface{})
+	resultsArr, ok := parsed["results"].([]any)
 	if !ok || len(resultsArr) != 2 {
 		t.Errorf("expected 2 results, got %v", parsed["results"])
 	}
@@ -429,8 +395,8 @@ func TestMultiFlowRunOutput_JSON(t *testing.T) {
 // ── integration tests with fake API + fake runner ─────────────────────────────
 
 func setupFakeAPIServer(
-	t *testing.T, launchResp interface{}, launchStatus int,
-	publishResp interface{}, publishStatus int,
+	t *testing.T, launchResp any, launchStatus int,
+	publishResp any, publishStatus int,
 ) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -454,9 +420,6 @@ func TestIntegration_SuccessfulEphemeralExecution(t *testing.T) {
 		t.Skip("skipping on windows due to shell script runner")
 	}
 
-	successResult, _ := json.Marshal(successRunnerResult())
-	runnerBinary := buildFakeRunner(t, 0, string(successResult))
-
 	srv := setupFakeAPIServer(t,
 		launchResponse(false), http.StatusAccepted,
 		publishResponse(), http.StatusOK,
@@ -470,7 +433,6 @@ func TestIntegration_SuccessfulEphemeralExecution(t *testing.T) {
 		context.Background(),
 		state,
 		[]string{flowUUID().String()},
-		runnerBinary,
 		"",
 		"",
 		"",
@@ -504,7 +466,6 @@ func TestIntegration_TerminalIdempotentReplay(t *testing.T) {
 		context.Background(),
 		state,
 		[]string{flowUUID().String()},
-		"/nonexistent-runner",
 		"",
 		"",
 		"",
@@ -524,23 +485,10 @@ func TestIntegration_TerminalIdempotentReplay(t *testing.T) {
 	_ = exitCode
 }
 
-func TestIntegration_MissingRunnerBinary(t *testing.T) {
-	_, err := resolveRunnerBinary("/totally/nonexistent/echopoint-runner")
-	if err == nil {
-		t.Fatal("expected error for missing runner binary")
-	}
-	if !strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "no such file") {
-		t.Errorf("expected 'not found' error, got: %v", err)
-	}
-}
-
 func TestIntegration_MultipleFlowsSequential(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("skipping on windows due to shell script runner")
 	}
-
-	successResult, _ := json.Marshal(successRunnerResult())
-	runnerBinary := buildFakeRunner(t, 0, string(successResult))
 
 	var mu struct {
 		sync.Mutex
@@ -575,7 +523,6 @@ func TestIntegration_MultipleFlowsSequential(t *testing.T) {
 		context.Background(),
 		state,
 		[]string{flowID1, flowID2},
-		runnerBinary,
 		"base-key",
 		"",
 		"",
@@ -607,9 +554,6 @@ func TestIntegration_ParallelBounding(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("skipping on windows due to shell script runner")
 	}
-
-	successResult, _ := json.Marshal(successRunnerResult())
-	runnerBinary := buildFakeRunner(t, 0, string(successResult))
 
 	var mu struct {
 		sync.Mutex
@@ -659,7 +603,6 @@ func TestIntegration_ParallelBounding(t *testing.T) {
 		context.Background(),
 		state,
 		flowIDs,
-		runnerBinary,
 		"",
 		"",
 		"",
@@ -739,7 +682,7 @@ func TestIntegration_PublishRetryOnTransient(t *testing.T) {
 func TestIntegration_JSONOutputOnAPIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"errors": []map[string]string{{"code": "FORBIDDEN", "message": "insufficient permissions"}},
 		})
 	}))
@@ -752,7 +695,6 @@ func TestIntegration_JSONOutputOnAPIError(t *testing.T) {
 		context.Background(),
 		state,
 		[]string{flowUUID().String()},
-		"/nonexistent",
 		"",
 		"",
 		"",
@@ -766,79 +708,4 @@ func TestIntegration_JSONOutputOnAPIError(t *testing.T) {
 	if len(results) != 1 || results[0].Success {
 		t.Errorf("expected failed result, got %+v", results)
 	}
-}
-
-func TestIntegration_InvalidRunnerResult(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows")
-	}
-
-	// Runner writes invalid JSON
-	runnerBinary := buildFakeRunner(t, 0, "this is not json")
-
-	srv := setupFakeAPIServer(t,
-		launchResponse(false), http.StatusAccepted,
-		publishResponse(), http.StatusOK,
-	)
-	defer srv.Close()
-
-	state := makeState(t, "test-api-key", "", srv.URL)
-
-	results, exitCode := executeFlows(
-		context.Background(),
-		state,
-		[]string{flowUUID().String()},
-		runnerBinary,
-		"",
-		"",
-		"",
-		1,
-		"",
-	)
-
-	if exitCode != exitError {
-		t.Errorf("expected exit code %d for invalid runner result, got %d", exitError, exitCode)
-	}
-	if len(results) == 1 && results[0].ErrorMessage == nil {
-		t.Error("expected error message for invalid runner result")
-	}
-}
-
-func TestIntegration_TimeoutExitsWithCode4(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows")
-	}
-
-	// Build a runner that sleeps for a long time
-	dir := t.TempDir()
-	runnerBinary := filepath.Join(dir, "echopoint-runner")
-	os.WriteFile(runnerBinary, []byte("#!/bin/sh\ncat > /dev/null\nsleep 60\n"), 0o755)
-
-	srv := setupFakeAPIServer(t,
-		launchResponse(false), http.StatusAccepted,
-		nil, http.StatusOK,
-	)
-	defer srv.Close()
-
-	state := makeState(t, "test-api-key", "", srv.URL)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	results, exitCode := executeFlows(
-		ctx,
-		state,
-		[]string{flowUUID().String()},
-		runnerBinary,
-		"",
-		"",
-		"",
-		1,
-		"",
-	)
-
-	if exitCode != exitTimeout {
-		t.Errorf("expected exit code %d for timeout, got %d", exitTimeout, exitCode)
-	}
-	_ = results
 }

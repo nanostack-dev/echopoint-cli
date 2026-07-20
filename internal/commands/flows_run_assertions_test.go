@@ -12,11 +12,11 @@ const (
 
 // runnerResultWith builds an ephemeralResult mirroring the runner payload shape
 // (result.execution_results[nodeID].assertion_results).
-func runnerResultWith(nodeID string, assertions []map[string]interface{}) *ephemeralResult {
+func runnerResultWith(nodeID string, assertions []map[string]any) *ephemeralResult {
 	return &ephemeralResult{
-		Result: map[string]interface{}{
-			"execution_results": map[string]interface{}{
-				nodeID: map[string]interface{}{
+		Result: map[string]any{
+			"execution_results": map[string]any{
+				nodeID: map[string]any{
 					"node_id":           nodeID,
 					"assertion_results": toAnySlice(assertions),
 				},
@@ -25,8 +25,8 @@ func runnerResultWith(nodeID string, assertions []map[string]interface{}) *ephem
 	}
 }
 
-func toAnySlice(items []map[string]interface{}) []interface{} {
-	out := make([]interface{}, len(items))
+func toAnySlice(items []map[string]any) []any {
+	out := make([]any, len(items))
 	for i, it := range items {
 		out[i] = it
 	}
@@ -34,7 +34,7 @@ func toAnySlice(items []map[string]interface{}) []interface{} {
 }
 
 func TestExtractAssertionsByNode(t *testing.T) {
-	result := runnerResultWith("ping", []map[string]interface{}{
+	result := runnerResultWith("ping", []map[string]any{
 		{"index": 0, "extractor": tStatusCode, "operator": tEquals, "expected": "200", "actual": 200, "passed": true},
 		{"index": 1, "extractor": tJSONPath, "operator": tEquals, "expected": "a", "actual": "b", "passed": false},
 	})
@@ -53,14 +53,14 @@ func TestExtractAssertionsByNode(t *testing.T) {
 }
 
 func TestExtractAssertionsByNode_NoResults(t *testing.T) {
-	if got := extractAssertionsByNode(map[string]interface{}{}); got != nil {
+	if got := extractAssertionsByNode(map[string]any{}); got != nil {
 		t.Errorf("expected nil for a payload without execution_results, got %v", got)
 	}
 }
 
 func TestAttachAssertions_MatchesByNodeID(t *testing.T) {
 	nodes := []FlowRunNode{{NodeID: "ping"}, {NodeID: "other"}}
-	result := runnerResultWith("ping", []map[string]interface{}{
+	result := runnerResultWith("ping", []map[string]any{
 		{"index": 0, "extractor": tStatusCode, "operator": tEquals, "expected": "200", "actual": 200, "passed": true},
 	})
 

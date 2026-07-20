@@ -188,16 +188,12 @@ func TestFlowsRun_TagResolutionRunsResolvedFlows(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	resultJSON, _ := json.Marshal(successRunnerResult())
-	runnerBinary := buildFakeRunner(t, 0, string(resultJSON))
-
 	state := makeState(t, "test-api-key", "", srv.URL)
 	cmd := newFlowsRunCmd(state)
 	cmd.SetArgs([]string{
 		"--tag", "production",
 		"--match-mode", "any",
 		"--parallel", "2",
-		"--runner-binary", runnerBinary,
 		"-o", "json",
 	})
 	var out bytes.Buffer

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"sort"
@@ -255,9 +256,7 @@ Examples:
 				}
 				target = overlays[environment]
 			}
-			for k, v := range updates {
-				target[k] = v
-			}
+			maps.Copy(target, updates)
 
 			if err := upsertOrgEnv(state, base, overlays); err != nil {
 				return err
@@ -379,9 +378,7 @@ unless overwritten).`,
 				}
 				target = overlays[environment]
 			}
-			for k, v := range updates {
-				target[k] = v
-			}
+			maps.Copy(target, updates)
 
 			if err := upsertOrgEnv(state, base, overlays); err != nil {
 				return err
@@ -555,7 +552,7 @@ func parseVarFile(path string) (map[string]string, error) {
 
 	// dotenv: KEY=value per line, # comments and blanks ignored.
 	out := make(map[string]string)
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue

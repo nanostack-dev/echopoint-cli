@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 
@@ -185,9 +186,7 @@ Examples:
 			for k, v := range getResp.JSON200.Variables {
 				vars[k] = v.Value
 			}
-			for k, v := range updates {
-				vars[k] = v
-			}
+			maps.Copy(vars, updates)
 
 			req := api.CreateFlowEnvironmentRequest{
 				Variables: vars,
