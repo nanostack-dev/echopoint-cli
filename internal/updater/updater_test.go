@@ -6,6 +6,8 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -86,11 +88,45 @@ func TestExtractBinaryTarGz(t *testing.T) {
 	_ = tw.Close()
 	_ = gz.Close()
 
-	got, err := extractBinary("echopoint_0.3.0_linux_amd64.tar.gz", buf.Bytes())
+	got, err := extractBinary("echopoint_0.3.0_linux_amd64.tar.gz", buf.Bytes(), binaryName)
 	if err != nil {
 		t.Fatalf("extractBinary: %v", err)
 	}
 	if !bytes.Equal(got, want) {
 		t.Errorf("extracted binary mismatch")
+	}
+}
+
+func TestInstallBinary(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "echopoint-runner")
+	content := []byte("#!/bin/sh\necho runner\n")
+
+	if err := installBinary(dest, content); err != nil {
+		t.Fatalf("installBinary: %v", err)
+	}
+
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("read installed binary: %v", err)
+	}
+	if !bytes.Equal(got, content) {
+		t.Fatalf("installed content mismatch: got %q want %q", got, content)
+	}
+
+	info, err := os.Stat(dest)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o100 == 0 {
+		t.Fatalf("installed binary is not executable: mode %v", info.Mode())
+	}
+
+	// Overwriting an existing binary must succeed (atomic replace).
+	if err := installBinary(dest, []byte("new")); err != nil {
+		t.Fatalf("installBinary overwrite: %v", err)
+	}
+	if got, _ := os.ReadFile(dest); string(got) != "new" {
+		t.Fatalf("overwrite failed: got %q", got)
 	}
 }

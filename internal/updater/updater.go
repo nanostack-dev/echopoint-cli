@@ -14,7 +14,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -24,9 +27,11 @@ import (
 )
 
 const (
-	releasesAPI    = "https://api.github.com/repos/nanostack-dev/echopoint-cli/releases/latest"
-	binaryName     = "echopoint"
-	requestTimeout = 60 * time.Second
+	releasesAPI       = "https://api.github.com/repos/nanostack-dev/echopoint-cli/releases/latest"
+	runnerReleasesAPI = "https://api.github.com/repos/nanostack-dev/echopoint-runner/releases/latest"
+	binaryName        = "echopoint"
+	runnerBinaryName  = "echopoint-runner"
+	requestTimeout    = 60 * time.Second
 )
 
 // Release is the subset of the GitHub release payload we use.
@@ -42,10 +47,20 @@ type Asset struct {
 	Size               int64  `json:"size"`
 }
 
-// LatestRelease fetches the newest published release from GitHub (anonymous;
-// the repository is public).
+// LatestRelease fetches the newest published CLI release from GitHub.
 func LatestRelease(ctx context.Context) (*Release, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, releasesAPI, nil)
+	return latestReleaseFrom(ctx, releasesAPI)
+}
+
+// LatestRunnerRelease fetches the newest published echopoint-runner release.
+func LatestRunnerRelease(ctx context.Context) (*Release, error) {
+	return latestReleaseFrom(ctx, runnerReleasesAPI)
+}
+
+// latestReleaseFrom fetches the newest published release from the given GitHub
+// releases API URL (anonymous; the repositories are public).
+func latestReleaseFrom(ctx context.Context, apiURL string) (*Release, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +197,9 @@ func verifyChecksum(checksums []byte, assetName string, archive []byte) error {
 	return nil
 }
 
-// extractBinary pulls the echopoint binary out of the downloaded archive.
-func extractBinary(assetName string, archive []byte) ([]byte, error) {
-	wantNames := map[string]bool{binaryName: true, binaryName + ".exe": true}
+// extractBinary pulls the named binary out of the downloaded archive.
+func extractBinary(assetName string, archive []byte, wantBinary string) ([]byte, error) {
+	wantNames := map[string]bool{wantBinary: true, wantBinary + ".exe": true}
 
 	if strings.HasSuffix(assetName, ".zip") {
 		zr, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
@@ -201,7 +216,7 @@ func extractBinary(assetName string, archive []byte) ([]byte, error) {
 				return io.ReadAll(rc)
 			}
 		}
-		return nil, fmt.Errorf("binary %q not found in archive", binaryName)
+		return nil, fmt.Errorf("binary %q not found in archive", wantBinary)
 	}
 
 	gz, err := gzip.NewReader(bytes.NewReader(archive))
@@ -222,7 +237,7 @@ func extractBinary(assetName string, archive []byte) ([]byte, error) {
 			return io.ReadAll(tr)
 		}
 	}
-	return nil, fmt.Errorf("binary %q not found in archive", binaryName)
+	return nil, fmt.Errorf("binary %q not found in archive", wantBinary)
 }
 
 // Apply downloads the asset for this platform from the given release, verifies
@@ -248,7 +263,7 @@ func Apply(ctx context.Context, release *Release) error {
 		}
 	}
 
-	binary, err := extractBinary(asset.Name, archive)
+	binary, err := extractBinary(asset.Name, archive, binaryName)
 	if err != nil {
 		return err
 	}
@@ -258,6 +273,85 @@ func Apply(ctx context.Context, release *Release) error {
 			return fmt.Errorf("update failed and rollback failed (rollback: %w): %w", rerr, err)
 		}
 		return fmt.Errorf("apply update: %w", err)
+	}
+	return nil
+}
+
+// RunnerBinaryPath resolves where the echopoint-runner binary should be
+// installed: an existing one already on PATH, otherwise alongside the running
+// CLI executable (so a single install location holds both).
+func RunnerBinaryPath() (string, error) {
+	if p, err := exec.LookPath(runnerBinaryName); err == nil {
+		return p, nil
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("locate CLI executable: %w", err)
+	}
+	name := runnerBinaryName
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	return filepath.Join(filepath.Dir(self), name), nil
+}
+
+// ApplyRunner downloads the echopoint-runner asset for this platform from
+// release, verifies its checksum, extracts the runner binary, and installs it
+// atomically at destPath. Unlike Apply it does not touch the running process —
+// the runner is a separate binary the CLI shells out to.
+func ApplyRunner(ctx context.Context, release *Release, destPath string) error {
+	asset, err := release.findAsset()
+	if err != nil {
+		return err
+	}
+
+	archive, err := download(ctx, asset.BrowserDownloadURL)
+	if err != nil {
+		return fmt.Errorf("download %s: %w", asset.Name, err)
+	}
+
+	if cs := release.checksumsAsset(); cs != nil {
+		checksums, derr := download(ctx, cs.BrowserDownloadURL)
+		if derr != nil {
+			return fmt.Errorf("download checksums: %w", derr)
+		}
+		if verr := verifyChecksum(checksums, asset.Name, archive); verr != nil {
+			return verr
+		}
+	}
+
+	binary, err := extractBinary(asset.Name, archive, runnerBinaryName)
+	if err != nil {
+		return err
+	}
+
+	return installBinary(destPath, binary)
+}
+
+// installBinary writes b to destPath atomically (temp file in the same
+// directory, then rename) with executable permissions.
+func installBinary(destPath string, b []byte) error {
+	dir := filepath.Dir(destPath)
+	tmp, err := os.CreateTemp(dir, ".echopoint-runner-*")
+	if err != nil {
+		return fmt.Errorf("create temp file in %s: %w", dir, err)
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+
+	if _, err := tmp.Write(b); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write runner binary: %w", err)
+	}
+	if err := tmp.Chmod(0o755); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("chmod runner binary: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close runner binary: %w", err)
+	}
+	if err := os.Rename(tmpName, destPath); err != nil {
+		return fmt.Errorf("install runner at %s: %w", destPath, err)
 	}
 	return nil
 }
