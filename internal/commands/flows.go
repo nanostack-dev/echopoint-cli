@@ -97,7 +97,7 @@ func newFlowsLaunchCmd(state *AppState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&runnerType, "runner", "cloud", "Runner backend: cloud or self_hosted")
+	cmd.Flags().StringVar(&runnerType, "runner", defaultRunnerType, "Runner backend: cloud or self_hosted")
 	cmd.Flags().
 		StringVar(&environmentKey, "environment", "", "Named organization environment to overlay before flow variables (e.g. dev)")
 	return cmd
@@ -214,29 +214,28 @@ func newFlowsExecutionListCmd(state *AppState) *cobra.Command {
 	return cmd
 }
 
+// defaultRunnerType is the runner backend used when none is specified.
+const defaultRunnerType = string(api.Cloud)
+
 func launchFlowRequestBody(runnerType, environmentKey string) ([]byte, error) {
 	normalized := strings.TrimSpace(strings.ToLower(runnerType))
 	if normalized == "" {
-		normalized = "cloud"
+		normalized = defaultRunnerType
 	}
 	if normalized != string(api.Cloud) && normalized != string(api.SelfHosted) && normalized != string(api.Ephemeral) {
 		return nil, fmt.Errorf("invalid runner type %q", runnerType)
 	}
 
-	payload := api.LaunchFlowRequest{RunnerType: runnerTypePtr(api.RunnerType(normalized))}
+	payload := api.LaunchFlowRequest{RunnerType: new(api.RunnerType(normalized))}
 	if env := strings.TrimSpace(environmentKey); env != "" {
 		payload.EnvironmentKey = &env
 	}
 	return json.Marshal(payload)
 }
 
-func runnerTypePtr(value api.RunnerType) *api.RunnerType {
-	return &value
-}
-
 func runnerTypeDisplay(runnerType *api.RunnerType) string {
 	if runnerType == nil {
-		return "cloud"
+		return defaultRunnerType
 	}
 	return string(*runnerType)
 }

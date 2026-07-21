@@ -1,17 +1,18 @@
 package commands
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nanostack-dev/echopoint-runner/pkg/ephemeral"
 
 	"echopoint-cli/internal/api"
 	"echopoint-cli/internal/output"
@@ -110,29 +111,28 @@ type MultiFlowRunOutput struct {
 
 // ephemeralPackage is the JSON the runner reads from stdin.
 type ephemeralPackage struct {
-	ExecutionID     string                 `json:"execution_id"`
-	FlowID          string                 `json:"flow_id"`
-	FlowDefinition  map[string]interface{} `json:"flow_definition"`
-	Inputs          map[string]interface{} `json:"inputs"`
-	ReferencedFlows map[string]interface{} `json:"referenced_flows"`
+	ExecutionID     string         `json:"execution_id"`
+	FlowID          string         `json:"flow_id"`
+	FlowDefinition  map[string]any `json:"flow_definition"`
+	Inputs          map[string]any `json:"inputs"`
+	ReferencedFlows map[string]any `json:"referenced_flows"`
 }
 
 // ephemeralResult is the JSON the runner writes to stdout.
 type ephemeralResult struct {
-	Status       string                 `json:"status"`
-	StartedAt    string                 `json:"started_at"`
-	CompletedAt  string                 `json:"completed_at"`
-	DurationMs   int64                  `json:"duration_ms"`
-	Result       map[string]interface{} `json:"result"`
-	ErrorMessage *string                `json:"error_message"`
-	ErrorCode    *string                `json:"error_code"`
+	Status       string         `json:"status"`
+	StartedAt    string         `json:"started_at"`
+	CompletedAt  string         `json:"completed_at"`
+	DurationMs   int64          `json:"duration_ms"`
+	Result       map[string]any `json:"result"`
+	ErrorMessage *string        `json:"error_message"`
+	ErrorCode    *string        `json:"error_code"`
 }
 
 func newFlowsRunCmd(state *AppState) *cobra.Command {
 	var (
 		flagEnvironment    string
 		flagVersionID      string
-		flagRunnerBinary   string
 		flagIdempotencyKey string
 		flagPollTimeout    time.Duration
 		flagParallel       int
@@ -204,11 +204,6 @@ Exit codes:
 				flagPollTimeout = 30 * time.Minute
 			}
 
-			runnerBinary, err := resolveRunnerBinary(flagRunnerBinary)
-			if err != nil {
-				return runError(cmd, state, flagOutput, nil, exitError, err.Error())
-			}
-
 			ctx, cancel := context.WithTimeout(context.Background(), flagPollTimeout)
 			defer cancel()
 
@@ -224,7 +219,7 @@ Exit codes:
 			baseKey := resolveIdempotencyKey(flagIdempotencyKey, flowIDs)
 
 			results, exitCode := executeFlows(
-				ctx, state, flowIDs, runnerBinary, baseKey,
+				ctx, state, flowIDs, baseKey,
 				flagEnvironment, flagVersionID, flagParallel, flagOutput,
 			)
 
@@ -237,8 +232,6 @@ Exit codes:
 	cmd.Flags().StringVar(&flagEnvironment, "environment", "", "Named environment key to overlay on flow inputs")
 	cmd.Flags().StringVar(&flagVersionID, "version-id", "",
 		"Flow version ID to execute (default: current flow definition)")
-	cmd.Flags().StringVar(&flagRunnerBinary, "runner-binary", "",
-		"Path to echopoint-runner binary (default: echopoint-runner on PATH)")
 	cmd.Flags().StringVar(&flagIdempotencyKey, "idempotency-key", "",
 		"Stable key for idempotent CI retries (auto-derived from GitHub env when GITHUB_ACTIONS=true)")
 	cmd.Flags().DurationVar(&flagPollTimeout, "poll-timeout", 30*time.Minute,
@@ -298,28 +291,6 @@ func resolveFlowIDsByTags(
 		ids = append(ids, item.Id.String())
 	}
 	return ids, nil
-}
-
-func resolveRunnerBinary(flagValue string) (string, error) {
-	if flagValue != "" {
-		info, err := os.Stat(flagValue)
-		if err != nil {
-			return "", fmt.Errorf("runner binary not found at %q: %w", flagValue, err)
-		}
-		if info.IsDir() {
-			return "", fmt.Errorf("runner binary path %q is a directory", flagValue)
-		}
-		if info.Mode()&0o111 == 0 {
-			return "", fmt.Errorf("runner binary %q is not executable", flagValue)
-		}
-		return flagValue, nil
-	}
-
-	path, err := exec.LookPath("echopoint-runner")
-	if err != nil {
-		return "", fmt.Errorf("echopoint-runner not found on PATH; use --runner-binary to specify the path")
-	}
-	return path, nil
 }
 
 func resolveIdempotencyKey(flagValue string, flowIDs []string) string {
@@ -396,7 +367,6 @@ func executeFlows(
 	ctx context.Context,
 	state *AppState,
 	flowIDs []string,
-	runnerBinary string,
 	baseKey string,
 	environment string,
 	versionID string,
@@ -414,7 +384,7 @@ func executeFlows(
 			if len(flowIDs) == 1 && baseKey != "" {
 				key = baseKey
 			}
-			results[i] = runSingleFlow(ctx, state, flowID, runnerBinary, key, environment, versionID, outputFormat)
+			results[i] = runSingleFlow(ctx, state, flowID, key, environment, versionID, outputFormat)
 		}
 	} else {
 		sem := make(chan struct{}, parallel)
@@ -429,7 +399,7 @@ func executeFlows(
 				defer func() { <-sem }()
 
 				key := derivePerFlowKey(baseKey, fid)
-				result := runSingleFlow(ctx, state, fid, runnerBinary, key, environment, versionID, outputFormat)
+				result := runSingleFlow(ctx, state, fid, key, environment, versionID, outputFormat)
 				mu.Lock()
 				results[idx] = result
 				mu.Unlock()
@@ -461,7 +431,6 @@ func runSingleFlow(
 	ctx context.Context,
 	state *AppState,
 	flowID string,
-	runnerBinary string,
 	idempotencyKey string,
 	environment string,
 	versionID string,
@@ -483,15 +452,15 @@ func runSingleFlow(
 		return *terminalResult
 	}
 
-	runnerResult, runErr := runEphemeralRunner(ctx, runnerBinary, pkg)
+	runnerResult, runErr := runEphemeralRunner(pkg)
 	if runErr != nil {
 		badResult := &ephemeralResult{
 			Status:       statusFailed,
 			StartedAt:    time.Now().UTC().Format(time.RFC3339),
 			CompletedAt:  time.Now().UTC().Format(time.RFC3339),
 			DurationMs:   0,
-			ErrorMessage: ptrString(runErr.Error()),
-			ErrorCode:    ptrString("RUNNER_ERROR"),
+			ErrorMessage: new(runErr.Error()),
+			ErrorCode:    new("RUNNER_ERROR"),
 		}
 		// Best-effort failure publication; ignore its error so the original failure
 		// (including a timeout) determines the exit code.
@@ -535,7 +504,7 @@ func launchEphemeral(
 		RunnerType: &runnerTypEphemeral,
 	}
 	if environment != "" {
-		req.EnvironmentKey = ptrString(environment)
+		req.EnvironmentKey = new(environment)
 	}
 	if versionID != "" {
 		vid, err := uuid.Parse(versionID)
@@ -594,19 +563,17 @@ func isTerminalStatus(status string) bool {
 }
 
 func executionToEphemeralPackage(execution api.FlowExecution) ephemeralPackage {
-	var flowDef map[string]interface{}
+	var flowDef map[string]any
 	flowDefBytes, _ := json.Marshal(execution.FlowSnapshot)
 	_ = json.Unmarshal(flowDefBytes, &flowDef)
 
-	inputs := map[string]interface{}{}
-	for k, v := range execution.RunnerInputs {
-		inputs[k] = v
-	}
+	inputs := map[string]any{}
+	maps.Copy(inputs, execution.RunnerInputs)
 
-	referenced := map[string]interface{}{}
+	referenced := map[string]any{}
 	for k, v := range execution.ReferencedFlows {
 		refBytes, _ := json.Marshal(v)
-		var refObj interface{}
+		var refObj any
 		_ = json.Unmarshal(refBytes, &refObj)
 		referenced[k] = refObj
 	}
@@ -620,117 +587,34 @@ func executionToEphemeralPackage(execution api.FlowExecution) ephemeralPackage {
 	}
 }
 
-// filteredRunnerEnv returns the current environment minus credentials the ephemeral runner
-// must never receive (it does not authenticate to the control plane).
-func filteredRunnerEnv() []string {
-	blocked := map[string]bool{
-		"ECHOPOINT_API_KEY":         true,
-		"ECHOPOINT_ORGANIZATION_ID": true,
-		"ECHOPOINT_TOKEN":           true,
-	}
-	env := os.Environ()
-	filtered := make([]string, 0, len(env))
-	for _, kv := range env {
-		key := kv
-		if i := strings.IndexByte(kv, '='); i >= 0 {
-			key = kv[:i]
-		}
-		if blocked[key] {
-			continue
-		}
-		filtered = append(filtered, kv)
-	}
-	return filtered
-}
-
-// extractRunnerError pulls a concise failure reason out of the runner's stderr,
-// which is line-delimited JSON logs. It returns the most specific error_message
-// or error field from the last JSON line that has one, falling back to the last
-// non-empty line.
-func extractRunnerError(stderr string) string {
-	lines := strings.Split(strings.TrimSpace(stderr), "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		line := strings.TrimSpace(lines[i])
-		if !strings.HasPrefix(line, "{") {
-			continue
-		}
-		var entry map[string]any
-		if json.Unmarshal([]byte(line), &entry) != nil {
-			continue
-		}
-		for _, key := range []string{"error_message", "error"} {
-			if v, ok := entry[key].(string); ok && strings.TrimSpace(v) != "" {
-				return strings.TrimSpace(v)
-			}
-		}
-	}
-	for i := len(lines) - 1; i >= 0; i-- {
-		if l := strings.TrimSpace(lines[i]); l != "" {
-			return l
-		}
-	}
-	return ""
-}
-
-func runEphemeralRunner(ctx context.Context, runnerBinary string, pkg *ephemeralPackage) (*ephemeralResult, error) {
+// runEphemeralRunner executes the ephemeral package in-process using the
+// embedded echopoint-runner (pkg/ephemeral). The runner is a library dependency,
+// so the CLI is a single self-contained binary — there is no separate
+// echopoint-runner binary to install, find on PATH, or keep in version sync, and
+// its version is pinned by go.mod. The package round-trips through JSON to reuse
+// the wire types that both sides already agree on.
+func runEphemeralRunner(pkg *ephemeralPackage) (*ephemeralResult, error) {
 	pkgBytes, err := json.Marshal(pkg)
 	if err != nil {
 		return nil, fmt.Errorf("marshal package: %w", err)
 	}
 
-	runnerCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	runnerCmd := exec.CommandContext(runnerCtx, runnerBinary, "ephemeral", "--input", "-", "--output", "-")
-	runnerCmd.Stdin = bytes.NewReader(pkgBytes)
-	// Least privilege: the ephemeral runner executes flow logic locally and needs no API
-	// credentials, so strip them from the child environment to avoid exposing the org API
-	// key to the runner subprocess.
-	runnerCmd.Env = filteredRunnerEnv()
-
-	var stdout, stderr bytes.Buffer
-	runnerCmd.Stdout = &stdout
-	runnerCmd.Stderr = &stderr
-
-	if err := runnerCmd.Start(); err != nil {
-		return nil, fmt.Errorf("start runner: %w", err)
+	var runnerPkg ephemeral.Package
+	if err := json.Unmarshal(pkgBytes, &runnerPkg); err != nil {
+		return nil, fmt.Errorf("build runner package: %w", err)
 	}
 
-	done := make(chan error, 1)
-	go func() { done <- runnerCmd.Wait() }()
+	runnerResult := ephemeral.Run(&runnerPkg)
 
-	select {
-	case <-ctx.Done():
-		_ = runnerCmd.Process.Kill()
-		return nil, fmt.Errorf("runner timeout/cancelled: %w", ctx.Err())
-	case err := <-done:
-		if err != nil {
-			stderrStr := strings.TrimSpace(stderr.String())
-			if stderrStr != "" {
-				fmt.Fprintf(os.Stderr, "[runner stderr] %s\n", stderrStr)
-			}
-			// Surface the runner's actual failure reason (parse/validation/node
-			// error) instead of just the opaque "exit status N", so it flows into
-			// the result, JSON output, and the CI summary.
-			if reason := extractRunnerError(stderrStr); reason != "" {
-				return nil, fmt.Errorf("runner failed: %s", reason)
-			}
-			return nil, fmt.Errorf("runner exited with error: %w", err)
-		}
-	}
-
-	stderrStr := strings.TrimSpace(stderr.String())
-	if stderrStr != "" {
-		fmt.Fprintf(os.Stderr, "[runner] %s\n", stderrStr)
+	resultBytes, err := json.Marshal(runnerResult)
+	if err != nil {
+		return nil, fmt.Errorf("marshal runner result: %w", err)
 	}
 
 	var result ephemeralResult
-	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
-		// Do not include the raw runner stdout in the error: it is the result payload and
-		// may contain resolved request/response data. Report only the byte length.
-		return nil, fmt.Errorf("parse runner result (%d bytes): %w", stdout.Len(), err)
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		return nil, fmt.Errorf("parse runner result: %w", err)
 	}
-
 	return &result, nil
 }
 
@@ -876,14 +760,14 @@ func attachAssertions(nodes []FlowRunNode, runnerResult *ephemeralResult) {
 	}
 }
 
-func extractAssertionsByNode(result map[string]interface{}) map[string][]AssertionSummary {
-	executionResults, ok := result["execution_results"].(map[string]interface{})
+func extractAssertionsByNode(result map[string]any) map[string][]AssertionSummary {
+	executionResults, ok := result["execution_results"].(map[string]any)
 	if !ok {
 		return nil
 	}
 	out := make(map[string][]AssertionSummary, len(executionResults))
 	for nodeID, raw := range executionResults {
-		nodeMap, ok := raw.(map[string]interface{})
+		nodeMap, ok := raw.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -940,7 +824,7 @@ func errorResult(flowID, executionID string, exitCode int, msg string) FlowRunRe
 		Status:       statusForExit(exitCode),
 		Success:      false,
 		ExitCode:     exitCode,
-		ErrorMessage: ptrString(msg),
+		ErrorMessage: new(msg),
 		Nodes:        nil,
 	}
 }
@@ -964,7 +848,7 @@ func emitOutput(
 	return &exitCodeError{code: exitCode}
 }
 
-func buildJSONOutput(results []FlowRunResult, exitCode int, numFlows int) interface{} {
+func buildJSONOutput(results []FlowRunResult, exitCode int, numFlows int) any {
 	if numFlows == 1 {
 		return FlowRunOutput{results[0]}
 	}
@@ -1000,7 +884,7 @@ func runError(
 	return &exitCodeError{code: exitCode}
 }
 
-func buildErrorJSON(results []FlowRunResult, exitCode int, msg string) interface{} {
+func buildErrorJSON(results []FlowRunResult, exitCode int, msg string) any {
 	if results != nil {
 		return MultiFlowRunOutput{
 			Status:   statusForExit(exitCode),
@@ -1013,7 +897,7 @@ func buildErrorJSON(results []FlowRunResult, exitCode int, msg string) interface
 		Status:       statusForExit(exitCode),
 		Success:      false,
 		ExitCode:     exitCode,
-		ErrorMessage: ptrString(msg),
+		ErrorMessage: new(msg),
 	}}
 }
 
@@ -1136,12 +1020,8 @@ func writeGitHubStepSummary(path string, results []FlowRunResult) error {
 	return nil
 }
 
-func progressf(outputFormat, format string, args ...interface{}) {
+func progressf(outputFormat, format string, args ...any) {
 	if strings.ToLower(strings.TrimSpace(outputFormat)) != outputFormatJSON {
 		fmt.Fprintf(os.Stderr, format, args...)
 	}
-}
-
-func ptrString(s string) *string {
-	return &s
 }

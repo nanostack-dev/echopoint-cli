@@ -164,7 +164,7 @@ func download(ctx context.Context, url string) ([]byte, error) {
 // assetName in a goreleaser-style checksums.txt ("<hex>  <name>" per line).
 func verifyChecksum(checksums []byte, assetName string, archive []byte) error {
 	want := ""
-	for _, line := range strings.Split(string(checksums), "\n") {
+	for line := range strings.SplitSeq(string(checksums), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) == 2 && fields[1] == assetName {
 			want = strings.ToLower(fields[0])

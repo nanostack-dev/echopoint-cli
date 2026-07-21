@@ -41,7 +41,7 @@ func PrintTable(headers []string, rows [][]string) error {
 	return tw.Flush()
 }
 
-func PrintJSON(w io.Writer, value interface{}) error {
+func PrintJSON(w io.Writer, value any) error {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func PrintJSON(w io.Writer, value interface{}) error {
 	return err
 }
 
-func PrintYAML(w io.Writer, value interface{}) error {
+func PrintYAML(w io.Writer, value any) error {
 	data, err := yaml.Marshal(value)
 	if err != nil {
 		return err

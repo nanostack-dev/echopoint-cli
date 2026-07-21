@@ -278,7 +278,7 @@ func newCollectionsImportCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("--file is required")
 			}
 
-			var spec map[string]interface{}
+			var spec map[string]any
 			if err := loadJSONFile(file, &spec); err != nil {
 				return err
 			}

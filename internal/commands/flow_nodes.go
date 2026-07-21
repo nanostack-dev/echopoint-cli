@@ -782,13 +782,13 @@ Available operators: equals, notEquals, contains, notContains, greaterThan, less
 			definition := flow.FlowDefinition
 
 			// Build extractor data
-			extractorData := make(map[string]interface{})
+			extractorData := make(map[string]any)
 			if path != "" {
 				extractorData["path"] = path
 			}
 
 			// Build operator data
-			operatorData := make(map[string]interface{})
+			operatorData := make(map[string]any)
 			if value != "" {
 				operatorData["value"] = value
 			}
@@ -1028,7 +1028,7 @@ func buildModuleData(moduleFlowID string, inputBindings, outputBindings []string
 		if ierr != nil {
 			return data, fmt.Errorf("invalid --input: %w", ierr)
 		}
-		bindings := make(map[string]interface{}, len(inputs))
+		bindings := make(map[string]any, len(inputs))
 		for k, v := range inputs {
 			bindings[k] = v
 		}
