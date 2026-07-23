@@ -39,6 +39,12 @@ const (
 	ApiKeySortFieldName       ApiKeySortField = "name"
 )
 
+// Defines values for AssistantChatScope.
+const (
+	General AssistantChatScope = "general"
+	Page    AssistantChatScope = "page"
+)
+
 // Defines values for BodyExtractorConfigFormat.
 const (
 	BodyExtractorConfigFormatJson BodyExtractorConfigFormat = "json"
@@ -57,6 +63,7 @@ const (
 // Defines values for CollectionRequestAuthType.
 const (
 	CollectionRequestAuthTypeApiKey CollectionRequestAuthType = "api_key"
+	CollectionRequestAuthTypeBasic  CollectionRequestAuthType = "basic"
 	CollectionRequestAuthTypeBearer CollectionRequestAuthType = "bearer"
 	CollectionRequestAuthTypeNone   CollectionRequestAuthType = "none"
 )
@@ -107,48 +114,17 @@ const (
 	Success FlowEdgeType = "success"
 )
 
-// Defines values for FlowGenerationSessionMentionKind.
-const (
-	FlowGenerationSessionMentionKindCollection FlowGenerationSessionMentionKind = "collection"
-	FlowGenerationSessionMentionKindFlow       FlowGenerationSessionMentionKind = "flow"
-	FlowGenerationSessionMentionKindRequest    FlowGenerationSessionMentionKind = "request"
-)
-
-// Defines values for FlowGenerationSessionMessageKind.
-const (
-	Checkpoint FlowGenerationSessionMessageKind = "checkpoint"
-	Error      FlowGenerationSessionMessageKind = "error"
-	Message    FlowGenerationSessionMessageKind = "message"
-	Result     FlowGenerationSessionMessageKind = "result"
-	Status     FlowGenerationSessionMessageKind = "status"
-)
-
-// Defines values for FlowGenerationSessionMessageRole.
-const (
-	Assistant FlowGenerationSessionMessageRole = "assistant"
-	System    FlowGenerationSessionMessageRole = "system"
-	User      FlowGenerationSessionMessageRole = "user"
-)
-
-// Defines values for FlowGenerationSessionStatus.
-const (
-	FlowGenerationSessionStatusArchived FlowGenerationSessionStatus = "archived"
-	FlowGenerationSessionStatusIdle     FlowGenerationSessionStatus = "idle"
-	FlowGenerationSessionStatusRunning  FlowGenerationSessionStatus = "running"
-)
-
-// Defines values for FlowGenerationStatus.
-const (
-	FlowGenerationStatusCancelled FlowGenerationStatus = "cancelled"
-	FlowGenerationStatusCompleted FlowGenerationStatus = "completed"
-	FlowGenerationStatusFailed    FlowGenerationStatus = "failed"
-	FlowGenerationStatusRunning   FlowGenerationStatus = "running"
-)
-
 // Defines values for FlowNodeRunWhen.
 const (
 	Always    FlowNodeRunWhen = "always"
 	OnSuccess FlowNodeRunWhen = "on_success"
+)
+
+// Defines values for FlowRunStatus.
+const (
+	FlowRunStatusFailed FlowRunStatus = "failed"
+	FlowRunStatusNone   FlowRunStatus = "none"
+	FlowRunStatusPassed FlowRunStatus = "passed"
 )
 
 // Defines values for HttpMethod.
@@ -287,7 +263,6 @@ const (
 
 // Defines values for ResourceSearchPreset.
 const (
-	AiGeneration     ResourceSearchPreset = "ai_generation"
 	FlowReference    ResourceSearchPreset = "flow_reference"
 	FlowRightClick   ResourceSearchPreset = "flow_right_click"
 	TopBarNavigation ResourceSearchPreset = "top_bar_navigation"
@@ -505,6 +480,33 @@ type ApiKeySearchRequest struct {
 // ApiKeySortField Field to sort API key search results by.
 type ApiKeySortField string
 
+// AssistantChatRequest defines model for AssistantChatRequest.
+type AssistantChatRequest struct {
+	// Message The user's chat message.
+	Message string `json:"message"`
+
+	// PageContext The page the user has open when asking from the page scope.
+	PageContext *AssistantPageContext `json:"page_context,omitempty"`
+
+	// Scope Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.
+	Scope AssistantChatScope `json:"scope"`
+}
+
+// AssistantChatScope Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.
+type AssistantChatScope string
+
+// AssistantPageContext The page the user has open when asking from the page scope.
+type AssistantPageContext struct {
+	// Details Live per-view details contributed by the page, e.g. the entity a detail page displays ("Endpoint: Stripe events").
+	Details *[]string `json:"details,omitempty"`
+
+	// Pathname Route pathname of the open page.
+	Pathname string `json:"pathname"`
+
+	// Title Human title of the open page (e.g. "Webhooks").
+	Title string `json:"title"`
+}
+
 // BaseFlowNode defines model for BaseFlowNode.
 type BaseFlowNode struct {
 	// Assertions Validation assertions for the node
@@ -534,6 +536,24 @@ type BodyExtractorConfig struct {
 
 // BodyExtractorConfigFormat How to format the extracted body
 type BodyExtractorConfigFormat string
+
+// BulkMoveFlowsRequest Moves many flows into one folder in a single operation. Provide exactly one selector: flow_ids (an explicit set) or filter (every flow matching a search, moved server-side — not just a page). folder_id is the shared destination; send null to move them all to the Uncategorized bucket.
+type BulkMoveFlowsRequest struct {
+	// Filter The same criteria as flow search — every matching flow is moved, regardless of how many pages it spans. pagination, sort_direction, and include_definition are ignored.
+	Filter *FlowSearchRequest `json:"filter,omitempty"`
+
+	// FlowIds Explicit set of flows to move. Mutually exclusive with filter; an empty list is rejected.
+	FlowIds *[]openapi_types.UUID `json:"flow_ids,omitempty"`
+
+	// FolderId Destination folder for every moved flow, or null for Uncategorized.
+	FolderId *openapi_types.UUID `json:"folder_id"`
+}
+
+// BulkMoveFlowsResult Summary of a bulk flow move.
+type BulkMoveFlowsResult struct {
+	// MovedFlows Number of flows whose folder actually changed. Flows already in the destination are not counted.
+	MovedFlows int `json:"moved_flows"`
+}
 
 // Collection defines model for Collection.
 type Collection struct {
@@ -672,6 +692,9 @@ type CollectionRequestAuth struct {
 	// Key API key header, query parameter, or cookie name.
 	Key *string `json:"key"`
 
+	// Password Password template or literal value for basic authentication.
+	Password *string `json:"password"`
+
 	// SourceOptionId Stable identifier for the imported OpenAPI auth option currently selected on this request.
 	SourceOptionId *string `json:"source_option_id"`
 
@@ -683,6 +706,9 @@ type CollectionRequestAuth struct {
 
 	// Type Dedicated authentication mode for a saved collection request.
 	Type CollectionRequestAuthType `json:"type"`
+
+	// Username Username template or literal value for basic authentication.
+	Username *string `json:"username"`
 
 	// Value API key template or literal value.
 	Value *string `json:"value"`
@@ -773,22 +799,13 @@ type CreateFlowEnvironmentRequest struct {
 	Variables EnvironmentVariablesInput `json:"variables"`
 }
 
-// CreateFlowGenerationRequest defines model for CreateFlowGenerationRequest.
-type CreateFlowGenerationRequest struct {
-	// CollectionIds Optional collection scope to limit request search.
-	CollectionIds *[]openapi_types.UUID `json:"collection_ids,omitempty"`
+// CreateFlowFolderRequest defines model for CreateFlowFolderRequest.
+type CreateFlowFolderRequest struct {
+	// Name Folder name.
+	Name string `json:"name"`
 
-	// FlowId Existing flow to update with the generated plan.
-	FlowId openapi_types.UUID `json:"flow_id"`
-
-	// Prompt Natural-language request describing the flow to generate.
-	Prompt string `json:"prompt"`
-}
-
-// CreateFlowGenerationSessionMessageRequest defines model for CreateFlowGenerationSessionMessageRequest.
-type CreateFlowGenerationSessionMessageRequest struct {
-	Content  string                          `json:"content"`
-	Mentions *[]FlowGenerationSessionMention `json:"mentions,omitempty"`
+	// ParentId Parent folder, or null for a root folder.
+	ParentId *openapi_types.UUID `json:"parent_id"`
 }
 
 // CreateFlowRequest defines model for CreateFlowRequest.
@@ -799,6 +816,9 @@ type CreateFlowRequest struct {
 	// Description Optional description of the flow.
 	Description    *string        `json:"description"`
 	FlowDefinition FlowDefinition `json:"flow_definition"`
+
+	// FolderId Folder to create the flow in. Omit or send null to leave it uncategorized. A folder unknown to the organization yields 404.
+	FolderId *openapi_types.UUID `json:"folder_id"`
 
 	// Metadata Frontend-specific metadata including UI layout information and execution defaults.
 	Metadata *FlowMetadata `json:"metadata,omitempty"`
@@ -1173,6 +1193,9 @@ type Flow struct {
 	Description    *string        `json:"description"`
 	FlowDefinition FlowDefinition `json:"flow_definition"`
 
+	// FolderId The flow's folder, or null when it is uncategorized.
+	FolderId *openapi_types.UUID `json:"folder_id"`
+
 	// Id Server-generated unique identifier for the flow.
 	Id openapi_types.UUID `json:"id"`
 
@@ -1304,165 +1327,42 @@ type FlowExecutionListResponse struct {
 	Total int64 `json:"total"`
 }
 
-// FlowGeneration defines model for FlowGeneration.
-type FlowGeneration struct {
-	CompletedAt *time.Time `json:"completed_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+// FlowFolder A folder in the organization's flow tree. One home per flow.
+type FlowFolder struct {
+	CreatedAt time.Time `json:"created_at"`
 
-	// ErrorMessage Failure reason when the generation run does not succeed.
-	ErrorMessage *string `json:"error_message"`
-	Flow         *Flow   `json:"flow"`
+	// Id Server-generated unique identifier.
+	Id openapi_types.UUID `json:"id"`
 
-	// FlowId Existing flow ID being updated by this generation run.
-	FlowId openapi_types.UUID `json:"flow_id"`
+	// Name Folder name.
+	Name string `json:"name"`
 
-	// RunId Workflow run ID backing this generation.
-	RunId openapi_types.UUID `json:"run_id"`
-
-	// Status Lifecycle status for an AI-assisted flow generation run.
-	Status FlowGenerationStatus `json:"status"`
+	// ParentId Parent folder, or null for a root folder.
+	ParentId  *openapi_types.UUID `json:"parent_id"`
+	UpdatedAt time.Time           `json:"updated_at"`
 }
 
-// FlowGenerationCompactionCheckpoint defines model for FlowGenerationCompactionCheckpoint.
-type FlowGenerationCompactionCheckpoint struct {
-	CompactedMessageCount int                 `json:"compacted_message_count"`
-	CreatedAt             time.Time           `json:"created_at"`
-	EstimatedTokensAfter  int                 `json:"estimated_tokens_after"`
-	EstimatedTokensBefore int                 `json:"estimated_tokens_before"`
-	Id                    openapi_types.UUID  `json:"id"`
-	RunId                 *openapi_types.UUID `json:"run_id"`
-	SourceEndMessageId    *openapi_types.UUID `json:"source_end_message_id"`
-	Summary               string              `json:"summary"`
-	TailMessageCount      int                 `json:"tail_message_count"`
+// FlowFolderDeletionResult Summary of a folder subtree deletion.
+type FlowFolderDeletionResult struct {
+	// DeletedFlows Number of flows permanently deleted. Always 0 unless delete_flows is true.
+	DeletedFlows int `json:"deleted_flows"`
+
+	// DeletedFolders Number of folders removed (the folder plus its descendants).
+	DeletedFolders int `json:"deleted_folders"`
+
+	// UncategorizedFlows Number of flows moved to the Uncategorized bucket. Always 0 when delete_flows is true.
+	UncategorizedFlows int `json:"uncategorized_flows"`
 }
 
-// FlowGenerationContextSnapshot defines model for FlowGenerationContextSnapshot.
-type FlowGenerationContextSnapshot struct {
-	CompactionCount          int                                 `json:"compaction_count"`
-	CreatedAt                time.Time                           `json:"created_at"`
-	EstimatedInputTokens     int                                 `json:"estimated_input_tokens"`
-	Id                       openapi_types.UUID                  `json:"id"`
-	MaxInputTokens           int                                 `json:"max_input_tokens"`
-	Model                    string                              `json:"model"`
-	PromptMessageCount       int                                 `json:"prompt_message_count"`
-	PromptMessages           []FlowGenerationConversationMessage `json:"prompt_messages"`
-	ReservedCompletionTokens int                                 `json:"reserved_completion_tokens"`
-	RunId                    openapi_types.UUID                  `json:"run_id"`
-	RuntimeContext           string                              `json:"runtime_context"`
-	Summary                  *string                             `json:"summary"`
-	SystemPrompt             string                              `json:"system_prompt"`
+// FlowFolderListResponse defines model for FlowFolderListResponse.
+type FlowFolderListResponse struct {
+	// Count The number of items returned in this response.
+	Count int          `json:"count"`
+	Items []FlowFolder `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
 }
-
-// FlowGenerationConversationMessage defines model for FlowGenerationConversationMessage.
-type FlowGenerationConversationMessage struct {
-	Content string `json:"content"`
-
-	// Role Author role for a flow generation session message.
-	Role FlowGenerationSessionMessageRole `json:"role"`
-}
-
-// FlowGenerationSession defines model for FlowGenerationSession.
-type FlowGenerationSession struct {
-	ActiveRunId *openapi_types.UUID `json:"active_run_id"`
-	CreatedAt   time.Time           `json:"created_at"`
-	FlowId      openapi_types.UUID  `json:"flow_id"`
-	Id          openapi_types.UUID  `json:"id"`
-
-	// Status Lifecycle status for a persisted AI flow generation session.
-	Status    FlowGenerationSessionStatus `json:"status"`
-	UpdatedAt time.Time                   `json:"updated_at"`
-}
-
-// FlowGenerationSessionDetail defines model for FlowGenerationSessionDetail.
-type FlowGenerationSessionDetail struct {
-	LatestContextSnapshot *FlowGenerationContextSnapshot       `json:"latest_context_snapshot"`
-	LatestRun             *FlowGenerationSessionRun            `json:"latest_run"`
-	RecentCheckpoints     []FlowGenerationCompactionCheckpoint `json:"recent_checkpoints"`
-	Session               FlowGenerationSession                `json:"session"`
-
-	// TotalMessageCount Total number of messages in the session.
-	TotalMessageCount int `json:"total_message_count"`
-}
-
-// FlowGenerationSessionMention defines model for FlowGenerationSessionMention.
-type FlowGenerationSessionMention struct {
-	// CollectionId Parent collection id for request mentions.
-	CollectionId *openapi_types.UUID `json:"collection_id"`
-	Id           openapi_types.UUID  `json:"id"`
-
-	// Kind Supported mention kinds within a flow generation session message.
-	Kind  FlowGenerationSessionMentionKind `json:"kind"`
-	Label string                           `json:"label"`
-}
-
-// FlowGenerationSessionMentionKind Supported mention kinds within a flow generation session message.
-type FlowGenerationSessionMentionKind string
-
-// FlowGenerationSessionMessage defines model for FlowGenerationSessionMessage.
-type FlowGenerationSessionMessage struct {
-	Content   string             `json:"content"`
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
-
-	// Kind Display category for a flow generation session message.
-	Kind     FlowGenerationSessionMessageKind `json:"kind"`
-	Mentions []FlowGenerationSessionMention   `json:"mentions"`
-	Metadata map[string]interface{}           `json:"metadata"`
-
-	// Role Author role for a flow generation session message.
-	Role  FlowGenerationSessionMessageRole `json:"role"`
-	RunId *openapi_types.UUID              `json:"run_id"`
-}
-
-// FlowGenerationSessionMessageKind Display category for a flow generation session message.
-type FlowGenerationSessionMessageKind string
-
-// FlowGenerationSessionMessageList defines model for FlowGenerationSessionMessageList.
-type FlowGenerationSessionMessageList struct {
-	// HasMore Whether older messages exist before this page.
-	HasMore  bool                           `json:"has_more"`
-	Messages []FlowGenerationSessionMessage `json:"messages"`
-}
-
-// FlowGenerationSessionMessageRole Author role for a flow generation session message.
-type FlowGenerationSessionMessageRole string
-
-// FlowGenerationSessionMessageSendResult defines model for FlowGenerationSessionMessageSendResult.
-type FlowGenerationSessionMessageSendResult struct {
-	LatestRun FlowGenerationSessionRun     `json:"latest_run"`
-	Message   FlowGenerationSessionMessage `json:"message"`
-	Session   FlowGenerationSession        `json:"session"`
-}
-
-// FlowGenerationSessionRestoreResult defines model for FlowGenerationSessionRestoreResult.
-type FlowGenerationSessionRestoreResult struct {
-	Flow          Flow                         `json:"flow"`
-	Message       FlowGenerationSessionMessage `json:"message"`
-	RestoredRunId openapi_types.UUID           `json:"restored_run_id"`
-}
-
-// FlowGenerationSessionRun defines model for FlowGenerationSessionRun.
-type FlowGenerationSessionRun struct {
-	// CanRestore Whether the flow can be restored to the pre-run snapshot captured for this run.
-	CanRestore    bool                 `json:"can_restore"`
-	CollectionIds []openapi_types.UUID `json:"collection_ids"`
-	CompletedAt   *time.Time           `json:"completed_at"`
-	CreatedAt     time.Time            `json:"created_at"`
-	ErrorMessage  *string              `json:"error_message"`
-	FlowId        openapi_types.UUID   `json:"flow_id"`
-	Id            openapi_types.UUID   `json:"id"`
-	Prompt        string               `json:"prompt"`
-
-	// Status Lifecycle status for an AI-assisted flow generation run.
-	Status        FlowGenerationStatus `json:"status"`
-	WorkflowRunId *openapi_types.UUID  `json:"workflow_run_id"`
-}
-
-// FlowGenerationSessionStatus Lifecycle status for a persisted AI flow generation session.
-type FlowGenerationSessionStatus string
-
-// FlowGenerationStatus Lifecycle status for an AI-assisted flow generation run.
-type FlowGenerationStatus string
 
 // FlowListResponse defines model for FlowListResponse.
 type FlowListResponse struct {
@@ -1494,6 +1394,9 @@ type FlowNode struct {
 
 // FlowNodeRunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
 type FlowNodeRunWhen string
+
+// FlowRunStatus Outcome of a flow's most recent terminal execution, folded to the states the Flow Library list renders: passed (completed), failed (failed), or none (no terminal run yet). In-flight and cancelled runs are ignored: they never erase the last real pass/fail badge.
+type FlowRunStatus string
 
 // FlowSchedule A recurring schedule that launches the tag-selected suite of flows resolved at each due tick.
 type FlowSchedule struct {
@@ -1599,19 +1502,31 @@ type FlowScheduleRunListResponse struct {
 
 // FlowSearchItem Lightweight flow returned by flow search. flow_definition is present only when requested via include_definition, keeping search payloads small.
 type FlowSearchItem struct {
-	CreatedAt      time.Time          `json:"created_at"`
-	Description    *string            `json:"description"`
-	FlowDefinition *FlowDefinition    `json:"flow_definition,omitempty"`
-	Id             openapi_types.UUID `json:"id"`
-	Name           string             `json:"name"`
-	OrganizationId string             `json:"organization_id"`
-	Tags           []string           `json:"tags"`
-	UpdatedAt      time.Time          `json:"updated_at"`
-	Version        string             `json:"version"`
+	CreatedAt      time.Time       `json:"created_at"`
+	Description    *string         `json:"description"`
+	FlowDefinition *FlowDefinition `json:"flow_definition,omitempty"`
+
+	// FolderId The flow's folder, or null when it is uncategorized.
+	FolderId *openapi_types.UUID `json:"folder_id"`
+	Id       openapi_types.UUID  `json:"id"`
+
+	// LastRunStatus Outcome of a flow's most recent terminal execution, folded to the states the Flow Library list renders: passed (completed), failed (failed), or none (no terminal run yet). In-flight and cancelled runs are ignored: they never erase the last real pass/fail badge.
+	LastRunStatus FlowRunStatus `json:"last_run_status"`
+	Name          string        `json:"name"`
+
+	// NodeCount Number of nodes in the flow definition.
+	NodeCount      int       `json:"node_count"`
+	OrganizationId string    `json:"organization_id"`
+	Tags           []string  `json:"tags"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Version        string    `json:"version"`
 }
 
 // FlowSearchRequest defines model for FlowSearchRequest.
 type FlowSearchRequest struct {
+	// FolderId Scope results to this folder and all of its descendants. Omit to search every folder. Ignored when uncategorized is true. A folder unknown to the organization yields 404.
+	FolderId *openapi_types.UUID `json:"folder_id"`
+
 	// FullTextSearch Full-text search term to match against searchable fields.
 	FullTextSearch *string `json:"full_text_search,omitempty"`
 
@@ -1625,6 +1540,9 @@ type FlowSearchRequest struct {
 
 	// Tags Canonical tags to match exactly against the flow's tags.
 	Tags *[]string `json:"tags,omitempty"`
+
+	// Uncategorized Return only flows with no folder (the Uncategorized bucket). Takes precedence over folder_id.
+	Uncategorized *bool `json:"uncategorized,omitempty"`
 }
 
 // FlowSearchResponse defines model for FlowSearchResponse.
@@ -1875,6 +1793,12 @@ type ModuleNodeData struct {
 
 	// OutputBindings Parent-visible outputs mapped from child final output keys.
 	OutputBindings *map[string]string `json:"output_bindings,omitempty"`
+}
+
+// MoveFlowFolderRequest Sets the folder's parent. parent_id is always present; send null to move the folder to the root (top level). Returns 400 when the move would form a cycle (the folder into itself or a descendant) or nest deeper than the folder depth limit, and 409 when another flow-tree mutation is in flight (the move serializes on the per-organization flow-tree lock).
+type MoveFlowFolderRequest struct {
+	// ParentId New parent folder, or null to move the folder to the root.
+	ParentId *openapi_types.UUID `json:"parent_id"`
 }
 
 // NamedEnvironmentVariableSets Named environment overlays such as dev, stg1, or prd.
@@ -2367,6 +2291,14 @@ type ResourceSearchContextLevel string
 // ResourceSearchDomain Searchable resource domain included in cross-domain resource search.
 type ResourceSearchDomain string
 
+// ResourceSearchDriftDocument A single resource_search_documents row that drifted from its canonical source.
+type ResourceSearchDriftDocument struct {
+	Domain         string `json:"domain"`
+	OrganizationId string `json:"organizationId"`
+	ResourceId     string `json:"resourceId"`
+	ResourceType   string `json:"resourceType"`
+}
+
 // ResourceSearchIdentifiers defines model for ResourceSearchIdentifiers.
 type ResourceSearchIdentifiers struct {
 	// CollectionId Related collection identifier when the resource belongs to a collection.
@@ -2386,6 +2318,25 @@ type ResourceSearchIdentifiers struct {
 
 	// ResourceId Canonical identifier for the matched resource.
 	ResourceId openapi_types.UUID `json:"resource_id"`
+}
+
+// ResourceSearchOrgResyncReport Per-organization summary of what the resync corrected.
+type ResourceSearchOrgResyncReport struct {
+	// Added Bounded sample of the added rows (capped at sampleLimitPerDirection).
+	Added []ResourceSearchDriftDocument `json:"added"`
+
+	// AddedCount Total canonical rows that were missing and inserted back for this org.
+	AddedCount     int64  `json:"addedCount"`
+	OrganizationId string `json:"organizationId"`
+
+	// Removed Bounded sample of the removed rows (capped at sampleLimitPerDirection).
+	Removed []ResourceSearchDriftDocument `json:"removed"`
+
+	// RemovedCount Total stale rows that were present but unexpected and deleted for this org.
+	RemovedCount int64 `json:"removedCount"`
+
+	// SampleTruncated True when addedCount+removedCount exceeds the returned sample size.
+	SampleTruncated bool `json:"sampleTruncated"`
 }
 
 // ResourceSearchPreset Preset that shapes default search behavior for a specific discovery workflow.
@@ -2456,6 +2407,18 @@ type ResourceSearchResultItem struct {
 
 	// Url Indexed URL when relevant to the matched resource.
 	Url *string `json:"url"`
+}
+
+// ResourceSearchResyncReport Result of an admin resync — what drifted and was corrected, grouped by organization.
+type ResourceSearchResyncReport struct {
+	// OrganizationCount Number of organizations that had drift corrected.
+	OrganizationCount int                             `json:"organizationCount"`
+	Organizations     []ResourceSearchOrgResyncReport `json:"organizations"`
+
+	// SampleLimitPerDirection Max added/removed rows returned per org per direction.
+	SampleLimitPerDirection int   `json:"sampleLimitPerDirection"`
+	TotalAdded              int64 `json:"totalAdded"`
+	TotalRemoved            int64 `json:"totalRemoved"`
 }
 
 // ResourceSearchScope defines model for ResourceSearchScope.
@@ -2722,6 +2685,15 @@ type UpdateCollectionRequest struct {
 // UpdateFlowEnvironmentRequest Request to update flow environment
 type UpdateFlowEnvironmentRequest struct {
 	Variables EnvironmentVariablesInput `json:"variables"`
+}
+
+// UpdateFlowFolderRequest Partial folder update. Omit a field to leave it unchanged. Prefer POST /flows/folders/{folderId}/move for reparenting — it is the single move endpoint and can also move a folder back to the root, which this pointer field cannot express.
+type UpdateFlowFolderRequest struct {
+	// Name New folder name.
+	Name *string `json:"name,omitempty"`
+
+	// ParentId New parent folder to nest this folder under.
+	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
 // UpdateFlowRequest defines model for UpdateFlowRequest.
@@ -3082,12 +3054,6 @@ type SearchAPIKeysParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// GetCurrentAPIKeyParams defines parameters for GetCurrentAPIKey.
-type GetCurrentAPIKeyParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
 // DeleteAPIKeyParams defines parameters for DeleteAPIKey.
 type DeleteAPIKeyParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -3096,6 +3062,12 @@ type DeleteAPIKeyParams struct {
 
 // GetAPIKeyParams defines parameters for GetAPIKey.
 type GetAPIKeyParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ChatWithAssistantParams defines parameters for ChatWithAssistant.
+type ChatWithAssistantParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -3271,42 +3243,6 @@ type AddRequestParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// GetFlowGenerationSessionParams defines parameters for GetFlowGenerationSession.
-type GetFlowGenerationSessionParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// ListFlowGenerationSessionMessagesParams defines parameters for ListFlowGenerationSessionMessages.
-type ListFlowGenerationSessionMessagesParams struct {
-	// Limit Maximum number of messages to return (1–50, default 20).
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Before Cursor — return messages created before this message ID. Omit to start from the latest messages.
-	Before *openapi_types.UUID `form:"before,omitempty" json:"before,omitempty"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// CreateFlowGenerationSessionMessageParams defines parameters for CreateFlowGenerationSessionMessage.
-type CreateFlowGenerationSessionMessageParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// RestoreFlowGenerationSessionRunParams defines parameters for RestoreFlowGenerationSessionRun.
-type RestoreFlowGenerationSessionRunParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// StreamFlowGenerationSessionParams defines parameters for StreamFlowGenerationSession.
-type StreamFlowGenerationSessionParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
 // ListFlowSchedulesParams defines parameters for ListFlowSchedules.
 type ListFlowSchedulesParams struct {
 	// Limit Maximum number of items per page.
@@ -3400,14 +3336,41 @@ type CreateFlowParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// CreateFlowGenerationParams defines parameters for CreateFlowGeneration.
-type CreateFlowGenerationParams struct {
+// ListFlowFoldersParams defines parameters for ListFlowFolders.
+type ListFlowFoldersParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// GetFlowGenerationParams defines parameters for GetFlowGeneration.
-type GetFlowGenerationParams struct {
+// CreateFlowFolderParams defines parameters for CreateFlowFolder.
+type CreateFlowFolderParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// BulkMoveFlowsParams defines parameters for BulkMoveFlows.
+type BulkMoveFlowsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteFlowFolderParams defines parameters for DeleteFlowFolder.
+type DeleteFlowFolderParams struct {
+	// DeleteFlows When true, permanently deletes every flow in the deleted subtree (including execution history). Irreversible. When false or omitted, flows move to the Uncategorized bucket.
+	DeleteFlows *bool `form:"delete_flows,omitempty" json:"delete_flows,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// UpdateFlowFolderParams defines parameters for UpdateFlowFolder.
+type UpdateFlowFolderParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// MoveFlowFolderParams defines parameters for MoveFlowFolder.
+type MoveFlowFolderParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -3519,12 +3482,6 @@ type ExportFlowParams struct {
 	// VersionId Optional flow version ID to export. When omitted, the current flow definition is used.
 	VersionId *openapi_types.UUID `form:"version_id,omitempty" json:"version_id,omitempty"`
 
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// EnsureFlowGenerationSessionParams defines parameters for EnsureFlowGenerationSession.
-type EnsureFlowGenerationSessionParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -3730,6 +3687,9 @@ type CreateAPIKeyJSONRequestBody = ApiKeyCreateRequest
 // SearchAPIKeysJSONRequestBody defines body for SearchAPIKeys for application/json ContentType.
 type SearchAPIKeysJSONRequestBody = ApiKeySearchRequest
 
+// ChatWithAssistantJSONRequestBody defines body for ChatWithAssistant for application/json ContentType.
+type ChatWithAssistantJSONRequestBody = AssistantChatRequest
+
 // CreateCollectionJSONRequestBody defines body for CreateCollection for application/json ContentType.
 type CreateCollectionJSONRequestBody = CreateCollectionRequest
 
@@ -3763,9 +3723,6 @@ type RunOpenAPISyncNowJSONRequestBody = RunOpenAPISyncNowRequest
 // AddRequestJSONRequestBody defines body for AddRequest for application/json ContentType.
 type AddRequestJSONRequestBody = CreateRequestRequest
 
-// CreateFlowGenerationSessionMessageJSONRequestBody defines body for CreateFlowGenerationSessionMessage for application/json ContentType.
-type CreateFlowGenerationSessionMessageJSONRequestBody = CreateFlowGenerationSessionMessageRequest
-
 // CreateFlowScheduleJSONRequestBody defines body for CreateFlowSchedule for application/json ContentType.
 type CreateFlowScheduleJSONRequestBody = CreateFlowScheduleRequest
 
@@ -3778,8 +3735,17 @@ type UpdateFlowScheduleJSONRequestBody = UpdateFlowScheduleRequest
 // CreateFlowJSONRequestBody defines body for CreateFlow for application/json ContentType.
 type CreateFlowJSONRequestBody = CreateFlowRequest
 
-// CreateFlowGenerationJSONRequestBody defines body for CreateFlowGeneration for application/json ContentType.
-type CreateFlowGenerationJSONRequestBody = CreateFlowGenerationRequest
+// CreateFlowFolderJSONRequestBody defines body for CreateFlowFolder for application/json ContentType.
+type CreateFlowFolderJSONRequestBody = CreateFlowFolderRequest
+
+// BulkMoveFlowsJSONRequestBody defines body for BulkMoveFlows for application/json ContentType.
+type BulkMoveFlowsJSONRequestBody = BulkMoveFlowsRequest
+
+// UpdateFlowFolderJSONRequestBody defines body for UpdateFlowFolder for application/json ContentType.
+type UpdateFlowFolderJSONRequestBody = UpdateFlowFolderRequest
+
+// MoveFlowFolderJSONRequestBody defines body for MoveFlowFolder for application/json ContentType.
+type MoveFlowFolderJSONRequestBody = MoveFlowFolderRequest
 
 // SearchFlowsJSONRequestBody defines body for SearchFlows for application/json ContentType.
 type SearchFlowsJSONRequestBody = FlowSearchRequest
@@ -4661,13 +4627,18 @@ type ClientInterface interface {
 	SearchAPIKeys(ctx context.Context, params *SearchAPIKeysParams, body SearchAPIKeysJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetCurrentAPIKey request
-	GetCurrentAPIKey(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetCurrentAPIKey(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteAPIKey request
 	DeleteAPIKey(ctx context.Context, id ApiKeyIdParameter, params *DeleteAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetAPIKey request
 	GetAPIKey(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ChatWithAssistantWithBody request with any body
+	ChatWithAssistantWithBody(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ChatWithAssistant(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListCollections request
 	ListCollections(ctx context.Context, params *ListCollectionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4760,23 +4731,6 @@ type ClientInterface interface {
 
 	AddRequest(ctx context.Context, id openapi_types.UUID, params *AddRequestParams, body AddRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetFlowGenerationSession request
-	GetFlowGenerationSession(ctx context.Context, sessionId openapi_types.UUID, params *GetFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListFlowGenerationSessionMessages request
-	ListFlowGenerationSessionMessages(ctx context.Context, sessionId openapi_types.UUID, params *ListFlowGenerationSessionMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateFlowGenerationSessionMessageWithBody request with any body
-	CreateFlowGenerationSessionMessageWithBody(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	CreateFlowGenerationSessionMessage(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, body CreateFlowGenerationSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RestoreFlowGenerationSessionRun request
-	RestoreFlowGenerationSessionRun(ctx context.Context, sessionId openapi_types.UUID, runId openapi_types.UUID, params *RestoreFlowGenerationSessionRunParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// StreamFlowGenerationSession request
-	StreamFlowGenerationSession(ctx context.Context, sessionId openapi_types.UUID, params *StreamFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListFlowSchedules request
 	ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -4821,13 +4775,31 @@ type ClientInterface interface {
 
 	CreateFlow(ctx context.Context, params *CreateFlowParams, body CreateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateFlowGenerationWithBody request with any body
-	CreateFlowGenerationWithBody(ctx context.Context, params *CreateFlowGenerationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListFlowFolders request
+	ListFlowFolders(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateFlowGeneration(ctx context.Context, params *CreateFlowGenerationParams, body CreateFlowGenerationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// CreateFlowFolderWithBody request with any body
+	CreateFlowFolderWithBody(ctx context.Context, params *CreateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetFlowGeneration request
-	GetFlowGeneration(ctx context.Context, runId openapi_types.UUID, params *GetFlowGenerationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateFlowFolder(ctx context.Context, params *CreateFlowFolderParams, body CreateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// BulkMoveFlowsWithBody request with any body
+	BulkMoveFlowsWithBody(ctx context.Context, params *BulkMoveFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	BulkMoveFlows(ctx context.Context, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteFlowFolder request
+	DeleteFlowFolder(ctx context.Context, folderId openapi_types.UUID, params *DeleteFlowFolderParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateFlowFolderWithBody request with any body
+	UpdateFlowFolderWithBody(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateFlowFolder(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, body UpdateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// MoveFlowFolderWithBody request with any body
+	MoveFlowFolderWithBody(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	MoveFlowFolder(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, body MoveFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SearchFlowsWithBody request with any body
 	SearchFlowsWithBody(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4884,9 +4856,6 @@ type ClientInterface interface {
 
 	// ExportFlow request
 	ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// EnsureFlowGenerationSession request
-	EnsureFlowGenerationSession(ctx context.Context, id openapi_types.UUID, params *EnsureFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// LaunchFlowWithBody request with any body
 	LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, params *LaunchFlowParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5110,8 +5079,8 @@ func (c *Client) SearchAPIKeys(ctx context.Context, params *SearchAPIKeysParams,
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetCurrentAPIKey(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetCurrentAPIKeyRequest(c.Server, params)
+func (c *Client) GetCurrentAPIKey(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCurrentAPIKeyRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -5136,6 +5105,30 @@ func (c *Client) DeleteAPIKey(ctx context.Context, id ApiKeyIdParameter, params 
 
 func (c *Client) GetAPIKey(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAPIKeyRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ChatWithAssistantWithBody(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewChatWithAssistantRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ChatWithAssistant(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewChatWithAssistantRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5554,78 +5547,6 @@ func (c *Client) AddRequest(ctx context.Context, id openapi_types.UUID, params *
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetFlowGenerationSession(ctx context.Context, sessionId openapi_types.UUID, params *GetFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFlowGenerationSessionRequest(c.Server, sessionId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListFlowGenerationSessionMessages(ctx context.Context, sessionId openapi_types.UUID, params *ListFlowGenerationSessionMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListFlowGenerationSessionMessagesRequest(c.Server, sessionId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CreateFlowGenerationSessionMessageWithBody(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateFlowGenerationSessionMessageRequestWithBody(c.Server, sessionId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CreateFlowGenerationSessionMessage(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, body CreateFlowGenerationSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateFlowGenerationSessionMessageRequest(c.Server, sessionId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RestoreFlowGenerationSessionRun(ctx context.Context, sessionId openapi_types.UUID, runId openapi_types.UUID, params *RestoreFlowGenerationSessionRunParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRestoreFlowGenerationSessionRunRequest(c.Server, sessionId, runId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) StreamFlowGenerationSession(ctx context.Context, sessionId openapi_types.UUID, params *StreamFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewStreamFlowGenerationSessionRequest(c.Server, sessionId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowSchedulesRequest(c.Server, params)
 	if err != nil {
@@ -5818,8 +5739,8 @@ func (c *Client) CreateFlow(ctx context.Context, params *CreateFlowParams, body 
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateFlowGenerationWithBody(ctx context.Context, params *CreateFlowGenerationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateFlowGenerationRequestWithBody(c.Server, params, contentType, body)
+func (c *Client) ListFlowFolders(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlowFoldersRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -5830,8 +5751,8 @@ func (c *Client) CreateFlowGenerationWithBody(ctx context.Context, params *Creat
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateFlowGeneration(ctx context.Context, params *CreateFlowGenerationParams, body CreateFlowGenerationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateFlowGenerationRequest(c.Server, params, body)
+func (c *Client) CreateFlowFolderWithBody(ctx context.Context, params *CreateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFlowFolderRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5842,8 +5763,92 @@ func (c *Client) CreateFlowGeneration(ctx context.Context, params *CreateFlowGen
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetFlowGeneration(ctx context.Context, runId openapi_types.UUID, params *GetFlowGenerationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFlowGenerationRequest(c.Server, runId, params)
+func (c *Client) CreateFlowFolder(ctx context.Context, params *CreateFlowFolderParams, body CreateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFlowFolderRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BulkMoveFlowsWithBody(ctx context.Context, params *BulkMoveFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBulkMoveFlowsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BulkMoveFlows(ctx context.Context, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBulkMoveFlowsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteFlowFolder(ctx context.Context, folderId openapi_types.UUID, params *DeleteFlowFolderParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteFlowFolderRequest(c.Server, folderId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateFlowFolderWithBody(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateFlowFolderRequestWithBody(c.Server, folderId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateFlowFolder(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, body UpdateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateFlowFolderRequest(c.Server, folderId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MoveFlowFolderWithBody(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMoveFlowFolderRequestWithBody(c.Server, folderId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MoveFlowFolder(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, body MoveFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMoveFlowFolderRequest(c.Server, folderId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -6084,18 +6089,6 @@ func (c *Client) ListFlowExecutions(ctx context.Context, id openapi_types.UUID, 
 
 func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewExportFlowRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) EnsureFlowGenerationSession(ctx context.Context, id openapi_types.UUID, params *EnsureFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewEnsureFlowGenerationSessionRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -6970,7 +6963,7 @@ func NewSearchAPIKeysRequestWithBody(server string, params *SearchAPIKeysParams,
 }
 
 // NewGetCurrentAPIKeyRequest generates requests for GetCurrentAPIKey
-func NewGetCurrentAPIKeyRequest(server string, params *GetCurrentAPIKeyParams) (*http.Request, error) {
+func NewGetCurrentAPIKeyRequest(server string) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -6991,19 +6984,6 @@ func NewGetCurrentAPIKeyRequest(server string, params *GetCurrentAPIKeyParams) (
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
 	}
 
 	return req, nil
@@ -7086,6 +7066,59 @@ func NewGetAPIKeyRequest(server string, id ApiKeyIdParameter, params *GetAPIKeyP
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewChatWithAssistantRequest calls the generic ChatWithAssistant builder with application/json body
+func NewChatWithAssistantRequest(server string, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewChatWithAssistantRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewChatWithAssistantRequestWithBody generates requests for ChatWithAssistant with any type of body
+func NewChatWithAssistantRequestWithBody(server string, params *ChatWithAssistantParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/assistant/chat")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -8523,299 +8556,6 @@ func NewAddRequestRequestWithBody(server string, id openapi_types.UUID, params *
 	return req, nil
 }
 
-// NewGetFlowGenerationSessionRequest generates requests for GetFlowGenerationSession
-func NewGetFlowGenerationSessionRequest(server string, sessionId openapi_types.UUID, params *GetFlowGenerationSessionParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "sessionId", runtime.ParamLocationPath, sessionId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-generation-sessions/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewListFlowGenerationSessionMessagesRequest generates requests for ListFlowGenerationSessionMessages
-func NewListFlowGenerationSessionMessagesRequest(server string, sessionId openapi_types.UUID, params *ListFlowGenerationSessionMessagesParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "sessionId", runtime.ParamLocationPath, sessionId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-generation-sessions/%s/messages", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Limit != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, *params.Limit); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Before != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "before", runtime.ParamLocationQuery, *params.Before); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewCreateFlowGenerationSessionMessageRequest calls the generic CreateFlowGenerationSessionMessage builder with application/json body
-func NewCreateFlowGenerationSessionMessageRequest(server string, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, body CreateFlowGenerationSessionMessageJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateFlowGenerationSessionMessageRequestWithBody(server, sessionId, params, "application/json", bodyReader)
-}
-
-// NewCreateFlowGenerationSessionMessageRequestWithBody generates requests for CreateFlowGenerationSessionMessage with any type of body
-func NewCreateFlowGenerationSessionMessageRequestWithBody(server string, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "sessionId", runtime.ParamLocationPath, sessionId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-generation-sessions/%s/messages", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewRestoreFlowGenerationSessionRunRequest generates requests for RestoreFlowGenerationSessionRun
-func NewRestoreFlowGenerationSessionRunRequest(server string, sessionId openapi_types.UUID, runId openapi_types.UUID, params *RestoreFlowGenerationSessionRunParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "sessionId", runtime.ParamLocationPath, sessionId)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "runId", runtime.ParamLocationPath, runId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-generation-sessions/%s/runs/%s/restore", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewStreamFlowGenerationSessionRequest generates requests for StreamFlowGenerationSession
-func NewStreamFlowGenerationSessionRequest(server string, sessionId openapi_types.UUID, params *StreamFlowGenerationSessionParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "sessionId", runtime.ParamLocationPath, sessionId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-generation-sessions/%s/stream", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
 // NewListFlowSchedulesRequest generates requests for ListFlowSchedules
 func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams) (*http.Request, error) {
 	var err error
@@ -9510,19 +9250,8 @@ func NewCreateFlowRequestWithBody(server string, params *CreateFlowParams, conte
 	return req, nil
 }
 
-// NewCreateFlowGenerationRequest calls the generic CreateFlowGeneration builder with application/json body
-func NewCreateFlowGenerationRequest(server string, params *CreateFlowGenerationParams, body CreateFlowGenerationJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateFlowGenerationRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewCreateFlowGenerationRequestWithBody generates requests for CreateFlowGeneration with any type of body
-func NewCreateFlowGenerationRequestWithBody(server string, params *CreateFlowGenerationParams, contentType string, body io.Reader) (*http.Request, error) {
+// NewListFlowFoldersRequest generates requests for ListFlowFolders
+func NewListFlowFoldersRequest(server string, params *ListFlowFoldersParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -9530,7 +9259,58 @@ func NewCreateFlowGenerationRequestWithBody(server string, params *CreateFlowGen
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/flows/generations")
+	operationPath := fmt.Sprintf("/flows/folders")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateFlowFolderRequest calls the generic CreateFlowFolder builder with application/json body
+func NewCreateFlowFolderRequest(server string, params *CreateFlowFolderParams, body CreateFlowFolderJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateFlowFolderRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateFlowFolderRequestWithBody generates requests for CreateFlowFolder with any type of body
+func NewCreateFlowFolderRequestWithBody(server string, params *CreateFlowFolderParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/folders")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -9563,23 +9343,27 @@ func NewCreateFlowGenerationRequestWithBody(server string, params *CreateFlowGen
 	return req, nil
 }
 
-// NewGetFlowGenerationRequest generates requests for GetFlowGeneration
-func NewGetFlowGenerationRequest(server string, runId openapi_types.UUID, params *GetFlowGenerationParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "runId", runtime.ParamLocationPath, runId)
+// NewBulkMoveFlowsRequest calls the generic BulkMoveFlows builder with application/json body
+func NewBulkMoveFlowsRequest(server string, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
+	bodyReader = bytes.NewReader(buf)
+	return NewBulkMoveFlowsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewBulkMoveFlowsRequestWithBody generates requests for BulkMoveFlows with any type of body
+func NewBulkMoveFlowsRequestWithBody(server string, params *BulkMoveFlowsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/flows/generations/%s", pathParam0)
+	operationPath := fmt.Sprintf("/flows/folders/move")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -9589,10 +9373,201 @@ func NewGetFlowGenerationRequest(server string, runId openapi_types.UUID, params
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	req, err := http.NewRequest("POST", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteFlowFolderRequest generates requests for DeleteFlowFolder
+func NewDeleteFlowFolderRequest(server string, folderId openapi_types.UUID, params *DeleteFlowFolderParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "folderId", runtime.ParamLocationPath, folderId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/folders/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.DeleteFlows != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "delete_flows", runtime.ParamLocationQuery, *params.DeleteFlows); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUpdateFlowFolderRequest calls the generic UpdateFlowFolder builder with application/json body
+func NewUpdateFlowFolderRequest(server string, folderId openapi_types.UUID, params *UpdateFlowFolderParams, body UpdateFlowFolderJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateFlowFolderRequestWithBody(server, folderId, params, "application/json", bodyReader)
+}
+
+// NewUpdateFlowFolderRequestWithBody generates requests for UpdateFlowFolder with any type of body
+func NewUpdateFlowFolderRequestWithBody(server string, folderId openapi_types.UUID, params *UpdateFlowFolderParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "folderId", runtime.ParamLocationPath, folderId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/folders/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewMoveFlowFolderRequest calls the generic MoveFlowFolder builder with application/json body
+func NewMoveFlowFolderRequest(server string, folderId openapi_types.UUID, params *MoveFlowFolderParams, body MoveFlowFolderJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewMoveFlowFolderRequestWithBody(server, folderId, params, "application/json", bodyReader)
+}
+
+// NewMoveFlowFolderRequestWithBody generates requests for MoveFlowFolder with any type of body
+func NewMoveFlowFolderRequestWithBody(server string, folderId openapi_types.UUID, params *MoveFlowFolderParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "folderId", runtime.ParamLocationPath, folderId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/folders/%s/move", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -10504,53 +10479,6 @@ func NewExportFlowRequest(server string, id openapi_types.UUID, params *ExportFl
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Organization-ID", runtime.ParamLocationHeader, params.XOrganizationID)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewEnsureFlowGenerationSessionRequest generates requests for EnsureFlowGenerationSession
-func NewEnsureFlowGenerationSessionRequest(server string, id openapi_types.UUID, params *EnsureFlowGenerationSessionParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flows/%s/generation-sessions", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -12480,13 +12408,18 @@ type ClientWithResponsesInterface interface {
 	SearchAPIKeysWithResponse(ctx context.Context, params *SearchAPIKeysParams, body SearchAPIKeysJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchAPIKeysResponse, error)
 
 	// GetCurrentAPIKeyWithResponse request
-	GetCurrentAPIKeyWithResponse(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error)
+	GetCurrentAPIKeyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error)
 
 	// DeleteAPIKeyWithResponse request
 	DeleteAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *DeleteAPIKeyParams, reqEditors ...RequestEditorFn) (*DeleteAPIKeyResponse, error)
 
 	// GetAPIKeyWithResponse request
 	GetAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*GetAPIKeyResponse, error)
+
+	// ChatWithAssistantWithBodyWithResponse request with any body
+	ChatWithAssistantWithBodyWithResponse(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error)
+
+	ChatWithAssistantWithResponse(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error)
 
 	// ListCollectionsWithResponse request
 	ListCollectionsWithResponse(ctx context.Context, params *ListCollectionsParams, reqEditors ...RequestEditorFn) (*ListCollectionsResponse, error)
@@ -12579,23 +12512,6 @@ type ClientWithResponsesInterface interface {
 
 	AddRequestWithResponse(ctx context.Context, id openapi_types.UUID, params *AddRequestParams, body AddRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*AddRequestResponse, error)
 
-	// GetFlowGenerationSessionWithResponse request
-	GetFlowGenerationSessionWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *GetFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*GetFlowGenerationSessionResponse, error)
-
-	// ListFlowGenerationSessionMessagesWithResponse request
-	ListFlowGenerationSessionMessagesWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *ListFlowGenerationSessionMessagesParams, reqEditors ...RequestEditorFn) (*ListFlowGenerationSessionMessagesResponse, error)
-
-	// CreateFlowGenerationSessionMessageWithBodyWithResponse request with any body
-	CreateFlowGenerationSessionMessageWithBodyWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowGenerationSessionMessageResponse, error)
-
-	CreateFlowGenerationSessionMessageWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, body CreateFlowGenerationSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowGenerationSessionMessageResponse, error)
-
-	// RestoreFlowGenerationSessionRunWithResponse request
-	RestoreFlowGenerationSessionRunWithResponse(ctx context.Context, sessionId openapi_types.UUID, runId openapi_types.UUID, params *RestoreFlowGenerationSessionRunParams, reqEditors ...RequestEditorFn) (*RestoreFlowGenerationSessionRunResponse, error)
-
-	// StreamFlowGenerationSessionWithResponse request
-	StreamFlowGenerationSessionWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *StreamFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*StreamFlowGenerationSessionResponse, error)
-
 	// ListFlowSchedulesWithResponse request
 	ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error)
 
@@ -12640,13 +12556,31 @@ type ClientWithResponsesInterface interface {
 
 	CreateFlowWithResponse(ctx context.Context, params *CreateFlowParams, body CreateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowResponse, error)
 
-	// CreateFlowGenerationWithBodyWithResponse request with any body
-	CreateFlowGenerationWithBodyWithResponse(ctx context.Context, params *CreateFlowGenerationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowGenerationResponse, error)
+	// ListFlowFoldersWithResponse request
+	ListFlowFoldersWithResponse(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*ListFlowFoldersResponse, error)
 
-	CreateFlowGenerationWithResponse(ctx context.Context, params *CreateFlowGenerationParams, body CreateFlowGenerationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowGenerationResponse, error)
+	// CreateFlowFolderWithBodyWithResponse request with any body
+	CreateFlowFolderWithBodyWithResponse(ctx context.Context, params *CreateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowFolderResponse, error)
 
-	// GetFlowGenerationWithResponse request
-	GetFlowGenerationWithResponse(ctx context.Context, runId openapi_types.UUID, params *GetFlowGenerationParams, reqEditors ...RequestEditorFn) (*GetFlowGenerationResponse, error)
+	CreateFlowFolderWithResponse(ctx context.Context, params *CreateFlowFolderParams, body CreateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowFolderResponse, error)
+
+	// BulkMoveFlowsWithBodyWithResponse request with any body
+	BulkMoveFlowsWithBodyWithResponse(ctx context.Context, params *BulkMoveFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BulkMoveFlowsResponse, error)
+
+	BulkMoveFlowsWithResponse(ctx context.Context, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*BulkMoveFlowsResponse, error)
+
+	// DeleteFlowFolderWithResponse request
+	DeleteFlowFolderWithResponse(ctx context.Context, folderId openapi_types.UUID, params *DeleteFlowFolderParams, reqEditors ...RequestEditorFn) (*DeleteFlowFolderResponse, error)
+
+	// UpdateFlowFolderWithBodyWithResponse request with any body
+	UpdateFlowFolderWithBodyWithResponse(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowFolderResponse, error)
+
+	UpdateFlowFolderWithResponse(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, body UpdateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowFolderResponse, error)
+
+	// MoveFlowFolderWithBodyWithResponse request with any body
+	MoveFlowFolderWithBodyWithResponse(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MoveFlowFolderResponse, error)
+
+	MoveFlowFolderWithResponse(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, body MoveFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*MoveFlowFolderResponse, error)
 
 	// SearchFlowsWithBodyWithResponse request with any body
 	SearchFlowsWithBodyWithResponse(ctx context.Context, params *SearchFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowsResponse, error)
@@ -12703,9 +12637,6 @@ type ClientWithResponsesInterface interface {
 
 	// ExportFlowWithResponse request
 	ExportFlowWithResponse(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*ExportFlowResponse, error)
-
-	// EnsureFlowGenerationSessionWithResponse request
-	EnsureFlowGenerationSessionWithResponse(ctx context.Context, id openapi_types.UUID, params *EnsureFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*EnsureFlowGenerationSessionResponse, error)
 
 	// LaunchFlowWithBodyWithResponse request with any body
 	LaunchFlowWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *LaunchFlowParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LaunchFlowResponse, error)
@@ -12872,6 +12803,7 @@ func (r RunFlowScheduleNowResponse) StatusCode() int {
 type ResyncResourceSearchResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *ResourceSearchResyncReport
 	JSON401      *Unauthorized
 	JSON403      *Forbidden
 }
@@ -13040,6 +12972,29 @@ func (r GetAPIKeyResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetAPIKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ChatWithAssistantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+}
+
+// Status returns HTTPResponse.Status
+func (r ChatWithAssistantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ChatWithAssistantResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -13604,128 +13559,6 @@ func (r AddRequestResponse) StatusCode() int {
 	return 0
 }
 
-type GetFlowGenerationSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *FlowGenerationSessionDetail
-	JSON401      *Unauthorized
-	JSON404      *NotFound
-}
-
-// Status returns HTTPResponse.Status
-func (r GetFlowGenerationSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetFlowGenerationSessionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ListFlowGenerationSessionMessagesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *FlowGenerationSessionMessageList
-	JSON401      *Unauthorized
-	JSON404      *NotFound
-}
-
-// Status returns HTTPResponse.Status
-func (r ListFlowGenerationSessionMessagesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListFlowGenerationSessionMessagesResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type CreateFlowGenerationSessionMessageResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON201      *FlowGenerationSessionMessageSendResult
-	JSON400      *BadRequest
-	JSON401      *Unauthorized
-	JSON404      *NotFound
-	JSON409      *Conflict
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateFlowGenerationSessionMessageResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateFlowGenerationSessionMessageResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RestoreFlowGenerationSessionRunResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *FlowGenerationSessionRestoreResult
-	JSON401      *Unauthorized
-	JSON404      *NotFound
-	JSON409      *Conflict
-}
-
-// Status returns HTTPResponse.Status
-func (r RestoreFlowGenerationSessionRunResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RestoreFlowGenerationSessionRunResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type StreamFlowGenerationSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON401      *Unauthorized
-	JSON404      *NotFound
-}
-
-// Status returns HTTPResponse.Status
-func (r StreamFlowGenerationSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r StreamFlowGenerationSessionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type ListFlowSchedulesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -14024,17 +13857,16 @@ func (r CreateFlowResponse) StatusCode() int {
 	return 0
 }
 
-type CreateFlowGenerationResponse struct {
+type ListFlowFoldersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON201      *FlowGeneration
-	JSON400      *BadRequest
+	JSON200      *FlowFolderListResponse
 	JSON401      *Unauthorized
-	JSON500      *InternalServerError
+	JSON403      *Forbidden
 }
 
 // Status returns HTTPResponse.Status
-func (r CreateFlowGenerationResponse) Status() string {
+func (r ListFlowFoldersResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -14042,23 +13874,26 @@ func (r CreateFlowGenerationResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r CreateFlowGenerationResponse) StatusCode() int {
+func (r ListFlowFoldersResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetFlowGenerationResponse struct {
+type CreateFlowFolderResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *FlowGeneration
+	JSON201      *FlowFolder
+	JSON400      *BadRequest
 	JSON401      *Unauthorized
+	JSON403      *Forbidden
 	JSON404      *NotFound
+	JSON409      *Conflict
 }
 
 // Status returns HTTPResponse.Status
-func (r GetFlowGenerationResponse) Status() string {
+func (r CreateFlowFolderResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -14066,7 +13901,114 @@ func (r GetFlowGenerationResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetFlowGenerationResponse) StatusCode() int {
+func (r CreateFlowFolderResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type BulkMoveFlowsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *BulkMoveFlowsResult
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+	JSON409      *Conflict
+}
+
+// Status returns HTTPResponse.Status
+func (r BulkMoveFlowsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r BulkMoveFlowsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteFlowFolderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowFolderDeletionResult
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+	JSON409      *Conflict
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFlowFolderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFlowFolderResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateFlowFolderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowFolder
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+	JSON409      *Conflict
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateFlowFolderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateFlowFolderResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type MoveFlowFolderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FlowFolder
+	JSON400      *BadRequest
+	JSON401      *Unauthorized
+	JSON403      *Forbidden
+	JSON404      *NotFound
+	JSON409      *Conflict
+}
+
+// Status returns HTTPResponse.Status
+func (r MoveFlowFolderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r MoveFlowFolderResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -14080,6 +14022,7 @@ type SearchFlowsResponse struct {
 	JSON400      *BadRequest
 	JSON401      *Unauthorized
 	JSON403      *Forbidden
+	JSON404      *NotFound
 }
 
 // Status returns HTTPResponse.Status
@@ -14454,30 +14397,6 @@ func (r ExportFlowResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r ExportFlowResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type EnsureFlowGenerationSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *FlowGenerationSession
-	JSON401      *Unauthorized
-	JSON404      *NotFound
-}
-
-// Status returns HTTPResponse.Status
-func (r EnsureFlowGenerationSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r EnsureFlowGenerationSessionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -15204,7 +15123,6 @@ type CreateWebhookResponse struct {
 	HTTPResponse *http.Response
 	JSON201      *Webhook
 	JSON400      *BadRequest
-	JSON409      *Conflict
 }
 
 // Status returns HTTPResponse.Status
@@ -15448,8 +15366,8 @@ func (c *ClientWithResponses) SearchAPIKeysWithResponse(ctx context.Context, par
 }
 
 // GetCurrentAPIKeyWithResponse request returning *GetCurrentAPIKeyResponse
-func (c *ClientWithResponses) GetCurrentAPIKeyWithResponse(ctx context.Context, params *GetCurrentAPIKeyParams, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error) {
-	rsp, err := c.GetCurrentAPIKey(ctx, params, reqEditors...)
+func (c *ClientWithResponses) GetCurrentAPIKeyWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCurrentAPIKeyResponse, error) {
+	rsp, err := c.GetCurrentAPIKey(ctx, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -15472,6 +15390,23 @@ func (c *ClientWithResponses) GetAPIKeyWithResponse(ctx context.Context, id ApiK
 		return nil, err
 	}
 	return ParseGetAPIKeyResponse(rsp)
+}
+
+// ChatWithAssistantWithBodyWithResponse request with arbitrary body returning *ChatWithAssistantResponse
+func (c *ClientWithResponses) ChatWithAssistantWithBodyWithResponse(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error) {
+	rsp, err := c.ChatWithAssistantWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseChatWithAssistantResponse(rsp)
+}
+
+func (c *ClientWithResponses) ChatWithAssistantWithResponse(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error) {
+	rsp, err := c.ChatWithAssistant(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseChatWithAssistantResponse(rsp)
 }
 
 // ListCollectionsWithResponse request returning *ListCollectionsResponse
@@ -15769,59 +15704,6 @@ func (c *ClientWithResponses) AddRequestWithResponse(ctx context.Context, id ope
 	return ParseAddRequestResponse(rsp)
 }
 
-// GetFlowGenerationSessionWithResponse request returning *GetFlowGenerationSessionResponse
-func (c *ClientWithResponses) GetFlowGenerationSessionWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *GetFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*GetFlowGenerationSessionResponse, error) {
-	rsp, err := c.GetFlowGenerationSession(ctx, sessionId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetFlowGenerationSessionResponse(rsp)
-}
-
-// ListFlowGenerationSessionMessagesWithResponse request returning *ListFlowGenerationSessionMessagesResponse
-func (c *ClientWithResponses) ListFlowGenerationSessionMessagesWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *ListFlowGenerationSessionMessagesParams, reqEditors ...RequestEditorFn) (*ListFlowGenerationSessionMessagesResponse, error) {
-	rsp, err := c.ListFlowGenerationSessionMessages(ctx, sessionId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListFlowGenerationSessionMessagesResponse(rsp)
-}
-
-// CreateFlowGenerationSessionMessageWithBodyWithResponse request with arbitrary body returning *CreateFlowGenerationSessionMessageResponse
-func (c *ClientWithResponses) CreateFlowGenerationSessionMessageWithBodyWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowGenerationSessionMessageResponse, error) {
-	rsp, err := c.CreateFlowGenerationSessionMessageWithBody(ctx, sessionId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateFlowGenerationSessionMessageResponse(rsp)
-}
-
-func (c *ClientWithResponses) CreateFlowGenerationSessionMessageWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *CreateFlowGenerationSessionMessageParams, body CreateFlowGenerationSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowGenerationSessionMessageResponse, error) {
-	rsp, err := c.CreateFlowGenerationSessionMessage(ctx, sessionId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateFlowGenerationSessionMessageResponse(rsp)
-}
-
-// RestoreFlowGenerationSessionRunWithResponse request returning *RestoreFlowGenerationSessionRunResponse
-func (c *ClientWithResponses) RestoreFlowGenerationSessionRunWithResponse(ctx context.Context, sessionId openapi_types.UUID, runId openapi_types.UUID, params *RestoreFlowGenerationSessionRunParams, reqEditors ...RequestEditorFn) (*RestoreFlowGenerationSessionRunResponse, error) {
-	rsp, err := c.RestoreFlowGenerationSessionRun(ctx, sessionId, runId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRestoreFlowGenerationSessionRunResponse(rsp)
-}
-
-// StreamFlowGenerationSessionWithResponse request returning *StreamFlowGenerationSessionResponse
-func (c *ClientWithResponses) StreamFlowGenerationSessionWithResponse(ctx context.Context, sessionId openapi_types.UUID, params *StreamFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*StreamFlowGenerationSessionResponse, error) {
-	rsp, err := c.StreamFlowGenerationSession(ctx, sessionId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseStreamFlowGenerationSessionResponse(rsp)
-}
-
 // ListFlowSchedulesWithResponse request returning *ListFlowSchedulesResponse
 func (c *ClientWithResponses) ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error) {
 	rsp, err := c.ListFlowSchedules(ctx, params, reqEditors...)
@@ -15962,30 +15844,90 @@ func (c *ClientWithResponses) CreateFlowWithResponse(ctx context.Context, params
 	return ParseCreateFlowResponse(rsp)
 }
 
-// CreateFlowGenerationWithBodyWithResponse request with arbitrary body returning *CreateFlowGenerationResponse
-func (c *ClientWithResponses) CreateFlowGenerationWithBodyWithResponse(ctx context.Context, params *CreateFlowGenerationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowGenerationResponse, error) {
-	rsp, err := c.CreateFlowGenerationWithBody(ctx, params, contentType, body, reqEditors...)
+// ListFlowFoldersWithResponse request returning *ListFlowFoldersResponse
+func (c *ClientWithResponses) ListFlowFoldersWithResponse(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*ListFlowFoldersResponse, error) {
+	rsp, err := c.ListFlowFolders(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateFlowGenerationResponse(rsp)
+	return ParseListFlowFoldersResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateFlowGenerationWithResponse(ctx context.Context, params *CreateFlowGenerationParams, body CreateFlowGenerationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowGenerationResponse, error) {
-	rsp, err := c.CreateFlowGeneration(ctx, params, body, reqEditors...)
+// CreateFlowFolderWithBodyWithResponse request with arbitrary body returning *CreateFlowFolderResponse
+func (c *ClientWithResponses) CreateFlowFolderWithBodyWithResponse(ctx context.Context, params *CreateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowFolderResponse, error) {
+	rsp, err := c.CreateFlowFolderWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateFlowGenerationResponse(rsp)
+	return ParseCreateFlowFolderResponse(rsp)
 }
 
-// GetFlowGenerationWithResponse request returning *GetFlowGenerationResponse
-func (c *ClientWithResponses) GetFlowGenerationWithResponse(ctx context.Context, runId openapi_types.UUID, params *GetFlowGenerationParams, reqEditors ...RequestEditorFn) (*GetFlowGenerationResponse, error) {
-	rsp, err := c.GetFlowGeneration(ctx, runId, params, reqEditors...)
+func (c *ClientWithResponses) CreateFlowFolderWithResponse(ctx context.Context, params *CreateFlowFolderParams, body CreateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowFolderResponse, error) {
+	rsp, err := c.CreateFlowFolder(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetFlowGenerationResponse(rsp)
+	return ParseCreateFlowFolderResponse(rsp)
+}
+
+// BulkMoveFlowsWithBodyWithResponse request with arbitrary body returning *BulkMoveFlowsResponse
+func (c *ClientWithResponses) BulkMoveFlowsWithBodyWithResponse(ctx context.Context, params *BulkMoveFlowsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BulkMoveFlowsResponse, error) {
+	rsp, err := c.BulkMoveFlowsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBulkMoveFlowsResponse(rsp)
+}
+
+func (c *ClientWithResponses) BulkMoveFlowsWithResponse(ctx context.Context, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*BulkMoveFlowsResponse, error) {
+	rsp, err := c.BulkMoveFlows(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBulkMoveFlowsResponse(rsp)
+}
+
+// DeleteFlowFolderWithResponse request returning *DeleteFlowFolderResponse
+func (c *ClientWithResponses) DeleteFlowFolderWithResponse(ctx context.Context, folderId openapi_types.UUID, params *DeleteFlowFolderParams, reqEditors ...RequestEditorFn) (*DeleteFlowFolderResponse, error) {
+	rsp, err := c.DeleteFlowFolder(ctx, folderId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFlowFolderResponse(rsp)
+}
+
+// UpdateFlowFolderWithBodyWithResponse request with arbitrary body returning *UpdateFlowFolderResponse
+func (c *ClientWithResponses) UpdateFlowFolderWithBodyWithResponse(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowFolderResponse, error) {
+	rsp, err := c.UpdateFlowFolderWithBody(ctx, folderId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateFlowFolderResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateFlowFolderWithResponse(ctx context.Context, folderId openapi_types.UUID, params *UpdateFlowFolderParams, body UpdateFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowFolderResponse, error) {
+	rsp, err := c.UpdateFlowFolder(ctx, folderId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateFlowFolderResponse(rsp)
+}
+
+// MoveFlowFolderWithBodyWithResponse request with arbitrary body returning *MoveFlowFolderResponse
+func (c *ClientWithResponses) MoveFlowFolderWithBodyWithResponse(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MoveFlowFolderResponse, error) {
+	rsp, err := c.MoveFlowFolderWithBody(ctx, folderId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMoveFlowFolderResponse(rsp)
+}
+
+func (c *ClientWithResponses) MoveFlowFolderWithResponse(ctx context.Context, folderId openapi_types.UUID, params *MoveFlowFolderParams, body MoveFlowFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*MoveFlowFolderResponse, error) {
+	rsp, err := c.MoveFlowFolder(ctx, folderId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMoveFlowFolderResponse(rsp)
 }
 
 // SearchFlowsWithBodyWithResponse request with arbitrary body returning *SearchFlowsResponse
@@ -16162,15 +16104,6 @@ func (c *ClientWithResponses) ExportFlowWithResponse(ctx context.Context, id ope
 		return nil, err
 	}
 	return ParseExportFlowResponse(rsp)
-}
-
-// EnsureFlowGenerationSessionWithResponse request returning *EnsureFlowGenerationSessionResponse
-func (c *ClientWithResponses) EnsureFlowGenerationSessionWithResponse(ctx context.Context, id openapi_types.UUID, params *EnsureFlowGenerationSessionParams, reqEditors ...RequestEditorFn) (*EnsureFlowGenerationSessionResponse, error) {
-	rsp, err := c.EnsureFlowGenerationSession(ctx, id, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseEnsureFlowGenerationSessionResponse(rsp)
 }
 
 // LaunchFlowWithBodyWithResponse request with arbitrary body returning *LaunchFlowResponse
@@ -16664,6 +16597,13 @@ func ParseResyncResourceSearchResponse(rsp *http.Response) (*ResyncResourceSearc
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResourceSearchResyncReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -16987,6 +16927,39 @@ func ParseGetAPIKeyResponse(rsp *http.Response) (*GetAPIKeyResponse, error) {
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseChatWithAssistantResponse parses an HTTP response from a ChatWithAssistantWithResponse call
+func ParseChatWithAssistantResponse(rsp *http.Response) (*ChatWithAssistantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ChatWithAssistantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
 
 	}
 
@@ -17955,220 +17928,6 @@ func ParseAddRequestResponse(rsp *http.Response) (*AddRequestResponse, error) {
 	return response, nil
 }
 
-// ParseGetFlowGenerationSessionResponse parses an HTTP response from a GetFlowGenerationSessionWithResponse call
-func ParseGetFlowGenerationSessionResponse(rsp *http.Response) (*GetFlowGenerationSessionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetFlowGenerationSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowGenerationSessionDetail
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListFlowGenerationSessionMessagesResponse parses an HTTP response from a ListFlowGenerationSessionMessagesWithResponse call
-func ParseListFlowGenerationSessionMessagesResponse(rsp *http.Response) (*ListFlowGenerationSessionMessagesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListFlowGenerationSessionMessagesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowGenerationSessionMessageList
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCreateFlowGenerationSessionMessageResponse parses an HTTP response from a CreateFlowGenerationSessionMessageWithResponse call
-func ParseCreateFlowGenerationSessionMessageResponse(rsp *http.Response) (*CreateFlowGenerationSessionMessageResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateFlowGenerationSessionMessageResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest FlowGenerationSessionMessageSendResult
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRestoreFlowGenerationSessionRunResponse parses an HTTP response from a RestoreFlowGenerationSessionRunWithResponse call
-func ParseRestoreFlowGenerationSessionRunResponse(rsp *http.Response) (*RestoreFlowGenerationSessionRunResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RestoreFlowGenerationSessionRunResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowGenerationSessionRestoreResult
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseStreamFlowGenerationSessionResponse parses an HTTP response from a StreamFlowGenerationSessionWithResponse call
-func ParseStreamFlowGenerationSessionResponse(rsp *http.Response) (*StreamFlowGenerationSessionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &StreamFlowGenerationSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseListFlowSchedulesResponse parses an HTTP response from a ListFlowSchedulesWithResponse call
 func ParseListFlowSchedulesResponse(rsp *http.Response) (*ListFlowSchedulesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -18719,22 +18478,62 @@ func ParseCreateFlowResponse(rsp *http.Response) (*CreateFlowResponse, error) {
 	return response, nil
 }
 
-// ParseCreateFlowGenerationResponse parses an HTTP response from a CreateFlowGenerationWithResponse call
-func ParseCreateFlowGenerationResponse(rsp *http.Response) (*CreateFlowGenerationResponse, error) {
+// ParseListFlowFoldersResponse parses an HTTP response from a ListFlowFoldersWithResponse call
+func ParseListFlowFoldersResponse(rsp *http.Response) (*ListFlowFoldersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &CreateFlowGenerationResponse{
+	response := &ListFlowFoldersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowFolderListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateFlowFolderResponse parses an HTTP response from a CreateFlowFolderWithResponse call
+func ParseCreateFlowFolderResponse(rsp *http.Response) (*CreateFlowFolderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateFlowFolderResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest FlowGeneration
+		var dest FlowFolder
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -18754,34 +18553,109 @@ func ParseCreateFlowGenerationResponse(rsp *http.Response) (*CreateFlowGeneratio
 		}
 		response.JSON401 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON500 = &dest
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
 	return response, nil
 }
 
-// ParseGetFlowGenerationResponse parses an HTTP response from a GetFlowGenerationWithResponse call
-func ParseGetFlowGenerationResponse(rsp *http.Response) (*GetFlowGenerationResponse, error) {
+// ParseBulkMoveFlowsResponse parses an HTTP response from a BulkMoveFlowsWithResponse call
+func ParseBulkMoveFlowsResponse(rsp *http.Response) (*BulkMoveFlowsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetFlowGenerationResponse{
+	response := &BulkMoveFlowsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowGeneration
+		var dest BulkMoveFlowsResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFlowFolderResponse parses an HTTP response from a DeleteFlowFolderWithResponse call
+func ParseDeleteFlowFolderResponse(rsp *http.Response) (*DeleteFlowFolderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFlowFolderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowFolderDeletionResult
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -18794,12 +18668,148 @@ func ParseGetFlowGenerationResponse(rsp *http.Response) (*GetFlowGenerationRespo
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateFlowFolderResponse parses an HTTP response from a UpdateFlowFolderWithResponse call
+func ParseUpdateFlowFolderResponse(rsp *http.Response) (*UpdateFlowFolderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateFlowFolderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowFolder
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseMoveFlowFolderResponse parses an HTTP response from a MoveFlowFolderWithResponse call
+func ParseMoveFlowFolderResponse(rsp *http.Response) (*MoveFlowFolderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &MoveFlowFolderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowFolder
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -18847,6 +18857,13 @@ func ParseSearchFlowsResponse(rsp *http.Response) (*SearchFlowsResponse, error) 
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
@@ -19461,46 +19478,6 @@ func ParseExportFlowResponse(rsp *http.Response) (*ExportFlowResponse, error) {
 			return nil, err
 		}
 		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseEnsureFlowGenerationSessionResponse parses an HTTP response from a EnsureFlowGenerationSessionWithResponse call
-func ParseEnsureFlowGenerationSessionResponse(rsp *http.Response) (*EnsureFlowGenerationSessionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &EnsureFlowGenerationSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowGenerationSession
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
 
 	}
 
@@ -20827,13 +20804,6 @@ func ParseCreateWebhookResponse(rsp *http.Response) (*CreateWebhookResponse, err
 			return nil, err
 		}
 		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
 
 	}
 

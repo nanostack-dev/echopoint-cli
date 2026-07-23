@@ -13,6 +13,10 @@ Flows are the core of Echopoint - they define automated sequences of API request
 echopoint flows list
 echopoint flows list -o json
 echopoint flows list --limit 50
+
+# scope the listing to one branch of the folder tree
+echopoint flows list --folder "Anchor/Identity"
+echopoint flows list --uncategorized
 ```
 
 ### Get Flow Details
@@ -58,6 +62,61 @@ lowercased and de-duplicated server-side.
 ```bash
 echopoint flows delete <flow-id>
 ```
+
+---
+
+## Folders
+
+Flows live in a folder tree — the same tree the Flow Library renders. Folders are
+addressed either by id or by a `/`-separated path of folder names from the root,
+matched case-insensitively:
+
+```bash
+# show the tree with a flow count per folder
+echopoint flows folder list
+
+# create a folder; every missing segment of the path is created, so re-running is safe
+echopoint flows folder create "Anchor"
+echopoint flows folder create "Anchor/Identity/Roles"
+echopoint flows folder create "Identity" --parent Anchor
+
+# rename, and reparent (--to root moves it back to the top level)
+echopoint flows folder rename "Anchor/Identity" "Identity & Access"
+echopoint flows folder move "Identity" --to "Anchor"
+echopoint flows folder move "Anchor/Identity" --to root
+```
+
+### Move Flows Between Folders
+
+Select flows by ID, or by a search filter — with a filter every matching flow
+moves, not just the first page. As with tagging, a filter is required for search
+selection; moving every flow in the org is intentionally not supported.
+
+```bash
+# move specific flows
+echopoint flows move <flow-id> <flow-id> --to "Anchor/Identity"
+
+# move every flow carrying a tag, creating the destination path if needed
+echopoint flows move --match-tag anchor --to "Anchor" --create
+
+# pull flows back out of every folder
+echopoint flows move <flow-id> --to uncategorized
+```
+
+The move runs as one server-side transaction and serializes on the
+per-organization folder-tree lock, so a concurrent tree change returns `409`.
+
+### Delete a Folder
+
+```bash
+# the folder and its descendants go away; the flows inside become uncategorized
+echopoint flows folder delete "Anchor/Identity"
+
+# also delete every flow in the subtree, with its execution history (irreversible)
+echopoint flows folder delete "Anchor/Identity" --delete-flows --yes
+```
+
+`--delete-flows` is irreversible and therefore refuses to run without `--yes`.
 
 ---
 
