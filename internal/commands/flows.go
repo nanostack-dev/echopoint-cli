@@ -31,6 +31,8 @@ func newFlowsCmd(state *AppState) *cobra.Command {
 		newFlowsCreateCmd(state),
 		newFlowsUpdateCmd(state),
 		newFlowsTagCmd(state),
+		newFlowsMoveCmd(state),
+		newFlowFolderCmd(state),
 		newFlowsDeleteCmd(state),
 		newFlowInteractiveCmd(state),
 		newFlowShowCmd(state),
@@ -258,16 +260,36 @@ func printExecutionSummary(execution api.FlowExecution) error {
 	return nil
 }
 
+// Column headers shared by more than one table renderer.
+const (
+	columnID   = "ID"
+	columnName = "Name"
+)
+
+// flowListColumns are the columns every `flows list` variant renders, whether
+// the rows come from the list endpoint or from a folder-scoped search.
+var flowListColumns = []string{columnID, columnName, "Updated"}
+
 func newFlowsListCmd(state *AppState) *cobra.Command {
 	var limit int32 = 20
 	var offset int32
+	var folderRef string
+	var uncategorized bool
 
 	cmd := &cobra.Command{
 		Use:   listVerb,
 		Short: "List flows",
+		Long: `List flows.
+
+With --folder or --uncategorized the listing is scoped to one branch of the flow
+folder tree; --folder includes the folder's descendants.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
+			}
+
+			if folderRef != "" || uncategorized {
+				return listFlowsInFolder(state, folderRef, uncategorized, limit, offset)
 			}
 
 			params := &api.ListFlowsParams{
@@ -295,15 +317,66 @@ func newFlowsListCmd(state *AppState) *cobra.Command {
 					rows = append(rows, []string{flow.Id.String(), flow.Name, flow.UpdatedAt.String()})
 				}
 				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
-				return output.PrintTable([]string{"ID", "Name", "Updated"}, rows)
+				return output.PrintTable(flowListColumns, rows)
 			}
 		},
 	}
 
 	cmd.Flags().Int32Var(&limit, "limit", 20, "Number of results to return")
 	cmd.Flags().Int32Var(&offset, "offset", 0, "Offset for pagination")
+	cmd.Flags().StringVar(&folderRef, "folder", "", "Only list flows in this folder and its descendants (id or path)")
+	cmd.Flags().BoolVar(&uncategorized, "uncategorized", false, "Only list flows that are in no folder")
 
 	return cmd
+}
+
+// listFlowsInFolder backs the folder-scoped variants of `flows list`. Folder
+// scoping lives on flow search rather than the plain list endpoint, so the two
+// paths render the same columns from different responses.
+func listFlowsInFolder(state *AppState, folderRef string, uncategorized bool, limit, offset int32) error {
+	if folderRef != "" && uncategorized {
+		return fmt.Errorf("--folder cannot be combined with --uncategorized")
+	}
+
+	ctx := context.Background()
+	body := api.FlowSearchRequest{
+		Pagination: &api.PaginationRequest{Limit: &limit, Offset: &offset},
+	}
+	if uncategorized {
+		body.Uncategorized = &uncategorized
+	} else {
+		idx, err := loadFolderIndex(ctx, state)
+		if err != nil {
+			return err
+		}
+		folderID, err := idx.resolve(folderRef)
+		if err != nil {
+			return err
+		}
+		body.FolderId = &folderID
+	}
+
+	resp, err := state.Client.API().SearchFlowsWithResponse(ctx, nil, body)
+	if err != nil {
+		return err
+	}
+	if resp.JSON200 == nil {
+		return formatAPIError(resp.HTTPResponse, resp.Body)
+	}
+
+	switch state.OutputFormat {
+	case output.FormatJSON:
+		return output.PrintJSON(os.Stdout, resp.JSON200)
+	case output.FormatYAML:
+		return output.PrintYAML(os.Stdout, resp.JSON200)
+	default:
+		rows := make([][]string, 0, len(resp.JSON200.Items))
+		for _, flow := range resp.JSON200.Items {
+			rows = append(rows, []string{flow.Id.String(), flow.Name, flow.UpdatedAt.String()})
+		}
+		fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
+		return output.PrintTable(flowListColumns, rows)
+	}
 }
 
 func newFlowsGetCmd(state *AppState) *cobra.Command {

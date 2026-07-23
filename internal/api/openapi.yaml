@@ -31,6 +31,8 @@ tags:
     description: Special flow control nodes like delay
   - name: Runner
     description: Self-hosted runner control-plane operations
+  - name: Assistant
+    description: Workspace AI assistant chat operations.
 # servers removed to avoid host-header validation warnings under oapi validator
 components:
   securitySchemes:
@@ -159,6 +161,59 @@ components:
             errors:
               [{ "code": "CONFLICT", "message": "Resource conflict.", "field": "name" }]
   schemas:
+    # Assistant chat
+    AssistantChatScope:
+      type: string
+      description: >
+        Which assistant conversation the message belongs to: the general
+        workspace-wide chat or the page-scoped side panel.
+      enum: [general, page]
+    AssistantPageContext:
+      type: object
+      description: The page the user has open when asking from the page scope.
+      required: [title, pathname]
+      properties:
+        title:
+          type: string
+          description: Human title of the open page (e.g. "Webhooks").
+          maxLength: 200
+        pathname:
+          type: string
+          description: Route pathname of the open page.
+          maxLength: 500
+        details:
+          type: array
+          description: >
+            Live per-view details contributed by the page, e.g. the entity a
+            detail page displays ("Endpoint: Stripe events").
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 300
+    AssistantChatRequest:
+      type: object
+      required: [message, scope]
+      properties:
+        message:
+          type: string
+          description: The user's chat message.
+          minLength: 1
+          maxLength: 4000
+        scope:
+          $ref: "#/components/schemas/AssistantChatScope"
+        page_context:
+          $ref: "#/components/schemas/AssistantPageContext"
+    AssistantAction:
+      type: object
+      description: A navigation action the assistant offers under a reply.
+      required: [label, path]
+      properties:
+        label:
+          type: string
+        path:
+          type: string
+          description: Frontend route path the action navigates to.
+
     # Generic Error Handling
     ApiError:
       type: object
@@ -540,7 +595,7 @@ components:
       description: Normalized provenance for saved request resources.
     ResourceSearchPreset:
       type: string
-      enum: [top_bar_navigation, ai_generation, flow_reference, flow_right_click]
+      enum: [top_bar_navigation, flow_reference, flow_right_click]
       description: Preset that shapes default search behavior for a specific discovery workflow.
     ResourceSearchContextLevel:
       type: string
@@ -681,6 +736,86 @@ components:
       required:
         - groups
 
+    ResourceSearchDriftDocument:
+      type: object
+      description: A single resource_search_documents row that drifted from its canonical source.
+      properties:
+        organizationId:
+          type: string
+        domain:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+      required:
+        - organizationId
+        - domain
+        - resourceType
+        - resourceId
+
+    ResourceSearchOrgResyncReport:
+      type: object
+      description: Per-organization summary of what the resync corrected.
+      properties:
+        organizationId:
+          type: string
+        addedCount:
+          type: integer
+          format: int64
+          description: Total canonical rows that were missing and inserted back for this org.
+        removedCount:
+          type: integer
+          format: int64
+          description: Total stale rows that were present but unexpected and deleted for this org.
+        added:
+          type: array
+          description: Bounded sample of the added rows (capped at sampleLimitPerDirection).
+          items:
+            $ref: "#/components/schemas/ResourceSearchDriftDocument"
+        removed:
+          type: array
+          description: Bounded sample of the removed rows (capped at sampleLimitPerDirection).
+          items:
+            $ref: "#/components/schemas/ResourceSearchDriftDocument"
+        sampleTruncated:
+          type: boolean
+          description: True when addedCount+removedCount exceeds the returned sample size.
+      required:
+        - organizationId
+        - addedCount
+        - removedCount
+        - added
+        - removed
+        - sampleTruncated
+
+    ResourceSearchResyncReport:
+      type: object
+      description: Result of an admin resync — what drifted and was corrected, grouped by organization.
+      properties:
+        totalAdded:
+          type: integer
+          format: int64
+        totalRemoved:
+          type: integer
+          format: int64
+        organizationCount:
+          type: integer
+          description: Number of organizations that had drift corrected.
+        sampleLimitPerDirection:
+          type: integer
+          description: Max added/removed rows returned per org per direction.
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceSearchOrgResyncReport"
+      required:
+        - totalAdded
+        - totalRemoved
+        - organizationCount
+        - sampleLimitPerDirection
+        - organizations
+
     # Webhook Schemas
     Webhook:
       type: object
@@ -783,7 +918,7 @@ components:
       description: Simplified response body classification for AI and UX.
     CollectionRequestAuthType:
       type: string
-      enum: [none, bearer, api_key]
+      enum: [none, bearer, api_key, basic]
       description: Dedicated authentication mode for a saved collection request.
     CollectionRequestAuthApiKeyLocation:
       type: string
@@ -823,6 +958,16 @@ components:
             - $ref: "#/components/schemas/CollectionRequestAuthApiKeyLocation"
           nullable: true
           description: API key placement for api_key authentication.
+        username:
+          type: string
+          nullable: true
+          description: Username template or literal value for basic authentication.
+          example: "{{apiUser}}"
+        password:
+          type: string
+          nullable: true
+          description: Password template or literal value for basic authentication.
+          example: "{{apiPassword}}"
       required:
         - type
 
@@ -1493,6 +1638,11 @@ components:
             type: string
           description: Flat canonical tags associated with the flow (lowercase, normalized, deduplicated, sorted).
           example: ["production", "monitoring"]
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The flow's folder, or null when it is uncategorized.
         created_at:
           type: string
           format: date-time
@@ -1545,6 +1695,13 @@ components:
             type: string
           description: Optional flat tags for the flow. Lowercased, normalized, deduplicated, and sorted on write. Omitted defaults to an empty list.
           example: ["production", "monitoring"]
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: >-
+            Folder to create the flow in. Omit or send null to leave it
+            uncategorized. A folder unknown to the organization yields 404.
       required:
         - name
         - flow_definition
@@ -1584,6 +1741,166 @@ components:
             send an empty array to clear all tags; send a list to replace the tag set.
             Lowercased, normalized, deduplicated, and sorted on write.
           example: ["staging"]
+
+    FlowFolder:
+      type: object
+      description: A folder in the organization's flow tree. One home per flow.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated unique identifier.
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent folder, or null for a root folder.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Folder name.
+          example: "Payments"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+
+    FlowFolderListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FlowFolder"
+          required:
+            - items
+
+    CreateFlowFolderRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Folder name.
+          example: "Payments"
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent folder, or null for a root folder.
+      required:
+        - name
+
+    UpdateFlowFolderRequest:
+      type: object
+      description: >-
+        Partial folder update. Omit a field to leave it unchanged. Prefer
+        POST /flows/folders/{folderId}/move for reparenting — it is the single
+        move endpoint and can also move a folder back to the root, which this
+        pointer field cannot express.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: New folder name.
+        parent_id:
+          type: string
+          format: uuid
+          description: New parent folder to nest this folder under.
+
+    MoveFlowFolderRequest:
+      type: object
+      description: >-
+        Sets the folder's parent. parent_id is always present; send null to move
+        the folder to the root (top level). Returns 400 when the move would form
+        a cycle (the folder into itself or a descendant) or nest deeper than the
+        folder depth limit, and 409 when another flow-tree mutation is in flight
+        (the move serializes on the per-organization flow-tree lock).
+      properties:
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: New parent folder, or null to move the folder to the root.
+      required:
+        - parent_id
+
+    FlowFolderDeletionResult:
+      type: object
+      description: Summary of a folder subtree deletion.
+      properties:
+        deleted_folders:
+          type: integer
+          description: Number of folders removed (the folder plus its descendants).
+        uncategorized_flows:
+          type: integer
+          description: >-
+            Number of flows moved to the Uncategorized bucket. Always 0 when
+            delete_flows is true.
+        deleted_flows:
+          type: integer
+          description: >-
+            Number of flows permanently deleted. Always 0 unless delete_flows
+            is true.
+      required:
+        - deleted_folders
+        - uncategorized_flows
+        - deleted_flows
+
+    BulkMoveFlowsRequest:
+      type: object
+      description: >-
+        Moves many flows into one folder in a single operation. Provide exactly
+        one selector: flow_ids (an explicit set) or filter (every flow matching
+        a search, moved server-side — not just a page). folder_id is the shared
+        destination; send null to move them all to the Uncategorized bucket.
+      properties:
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Destination folder for every moved flow, or null for Uncategorized.
+        flow_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: >-
+            Explicit set of flows to move. Mutually exclusive with filter; an
+            empty list is rejected.
+        filter:
+          allOf:
+            - $ref: "#/components/schemas/FlowSearchRequest"
+          description: >-
+            The same criteria as flow search — every matching flow is moved,
+            regardless of how many pages it spans. pagination, sort_direction,
+            and include_definition are ignored.
+      required:
+        - folder_id
+
+    BulkMoveFlowsResult:
+      type: object
+      description: Summary of a bulk flow move.
+      properties:
+        moved_flows:
+          type: integer
+          description: >-
+            Number of flows whose folder actually changed. Flows already in the
+            destination are not counted.
+      required:
+        - moved_flows
 
     FlowMetadata:
       type: object
@@ -1625,6 +1942,32 @@ components:
               description: >-
                 Include the full flow_definition in each result. Omitted by
                 default to keep search payloads small.
+            folder_id:
+              type: string
+              format: uuid
+              nullable: true
+              description: >-
+                Scope results to this folder and all of its descendants. Omit to
+                search every folder. Ignored when uncategorized is true. A
+                folder unknown to the organization yields 404.
+            uncategorized:
+              type: boolean
+              default: false
+              description: >-
+                Return only flows with no folder (the Uncategorized bucket). Takes
+                precedence over folder_id.
+
+    FlowRunStatus:
+      type: string
+      description: >-
+        Outcome of a flow's most recent terminal execution, folded to the states
+        the Flow Library list renders: passed (completed), failed (failed), or
+        none (no terminal run yet). In-flight and cancelled runs are ignored:
+        they never erase the last real pass/fail badge.
+      enum:
+        - passed
+        - failed
+        - none
 
     FlowSearchItem:
       type: object
@@ -1648,6 +1991,16 @@ components:
           type: array
           items:
             type: string
+        folder_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The flow's folder, or null when it is uncategorized.
+        node_count:
+          type: integer
+          description: Number of nodes in the flow definition.
+        last_run_status:
+          $ref: "#/components/schemas/FlowRunStatus"
         flow_definition:
           $ref: "#/components/schemas/FlowDefinition"
         created_at:
@@ -1662,6 +2015,8 @@ components:
         - name
         - version
         - tags
+        - node_count
+        - last_run_status
         - created_at
         - updated_at
 
@@ -1758,388 +2113,6 @@ components:
                 $ref: "#/components/schemas/FlowVersion"
           required:
             - items
-
-    FlowGenerationStatus:
-      type: string
-      enum: [running, completed, failed, cancelled]
-      description: Lifecycle status for an AI-assisted flow generation run.
-    CreateFlowGenerationRequest:
-      type: object
-      properties:
-        flow_id:
-          type: string
-          format: uuid
-          description: Existing flow to update with the generated plan.
-        prompt:
-          type: string
-          minLength: 1
-          maxLength: 4000
-          description: Natural-language request describing the flow to generate.
-          example: "Create a smoke test that creates a user and then fetches it"
-        collection_ids:
-          type: array
-          description: Optional collection scope to limit request search.
-          items:
-            type: string
-            format: uuid
-      required:
-        - flow_id
-        - prompt
-
-    FlowGeneration:
-      type: object
-      properties:
-        run_id:
-          type: string
-          format: uuid
-          description: Workflow run ID backing this generation.
-        status:
-          $ref: "#/components/schemas/FlowGenerationStatus"
-        flow_id:
-          type: string
-          format: uuid
-          description: Existing flow ID being updated by this generation run.
-        flow:
-          allOf:
-            - $ref: "#/components/schemas/Flow"
-          nullable: true
-        error_message:
-          type: string
-          nullable: true
-          description: Failure reason when the generation run does not succeed.
-        created_at:
-          type: string
-          format: date-time
-        completed_at:
-          type: string
-          format: date-time
-          nullable: true
-      required:
-        - run_id
-        - status
-        - flow_id
-        - created_at
-
-    FlowGenerationSessionStatus:
-      type: string
-      enum: [idle, running, archived]
-      description: Lifecycle status for a persisted AI flow generation session.
-    FlowGenerationSessionMessageRole:
-      type: string
-      enum: [user, assistant, system]
-      description: Author role for a flow generation session message.
-    FlowGenerationSessionMessageKind:
-      type: string
-      enum: [message, status, result, error, checkpoint]
-      description: Display category for a flow generation session message.
-    FlowGenerationSessionMentionKind:
-      type: string
-      enum: [collection, request, flow]
-      description: Supported mention kinds within a flow generation session message.
-    FlowGenerationSessionMention:
-      type: object
-      properties:
-        kind:
-          $ref: "#/components/schemas/FlowGenerationSessionMentionKind"
-        id:
-          type: string
-          format: uuid
-        collection_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Parent collection id for request mentions.
-        label:
-          type: string
-      required:
-        - kind
-        - id
-        - label
-
-    FlowGenerationConversationMessage:
-      type: object
-      properties:
-        role:
-          $ref: "#/components/schemas/FlowGenerationSessionMessageRole"
-        content:
-          type: string
-      required:
-        - role
-        - content
-
-    FlowGenerationSessionMessage:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        run_id:
-          type: string
-          format: uuid
-          nullable: true
-        role:
-          $ref: "#/components/schemas/FlowGenerationSessionMessageRole"
-        kind:
-          $ref: "#/components/schemas/FlowGenerationSessionMessageKind"
-        content:
-          type: string
-        mentions:
-          type: array
-          items:
-            $ref: "#/components/schemas/FlowGenerationSessionMention"
-        metadata:
-          type: object
-          additionalProperties: true
-        created_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - role
-        - kind
-        - content
-        - mentions
-        - metadata
-        - created_at
-
-    FlowGenerationSession:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        flow_id:
-          type: string
-          format: uuid
-        status:
-          $ref: "#/components/schemas/FlowGenerationSessionStatus"
-        active_run_id:
-          type: string
-          format: uuid
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - flow_id
-        - status
-        - created_at
-        - updated_at
-
-    FlowGenerationSessionRun:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        workflow_run_id:
-          type: string
-          format: uuid
-          nullable: true
-        flow_id:
-          type: string
-          format: uuid
-        status:
-          $ref: "#/components/schemas/FlowGenerationStatus"
-        prompt:
-          type: string
-        collection_ids:
-          type: array
-          items:
-            type: string
-            format: uuid
-        error_message:
-          type: string
-          nullable: true
-        can_restore:
-          type: boolean
-          description: Whether the flow can be restored to the pre-run snapshot captured for this run.
-        created_at:
-          type: string
-          format: date-time
-        completed_at:
-          type: string
-          format: date-time
-          nullable: true
-      required:
-        - id
-        - flow_id
-        - status
-        - prompt
-        - collection_ids
-        - can_restore
-        - created_at
-
-    FlowGenerationContextSnapshot:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        run_id:
-          type: string
-          format: uuid
-        model:
-          type: string
-        system_prompt:
-          type: string
-        runtime_context:
-          type: string
-        summary:
-          type: string
-          nullable: true
-        prompt_messages:
-          type: array
-          items:
-            $ref: "#/components/schemas/FlowGenerationConversationMessage"
-        prompt_message_count:
-          type: integer
-        estimated_input_tokens:
-          type: integer
-        max_input_tokens:
-          type: integer
-        reserved_completion_tokens:
-          type: integer
-        compaction_count:
-          type: integer
-        created_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - run_id
-        - model
-        - system_prompt
-        - runtime_context
-        - prompt_messages
-        - prompt_message_count
-        - estimated_input_tokens
-        - max_input_tokens
-        - reserved_completion_tokens
-        - compaction_count
-        - created_at
-
-    FlowGenerationCompactionCheckpoint:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        run_id:
-          type: string
-          format: uuid
-          nullable: true
-        source_end_message_id:
-          type: string
-          format: uuid
-          nullable: true
-        summary:
-          type: string
-        compacted_message_count:
-          type: integer
-        tail_message_count:
-          type: integer
-        estimated_tokens_before:
-          type: integer
-        estimated_tokens_after:
-          type: integer
-        created_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - summary
-        - compacted_message_count
-        - tail_message_count
-        - estimated_tokens_before
-        - estimated_tokens_after
-        - created_at
-
-    FlowGenerationSessionDetail:
-      type: object
-      properties:
-        session:
-          $ref: "#/components/schemas/FlowGenerationSession"
-        latest_run:
-          allOf:
-            - $ref: "#/components/schemas/FlowGenerationSessionRun"
-          nullable: true
-        latest_context_snapshot:
-          allOf:
-            - $ref: "#/components/schemas/FlowGenerationContextSnapshot"
-          nullable: true
-        recent_checkpoints:
-          type: array
-          items:
-            $ref: "#/components/schemas/FlowGenerationCompactionCheckpoint"
-        total_message_count:
-          type: integer
-          description: Total number of messages in the session.
-      required:
-        - session
-        - recent_checkpoints
-        - total_message_count
-
-    FlowGenerationSessionMessageList:
-      type: object
-      properties:
-        messages:
-          type: array
-          items:
-            $ref: "#/components/schemas/FlowGenerationSessionMessage"
-        has_more:
-          type: boolean
-          description: Whether older messages exist before this page.
-      required:
-        - messages
-        - has_more
-
-    CreateFlowGenerationSessionMessageRequest:
-      type: object
-      properties:
-        content:
-          type: string
-          minLength: 1
-          maxLength: 4000
-        mentions:
-          type: array
-          items:
-            $ref: "#/components/schemas/FlowGenerationSessionMention"
-      required:
-        - content
-
-    FlowGenerationSessionMessageSendResult:
-      type: object
-      properties:
-        session:
-          $ref: "#/components/schemas/FlowGenerationSession"
-        latest_run:
-          $ref: "#/components/schemas/FlowGenerationSessionRun"
-        message:
-          $ref: "#/components/schemas/FlowGenerationSessionMessage"
-      required:
-        - session
-        - latest_run
-        - message
-
-    FlowGenerationSessionRestoreResult:
-      type: object
-      properties:
-        flow:
-          $ref: "#/components/schemas/Flow"
-        message:
-          $ref: "#/components/schemas/FlowGenerationSessionMessage"
-        restored_run_id:
-          type: string
-          format: uuid
-      required:
-        - flow
-        - message
-        - restored_run_id
 
     # Flow Execution Schemas
     ExecutionStatus:
@@ -4633,8 +4606,6 @@ paths:
                 $ref: "#/components/schemas/Webhook"
         "400":
           $ref: "#/components/responses/BadRequest"
-        "409":
-          $ref: "#/components/responses/Conflict"
 
   /webhooks/{id}:
     parameters:
@@ -4710,7 +4681,7 @@ paths:
     post:
       summary: Resync Resource Search Documents
       description: |-
-        Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant.
+        Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant, and returns a report — grouped by organization — of the rows that had drifted and were corrected (missing rows added back, stale rows removed).
         Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
       operationId: resyncResourceSearch
       x-ai-danger: "Admin route - requires a privileged session."
@@ -4718,8 +4689,12 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        "202":
-          description: Resync completed successfully.
+        "200":
+          description: Resync completed successfully; body reports what drifted and was corrected.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceSearchResyncReport"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -5429,6 +5404,248 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /flows/folders/move:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Move Flows into a Folder
+      description: >-
+        Moves many flows into one folder in a single transaction. Select the
+        flows either by an explicit flow_ids set or by a search filter (which
+        moves the entire matching set, not just a page). Send folder_id null to
+        move them to the Uncategorized bucket. Serializes on the per-organization
+        flow-tree lock and returns 409 when another tree mutation is in flight.
+      operationId: bulkMoveFlows
+      x-ai-tool: true
+      x-ai-description: "Move many flows into one folder at once, chosen by explicit ids or by a search filter (null folder = uncategorized)."
+      x-ai-danger: "Mutates many flows in one call; a broad filter can move the entire organization's flows. Confirm the filter scope first."
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      requestBody:
+        description: Destination folder plus the flow selector (ids or filter).
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkMoveFlowsRequest"
+      responses:
+        "200":
+          description: Flows moved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkMoveFlowsResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /flows/folders:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Flow Folders
+      description: Returns every flow folder for the organization so clients can build the tree.
+      operationId: listFlowFolders
+      x-ai-tool: true
+      x-ai-description: "List the organization's flow folders (id, parent, name) to render the flow tree."
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      responses:
+        "200":
+          description: Flow folders returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowFolderListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create Flow Folder
+      description: Creates a flow folder, optionally nested under a parent folder.
+      operationId: createFlowFolder
+      x-ai-tool: true
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:create]
+        - ApiKeys: [flows:create]
+      requestBody:
+        description: Folder creation details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlowFolderRequest"
+      responses:
+        "201":
+          description: Flow folder created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /flows/folders/{folderId}:
+    parameters:
+      - name: folderId
+        in: path
+        required: true
+        description: The unique identifier of the flow folder.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    put:
+      summary: Update Flow Folder
+      description: Renames a flow folder or moves it under a different parent.
+      operationId: updateFlowFolder
+      x-ai-tool: true
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      requestBody:
+        description: Folder update details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFlowFolderRequest"
+      responses:
+        "200":
+          description: Flow folder updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      summary: Delete Flow Folder
+      description: >-
+        Deletes a folder and its descendants. By default the flows inside the
+        subtree survive and move to the Uncategorized bucket; with
+        delete_flows=true they are permanently deleted instead.
+      operationId: deleteFlowFolder
+      x-ai-tool: true
+      x-ai-description: >-
+        Delete a flow folder subtree. Keep delete_flows false unless the user
+        explicitly asked to also delete the flows inside: delete_flows=true
+        irreversibly deletes every flow in the subtree with its execution
+        history.
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:delete]
+        - ApiKeys: [flows:delete]
+      parameters:
+        - name: delete_flows
+          in: query
+          required: false
+          description: >-
+            When true, permanently deletes every flow in the deleted subtree
+            (including execution history). Irreversible. When false or omitted,
+            flows move to the Uncategorized bucket.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Flow folder deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowFolderDeletionResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /flows/folders/{folderId}/move:
+    parameters:
+      - name: folderId
+        in: path
+        required: true
+        description: The unique identifier of the flow folder to move.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Move Flow Folder
+      description: >-
+        Moves a folder under a different parent, or to the root when parent_id is
+        null. This is the single endpoint for reparenting a folder and the only
+        one that can move a folder back to the root. Rejects moves that would
+        form a cycle (a folder into itself or a descendant) or exceed the depth
+        limit, and serializes on the per-organization flow-tree lock.
+      operationId: moveFlowFolder
+      x-ai-tool: true
+      x-ai-description: "Move a folder under another folder, or to the root (send parent_id null)."
+      x-ai-danger: "Reparents the whole folder subtree; confirm the destination before moving."
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      requestBody:
+        description: The new parent folder (null = root).
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveFlowFolderRequest"
+      responses:
+        "200":
+          description: Folder moved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /flows/tags:
     parameters:
@@ -5456,280 +5673,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
-  /flows/generations:
-    parameters:
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    post:
-      summary: Start Flow Generation
-      description: Starts an asynchronous AI-assisted flow generation run.
-      operationId: createFlowGeneration
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateFlowGenerationRequest"
-      responses:
-        "201":
-          description: Flow generation run started successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FlowGeneration"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /flows/generations/{runId}:
-    parameters:
-      - name: runId
-        in: path
-        required: true
-        description: The workflow run ID returned when generation started.
-        schema:
-          type: string
-          format: uuid
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    get:
-      summary: Get Flow Generation
-      description: Retrieves the current status and result of an AI-assisted flow generation run.
-      operationId: getFlowGeneration
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:read]
-        - ApiKeys: [flows:read]
-      responses:
-        "200":
-          description: Flow generation status retrieved successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FlowGeneration"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /flows/{id}/generation-sessions:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        description: The unique identifier of the flow.
-        schema:
-          type: string
-          format: uuid
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    post:
-      summary: Ensure Flow Generation Session
-      description: Creates or returns the active AI generation session for the current user and flow.
-      operationId: ensureFlowGenerationSession
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
-      responses:
-        "200":
-          description: Active generation session returned successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FlowGenerationSession"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /flow-generation-sessions/{sessionId}:
-    parameters:
-      - name: sessionId
-        in: path
-        required: true
-        description: The unique identifier of the flow generation session.
-        schema:
-          type: string
-          format: uuid
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    get:
-      summary: Get Flow Generation Session
-      description: Retrieves the current session state, latest run, and recent chat messages.
-      operationId: getFlowGenerationSession
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:read]
-        - ApiKeys: [flows:read]
-      responses:
-        "200":
-          description: Session retrieved successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FlowGenerationSessionDetail"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /flow-generation-sessions/{sessionId}/messages:
-    parameters:
-      - name: sessionId
-        in: path
-        required: true
-        description: The unique identifier of the flow generation session.
-        schema:
-          type: string
-          format: uuid
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    get:
-      summary: List Flow Generation Session Messages
-      description: Returns a paginated list of messages for the session, ordered oldest to newest. Use the `before` cursor to page backward through older messages.
-      operationId: listFlowGenerationSessionMessages
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:read]
-        - ApiKeys: [flows:read]
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          description: Maximum number of messages to return (1–50, default 20).
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 50
-            default: 20
-        - name: before
-          in: query
-          required: false
-          description: Cursor — return messages created before this message ID. Omit to start from the latest messages.
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Paginated list of messages.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FlowGenerationSessionMessageList"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    post:
-      summary: Send Flow Generation Session Message
-      description: Persists a user message and starts a linked AI generation run for the session.
-      operationId: createFlowGenerationSessionMessage
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateFlowGenerationSessionMessageRequest"
-      responses:
-        "201":
-          description: Session message accepted and run started.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FlowGenerationSessionMessageSendResult"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-
-  /flow-generation-sessions/{sessionId}/stream:
-    parameters:
-      - name: sessionId
-        in: path
-        required: true
-        description: The unique identifier of the flow generation session.
-        schema:
-          type: string
-          format: uuid
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    get:
-      summary: Stream flow generation session events
-      description: Streams real-time AI session events for a specific flow generation session using Server-Sent Events.
-      operationId: streamFlowGenerationSession
-      x-ai-danger: "SSE stream - long-lived, incompatible with request/response tools."
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:read]
-      responses:
-        "200":
-          description: Server-Sent Events stream of flow generation session events.
-          content:
-            text/event-stream:
-              schema:
-                type: string
-                description: Stream of JSON event payloads prefixed with `data:`.
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /flow-generation-sessions/{sessionId}/runs/{runId}/restore:
-    parameters:
-      - name: sessionId
-        in: path
-        required: true
-        description: The unique identifier of the flow generation session.
-        schema:
-          type: string
-          format: uuid
-      - name: runId
-        in: path
-        required: true
-        description: The unique identifier of the flow generation run to restore from.
-        schema:
-          type: string
-          format: uuid
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    post:
-      summary: Restore flow from AI session run snapshot
-      description: Restores the current flow to the snapshot captured before the specified AI session run applied its changes.
-      operationId: restoreFlowGenerationSessionRun
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
-      responses:
-        "200":
-          description: Flow restored successfully from the selected AI session run snapshot.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FlowGenerationSessionRestoreResult"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
 
   /flows/{id}:
     parameters:
@@ -6104,8 +6047,6 @@ paths:
           $ref: "#/components/responses/InternalServerError"
 
   /api-keys/self:
-    parameters:
-      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Get current API key identity
       description: >-
@@ -7842,3 +7783,40 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /assistant/chat:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      summary: Chat With Assistant
+      description: >
+        Streams the assistant's reply to a chat message as Server-Sent Events.
+        Events are JSON payloads prefixed with `data:` carrying a `type` field:
+        `message.delta` ({text} with the full text so far), `message.completed`
+        ({actions, follow_ups}), and `error` ({error}). The current
+        implementation streams mocked replies; the AI transport replaces the
+        reply source later without changing this contract.
+      operationId: chatWithAssistant
+      x-ai-danger: "SSE stream - long-lived, incompatible with request/response tools."
+      tags: [Assistant]
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: The chat message and its conversation scope.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantChatRequest"
+      responses:
+        "200":
+          description: Server-Sent Events stream of assistant reply events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream of JSON event payloads prefixed with `data:`.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"

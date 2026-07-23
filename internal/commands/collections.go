@@ -71,7 +71,7 @@ func newCollectionsListCmd(state *AppState) *cobra.Command {
 					)
 				}
 				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
-				return output.PrintTable([]string{"ID", "Name", "Updated"}, rows)
+				return output.PrintTable([]string{columnID, columnName, "Updated"}, rows)
 			}
 		},
 	}
