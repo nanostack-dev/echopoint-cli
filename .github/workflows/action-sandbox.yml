@@ -51,7 +51,7 @@ jobs:
 
       - name: Checkout
         if: steps.check-creds.outputs.skip != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run Echopoint sandbox flow
         if: steps.check-creds.outputs.skip != 'true'
