@@ -55,8 +55,6 @@ Use a dedicated, least-privilege organization API key for CI and store it as a r
 | `environment` | no | — | Environment key for resolved inputs/env. |
 | `version-id` | no | current | Immutable flow version to run. Applies to every requested flow. |
 | `cli-version` | no | `latest` | `echopoint` CLI release to download. |
-| `runner-version` | no | = `cli-version` | `echopoint-runner` release to download. |
-| `runner-binary` | no | — | Path to a pre-installed runner; skips the runner download. |
 | `poll-timeout` | no | `300` | Max seconds to wait for all flows. |
 | `parallel` | no | `1` | Number of flows to run concurrently (must be ≥ 1). |
 
@@ -138,7 +136,6 @@ Pin specific binary versions and consume outputs:
     organization-id: ${{ secrets.ECHOPOINT_ORG_ID }}
     flow-id: flow_abc123
     cli-version: v1.2.0
-    runner-version: v1.2.0
 - run: echo "status=${{ steps.smoke.outputs.status }} success=${{ steps.smoke.outputs.success }}"
 ```
 
@@ -153,13 +150,12 @@ export ECHOPOINT_ORGANIZATION_ID=...  # or --organization-id
 echopoint flows run flow_abc123 \
   --environment staging \
   --version-id ver_2024_06_01 \
-  --runner-binary "$(which echopoint-runner)" \
   --parallel 1 \
   --poll-timeout 5m \
   -o json
 ```
 
-Flags: `--environment`, `--version-id`, `--runner-binary`, `--idempotency-key`,
+Flags: `--environment`, `--version-id`, `--idempotency-key`,
 `--poll-timeout` (default `30m`), `--parallel` (default `1`), `-o json`. Auth comes from
 `--api-key` / `ECHOPOINT_API_KEY` and `--organization-id` / `ECHOPOINT_ORGANIZATION_ID`
 (API-key auth takes precedence over any Bearer token). When `GITHUB_ACTIONS=true` the CLI
