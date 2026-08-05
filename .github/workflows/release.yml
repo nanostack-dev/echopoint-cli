@@ -9,6 +9,14 @@ on:
 permissions:
   contents: write
 
+env:
+  # Floating major tag consumers pin the composite action at
+  # (`uses: nanostack-dev/echopoint-cli@v1`). This is the ACTION's contract
+  # version and is deliberately independent of the CLI's semver — the CLI is
+  # still on v0.x. Bump this by hand only when action.yml changes in a way that
+  # breaks existing callers (removing/renaming an input, changing a default).
+  ACTION_MAJOR_TAG: v1
+
 jobs:
   create-tag:
     name: Create Version Tag
@@ -126,3 +134,35 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  move-major-tag:
+    name: Move floating action tag
+    runs-on: ubuntu-latest
+    needs: [create-tag, goreleaser]
+    if: needs.create-tag.outputs.release == 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Consumers pin the composite action at the floating major tag, so a
+      # change to action.yml reaches nobody until that tag is repointed. This
+      # used to be a manual step that was silently skipped: the CLI dropped the
+      # --runner-binary flag in b9b673c while v1 stayed frozen on a commit that
+      # still passed it, and every flow suite died on `unknown flag` for two
+      # weeks behind a continue-on-error.
+      - name: Repoint floating major tag at the released commit
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Tag HEAD rather than the semver tag by name: create-tag applied that
+          # tag to this same commit, and HEAD needs no tag fetch to resolve.
+          git tag -f "$ACTION_MAJOR_TAG" HEAD
+          git push --force origin "refs/tags/$ACTION_MAJOR_TAG"
+
+          echo "\`$ACTION_MAJOR_TAG\` -> ${{ needs.create-tag.outputs.new_tag }} ($(git rev-parse --short HEAD))" \
+            >> "$GITHUB_STEP_SUMMARY"
