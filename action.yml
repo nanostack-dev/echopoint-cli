@@ -33,15 +33,6 @@ inputs:
     description: Version of the echopoint CLI to download (e.g. v1.2.0 or latest).
     required: false
     default: latest
-  runner-version:
-    description: >
-      Version of echopoint-runner to download. Defaults to cli-version when omitted.
-    required: false
-  runner-binary:
-    description: >
-      Path to an already-installed echopoint-runner binary. When set, the action
-      skips downloading the runner and uses this path instead.
-    required: false
   poll-timeout:
     description: Maximum seconds to wait for all flows to complete.
     required: false
@@ -143,12 +134,6 @@ runs:
         set -euo pipefail
 
         cli_version="${{ inputs.cli-version }}"
-        runner_version="${{ inputs.runner-version }}"
-
-        # Default runner-version to cli-version when not set
-        if [ -z "$runner_version" ]; then
-          runner_version="$cli_version"
-        fi
 
         # Resolve 'latest' for the CLI via GitHub Releases API
         if [ "$cli_version" = "latest" ]; then
@@ -163,21 +148,7 @@ runs:
           fi
         fi
 
-        # Resolve 'latest' for the runner
-        if [ "$runner_version" = "latest" ]; then
-          runner_version=$(curl -fsSL \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/nanostack-dev/echopoint-runner/releases/latest" \
-            | grep '"tag_name"' \
-            | sed -E 's/.*"([^"]+)".*/\1/')
-          if [ -z "$runner_version" ]; then
-            echo "::error::Failed to resolve latest runner version from GitHub Releases."
-            exit 3
-          fi
-        fi
-
         echo "cli-version=$cli_version" >> "$GITHUB_OUTPUT"
-        echo "runner-version=$runner_version" >> "$GITHUB_OUTPUT"
 
     # ------------------------------------------------------------------ #
     # 4. Detect runner OS / arch                                          #
@@ -278,75 +249,22 @@ runs:
         # This is omitted in v1 as a known hardening TODO.
 
     # ------------------------------------------------------------------ #
-    # 6. Download echopoint-runner (skip when runner-binary is set)       #
+    # 6. Add CLI to PATH                                                  #
     # ------------------------------------------------------------------ #
-    - name: Download echopoint-runner
-      id: download-runner
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        runner_binary="${{ inputs.runner-binary }}"
-
-        if [ -n "$runner_binary" ]; then
-          echo "Using provided runner-binary: $runner_binary"
-          echo "binary=$runner_binary" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        version="${{ steps.versions.outputs.runner-version }}"
-        version_num="${version#v}"
-        os="${{ steps.platform.outputs.os }}"
-        arch="${{ steps.platform.outputs.arch }}"
-        ext="${{ steps.platform.outputs.archive-ext }}"
-        bin_ext="${{ steps.platform.outputs.binary-ext }}"
-
-        # Runner uses the same GoReleaser naming convention
-        archive="echopoint-runner_${version_num}_${os}_${arch}.${ext}"
-        url="https://github.com/nanostack-dev/echopoint-runner/releases/download/${version}/${archive}"
-
-        echo "Downloading echopoint-runner ${version} (${os}/${arch}) from ${url}"
-
-        tmp_dir=$(mktemp -d)
-        trap "rm -rf '$tmp_dir'" EXIT
-
-        curl -fsSL -o "${tmp_dir}/${archive}" "$url"
-
-        install_dir="${RUNNER_TEMP}/echopoint-runner-bin"
-        mkdir -p "$install_dir"
-
-        if [ "$ext" = "zip" ]; then
-          unzip -q "${tmp_dir}/${archive}" -d "$install_dir"
-        else
-          tar -xzf "${tmp_dir}/${archive}" -C "$install_dir"
-        fi
-
-        chmod +x "${install_dir}/echopoint-runner${bin_ext}"
-
-        echo "binary=${install_dir}/echopoint-runner${bin_ext}" >> "$GITHUB_OUTPUT"
-
-        # TODO(post-v1): verify SHA-256 checksum against checksums.txt from the release.
-
-    # ------------------------------------------------------------------ #
-    # 7. Add binaries to PATH                                             #
-    # ------------------------------------------------------------------ #
-    - name: Add binaries to PATH
+    # The echopoint-runner is compiled into the CLI as a library
+    # (echopoint-runner/pkg/ephemeral), so there is no separate runner binary
+    # to download or put on PATH.
+    - name: Add CLI to PATH
       shell: bash
       run: |
         set -euo pipefail
 
         cli_dir=$(dirname "${{ steps.download-cli.outputs.binary }}")
-        runner_dir=$(dirname "${{ steps.download-runner.outputs.binary }}")
 
-        echo "$cli_dir"    >> "$GITHUB_PATH"
-
-        # Only add runner dir to PATH when it differs from CLI dir
-        if [ "$runner_dir" != "$cli_dir" ]; then
-          echo "$runner_dir" >> "$GITHUB_PATH"
-        fi
+        echo "$cli_dir" >> "$GITHUB_PATH"
 
     # ------------------------------------------------------------------ #
-    # 8. Build flow ID list                                               #
+    # 7. Build flow ID list                                               #
     # ------------------------------------------------------------------ #
     - name: Build flow ID args
       id: flow-ids
@@ -371,7 +289,7 @@ runs:
         fi
 
     # ------------------------------------------------------------------ #
-    # 9. Run echopoint flows run                                          #
+    # 8. Run echopoint flows run                                          #
     # ------------------------------------------------------------------ #
     - name: Run echopoint flows run
       id: run-flows
@@ -424,11 +342,6 @@ runs:
           extra_flags+=(--parallel "$parallel")
         fi
 
-        runner_binary="${{ steps.download-runner.outputs.binary }}"
-        if [ -n "$runner_binary" ]; then
-          extra_flags+=(--runner-binary "$runner_binary")
-        fi
-
         # Run CLI and capture JSON output (stdout) while letting human-readable
         # progress/errors (stderr) flow to the workflow log. Preserve exit code without
         # aborting. The CLI writes exactly one JSON object to stdout under -o json.
@@ -445,7 +358,7 @@ runs:
         echo "cli-exit=$cli_exit"    >> "$GITHUB_OUTPUT"
 
     # ------------------------------------------------------------------ #
-    # 10. Parse JSON into GITHUB_OUTPUT and write step summary            #
+    # 9. Parse JSON into GITHUB_OUTPUT and write step summary             #
     # ------------------------------------------------------------------ #
     - name: Parse outputs and write summary
       id: parse-outputs
@@ -570,7 +483,7 @@ runs:
         rm -f "$json_file"
 
     # ------------------------------------------------------------------ #
-    # 11. Exit with original CLI exit code                                #
+    # 10. Exit with original CLI exit code                                #
     # ------------------------------------------------------------------ #
     - name: Exit with CLI exit code
       shell: bash

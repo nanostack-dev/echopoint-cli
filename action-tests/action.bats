@@ -64,8 +64,6 @@ print('OK')
     "environment"
     "version-id"
     "cli-version"
-    "runner-version"
-    "runner-binary"
     "poll-timeout"
     "parallel"
   )
@@ -181,23 +179,12 @@ print('OK')
 
 @test "4.4.2 artifact URL strips v prefix from version number" {
   url=$(build_artifact_url \
-    "nanostack-dev/echopoint-runner" \
+    "nanostack-dev/echopoint-cli" \
     "v2.0.0" \
-    "echopoint-runner" \
+    "echopoint" \
     "darwin" "arm64" "tar.gz")
 
-  echo "$url" | grep -q "echopoint-runner_2.0.0_darwin_arm64.tar.gz"
-}
-
-@test "4.4.2 artifact URL for runner uses echopoint-runner binary name" {
-  url=$(build_artifact_url \
-    "nanostack-dev/echopoint-runner" \
-    "v1.0.0" \
-    "echopoint-runner" \
-    "linux" "amd64" "tar.gz")
-
-  echo "$url" | grep -q "nanostack-dev/echopoint-runner"
-  echo "$url" | grep -q "echopoint-runner_1.0.0_linux_amd64.tar.gz"
+  echo "$url" | grep -q "echopoint_2.0.0_darwin_arm64.tar.gz"
 }
 
 # -----------------------------------------------------------------------
