@@ -90,10 +90,16 @@ func newFlowEnvUnsetCmd(state *AppState) *cobra.Command {
 
 // newFlowEnvGetCmd gets environment variables for a flow
 func newFlowEnvGetCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
+	var showValues bool
+
+	cmd := &cobra.Command{
 		Use:   "get <flow-id>",
 		Short: "Get flow environment variables",
-		Args:  cobra.ExactArgs(1),
+		Long: `Get environment variables for a flow.
+
+Variable values are hidden by default and only names are shown. Pass
+--show-values to reveal them.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -113,26 +119,35 @@ func newFlowEnvGetCmd(state *AppState) *cobra.Command {
 			}
 
 			env := resp.JSON200
+			vars := make(map[string]string, len(env.Variables))
+			for k, v := range env.Variables {
+				vars[k] = v.Value
+			}
 
 			switch state.OutputFormat {
 			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, env)
+				return output.PrintJSON(os.Stdout, flowEnvGetPayload(env, vars, showValues))
 			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, env)
+				return output.PrintYAML(os.Stdout, flowEnvGetPayload(env, vars, showValues))
 			default:
-				if len(env.Variables) == 0 {
-					fmt.Println("No environment variables set")
-					return nil
-				}
-
-				fmt.Printf("Environment variables for flow %s:\n\n", flowID)
-				for key, val := range env.Variables {
-					fmt.Printf("  %s=%s\n", key, val.Value)
-				}
+				printVars(os.Stdout, fmt.Sprintf("Environment variables for flow %s", flowID), vars, showValues)
 				return nil
 			}
 		},
 	}
+
+	cmd.Flags().BoolVar(&showValues, "show-values", false, "Reveal variable values instead of names only")
+	return cmd
+}
+
+// flowEnvGetPayload builds the value to render for "flow env get": the raw
+// environment object (unchanged shape) when showValues is set, or a sorted
+// list of variable names otherwise so no map with emptied values is emitted.
+func flowEnvGetPayload(env *api.Environment, vars map[string]string, showValues bool) any {
+	if showValues {
+		return env
+	}
+	return sortedKeys(vars)
 }
 
 // newFlowEnvSetCmd sets environment variables for a flow

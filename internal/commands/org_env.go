@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
@@ -129,30 +130,96 @@ func upsertOrgEnv(state *AppState, base map[string]string, overlays map[string]m
 	return nil
 }
 
-// printVars renders a flat variable map for table output, sorted by key.
-func printVars(title string, vars map[string]string) {
-	if len(vars) == 0 {
-		fmt.Println("No environment variables set")
-		return
-	}
-	fmt.Printf("%s:\n\n", title)
+// sortedKeys returns the keys of a string-valued map, sorted ascending.
+func sortedKeys(vars map[string]string) []string {
 	keys := make([]string, 0, len(vars))
 	for k := range vars {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	return keys
+}
+
+// printVars renders a flat variable map for table output, sorted by key. By
+// default values are hidden (names only) so a credential never lands in
+// scrollback or a screenshot by accident; showValues opts into printing the
+// actual values.
+func printVars(w io.Writer, title string, vars map[string]string, showValues bool) {
+	if len(vars) == 0 {
+		fmt.Fprintln(w, "No environment variables set")
+		return
+	}
+	keys := sortedKeys(vars)
+
+	if !showValues {
+		fmt.Fprintf(w, "%s: %d variable(s) (values hidden, use --show-values to reveal)\n\n", title, len(keys))
+		for _, k := range keys {
+			fmt.Fprintf(w, "  %s\n", k)
+		}
+		return
+	}
+
+	fmt.Fprintf(w, "%s:\n\n", title)
 	for _, k := range keys {
-		fmt.Printf("  %s=%s\n", k, vars[k])
+		fmt.Fprintf(w, "  %s=%s\n", k, vars[k])
 	}
 }
 
+// orgEnvNames is the redacted JSON/YAML shape for the base "org env get"
+// command (no --environment): variable names only, never values.
+type orgEnvNames struct {
+	Variables    []string            `json:"variables"              yaml:"variables"`
+	Environments map[string][]string `json:"environments,omitempty" yaml:"environments,omitempty"`
+}
+
+// orgEnvGetPayload builds the value to render for the base "org env get"
+// path. With showValues it returns the raw environment (unchanged
+// behaviour); otherwise it returns a sorted list of variable names per
+// layer so a map with emptied-out values never gets emitted.
+func orgEnvGetPayload(
+	env *api.Environment,
+	base map[string]string,
+	overlays map[string]map[string]string,
+	showValues bool,
+) any {
+	if showValues {
+		return env
+	}
+
+	out := orgEnvNames{Variables: sortedKeys(base)}
+	if len(overlays) > 0 {
+		out.Environments = make(map[string][]string, len(overlays))
+		for name, vars := range overlays {
+			out.Environments[name] = sortedKeys(vars)
+		}
+	}
+	return out
+}
+
+// namedEnvGetPayload builds the value to render for the "-e" named-overlay
+// path (org env get -e <name>, and flow env get). With showValues it returns
+// the raw variable map; otherwise it returns a sorted list of names.
+func namedEnvGetPayload(vars map[string]string, showValues bool) any {
+	if showValues {
+		return vars
+	}
+	return sortedKeys(vars)
+}
+
 func newOrgEnvGetCmd(state *AppState) *cobra.Command {
-	var environment string
+	var (
+		environment string
+		showValues  bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get organization environment variables",
-		Args:  cobra.NoArgs,
+		Long: `Get organization environment variables.
+
+An organization environment can hold live credentials, so variable values are
+hidden by default and only names are shown. Pass --show-values to reveal them.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -175,22 +242,27 @@ func newOrgEnvGetCmd(state *AppState) *cobra.Command {
 				}
 				switch state.OutputFormat {
 				case output.FormatJSON:
-					return output.PrintJSON(os.Stdout, vars)
+					return output.PrintJSON(os.Stdout, namedEnvGetPayload(vars, showValues))
 				case output.FormatYAML:
-					return output.PrintYAML(os.Stdout, vars)
+					return output.PrintYAML(os.Stdout, namedEnvGetPayload(vars, showValues))
 				}
-				printVars(fmt.Sprintf("Organization environment %q variables", environment), vars)
+				printVars(
+					os.Stdout,
+					fmt.Sprintf("Organization environment %q variables", environment),
+					vars,
+					showValues,
+				)
 				return nil
 			}
 
 			switch state.OutputFormat {
 			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, env)
+				return output.PrintJSON(os.Stdout, orgEnvGetPayload(env, base, overlays, showValues))
 			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, env)
+				return output.PrintYAML(os.Stdout, orgEnvGetPayload(env, base, overlays, showValues))
 			}
 
-			printVars("Organization base variables", base)
+			printVars(os.Stdout, "Organization base variables", base, showValues)
 			if len(overlays) > 0 {
 				names := make([]string, 0, len(overlays))
 				for name := range overlays {
@@ -204,6 +276,7 @@ func newOrgEnvGetCmd(state *AppState) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named overlay instead of the base layer")
+	cmd.Flags().BoolVar(&showValues, "show-values", false, "Reveal variable values instead of names only")
 	return cmd
 }
 
