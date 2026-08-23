@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   version: 1.0.0
@@ -77,7 +77,7 @@ components:
         type: string
         minLength: 1
         pattern: ".*\\S.*"
-        example: "org_abc123"
+        examples: ["org_abc123"]
     WebhookIdParameter:
       name: id
       in: path
@@ -85,7 +85,7 @@ components:
       description: The unique identifier of the webhook endpoint.
       schema:
         type: string
-        example: "wh_abc123def456"
+        examples: ["wh_abc123def456"]
     ApiKeyIdParameter:
       name: id
       in: path
@@ -93,7 +93,7 @@ components:
       description: The unique identifier of the API key.
       schema:
         type: string
-        example: "organization_apikey_abc123def456"
+        examples: ["organization_apikey_abc123def456"]
     ApiKeyPermissionTypeParameter:
       name: type
       in: query
@@ -221,20 +221,20 @@ components:
         code:
           type: string
           description: A machine-readable error code.
-          example: "VALIDATION_ERROR"
+          examples: ["VALIDATION_ERROR"]
         message:
           type: string
           description: A human-readable error message.
-          example: "Request validation failed"
+          examples: ["Request validation failed"]
         field:
           type: string
           description: The specific field that caused the error (optional).
-          example: "name"
+          examples: ["name"]
         metadata:
           type: object
           additionalProperties: true
           description: Additional metadata about the error (optional).
-          example: { "minLength": 2 }
+          examples: [{ "minLength": 2 }]
       required:
         - code
         - message
@@ -281,8 +281,7 @@ components:
           type: string
           description: Organization display name.
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional organization description.
         role:
           $ref: "#/components/schemas/CurrentUserOrganizationRole"
@@ -298,17 +297,14 @@ components:
           type: string
           description: Authenticated user identifier from Clerk.
         email:
-          type: string
+          type: [string, "null"]
           format: email
-          nullable: true
           description: User email from Nanostack product user profile when available.
         name:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: User display name from Nanostack product user profile when available.
         user_id:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Nanostack user identifier.
         organizations:
           type: array
@@ -363,24 +359,22 @@ components:
         id:
           type: string
           description: Unique identifier for the API key.
-          example: "organization_apikey_abc123def456"
+          examples: ["organization_apikey_abc123def456"]
         name:
           type: string
           description: Human-readable name for the API key.
-          example: "CI Runner"
+          examples: ["CI Runner"]
         created_at:
           type: string
           format: date-time
           description: Timestamp when the API key was created.
         expires_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Optional expiration timestamp for the API key.
         last_used_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Timestamp when the API key was last used.
         permissions:
           type: array
@@ -401,14 +395,13 @@ components:
           minLength: 1
           maxLength: 100
           description: Human-readable name for the API key.
-          example: "CI Runner"
+          examples: ["CI Runner"]
         expires_in_days:
-          type: integer
+          type: [integer, "null"]
           format: int32
           minimum: 1
-          nullable: true
           description: Optional number of days until the API key expires.
-          example: 30
+          examples: [30]
         permissions:
           type: array
           description: Permissions to assign to the API key.
@@ -425,14 +418,12 @@ components:
         name:
           type: string
           description: Permission identifier.
-          example: "flows:read"
+          examples: ["flows:read"]
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional human-readable description.
         scope_modifier:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional scope modifier provided by Nanostack.
       required:
         - name
@@ -453,7 +444,7 @@ components:
             secret:
               type: string
               description: The full API key secret. This value is only returned once at creation time.
-              example: "epk_live_xxxxxxxxxxxxxxxxxxxx"
+              examples: ["epk_live_xxxxxxxxxxxxxxxxxxxx"]
           required:
             - secret
 
@@ -624,29 +615,24 @@ components:
           format: uuid
           description: Canonical identifier for the matched resource.
         collection_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Related collection identifier when the resource belongs to a collection.
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Related folder identifier when the resource belongs to a folder.
         request_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Related request identifier when the resource is or resolves through a saved request.
         openapi_operation_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Related OpenAPI operation identifier when the resource is backed by persisted OpenAPI contract data.
         flow_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Related flow identifier when the resource is a flow or flow reference target.
       required:
         - resource_id
@@ -662,28 +648,23 @@ components:
           type: string
           description: Primary display label for the matched resource.
         subtitle:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Secondary display text for picker and navigation UIs.
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Additional compact context shaped by the requested context level.
         identifiers:
           $ref: "#/components/schemas/ResourceSearchIdentifiers"
         request_origin:
           $ref: "#/components/schemas/RequestOrigin"
         method:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: HTTP method when the resource represents an executable request or operation.
         path:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Indexed path, route, or hierarchical location text for the resource.
         url:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Indexed URL when relevant to the matched resource.
       required:
         - domain
@@ -823,15 +804,15 @@ components:
         id:
           type: string
           description: Unique identifier for the webhook endpoint.
-          example: "wh_abc123def456"
+          examples: ["wh_abc123def456"]
         name:
           type: string
           description: Human-readable name for the webhook endpoint.
-          example: "My API Webhook"
+          examples: ["My API Webhook"]
         url:
           type: string
           description: The URL where webhook requests are received.
-          example: "https://api.echopoint.com/webhook/wh_abc123def456"
+          examples: ["https://api.echopoint.com/webhook/wh_abc123def456"]
         created_at:
           type: string
           format: date-time
@@ -843,7 +824,7 @@ components:
         request_count:
           type: integer
           description: Total number of requests received by this webhook endpoint.
-          example: 1247
+          examples: [1247]
       required:
         - id
         - name
@@ -905,7 +886,7 @@ components:
           minLength: 1
           maxLength: 255
           description: Human-readable name for the webhook endpoint.
-          example: "My API Webhook"
+          examples: ["My API Webhook"]
       required:
         - name
     HttpMethod:
@@ -925,49 +906,41 @@ components:
       enum: [header, query, cookie]
       description: Placement for API key authentication when a request uses the api_key auth type.
     CollectionRequestAuth:
-      type: object
-      nullable: true
+      type: [object, "null"]
       properties:
         source_option_id:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Stable identifier for the imported OpenAPI auth option currently selected on this request.
         source_option_label:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Human-readable label for the imported OpenAPI auth option currently selected on this request.
         type:
           $ref: "#/components/schemas/CollectionRequestAuthType"
         token:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Bearer token template or literal value.
-          example: "{{apiToken}}"
+          examples: ["{{apiToken}}"]
         key:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: API key header, query parameter, or cookie name.
-          example: "X-API-Key"
+          examples: ["X-API-Key"]
         value:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: API key template or literal value.
-          example: "{{apiKey}}"
+          examples: ["{{apiKey}}"]
         in:
-          allOf:
+          anyOf:
             - $ref: "#/components/schemas/CollectionRequestAuthApiKeyLocation"
-          nullable: true
+            - type: "null"
           description: API key placement for api_key authentication.
         username:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Username template or literal value for basic authentication.
-          example: "{{apiUser}}"
+          examples: ["{{apiUser}}"]
         password:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Password template or literal value for basic authentication.
-          example: "{{apiPassword}}"
+          examples: ["{{apiPassword}}"]
       required:
         - type
 
@@ -992,49 +965,46 @@ components:
         id:
           type: string
           description: Unique identifier for the webhook request.
-          example: "req_xyz789abc123"
+          examples: ["req_xyz789abc123"]
         webhook_id:
           type: string
           description: ID of the webhook endpoint that received this request.
-          example: "wh_abc123def456"
+          examples: ["wh_abc123def456"]
         method:
           $ref: "#/components/schemas/HttpMethod"
           description: HTTP method used for the request.
-          example: "POST"
+          examples: ["POST"]
         headers:
           type: object
           additionalProperties:
             type: string
           description: HTTP headers received with the request.
-          example:
-            "content-type": "application/json"
-            "user-agent": "GitHub-Hookshot/abc123"
+          examples:
+            - "content-type": "application/json"
+              "user-agent": "GitHub-Hookshot/abc123"
         query_params:
           type: object
           additionalProperties:
             type: string
           description: Query parameters received with the request.
-          example:
-            "signature": "sha256=abcd1234"
+          examples:
+            - "signature": "sha256=abcd1234"
         body:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Raw request body content.
-          example: '{"event": "push", "repository": {"name": "test"}}'
+          examples: ['{"event": "push", "repository": {"name": "test"}}']
         content_type:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Content-Type header value.
-          example: "application/json"
+          examples: ["application/json"]
         user_agent:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: User-Agent header value.
-          example: "GitHub-Hookshot/abc123"
+          examples: ["GitHub-Hookshot/abc123"]
         ip_address:
           type: string
           description: IP address of the request sender.
-          example: "192.168.1.100"
+          examples: ["192.168.1.100"]
         received_at:
           type: string
           format: date-time
@@ -1115,11 +1085,11 @@ components:
         message:
           type: string
           description: Success message confirming webhook receipt.
-          example: "Webhook received successfully"
+          examples: ["Webhook received successfully"]
         request_id:
           type: string
           description: Unique identifier for this webhook request.
-          example: "req_xyz789abc123"
+          examples: ["req_xyz789abc123"]
         received_at:
           type: string
           format: date-time
@@ -1136,15 +1106,15 @@ components:
         name:
           type: string
           description: Name of the flow
-          example: "User API Test"
+          examples: ["User API Test"]
         description:
           type: string
           description: Description of what the flow does
-          example: "Test user endpoints with branching"
+          examples: ["Test user endpoints with branching"]
         version:
           type: string
           description: Flow definition version
-          example: "1.0"
+          examples: ["1.0"]
         nodes:
           type: array
           description: List of nodes in the flow
@@ -1180,11 +1150,11 @@ components:
         id:
           type: string
           description: Unique identifier for the node
-          example: "node-1"
+          examples: ["node-1"]
         display_name:
           type: string
           description: Human-readable name for the node
-          example: "My Node"
+          examples: ["My Node"]
         type:
           type: string
           description: Type of node
@@ -1206,16 +1176,33 @@ components:
         - type
 
     FlowNode:
+      description: |
+        A node in a flow definition, discriminated by `type`. Every variant here is a
+        kind the runner registers and can execute; the contract and
+        `../echopoint-runner/pkg/spi.Kind` must stay in step, because an unlisted
+        type fails discriminator binding and the flow is rejected with 400.
       oneOf:
         - $ref: "#/components/schemas/RequestFlowNode"
         - $ref: "#/components/schemas/DelayFlowNode"
         - $ref: "#/components/schemas/ModuleFlowNode"
+        - $ref: "#/components/schemas/SetVariableFlowNode"
+        - $ref: "#/components/schemas/AssertFlowNode"
+        - $ref: "#/components/schemas/BranchFlowNode"
+        - $ref: "#/components/schemas/LoopFlowNode"
+        - $ref: "#/components/schemas/PollFlowNode"
+        - $ref: "#/components/schemas/SseFlowNode"
       discriminator:
         propertyName: type
         mapping:
           request: "#/components/schemas/RequestFlowNode"
           delay: "#/components/schemas/DelayFlowNode"
           module: "#/components/schemas/ModuleFlowNode"
+          set_variable: "#/components/schemas/SetVariableFlowNode"
+          assert: "#/components/schemas/AssertFlowNode"
+          branch: "#/components/schemas/BranchFlowNode"
+          loop: "#/components/schemas/LoopFlowNode"
+          poll: "#/components/schemas/PollFlowNode"
+          sse: "#/components/schemas/SseFlowNode"
 
     RequestFlowNode:
       allOf:
@@ -1256,13 +1243,91 @@ components:
           required:
             - data
 
+    SetVariableFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "set_variable"
+            data:
+              $ref: "#/components/schemas/SetVariableNodeData"
+          required:
+            - data
+
+    AssertFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "assert"
+            data:
+              $ref: "#/components/schemas/AssertNodeData"
+          required:
+            - data
+
+    BranchFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "branch"
+            data:
+              $ref: "#/components/schemas/BranchNodeData"
+          required:
+            - data
+
+    LoopFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "loop"
+            data:
+              $ref: "#/components/schemas/LoopNodeData"
+          required:
+            - data
+
+    PollFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "poll"
+            data:
+              $ref: "#/components/schemas/PollNodeData"
+          required:
+            - data
+
+    SseFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "sse"
+            data:
+              $ref: "#/components/schemas/SseNodeData"
+          required:
+            - data
+
     RequestNodeData:
       type: object
       properties:
         method:
           $ref: "#/components/schemas/HttpMethod"
           description: HTTP method
-          example: "POST"
+          examples: ["POST"]
         url:
           type: string
           format: uri
@@ -1270,7 +1335,7 @@ components:
             Full URL for the request. Supports variable substitution using template syntax.
             - Initial variables: {{variableName}} (e.g., {{apiUrl}})
             - Node outputs: {{nodeId.outputKey}} (e.g., {{create-user.userId}})
-          example: "{{apiUrl}}/users/{{create-user.userId}}"
+          examples: ["{{apiUrl}}/users/{{create-user.userId}}"]
         headers:
           type: object
           additionalProperties:
@@ -1278,7 +1343,7 @@ components:
           description: |
             HTTP headers. Supports the same variable substitution as URL.
             Headers can reference both initial inputs and previous node outputs.
-          example: {"Content-Type": "application/json", "Authorization": "Bearer {{auth.token}}"}
+          examples: [{"Content-Type": "application/json", "Authorization": "Bearer {{auth.token}}"}]
         query_params:
           type: object
           additionalProperties: true
@@ -1289,11 +1354,11 @@ components:
           description: |
             Request body (can be any JSON structure). Supports variable substitution.
             Any string values within the body can contain template variables.
-          example: {"name": "{{userName}}", "email": "{{userEmail}}"}
+          examples: [{"name": "{{userName}}", "email": "{{userEmail}}"}]
         timeout:
           type: integer
           description: Request timeout in milliseconds
-          example: 30000
+          examples: [30000]
       required:
         - method
         - url
@@ -1304,7 +1369,7 @@ components:
         duration:
           type: integer
           description: Delay duration in milliseconds
-          example: 1000
+          examples: [1000]
       required:
         - duration
 
@@ -1327,13 +1392,190 @@ components:
       required:
         - flow_id
 
+    SetVariableNodeData:
+      type: object
+      description: |
+        Declares flow variables. Values are templated, so a set_variable node is how a
+        flow names a computed value once and reuses it downstream as `{{nodeId.name}}`.
+      properties:
+        variables:
+          type: object
+          additionalProperties: true
+          description: Variable name to value. String values support variable substitution.
+          examples: [{"tenant": "{{login.orgId}}", "retries": 3}]
+      required:
+        - variables
+
+    AssertNodeData:
+      type: object
+      description: |
+        Runs the node's `assertions` against a value without issuing a request. Omit
+        `target` to assert over the flow's initial inputs; set it to a template
+        reference (e.g. `{{{create-user.payload}}}`) to assert over an upstream node's
+        output.
+      properties:
+        target:
+          description: Value the assertions run against. Templated; omit to use the flow's initial inputs.
+          examples: ["{{{create-user.payload}}}"]
+
+    BranchNodeData:
+      type: object
+      description: |
+        Routes execution to one of several successor nodes. Cases are evaluated in
+        order and the first match wins; `default` is taken when none match. Every
+        target must be a real successor of this node — the flow is rejected at launch
+        when an edge to it is missing.
+      properties:
+        target:
+          description: Value the case conditions are evaluated against. Templated; omit to use the flow's initial inputs.
+          examples: ["{{probe.status}}"]
+        cases:
+          type: array
+          description: Ordered conditions; the first matching case decides the route.
+          items:
+            $ref: "#/components/schemas/BranchCase"
+        default:
+          type: string
+          description: Node id taken when no case matches. Without it, an unmatched branch ends that path.
+          examples: ["fallback"]
+      required:
+        - cases
+
+    BranchCase:
+      type: object
+      properties:
+        when:
+          $ref: "#/components/schemas/CompositeAssertion"
+        target:
+          type: string
+          description: Node id to route to when this case matches.
+          examples: ["active-path"]
+      required:
+        - when
+        - target
+
+    LoopNodeData:
+      type: object
+      description: |
+        Runs an inline sub-flow once per item. The current item and index are injected
+        into the body's inputs under `item_var`/`index_var`.
+      properties:
+        items:
+          description: Template resolving to an array, or a literal array.
+          examples: [["a", "b", "c"]]
+        body:
+          $ref: "#/components/schemas/InlineFlowDefinition"
+        item_var:
+          type: string
+          description: Input key the current item is injected under.
+          default: "item"
+        index_var:
+          type: string
+          description: Input key the current zero-based index is injected under.
+          default: "index"
+        max_iterations:
+          type: integer
+          description: Safety cap on iterations. Unbounded when omitted or zero.
+          examples: [100]
+        continue_on_error:
+          type: boolean
+          description: Keep looping when an iteration fails, recording the error in that iteration's result.
+          default: false
+      required:
+        - items
+        - body
+
+    PollNodeData:
+      type: object
+      description: |
+        Re-runs an inline sub-flow until the node's `assertions` pass against its final
+        outputs, or the attempt/time budget runs out. Body outputs are addressed by the
+        flat `nodeId.outputName` key (e.g. `$["probe.status"]`).
+      properties:
+        body:
+          $ref: "#/components/schemas/InlineFlowDefinition"
+        max_attempts:
+          type: integer
+          description: Maximum body executions.
+          default: 10
+        interval_ms:
+          type: integer
+          description: Wait between attempts, in milliseconds.
+          default: 1000
+        timeout_ms:
+          type: integer
+          description: Overall wall-clock budget for the whole poll. Unbounded when omitted or zero.
+          examples: [60000]
+      required:
+        - body
+
+    SseNodeData:
+      type: object
+      description: |
+        Consumes a `text/event-stream` endpoint, collecting events until the stream
+        ends, the event cap is hit, the completion event arrives, or the timeout
+        expires. The node's `assertions` run against each event as it arrives.
+      properties:
+        url:
+          type: string
+          description: Event-stream endpoint. Supports the same variable substitution as a request node.
+          examples: ["{{apiUrl}}/flows/{{flowId}}/executions/{{launch.executionId}}/stream"]
+        method:
+          $ref: "#/components/schemas/HttpMethod"
+          description: HTTP method used to open the stream.
+          default: "GET"
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Request headers. Values support variable substitution.
+          examples: [{"Authorization": "Bearer {{auth.token}}"}]
+        max_events:
+          type: integer
+          description: Stop after collecting this many events.
+          default: 100
+        timeout_ms:
+          type: integer
+          description: Overall deadline for the stream, in milliseconds.
+          default: 30000
+        completion_event:
+          type: string
+          description: |
+            Stop as soon as an event whose `event:` name or raw data equals this value is
+            dispatched. Use it to end on a terminal event rather than waiting for EOF.
+          examples: ["execution.completed"]
+        stop_on_assertion_failure:
+          type: boolean
+          description: Stop and fail the node on the first failing per-event assertion.
+          default: true
+      required:
+        - url
+
+    InlineFlowDefinition:
+      type: object
+      description: |
+        A nested flow definition executed by a loop or poll node. It has the same shape
+        as a flow's own definition, but is stored inline on the node rather than
+        referenced by id the way a module node references a child flow.
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlowEdge"
+      required:
+        - nodes
+
     Output:
       type: object
       properties:
         name:
           type: string
           description: Name of the output for reference by downstream nodes
-          example: "userId"
+          examples: ["userId"]
         extractor:
           type: object
           description: Extractor configuration that defines how to extract data from the response
@@ -1343,11 +1585,11 @@ components:
             path:
               type: string
               description: Path for extraction (used by jsonPath, xmlPath, header extractors)
-              example: "$.user.id"
+              examples: ["$.user.id"]
             header_name:
               type: string
               description: Header name to extract (used by header extractor)
-              example: "x-custom-id"
+              examples: ["x-custom-id"]
           required:
             - type
       required:
@@ -1363,14 +1605,14 @@ components:
           type: object
           additionalProperties: true
           description: Configuration for the extractor
-          example: {"path": "$.user.name"}
+          examples: [{"path": "$.user.name"}]
         operator_type:
           $ref: "#/components/schemas/OperatorType"
         operator_data:
           type: object
           additionalProperties: true
           description: Configuration for the operator
-          example: {"min": 200, "max": 299}
+          examples: [{"min": 200, "max": 299}]
       required:
         - extractor_type
         - extractor_data
@@ -1383,28 +1625,28 @@ components:
         id:
           type: string
           description: Unique identifier for the edge
-          example: "e-success"
+          examples: ["e-success"]
         source:
           type: string
           description: ID of the source node
-          example: "req-1"
+          examples: ["req-1"]
         target:
           type: string
           description: ID of the target node
-          example: "req-success"
+          examples: ["req-success"]
         source_handle:
           type: string
           description: Optional source handle ID used for anchor-specific edge routing
-          example: "source-right-step-login"
+          examples: ["source-right-step-login"]
         target_handle:
           type: string
           description: Optional target handle ID used for anchor-specific edge routing
-          example: "target-left-step-auth"
+          examples: ["target-left-step-auth"]
         type:
           type: string
           enum: ["success", "failure"]
           description: Condition for following this edge
-          example: "success"
+          examples: ["success"]
       required:
         - id
         - source
@@ -1417,13 +1659,13 @@ components:
         success:
           type: boolean
           description: Whether the flow executed successfully
-          example: true
+          examples: [true]
         executed_nodes:
           type: array
           description: List of node IDs that were executed
           items:
             type: string
-          example: ["req-1", "req-success"]
+          examples: [["req-1", "req-success"]]
         results:
           type: object
           additionalProperties: true
@@ -1441,11 +1683,11 @@ components:
         period:
           type: string
           description: Time period for the analytics data.
-          example: "24h"
+          examples: ["24h"]
         total_requests:
           type: integer
           description: Total number of requests in the period.
-          example: 1247
+          examples: [1247]
         time_series:
           type: array
           items:
@@ -1472,17 +1714,17 @@ components:
         request_count:
           type: integer
           description: Number of requests in this time bucket.
-          example: 42
+          examples: [42]
         success_rate:
           type: number
           format: float
           description: Success rate for this time bucket (0.0 to 1.0).
-          example: 0.95
+          examples: [0.95]
         avg_response_time:
           type: number
           format: float
           description: Average response time in milliseconds for this time bucket.
-          example: 150.2
+          examples: [150.2]
       required:
         - timestamp
         - request_count
@@ -1495,16 +1737,16 @@ components:
         method:
           type: string
           description: HTTP method.
-          example: "POST"
+          examples: ["POST"]
         count:
           type: integer
           description: Number of requests using this method.
-          example: 980
+          examples: [980]
         percentage:
           type: number
           format: float
           description: Percentage of total requests (0.0 to 1.0).
-          example: 0.786
+          examples: [0.786]
       required:
         - method
         - count
@@ -1559,7 +1801,7 @@ components:
         bucket:
           type: string
           description: Aggregation bucket size used for the metrics.
-          example: "1h"
+          examples: ["1h"]
         since:
           type: string
           format: date-time
@@ -1581,7 +1823,7 @@ components:
         label:
           type: string
           description: Label identifying this series (e.g., HTTP method when grouped).
-          example: "POST"
+          examples: ["POST"]
         points:
           type: array
           items:
@@ -1599,7 +1841,7 @@ components:
         value:
           type: integer
           description: Metric value at this timestamp.
-          example: 42
+          examples: [42]
       required: [timestamp, value]
 
     # Flow Persistence Schemas
@@ -1610,24 +1852,23 @@ components:
           type: string
           format: uuid
           description: Server-generated unique identifier for the flow.
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          examples: ["550e8400-e29b-41d4-a716-446655440000"]
         organization_id:
           type: string
           description: Organization ID that owns this flow.
-          example: "org_123"
+          examples: ["org_123"]
         name:
           type: string
           description: Human-readable name for the flow.
-          example: "User API Test Flow"
+          examples: ["User API Test Flow"]
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional description of what the flow does.
-          example: "Test user endpoints with branching logic"
+          examples: ["Test user endpoints with branching logic"]
         version:
           type: string
           description: Version identifier for the flow.
-          example: "1.0"
+          examples: ["1.0"]
         flow_definition:
           $ref: "#/components/schemas/FlowDefinition"
         metadata:
@@ -1637,11 +1878,10 @@ components:
           items:
             type: string
           description: Flat canonical tags associated with the flow (lowercase, normalized, deduplicated, sorted).
-          example: ["production", "monitoring"]
+          examples: [["production", "monitoring"]]
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: The flow's folder, or null when it is uncategorized.
         created_at:
           type: string
@@ -1670,18 +1910,17 @@ components:
           minLength: 1
           maxLength: 255
           description: Human-readable name for the flow.
-          example: "User API Test Flow"
+          examples: ["User API Test Flow"]
         description:
-          type: string
+          type: [string, "null"]
           maxLength: 1000
-          nullable: true
           description: Optional description of the flow.
-          example: "Test user endpoints with branching logic"
+          examples: ["Test user endpoints with branching logic"]
         version:
           type: string
           default: "1.0"
           description: Version identifier for the flow.
-          example: "1.0"
+          examples: ["1.0"]
         flow_definition:
           $ref: "#/components/schemas/FlowDefinition"
         auto_layout:
@@ -1694,11 +1933,10 @@ components:
           items:
             type: string
           description: Optional flat tags for the flow. Lowercased, normalized, deduplicated, and sorted on write. Omitted defaults to an empty list.
-          example: ["production", "monitoring"]
+          examples: [["production", "monitoring"]]
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: >-
             Folder to create the flow in. Omit or send null to leave it
             uncategorized. A folder unknown to the organization yields 404.
@@ -1714,17 +1952,16 @@ components:
           minLength: 1
           maxLength: 255
           description: Human-readable name for the flow.
-          example: "User API Test Flow"
+          examples: ["User API Test Flow"]
         description:
-          type: string
+          type: [string, "null"]
           maxLength: 1000
-          nullable: true
           description: Optional description of the flow.
-          example: "Test user endpoints with branching logic"
+          examples: ["Test user endpoints with branching logic"]
         version:
           type: string
           description: Version identifier for the flow.
-          example: "1.0"
+          examples: ["1.0"]
         flow_definition:
           $ref: "#/components/schemas/FlowDefinition"
         auto_layout:
@@ -1740,7 +1977,7 @@ components:
             Optional flat tags for the flow. Omit to preserve the current tags;
             send an empty array to clear all tags; send a list to replace the tag set.
             Lowercased, normalized, deduplicated, and sorted on write.
-          example: ["staging"]
+          examples: [["staging"]]
 
     FlowFolder:
       type: object
@@ -1751,16 +1988,15 @@ components:
           format: uuid
           description: Server-generated unique identifier.
         parent_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Parent folder, or null for a root folder.
         name:
           type: string
           minLength: 1
           maxLength: 255
           description: Folder name.
-          example: "Payments"
+          examples: ["Payments"]
         created_at:
           type: string
           format: date-time
@@ -1793,11 +2029,10 @@ components:
           minLength: 1
           maxLength: 255
           description: Folder name.
-          example: "Payments"
+          examples: ["Payments"]
         parent_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Parent folder, or null for a root folder.
       required:
         - name
@@ -1830,9 +2065,8 @@ components:
         (the move serializes on the per-organization flow-tree lock).
       properties:
         parent_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: New parent folder, or null to move the folder to the root.
       required:
         - parent_id
@@ -1868,9 +2102,8 @@ components:
         destination; send null to move them all to the Uncategorized bucket.
       properties:
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Destination folder for every moved flow, or null for Uncategorized.
         flow_ids:
           type: array
@@ -1919,7 +2152,7 @@ components:
         target_environment_key:
           type: string
           description: Optional default organization environment key to use when launching this flow.
-          example: "staging"
+          examples: ["staging"]
       additionalProperties: true
 
     FlowSearchRequest:
@@ -1932,7 +2165,7 @@ components:
               items:
                 type: string
               description: Canonical tags to match exactly against the flow's tags.
-              example: ["production", "smoke"]
+              examples: [["production", "smoke"]]
             tag_match_mode:
               $ref: "#/components/schemas/TagMatchMode"
               description: Whether any or all of the provided tags must match.
@@ -1943,9 +2176,8 @@ components:
                 Include the full flow_definition in each result. Omitted by
                 default to keep search payloads small.
             folder_id:
-              type: string
+              type: [string, "null"]
               format: uuid
-              nullable: true
               description: >-
                 Scope results to this folder and all of its descendants. Omit to
                 search every folder. Ignored when uncategorized is true. A
@@ -1983,8 +2215,7 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
         version:
           type: string
         tags:
@@ -1992,9 +2223,8 @@ components:
           items:
             type: string
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: The flow's folder, or null when it is uncategorized.
         node_count:
           type: integer
@@ -2054,14 +2284,14 @@ components:
             type: string
           maxItems: 100
           description: Alphabetically sorted canonical tags. At most 100 tags are returned.
-          example: ["monitoring", "production", "smoke"]
+          examples: [["monitoring", "production", "smoke"]]
         count:
           type: integer
           description: Number of tags returned in this response.
         limit:
           type: integer
           description: Maximum number of distinct flow tags allowed per organization.
-          example: 100
+          examples: [100]
       required:
         - items
         - count
@@ -2242,7 +2472,7 @@ components:
         environment_key:
           type: string
           description: Optional named organization environment to overlay before flow variables.
-          example: "dev"
+          examples: ["dev"]
         version_id:
           type: string
           format: uuid
@@ -2251,11 +2481,10 @@ components:
             is used. Specify a version ID to run an immutable snapshot.
         trigger_type:
           $ref: "#/components/schemas/TriggerType"
-          nullable: true
         trigger_metadata:
-          allOf:
+          anyOf:
             - $ref: "#/components/schemas/TriggerMetadata"
-          nullable: true
+            - type: "null"
           description: Trigger provenance; shape determined by trigger_type.
       description: Optional launch settings for selecting the execution backend and version.
 
@@ -2312,14 +2541,12 @@ components:
           format: uuid
           description: Flow execution currently associated with the claimed job.
         claimed_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Time when the runner claimed the job.
         lease_expires_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Current lease expiration for the claimed job.
       required:
         - job_id
@@ -2377,18 +2604,18 @@ components:
         runner_id:
           type: string
           description: Stable runner identifier across restarts.
-          example: runner-eu-west-1-a
+          examples: [runner-eu-west-1-a]
         boot_id:
           type: string
           format: uuid
           description: Ephemeral identifier for the current runner process.
-          example: 01957d27-7c6c-7d4e-9b08-9ea5d6ab4a21
+          examples: [01957d27-7c6c-7d4e-9b08-9ea5d6ab4a21]
         max_parallel_flows:
           type: integer
           format: int32
           minimum: 1
           description: Maximum number of concurrent executions this runner can accept.
-          example: 4
+          examples: [4]
       required:
         - runner_id
         - boot_id
@@ -2510,23 +2737,19 @@ components:
           minimum: 0
           description: Execution duration in milliseconds.
         result:
-          type: object
+          type: [object, "null"]
           additionalProperties: true
-          nullable: true
           description: Terminal flow execution result payload for successful executions.
         error_message:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Terminal error message when the runner reports failure.
         error_code:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Terminal error code when the runner reports failure.
         last_event_sequence:
-          type: integer
+          type: [integer, "null"]
           format: int64
           minimum: 0
-          nullable: true
           description: Highest runner progress event sequence that must be durably accepted before completion.
       required:
         - runner_id
@@ -2574,9 +2797,8 @@ components:
         status:
           $ref: "#/components/schemas/RunnerJobHeartbeatStatus"
         lease_expires_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Extended lease expiration when the heartbeat is accepted.
       required:
         - job_id
@@ -2589,16 +2811,16 @@ components:
           type: string
           format: uuid
           description: Unique identifier for the execution
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          examples: ["550e8400-e29b-41d4-a716-446655440000"]
         flow_id:
           type: string
           format: uuid
           description: ID of the flow that was executed
-          example: "650e8400-e29b-41d4-a716-446655440000"
+          examples: ["650e8400-e29b-41d4-a716-446655440000"]
         organization_id:
           type: string
           description: Organization ID that owns this execution.
-          example: "org_123"
+          examples: ["org_123"]
         flow_snapshot:
           $ref: "#/components/schemas/FlowDefinition"
           description: Immutable snapshot of the flow at execution time
@@ -2609,46 +2831,40 @@ components:
         status:
           $ref: "#/components/schemas/ExecutionStatus"
         runner_type:
-          allOf:
+          anyOf:
             - $ref: "#/components/schemas/RunnerType"
-          nullable: true
+            - type: "null"
           description: Execution backend selected for this execution.
         environment_key:
           type: string
           description: Named environment overlaid when resolving this execution's inputs.
         schedule_run_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Schedule run that launched this execution; null for manual/CI launches.
         timeout_seconds:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Per-execution wall-clock bound enforced by the execution layer.
         started_at:
           type: string
           format: date-time
           description: When the execution started
         completed_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: When the execution completed (if finished)
         error_message:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Error message if execution failed
         error_code:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Error code if execution failed
         trigger_type:
           $ref: "#/components/schemas/TriggerType"
-          nullable: true
         trigger_metadata:
-          allOf:
+          anyOf:
             - $ref: "#/components/schemas/TriggerMetadata"
-          nullable: true
+            - type: "null"
           description: Trigger provenance; shape determined by trigger_type.
         created_at:
           type: string
@@ -2728,8 +2944,7 @@ components:
         node_type:
           $ref: "#/components/schemas/NodeExecutionResultNodeType"
         result:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
           description: |
             Complete polymorphic result from flow engine.
@@ -2740,38 +2955,30 @@ components:
         status:
           $ref: "#/components/schemas/NodeExecutionStatus"
         started_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         completed_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         error_message:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: System-level error (orchestration failures)
         error_code:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: System-level error code
         skip_reason:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Present when the node was skipped rather than executed.
         missing_inputs:
-          type: array
-          nullable: true
+          type: [array, "null"]
           description: Missing input references that caused an always-run node to be skipped.
           items:
             type: string
         has_errors:
-          type: boolean
-          nullable: true
+          type: [boolean, "null"]
           description: Fast flag for filtering failures (promoted from result)
         duration_ms:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Duration in milliseconds (promoted from result)
         created_at:
           type: string
@@ -2837,17 +3044,14 @@ components:
           minimum: 0
           description: Execution duration in milliseconds.
         result:
-          type: object
+          type: [object, "null"]
           additionalProperties: true
-          nullable: true
           description: Terminal flow execution result payload for successful executions.
         error_message:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Terminal error message when the runner reports failure.
         error_code:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Terminal error code when the runner reports failure.
       required:
         - status
@@ -2901,37 +3105,35 @@ components:
           type: string
           format: uuid
           description: Server-generated unique identifier
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          examples: ["550e8400-e29b-41d4-a716-446655440000"]
         organization_id:
           type: string
           description: Organization ID that owns this collection.
-          example: "org_123"
+          examples: ["org_123"]
         name:
           type: string
           description: Human-readable name for the collection
-          example: "My API Collection"
+          examples: ["My API Collection"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional description of the collection
-          example: "Collection for testing my API"
+          examples: ["Collection for testing my API"]
         source:
           $ref: "#/components/schemas/CollectionSource"
         openapi_sync_config_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Identifier of the attached OpenAPI sync config when this collection is sync-managed
         folder_count:
           type: integer
           description: Total number of folders in the collection
-          example: 12
+          examples: [12]
         request_count:
           type: integer
           description: Total number of requests in the collection
-          example: 438
+          examples: [438]
         folders:
           type: array
           items:
@@ -2993,29 +3195,27 @@ components:
           type: string
           format: uuid
           description: Server-generated unique identifier
-          example: "550e8400-e29b-41d4-a716-446655440001"
+          examples: ["550e8400-e29b-41d4-a716-446655440001"]
         collection_id:
           type: string
           format: uuid
           description: Reference to parent collection
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          examples: ["550e8400-e29b-41d4-a716-446655440000"]
         parent_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Reference to parent folder (null for root folders)
-          example: "550e8400-e29b-41d4-a716-446655440002"
+          examples: ["550e8400-e29b-41d4-a716-446655440002"]
         name:
           type: string
           description: Folder name
-          example: "User Endpoints"
+          examples: ["User Endpoints"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional folder description
-          example: "Contains user management endpoints"
+          examples: ["Contains user management endpoints"]
         created_at:
           type: string
           format: date-time
@@ -3038,29 +3238,27 @@ components:
           type: string
           format: uuid
           description: Server-generated unique identifier
-          example: "550e8400-e29b-41d4-a716-446655440003"
+          examples: ["550e8400-e29b-41d4-a716-446655440003"]
         collection_id:
           type: string
           format: uuid
           description: Reference to parent collection
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          examples: ["550e8400-e29b-41d4-a716-446655440000"]
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Reference to parent folder (null for root level)
-          example: "550e8400-e29b-41d4-a716-446655440001"
+          examples: ["550e8400-e29b-41d4-a716-446655440001"]
         name:
           type: string
           description: Request name
-          example: "Get User by ID"
+          examples: ["Get User by ID"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional request description
-          example: "Retrieves a user by their ID"
+          examples: ["Retrieves a user by their ID"]
         method:
           $ref: "#/components/schemas/HttpMethod"
         url:
@@ -3068,37 +3266,33 @@ components:
           description: |
             Request URL. Supports template variables such as {{baseUrl}}/users/123.
             Templates are resolved from the active organization environment in the request workspace.
-          example: "{{baseUrl}}/users/123"
+          examples: ["{{baseUrl}}/users/123"]
         headers:
-          type: object
+          type: [object, "null"]
           additionalProperties:
             type: string
-          nullable: true
           description: Non-auth HTTP headers for the request
-          example:
-            Content-Type: "application/json"
-            Accept: "application/json"
+          examples:
+            - Content-Type: "application/json"
+              Accept: "application/json"
         auth:
           $ref: "#/components/schemas/CollectionRequestAuth"
         auth_options:
-          type: array
-          nullable: true
+          type: [array, "null"]
           description: Imported OpenAPI authentication options available for this request. Empty for manual requests.
           items:
             $ref: "#/components/schemas/CollectionRequestAuthOption"
         body:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
           description: Request body (any JSON structure)
-          example:
-            name: "John Doe"
-            email: "john@example.com"
+          examples:
+            - name: "John Doe"
+              email: "john@example.com"
         timeout:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Request timeout in milliseconds
-          example: 30000
+          examples: [30000]
         response_spec:
           $ref: "#/components/schemas/CollectionRequestResponseSpec"
         created_at:
@@ -3124,14 +3318,13 @@ components:
         name:
           type: string
           description: Collection name
-          example: "My API Collection"
+          examples: ["My API Collection"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional description
-          example: "Collection for testing my API"
+          examples: ["Collection for testing my API"]
         source:
           $ref: "#/components/schemas/CollectionSource"
       required:
@@ -3143,12 +3336,11 @@ components:
         name:
           type: string
           description: Collection name
-          example: "Updated Collection Name"
+          examples: ["Updated Collection Name"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional description
 
     CreateFolderRequest:
@@ -3157,20 +3349,18 @@ components:
         name:
           type: string
           description: Folder name
-          example: "User Endpoints"
+          examples: ["User Endpoints"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional folder description
-          example: "Contains user management endpoints"
+          examples: ["Contains user management endpoints"]
         parent_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Parent folder ID (null for root level)
-          example: "550e8400-e29b-41d4-a716-446655440002"
+          examples: ["550e8400-e29b-41d4-a716-446655440002"]
       required:
         - name
 
@@ -3180,17 +3370,15 @@ components:
         name:
           type: string
           description: Folder name
-          example: "Updated Folder Name"
+          examples: ["Updated Folder Name"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional folder description
         parent_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Parent folder ID (null to move to root)
 
     CreateRequestRequest:
@@ -3199,14 +3387,13 @@ components:
         name:
           type: string
           description: Request name
-          example: "Get User by ID"
+          examples: ["Get User by ID"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional request description
-          example: "Retrieves a user by their ID"
+          examples: ["Retrieves a user by their ID"]
         method:
           $ref: "#/components/schemas/HttpMethod"
         url:
@@ -3214,33 +3401,29 @@ components:
           description: |
             Request URL. Supports template variables such as {{baseUrl}}/users/123.
             Templates are resolved from the active organization environment in the request workspace.
-          example: "{{baseUrl}}/users/123"
+          examples: ["{{baseUrl}}/users/123"]
         headers:
-          type: object
+          type: [object, "null"]
           additionalProperties:
             type: string
-          nullable: true
           description: Non-auth HTTP headers
-          example:
-            Content-Type: "application/json"
+          examples:
+            - Content-Type: "application/json"
         auth:
           $ref: "#/components/schemas/CollectionRequestAuth"
         body:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
           description: Request body (any JSON structure)
         timeout:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Request timeout in milliseconds
-          example: 30000
+          examples: [30000]
         response_spec:
           $ref: "#/components/schemas/CollectionRequestResponseSpec"
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Parent folder ID (null for collection root)
       required:
         - name
@@ -3253,12 +3436,11 @@ components:
         name:
           type: string
           description: Request name
-          example: "Updated Request Name"
+          examples: ["Updated Request Name"]
           minLength: 1
           maxLength: 255
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Optional request description
         method:
           $ref: "#/components/schemas/HttpMethod"
@@ -3267,30 +3449,26 @@ components:
           description: |
             Request URL. Supports template variables such as {{baseUrl}}/users/123.
             Templates are resolved from the active organization environment in the request workspace.
-          example: "{{baseUrl}}/users/123"
+          examples: ["{{baseUrl}}/users/123"]
         headers:
-          type: object
+          type: [object, "null"]
           additionalProperties:
             type: string
-          nullable: true
           description: Non-auth HTTP headers
         auth:
           $ref: "#/components/schemas/CollectionRequestAuth"
         body:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
           description: Request body (any JSON structure)
         timeout:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Request timeout in milliseconds
         response_spec:
           $ref: "#/components/schemas/CollectionRequestResponseSpec"
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Parent folder ID
 
     ExecuteRequestRequest:
@@ -3299,8 +3477,7 @@ components:
         - type: object
           properties:
             environment_key:
-              type: string
-              nullable: true
+              type: [string, "null"]
               description: Optional named organization environment override. Base organization variables are always loaded.
 
     ExecutedRequestResponse:
@@ -3317,7 +3494,13 @@ components:
             type: string
           description: Fully resolved request headers sent upstream.
         request_body:
-          nullable: true
+          # Any JSON value, including null. A bare typeless schema would admit
+          # null under JSON Schema, but kin-openapi (the request/response
+          # validator) rejects null unless nullability is stated, so it is
+          # spelled out here.
+          anyOf:
+            - {}
+            - type: "null"
           description: Fully resolved request body sent upstream.
         response_status_code:
           type: integer
@@ -3333,7 +3516,7 @@ components:
           type: string
           description: Upstream response body as text.
         response_body_parsed:
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
           description: Parsed response body when the content type is JSON.
         duration_ms:
@@ -3350,39 +3533,35 @@ components:
         - duration_ms
 
     CollectionRequestResponseSpec:
-      type: object
-      nullable: true
+      type: [object, "null"]
       properties:
         primary_status_code:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Preferred success status code for this request's response.
-          example: 200
+          examples: [200]
         status_codes:
           type: array
           items:
             type: integer
           description: Known response status codes from the source definition.
-          example: [200, 400, 404]
+          examples: [[200, 400, 404]]
         primary_content_type:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Preferred response media type.
-          example: application/json
+          examples: [application/json]
         content_types:
           type: array
           items:
             type: string
           description: Known response media types from the source definition.
-          example: [application/json]
+          examples: [[application/json]]
         body_kind:
-          allOf:
+          anyOf:
             - $ref: "#/components/schemas/CollectionRequestResponseBodyKind"
-          nullable: true
-          example: json
+            - type: "null"
+          examples: [json]
         schema:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
           description: Reduced response schema for the preferred response media type.
 
@@ -3390,8 +3569,7 @@ components:
       type: object
       properties:
         spec:
-          type: object
-          nullable: true
+          type: [object, "null"]
           description: OpenAPI spec as JSON object
         options:
           $ref: "#/components/schemas/OpenAPIImportOptions"
@@ -3402,10 +3580,9 @@ components:
         collection_name:
           type: string
           description: Name for the imported collection
-          example: "Pet Store API"
+          examples: ["Pet Store API"]
         collection_description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Description for the imported collection
         tags_as_folders:
           type: boolean
@@ -3416,9 +3593,8 @@ components:
           description: How imported operations should be grouped into folders
           default: tags
         source_url:
-          type: string
+          type: [string, "null"]
           format: uri
-          nullable: true
           description: Original source URL for the imported spec when available
         use_base_url_variable:
           type: boolean
@@ -3427,7 +3603,7 @@ components:
         base_url_variable_name:
           type: string
           description: Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
-          example: "baseUrl"
+          examples: ["baseUrl"]
 
     OpenAPIImportResult:
       type: object
@@ -3437,18 +3613,18 @@ components:
         requests_created:
           type: integer
           description: Number of requests created from the spec
-          example: 15
+          examples: [15]
         folders_created:
           type: integer
           description: Number of folders created from tags
-          example: 3
+          examples: [3]
         warnings:
           type: array
           items:
             type: string
           description: List of warnings from the import process
-          example:
-            - "Skipped endpoint with no operationId"
+          examples:
+            - - "Skipped endpoint with no operationId"
       required:
         - collection
         - requests_created
@@ -3481,7 +3657,7 @@ components:
         base_url_variable_name:
           type: string
           description: Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
-          example: "baseUrl"
+          examples: ["baseUrl"]
       required:
         - source_url
         - grouping_strategy
@@ -3509,7 +3685,7 @@ components:
         sync_interval_minutes:
           type: integer
           description: Current fixed sync interval in minutes
-          example: 5
+          examples: [5]
         grouping_strategy:
           $ref: "#/components/schemas/OpenAPIGroupingStrategy"
         use_base_url_variable:
@@ -3518,25 +3694,22 @@ components:
         base_url_variable_name:
           type: string
           description: Variable name currently used for rewritten base URLs
-          example: "baseUrl"
+          examples: ["baseUrl"]
         request_count:
           type: integer
           description: Current number of requests in the synced collection
-          example: 616
+          examples: [616]
         last_run_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         next_run_at:
           type: string
           format: date-time
         last_successful_run_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         last_error:
-          type: string
-          nullable: true
+          type: [string, "null"]
         created_at:
           type: string
           format: date-time
@@ -3604,26 +3777,21 @@ components:
         reference_id:
           type: string
         request_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
         change_type:
           $ref: "#/components/schemas/OpenAPISyncChangeType"
         applied:
           type: boolean
         before_hash:
-          type: string
-          nullable: true
+          type: [string, "null"]
         after_hash:
-          type: string
-          nullable: true
+          type: [string, "null"]
         before_snapshot:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
         after_snapshot:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
         created_at:
           type: string
@@ -3675,15 +3843,13 @@ components:
           type: string
           format: uuid
         folder_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
         operation_key:
           type: string
           description: Stable persisted identifier used by sync selection.
         source_operation_id:
-          type: string
-          nullable: true
+          type: [string, "null"]
         synthetic_operation_id:
           type: string
         method:
@@ -3694,13 +3860,11 @@ components:
           type: string
           description: Human-friendly route label for sorting and display.
         group_key:
-          type: string
-          nullable: true
+          type: [string, "null"]
         last_applied_hash:
           type: string
         spec_snapshot:
-          type: object
-          nullable: true
+          type: [object, "null"]
           additionalProperties: true
         created_at:
           type: string
@@ -3753,8 +3917,7 @@ components:
           type: string
           description: Human-readable name
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Description of what this does
         usage_examples:
           type: array
@@ -3874,10 +4037,10 @@ components:
         path:
           type: string
           description: JSONPath expression (RFC 9535)
-          example: "$.user.id"
+          examples: ["$.user.id"]
         default_value:
           description: Default value if path not found
-          example: null
+          examples: [null]
       required:
         - path
 
@@ -3887,10 +4050,10 @@ components:
         path:
           type: string
           description: XPath expression
-          example: "//user/@id"
+          examples: ["//user/@id"]
         default_value:
           description: Default value if path not found
-          example: null
+          examples: [null]
       required:
         - path
 
@@ -3900,12 +4063,11 @@ components:
         header_name:
           type: string
           description: HTTP header name (case-sensitive)
-          example: "X-Request-ID"
+          examples: ["X-Request-ID"]
         default_value:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Default value if header not found
-          example: null
+          examples: [null]
       required:
         - header_name
 
@@ -3931,11 +4093,11 @@ components:
           type: string
           maxLength: 1000
           description: The variable value
-          example: "https://api.example.com"
+          examples: ["https://api.example.com"]
         organization_id:
           type: string
           description: Organization ID that owns this variable.
-          example: "org_123"
+          examples: ["org_123"]
         created_at:
           type: string
           format: date-time
@@ -3967,19 +4129,19 @@ components:
       additionalProperties:
         type: string
         maxLength: 1000
-      example:
-        API_KEY: "secret123"
-        BASE_URL: "https://api.example.com"
+      examples:
+        - API_KEY: "secret123"
+          BASE_URL: "https://api.example.com"
 
     NamedEnvironmentVariablesInput:
       type: object
       additionalProperties:
         $ref: "#/components/schemas/EnvironmentVariablesInput"
-      example:
-        dev:
-          BASE_URL: "https://dev.api.example.com"
-        prd:
-          BASE_URL: "https://api.example.com"
+      examples:
+        - dev:
+            BASE_URL: "https://dev.api.example.com"
+          prd:
+            BASE_URL: "https://api.example.com"
 
     Environment:
       type: object
@@ -3988,38 +4150,38 @@ components:
           type: string
           format: uuid
           description: Server-generated unique identifier
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          examples: ["550e8400-e29b-41d4-a716-446655440000"]
         owner_id:
           type: string
           format: uuid
           description: The owner (flow, organization, workspace, etc.)
-          example: "550e8400-e29b-41d4-a716-446655440100"
+          examples: ["550e8400-e29b-41d4-a716-446655440100"]
         owner_type:
           type: string
           enum: [flow, organization]
           description: Type of owner
-          example: "flow"
+          examples: ["flow"]
         variables:
           $ref: "#/components/schemas/EnvironmentVariableSet"
           description: Environment variables as key-value pairs
-          example:
-            API_KEY:
-              value: "secret123"
-              organization_id: "org_123"
-              created_at: "2025-11-09T10:00:00Z"
-              updated_at: "2025-11-09T10:00:00Z"
-            BASE_URL:
-              value: "https://api.example.com"
-              organization_id: "org_123"
-              created_at: "2025-11-09T10:05:00Z"
-              updated_at: "2025-11-09T10:05:00Z"
+          examples:
+            - API_KEY:
+                value: "secret123"
+                organization_id: "org_123"
+                created_at: "2025-11-09T10:00:00Z"
+                updated_at: "2025-11-09T10:00:00Z"
+              BASE_URL:
+                value: "https://api.example.com"
+                organization_id: "org_123"
+                created_at: "2025-11-09T10:05:00Z"
+                updated_at: "2025-11-09T10:05:00Z"
         environments:
           $ref: "#/components/schemas/NamedEnvironmentVariableSets"
           description: Named environment overlays owned by this environment resource.
         organization_id:
           type: string
           description: Organization ID that owns this environment.
-          example: "org_123"
+          examples: ["org_123"]
         created_at:
           type: string
           format: date-time
@@ -4045,21 +4207,21 @@ components:
           type: string
           format: uuid
           description: The owner ID (flow, organization, workspace, etc.)
-          example: "550e8400-e29b-41d4-a716-446655440100"
+          examples: ["550e8400-e29b-41d4-a716-446655440100"]
         owner_type:
           type: string
           enum: [flow]
           description: Type of owner (currently only 'flow' is supported)
-          example: "flow"
+          examples: ["flow"]
         variables:
           type: object
           additionalProperties:
             type: string
             maxLength: 1000
           description: Initial environment variables
-          example:
-            API_KEY: "secret123"
-            BASE_URL: "https://api.example.com"
+          examples:
+            - API_KEY: "secret123"
+              BASE_URL: "https://api.example.com"
       required:
         - owner_id
         - owner_type
@@ -4073,8 +4235,8 @@ components:
             type: string
             maxLength: 1000
           description: Variables to add or update
-          example:
-            API_KEY: "new_secret456"
+          examples:
+            - API_KEY: "new_secret456"
       required:
         - variables
 
@@ -4142,8 +4304,7 @@ components:
           format: email
           description: Email address of the member; usable as an alert recipient.
         name:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Display name of the member, when set.
         role:
           $ref: "#/components/schemas/OrganizationMemberRole"
@@ -4200,8 +4361,7 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
         enabled:
           type: boolean
         cron_expression:
@@ -4217,9 +4377,8 @@ components:
           type: string
           description: IANA timezone name stored for display and anchoring; due times remain UTC.
         next_run_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Next due time in UTC; null when paused with no future occurrence computed.
         runner_type:
           $ref: "#/components/schemas/RunnerType"
@@ -4280,8 +4439,7 @@ components:
           minLength: 1
           maxLength: 120
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
         enabled:
           type: boolean
           default: true
@@ -4289,9 +4447,8 @@ components:
           type: string
           description: Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
         starts_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Optional UTC anchor; defaults to creation time when omitted.
         runner_type:
           $ref: "#/components/schemas/RunnerType"
@@ -4333,17 +4490,15 @@ components:
           minLength: 1
           maxLength: 120
         description:
-          type: string
-          nullable: true
+          type: [string, "null"]
         enabled:
           type: boolean
         cron_expression:
           type: string
           description: Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
         starts_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         runner_type:
           $ref: "#/components/schemas/RunnerType"
         environment_key:
@@ -4397,14 +4552,12 @@ components:
           type: string
           format: date-time
         started_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Derived earliest start of the run's executions.
         completed_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Derived latest completion once the run is terminal.
         matched_flow_count:
           type: integer
@@ -4469,15 +4622,12 @@ components:
           type: string
           format: date-time
         completed_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         error_message:
-          type: string
-          nullable: true
+          type: [string, "null"]
         error_code:
-          type: string
-          nullable: true
+          type: [string, "null"]
       required:
         - id
         - flow_id
@@ -4820,6 +4970,7 @@ paths:
       tags: [Webhook]
       security:
         - BearerAuth: [webhooks:read]
+        - ApiKeys: [webhooks:read]
       responses:
         "200":
           description: Server-Sent Events stream of webhook requests.
@@ -4850,7 +5001,7 @@ paths:
           schema:
             type: string
             format: date-time
-            example: "2023-01-01T00:00:00Z"
+            examples: ["2023-01-01T00:00:00Z"]
         - name: to
           in: query
           description: End datetime for analytics data (ISO 8601 format).
@@ -4858,7 +5009,7 @@ paths:
           schema:
             type: string
             format: date-time
-            example: "2023-01-02T00:00:00Z"
+            examples: ["2023-01-02T00:00:00Z"]
       responses:
         "200":
           description: Request volumes time series retrieved successfully.
@@ -4892,7 +5043,7 @@ paths:
           schema:
             type: string
             format: date-time
-            example: "2023-01-01T00:00:00Z"
+            examples: ["2023-01-01T00:00:00Z"]
         - name: to
           in: query
           description: End datetime for analytics data (ISO 8601 format).
@@ -4900,7 +5051,7 @@ paths:
           schema:
             type: string
             format: date-time
-            example: "2023-01-02T00:00:00Z"
+            examples: ["2023-01-02T00:00:00Z"]
       responses:
         "200":
           description: Method distribution retrieved successfully.
@@ -7288,6 +7439,7 @@ paths:
       tags: [Flows]
       security:
         - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
       responses:
         "200":
           description: Server-Sent Events stream of flow execution events.
