@@ -99,7 +99,7 @@ func newFlowsLaunchCmd(state *AppState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&runnerType, "runner", defaultRunnerType, "Runner backend: cloud or self_hosted")
+	cmd.Flags().StringVar(&runnerType, "runner", defaultRunnerType, "Runner backend: cloud, self_hosted, or ephemeral")
 	cmd.Flags().
 		StringVar(&environmentKey, "environment", "", "Named organization environment to overlay before flow variables (e.g. dev)")
 	return cmd
