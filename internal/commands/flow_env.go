@@ -150,9 +150,31 @@ func flowEnvGetPayload(env *api.Environment, vars map[string]string, showValues 
 	return sortedKeys(vars)
 }
 
+// collectVarInputs merges variables from an optional file and repeated --var
+// flags. Flag values win over file values on duplicate keys.
+func collectVarInputs(file string, flags []string) (map[string]string, error) {
+	out := make(map[string]string)
+	if file != "" {
+		fileVars, err := parseVarFile(file)
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(out, fileVars)
+	}
+	flagVars, err := parseVarFlags(flags)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(out, flagVars)
+	return out, nil
+}
+
 // newFlowEnvSetCmd sets environment variables for a flow
 func newFlowEnvSetCmd(state *AppState) *cobra.Command {
-	var variables []string
+	var (
+		variables []string
+		file      string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "set <flow-id>",
@@ -167,7 +189,7 @@ Examples:
   # Set multiple variables
   echopoint flows env set <flow-id> --var KEY1=value1 --var KEY2=value2
 
-  # Set from JSON file
+  # Set from a JSON ({"KEY":"value"}) or dotenv (KEY=value) file
   echopoint flows env set <flow-id> --file env.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -179,12 +201,12 @@ Examples:
 				return fmt.Errorf("invalid flow ID: %w", err)
 			}
 
-			updates, err := parseVarFlags(variables)
+			updates, err := collectVarInputs(file, variables)
 			if err != nil {
 				return err
 			}
 			if len(updates) == 0 {
-				return fmt.Errorf("no variables provided. Use --var KEY=value")
+				return fmt.Errorf("no variables provided. Use --var KEY=value or --file <path>")
 			}
 
 			// Merge into existing variables (read-modify-write): the API replaces
@@ -227,6 +249,7 @@ Examples:
 
 	cmd.Flags().
 		StringArrayVar(&variables, "var", []string{}, "Environment variable in KEY=value format (can be used multiple times)")
+	cmd.Flags().StringVar(&file, "file", "", "Path to a JSON or dotenv file")
 
 	return cmd
 }

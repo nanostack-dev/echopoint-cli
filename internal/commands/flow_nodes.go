@@ -730,7 +730,8 @@ Examples:
   # Assert response contains string
   echopoint flows node assertion add <flow-id> <node-id> --extractor body --operator contains --value "success"
 
-Available operators: equals, notEquals, contains, notContains, greaterThan, lessThan, empty, notEmpty`,
+Available operators: equals, notEquals, contains, notContains, greaterThan, lessThan,
+greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, regex`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
