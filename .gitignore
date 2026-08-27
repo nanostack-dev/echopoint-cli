@@ -6,3 +6,6 @@
 /.DS_Store
 *.log
 dist/
+
+# Agent worktrees, created by git worktree add
+worktrees/
