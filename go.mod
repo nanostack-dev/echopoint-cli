@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/minio/selfupdate v0.6.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
-	github.com/nanostack-dev/echopoint-runner v0.36.0
+	github.com/nanostack-dev/echopoint-runner v0.50.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/spf13/cobra v1.10.2

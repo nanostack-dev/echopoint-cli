@@ -74,8 +74,8 @@ github.com/minio/selfupdate v0.6.0 h1:i76PgT0K5xO9+hjzKcacQtO7+MjJ4JKA8Ak8XQ9DDw
 github.com/minio/selfupdate v0.6.0/go.mod h1:bO02GTIPCMQFTEvE5h4DjYB58bCoZ35XLeBf0buTDdM=
 github.com/modelcontextprotocol/go-sdk v1.6.1 h1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=
 github.com/modelcontextprotocol/go-sdk v1.6.1/go.mod h1:kzm3kzFL1/+AziGOE0nUs3gvPoNxMCvkxokMkuFapXQ=
-github.com/nanostack-dev/echopoint-runner v0.36.0 h1:KPqDSLoOl5QUUFLWn8jHSSf1qMHjHMicNYNYeinUt64=
-github.com/nanostack-dev/echopoint-runner v0.36.0/go.mod h1:YzIbq7euLMedGOEg04ho1C5p+NzlL9njJBQHWpptcsY=
+github.com/nanostack-dev/echopoint-runner v0.50.0 h1:gKoqvGjhMYIvxhcllxF+tV5NkkdKlR9PC/5aGuEA2GY=
+github.com/nanostack-dev/echopoint-runner v0.50.0/go.mod h1:NqYWs8myxHvPVRTEmxoIh4M9ZSgJUZgorVBIPD/rfSk=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
