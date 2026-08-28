@@ -46,7 +46,30 @@ components:
       in: header
       name: X-Api-Key
       description: "Organization API key in X-Api-Key header"
+    JobToken:
+      type: apiKey
+      in: header
+      name: X-Job-Token
+      description: "Single-use Cloud job token. The control plane stores only a hash."
   parameters:
+    VariableKey:
+      name: key
+      in: path
+      required: true
+      description: The variable name.
+      schema:
+        type: string
+        maxLength: 255
+        pattern: "^[A-Za-z_][A-Za-z0-9_-]*$"
+    EnvironmentPath:
+      name: environment
+      in: path
+      required: true
+      description: Named environment overlay, such as dev or prd.
+      schema:
+        type: string
+        maxLength: 255
+        pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
     LimitParameter:
       name: limit
       in: query
@@ -111,55 +134,71 @@ components:
         format: uuid
   responses:
     BadRequest:
-      description: Bad Request (e.g., validation error)
+      description: >-
+        The request is well-formed HTTP but the server will not process it. An
+        entity named in the request body or the query string does not resolve, a
+        field failed validation, or a non-credential header is absent or
+        malformed. The `code` field says which.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiErrorResponse"
     Unauthorized:
-      description: Unauthorized (Authentication required or invalid)
+      description: >-
+        The request carried no credential, or one that failed to authenticate:
+        absent, malformed, expired, revoked, or wrong. Authentication is the
+        subject. Permissions are not consulted.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiErrorResponse"
-          example:
-            errors:
-              [
-                {
-                  "code": "UNAUTHENTICATED",
-                  "message": "Authentication required.",
-                },
-              ]
     Forbidden:
-      description: Forbidden (Authenticated user lacks permission)
+      description: >-
+        The request authenticated, and the principal is not permitted to perform
+        it. A resource outside the caller's tenant answers 404 rather than 403,
+        so this status never confirms that an identifier names a real
+        resource.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiErrorResponse"
-          example:
-            errors:
-              [{ "code": "FORBIDDEN", "message": "Insufficient permissions." }]
     NotFound:
-      description: Resource Not Found
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ApiErrorResponse"
-    InternalServerError:
-      description: Internal Server Error
+      description: >-
+        A resource named in the URI path does not resolve. Every path segment
+        counts: on a nested path, either identifier being absent answers this.
+        The method does not enter the decision, so a custom action answers it
+        exactly as the read does.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiErrorResponse"
     Conflict:
-      description: Conflict (e.g., resource already exists)
+      description: >-
+        The request is well-formed and the target exists, and current state
+        refuses it. A later or different request can succeed — after a refresh,
+        after capacity is freed, or after a licensed limit is raised.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiErrorResponse"
-          example:
-            errors:
-              [{ "code": "CONFLICT", "message": "Resource conflict.", "field": "name" }]
+    TooManyRequests:
+      description: >-
+        The caller sent more requests than the window allows. Retrying later
+        succeeds.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+    InternalServerError:
+      description: >-
+        The server failed for a reason the caller could not have influenced.
+        The `code` is `UNEXPECTED_ERROR` unless the failure is a modelled
+        operational outcome that carries its own stable code.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"
+
   schemas:
     # Assistant chat
     AssistantChatScope:
@@ -1138,7 +1177,7 @@ components:
           properties:
             initialInputs:
               type: object
-              description: Initial input variables for the flow (from environment)
+              description: Initial input variables for the flow (from its variable set)
               additionalProperties: true
           required:
             - initialInputs
@@ -1636,12 +1675,20 @@ components:
           examples: ["req-success"]
         source_handle:
           type: string
-          description: Optional source handle ID used for anchor-specific edge routing
-          examples: ["source-right-step-login"]
+          description: >-
+            Border of the source node the edge is pinned to: top, right,
+            bottom, or left. Absent means the endpoint floats and meets the
+            border that faces the target node. An auto-layout update clears
+            this field.
+          examples: ["right"]
         target_handle:
           type: string
-          description: Optional target handle ID used for anchor-specific edge routing
-          examples: ["target-left-step-auth"]
+          description: >-
+            Border of the target node the edge is pinned to: top, right,
+            bottom, or left. Absent means the endpoint floats and meets the
+            border that faces the source node. An auto-layout update clears
+            this field.
+          examples: ["left"]
         type:
           type: string
           enum: ["success", "failure"]
@@ -1925,7 +1972,10 @@ components:
           $ref: "#/components/schemas/FlowDefinition"
         auto_layout:
           type: boolean
-          description: Recompute node positions on create using backend layout.
+          description: >-
+            Recompute node positions on create using backend layout. Also
+            clears every edge's pinned borders, so the new arrangement uses
+            floating endpoints.
         metadata:
           $ref: "#/components/schemas/FlowMetadata"
         tags:
@@ -1966,7 +2016,10 @@ components:
           $ref: "#/components/schemas/FlowDefinition"
         auto_layout:
           type: boolean
-          description: Recompute node positions on update using backend layout.
+          description: >-
+            Recompute node positions on update using backend layout. Also
+            clears every edge's pinned borders, so the new arrangement uses
+            floating endpoints.
         metadata:
           $ref: "#/components/schemas/FlowMetadata"
         tags:
@@ -2621,6 +2674,55 @@ components:
         - boot_id
         - max_parallel_flows
 
+    SecretInputKeys:
+      type: array
+      description: >-
+        Names the runner inputs whose values are secrets. The executor must
+        replace each of these values with `***` in every result, event, and log
+        line it emits.
+      items:
+        type: string
+      examples:
+        - ["API_KEY", "DB_PASSWORD"]
+
+    CloudJobPayload:
+      type: object
+      description: |
+        Runnable payload for a Cloud job. Returned only to a caller that presents
+        the matching job token. The raw token is never stored or echoed.
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        execution_id:
+          type: string
+          format: uuid
+        flow_id:
+          type: string
+          format: uuid
+        flow_snapshot:
+          $ref: "#/components/schemas/FlowDefinition"
+        runner_inputs:
+          $ref: "#/components/schemas/RunnerInputs"
+        secret_input_keys:
+          $ref: "#/components/schemas/SecretInputKeys"
+        referenced_flows:
+          $ref: "#/components/schemas/ReferencedFlows"
+        cloud_duration_seconds:
+          type: integer
+          format: int32
+          minimum: 1
+          description: |
+            Wall-clock cap for this Cloud run, from the organization license,
+            optionally tightened by the execution timeout_seconds.
+      required:
+        - job_id
+        - execution_id
+        - flow_id
+        - flow_snapshot
+        - runner_inputs
+        - cloud_duration_seconds
+
     RunnerJobPayload:
       type: object
       properties:
@@ -2644,6 +2746,8 @@ components:
           $ref: "#/components/schemas/FlowDefinition"
         inputs:
           $ref: "#/components/schemas/RunnerInputs"
+        secret_input_keys:
+          $ref: "#/components/schemas/SecretInputKeys"
         referenced_flows:
           $ref: "#/components/schemas/ReferencedFlows"
       required:
@@ -2721,6 +2825,12 @@ components:
           type: string
           format: uuid
           description: Ephemeral identifier for the current runner process.
+        runner_version:
+          type: string
+          maxLength: 64
+          description: >-
+            Runner build that ran the job. Recorded on the execution as
+            executor_version to make a bad build identifiable.
         status:
           $ref: "#/components/schemas/RunnerJobTerminalStatus"
         started_at:
@@ -2769,6 +2879,12 @@ components:
           type: string
           format: uuid
           description: Ephemeral identifier for the current runner process.
+        runner_version:
+          type: string
+          maxLength: 64
+          description: >-
+            Runner build that runs the job. Recorded on the execution as
+            executor_version to make a bad build identifiable.
         max_parallel_flows:
           type: integer
           format: int32
@@ -2826,6 +2942,9 @@ components:
           description: Immutable snapshot of the flow at execution time
         runner_inputs:
           $ref: "#/components/schemas/RunnerInputs"
+          description: >-
+            Effective root inputs for this execution. A secret value reads as
+            `***`.
         referenced_flows:
           $ref: "#/components/schemas/ReferencedFlows"
         status:
@@ -2848,11 +2967,37 @@ components:
         started_at:
           type: string
           format: date-time
-          description: When the execution started
+          description: >-
+            When the execution was created. An execution waits for a runner
+            before it runs, so this is not the moment the flow started.
+            execution_started_at is that moment.
         completed_at:
           type: [string, "null"]
           format: date-time
           description: When the execution completed (if finished)
+        executed_by:
+          type: [string, "null"]
+          description: >-
+            Runner process that ran the flow. A Cloud execution names the Cloud
+            worker container, such as cloud-worker:<container id>. Null until
+            the runner reports, and for an execution no runner ever ran.
+          examples: ["cloud-worker:b1c2d3e4f5"]
+        executor_boot_id:
+          type: [string, "null"]
+          format: uuid
+          description: >-
+            Boot identifier of that runner process. Two executions on the same
+            runner with different boot ids ran across a restart.
+        executor_version:
+          type: [string, "null"]
+          description: Runner build that ran the flow.
+          examples: ["v0.46.0"]
+        execution_started_at:
+          type: [string, "null"]
+          format: date-time
+          description: >-
+            When the runner started the flow. The interval from started_at is
+            the wait before execution.
         error_message:
           type: [string, "null"]
           description: Error message if execution failed
@@ -3008,6 +3153,107 @@ components:
                 $ref: "#/components/schemas/FlowExecution"
           required:
             - items
+
+    FlowExecutionActivity:
+      type: object
+      description: >
+        Slim org-wide execution row for activity surfaces. Omits flow_snapshot,
+        runner_inputs, referenced_flows, trigger_metadata, and execution_result.
+      properties:
+        id:
+          type: string
+          format: uuid
+        flow_id:
+          type: string
+          format: uuid
+        flow_name:
+          type: [string, "null"]
+          description: >
+            Current flows.name. Always present. Null means the flow is deleted or
+            missing, and null is the only signal for that. The execution history
+            stays after the flow is gone.
+        organization_id:
+          type: string
+        status:
+          $ref: "#/components/schemas/ExecutionStatus"
+        trigger_type:
+          $ref: "#/components/schemas/TriggerType"
+        runner_type:
+          $ref: "#/components/schemas/RunnerType"
+        environment_key:
+          type: [string, "null"]
+          description: Named environment overlaid for this execution. Null when unset.
+        schedule_run_id:
+          type: [string, "null"]
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: [string, "null"]
+          format: date-time
+        error_message:
+          type: [string, "null"]
+        error_code:
+          type: [string, "null"]
+      required:
+        - id
+        - flow_id
+        - flow_name
+        - organization_id
+        - status
+        - runner_type
+        - started_at
+
+    FlowExecutionActivityListResponse:
+      allOf:
+        - $ref: "#/components/schemas/PagedListResponse"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FlowExecutionActivity"
+          required:
+            - items
+
+    ExecutionSummaryWindow:
+      type: string
+      enum: [1h, 24h, 7d]
+      default: 24h
+      description: Lookback window for runs and failed counts. Running and pending are current.
+    ExecutionSummary:
+      type: object
+      properties:
+        window:
+          $ref: "#/components/schemas/ExecutionSummaryWindow"
+        since:
+          type: string
+          format: date-time
+          description: Inclusive lower bound used for runs and failed.
+        runs:
+          type: integer
+          format: int64
+          description: Executions with started_at greater than or equal to since.
+        failed:
+          type: integer
+          format: int64
+          description: Executions with status=failed and started_at greater than or equal to since.
+        running:
+          type: integer
+          format: int64
+          description: Executions currently running, any started_at.
+        pending:
+          type: integer
+          format: int64
+          description: Executions currently pending, any started_at.
+      required:
+        - window
+        - since
+        - runs
+        - failed
+        - running
+        - pending
 
     LaunchFlowAcceptedResponse:
       type: object
@@ -3265,7 +3511,7 @@ components:
           type: string
           description: |
             Request URL. Supports template variables such as {{baseUrl}}/users/123.
-            Templates are resolved from the active organization environment in the request workspace.
+            Templates are resolved from the organization variable set in the request workspace.
           examples: ["{{baseUrl}}/users/123"]
         headers:
           type: [object, "null"]
@@ -3400,7 +3646,7 @@ components:
           type: string
           description: |
             Request URL. Supports template variables such as {{baseUrl}}/users/123.
-            Templates are resolved from the active organization environment in the request workspace.
+            Templates are resolved from the organization variable set in the request workspace.
           examples: ["{{baseUrl}}/users/123"]
         headers:
           type: [object, "null"]
@@ -3448,7 +3694,7 @@ components:
           type: string
           description: |
             Request URL. Supports template variables such as {{baseUrl}}/users/123.
-            Templates are resolved from the active organization environment in the request workspace.
+            Templates are resolved from the organization variable set in the request workspace.
           examples: ["{{baseUrl}}/users/123"]
         headers:
           type: [object, "null"]
@@ -4085,15 +4331,26 @@ components:
           description: How to format the extracted body
 
 
-    # Environment Schemas
-    EnvironmentVariable:
+    # Variable Set Schemas
+    Variable:
       type: object
       properties:
         value:
           type: string
-          maxLength: 1000
-          description: The variable value
+          maxLength: 65536
+          description: >-
+            The variable value. Absent when `secret` is true: a secret value is
+            write-only and is never returned by any read.
           examples: ["https://api.example.com"]
+        secret:
+          type: boolean
+          default: false
+          description: >-
+            Whether the value is a secret. A secret is encrypted at rest, is
+            never returned by a read, and is replaced by `***` in execution
+            results, progress events, and flow exports. A plain variable can be
+            turned into a secret. A secret cannot be turned back into a plain
+            variable: delete it and create it again.
         organization_id:
           type: string
           description: Organization ID that owns this variable.
@@ -4107,43 +4364,97 @@ components:
           format: date-time
           description: When the variable was last updated
       required:
-        - value
+        - secret
         - organization_id
         - created_at
         - updated_at
 
-    EnvironmentVariableSet:
+    SetVariableRequest:
       type: object
-      additionalProperties:
-        $ref: "#/components/schemas/EnvironmentVariable"
-      description: Flat key/value environment variables with audit metadata.
+      properties:
+        value:
+          type: string
+          maxLength: 65536
+          description: The variable value.
+          examples: ["https://api.example.com"]
+        secret:
+          type: boolean
+          default: false
+          description: >-
+            Set to true to store the value as a secret. A secret is encrypted at
+            rest and is never returned by a read. Sending false for a key that
+            is already a secret is refused.
+      required:
+        - value
 
-    NamedEnvironmentVariableSets:
+    VariableLayer:
       type: object
       additionalProperties:
-        $ref: "#/components/schemas/EnvironmentVariableSet"
+        $ref: "#/components/schemas/Variable"
+      description: Flat key/value variables with audit metadata.
+
+    EnvironmentLayers:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/VariableLayer"
       description: Named environment overlays such as dev, stg1, or prd.
 
-    EnvironmentVariablesInput:
-      type: object
-      additionalProperties:
-        type: string
-        maxLength: 1000
-      examples:
-        - API_KEY: "secret123"
-          BASE_URL: "https://api.example.com"
-
-    NamedEnvironmentVariablesInput:
-      type: object
-      additionalProperties:
-        $ref: "#/components/schemas/EnvironmentVariablesInput"
-      examples:
-        - dev:
-            BASE_URL: "https://dev.api.example.com"
-          prd:
-            BASE_URL: "https://api.example.com"
-
     Environment:
+      type: object
+      description: >-
+        One named environment. It exists on its own, so an environment with no
+        variables is a real environment and survives a round trip.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated unique identifier
+          examples: ["550e8400-e29b-41d4-a716-446655440000"]
+        name:
+          type: string
+          description: The environment name, such as dev or prd.
+          examples: ["prd"]
+        created_at:
+          type: string
+          format: date-time
+          description: When the environment was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the environment was last updated
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+
+    CreateEnvironmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          description: The environment name, such as dev or prd.
+          examples: ["prd"]
+      required:
+        - name
+
+    EnvironmentListResponse:
+      type: object
+      description: The organization's environments, without their variables.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Environment"
+          description: Environments sorted by name.
+      required:
+        - items
+
+
+
+    VariableSet:
       type: object
       properties:
         id:
@@ -4161,9 +4472,9 @@ components:
           enum: [flow, organization]
           description: Type of owner
           examples: ["flow"]
-        variables:
-          $ref: "#/components/schemas/EnvironmentVariableSet"
-          description: Environment variables as key-value pairs
+        base:
+          $ref: "#/components/schemas/VariableLayer"
+          description: The base layer, applied before any environment overlay.
           examples:
             - API_KEY:
                 value: "secret123"
@@ -4176,111 +4487,35 @@ components:
                 created_at: "2025-11-09T10:05:00Z"
                 updated_at: "2025-11-09T10:05:00Z"
         environments:
-          $ref: "#/components/schemas/NamedEnvironmentVariableSets"
-          description: Named environment overlays owned by this environment resource.
+          $ref: "#/components/schemas/EnvironmentLayers"
+          description: Named environment overlays owned by this variable set.
         organization_id:
           type: string
-          description: Organization ID that owns this environment.
+          description: Organization ID that owns this variable set.
           examples: ["org_123"]
         created_at:
           type: string
           format: date-time
-          description: When the environment was created
+          description: When the variable set was created
         updated_at:
           type: string
           format: date-time
-          description: When the environment was last updated
+          description: When the variable set was last updated
       required:
         - id
         - owner_id
         - owner_type
-        - variables
+        - base
         - environments
         - organization_id
         - created_at
         - updated_at
 
-    CreateEnvironmentRequest:
-      type: object
-      properties:
-        owner_id:
-          type: string
-          format: uuid
-          description: The owner ID (flow, organization, workspace, etc.)
-          examples: ["550e8400-e29b-41d4-a716-446655440100"]
-        owner_type:
-          type: string
-          enum: [flow]
-          description: Type of owner (currently only 'flow' is supported)
-          examples: ["flow"]
-        variables:
-          type: object
-          additionalProperties:
-            type: string
-            maxLength: 1000
-          description: Initial environment variables
-          examples:
-            - API_KEY: "secret123"
-              BASE_URL: "https://api.example.com"
-      required:
-        - owner_id
-        - owner_type
 
-    UpdateEnvironmentRequest:
-      type: object
-      properties:
-        variables:
-          type: object
-          additionalProperties:
-            type: string
-            maxLength: 1000
-          description: Variables to add or update
-          examples:
-            - API_KEY: "new_secret456"
-      required:
-        - variables
 
-    CreateFlowEnvironmentRequest:
-      type: object
-      description: Request to create or update flow environment
-      properties:
-        variables:
-          $ref: "#/components/schemas/EnvironmentVariablesInput"
-          description: Environment variables to set
-      required:
-        - variables
 
-    UpdateFlowEnvironmentRequest:
-      type: object
-      description: Request to update flow environment
-      properties:
-        variables:
-          $ref: "#/components/schemas/EnvironmentVariablesInput"
-          description: Environment variables to update
-      required:
-        - variables
 
-    UpsertOrganizationEnvironmentRequest:
-      type: object
-      description: Request to create or update the organization environment layers.
-      properties:
-        variables:
-          $ref: "#/components/schemas/EnvironmentVariablesInput"
-          description: Base organization variables loaded for every execution.
-        environments:
-          $ref: "#/components/schemas/NamedEnvironmentVariablesInput"
-          description: Named organization environment overlays selected at launch time.
 
-    UpdateOrganizationEnvironmentRequest:
-      type: object
-      description: Request to replace the organization environment layers.
-      properties:
-        variables:
-          $ref: "#/components/schemas/EnvironmentVariablesInput"
-          description: Base organization variables loaded for every execution.
-        environments:
-          $ref: "#/components/schemas/NamedEnvironmentVariablesInput"
-          description: Named organization environment overlays selected at launch time.
 
     # ---------------------------------------------------------------------------
     # Flow schedules (scheduled flow runs / monitors)
@@ -4756,7 +4991,6 @@ paths:
                 $ref: "#/components/schemas/Webhook"
         "400":
           $ref: "#/components/responses/BadRequest"
-
   /webhooks/{id}:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
@@ -4791,7 +5025,12 @@ paths:
       responses:
         "204":
           description: Webhook endpoint deleted successfully or already deleted.
-
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /resources/search:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -4824,7 +5063,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
   /administrations/resource-search/resync:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -4849,7 +5087,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
   /administrations/flow-schedules/{scheduleId}/run:
     parameters:
       - name: scheduleId
@@ -4882,7 +5119,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-
+        "409":
+          $ref: "#/components/responses/Conflict"
   /webhooks/{id}/requests/search:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
@@ -4914,7 +5152,6 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /webhooks/search:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -4947,7 +5184,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
   /webhooks/{id}/stream:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
@@ -5021,7 +5257,6 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /webhooks/{id}/analytics/requests/methods:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
@@ -5229,7 +5464,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
-
   /runner/ephemeral/executions/{executionId}/complete:
     parameters:
       - name: executionId
@@ -5285,7 +5519,6 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /runners:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -5296,6 +5529,8 @@ paths:
       description: |
         Returns the currently live self-hosted runners observed for the active organization,
         based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
+        Cloud workers are never listed: a Cloud container is a transient worker of the
+        shared pool, not a runner that the organization operates.
       tags:
         - Runner
       security:
@@ -5316,7 +5551,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /runner/jobs/next:
     post:
       operationId: nextRunnerJob
@@ -5353,6 +5587,42 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /runner/jobs/{jobId}/payload:
+    parameters:
+      - $ref: "#/components/parameters/RunnerJobIDParameter"
+    get:
+      operationId: getCloudJobPayload
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
+      summary: Fetch the Cloud job payload
+      description: |
+        Returns the flow snapshot, runner inputs, referenced flows, and Cloud
+        duration for a Cloud job. Authenticate with the job token. The token is
+        never persisted. Self-hosted and ephemeral jobs are not served here.
+
+        The payload is single-use. The first call claims it; a later call is
+        refused with 409. Message delivery to a Cloud worker is at-least-once,
+        so a redelivered job can reach a second worker that holds the same
+        valid token, and a Cloud job must never run twice.
+      tags:
+        - Runner
+      security:
+        - JobToken: []
+      responses:
+        "200":
+          description: Cloud job payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudJobPayload"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /runner/jobs/{jobId}/complete:
     parameters:
       - $ref: "#/components/parameters/RunnerJobIDParameter"
@@ -5362,10 +5632,13 @@ paths:
       summary: Complete a claimed runner job
       description: |
         Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+        Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+        Do not send both headers.
       tags:
         - Runner
       security:
         - ApiKeys: [runner:complete]
+        - JobToken: []
       requestBody:
         required: true
         content:
@@ -5387,7 +5660,6 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /runner/jobs/{jobId}/events:
     parameters:
       - $ref: "#/components/parameters/RunnerJobIDParameter"
@@ -5396,11 +5668,14 @@ paths:
       x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
       summary: Append progress events for a claimed runner job
       description: |
-        Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+        Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+        Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+        Do not send both headers.
       tags:
         - Runner
       security:
         - ApiKeys: [runner:complete]
+        - JobToken: []
       requestBody:
         required: true
         content:
@@ -5426,7 +5701,6 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /runner/jobs/heartbeat:
     post:
       operationId: heartbeatRunnerJobs
@@ -5434,11 +5708,13 @@ paths:
       summary: Renew leases for active runner jobs
       description: |
         Refreshes the lease for the claimed runner jobs that are still actively executing
-        on the current runner process.
+        on the current runner process. Cloud jobs authenticate with X-Job-Token.
+        Self-hosted jobs keep X-Api-Key. Do not send both headers.
       tags:
         - Runner
       security:
         - ApiKeys: [runner:claim]
+        - JobToken: []
       requestBody:
         required: true
         content:
@@ -5462,7 +5738,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /flows:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -5517,7 +5792,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
-
+        "409":
+          $ref: "#/components/responses/Conflict"
   /flows/search:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -5557,7 +5833,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/folders/move:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -5601,7 +5876,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
-
   /flows/folders:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -5622,10 +5896,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FlowFolderListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     post:
       summary: Create Flow Folder
       description: Creates a flow folder, optionally nested under a parent folder.
@@ -5659,7 +5939,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
-
   /flows/folders/{folderId}:
     parameters:
       - name: folderId
@@ -5738,6 +6017,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FlowFolderDeletionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -5746,7 +6027,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
-
   /flows/folders/{folderId}/move:
     parameters:
       - name: folderId
@@ -5797,7 +6077,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
-
   /flows/tags:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -5824,7 +6103,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
   /flows/{id}:
     parameters:
       - name: id
@@ -5885,6 +6163,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     delete:
       summary: Delete Flow
       description: Deletes a flow. This is a destructive operation.
@@ -5899,7 +6179,6 @@ paths:
           description: Flow deleted successfully or already deleted.
         "401":
           $ref: "#/components/responses/Unauthorized"
-
   /flows/{id}/export:
     parameters:
       - name: id
@@ -5919,7 +6198,10 @@ paths:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     get:
       summary: Export Flow
-      description: Returns the raw flow definition JSON formatted for the flow engine.
+      description: >-
+        Returns the raw flow definition JSON formatted for the flow engine. A
+        secret variable is exported as the placeholder `{{KEY}}` instead of its
+        value, so the importing organization must set the secret itself.
       operationId: exportFlow
       x-ai-tool: true
       tags: [Flows]
@@ -5939,7 +6221,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /me:
     get:
       summary: Get current user and organization context
@@ -5958,103 +6239,222 @@ paths:
                 $ref: "#/components/schemas/CurrentUserResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
-  /organization/environment:
+  /organization/variables:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    post:
-      summary: Create or Update Organization Environment
-      description: Creates or updates the organization base environment and named environment overlays.
-      operationId: createOrUpdateOrganizationEnvironment
-      x-ai-tool: true
-      tags: [Organization]
-      security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpsertOrganizationEnvironmentRequest"
-      responses:
-        "200":
-          description: Organization environment updated successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Environment"
-        "201":
-          description: Organization environment created successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Environment"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
     get:
-      summary: Get Organization Environment
-      description: Retrieves the organization base environment and named environment overlays.
-      operationId: getOrganizationEnvironment
+      summary: Get Organization Variables
+      description: Retrieves the organization variable set, its base layer and its named environment overlays.
+      operationId: getOrganizationVariables
       x-ai-tool: true
       tags: [Organization]
       security:
-        - BearerAuth: [flows:read]
-        - ApiKeys: [flows:read]
+        - BearerAuth: [environment:read]
+        - ApiKeys: [environment:read]
       responses:
         "200":
-          description: Organization environment retrieved successfully.
+          description: Organization variable set retrieved successfully.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Environment"
+                $ref: "#/components/schemas/VariableSet"
         "401":
           $ref: "#/components/responses/Unauthorized"
-    put:
-      summary: Update Organization Environment
-      description: Replaces the organization base environment and named environment overlays.
-      operationId: updateOrganizationEnvironment
+    delete:
+      summary: Delete Organization Variables
+      description: Deletes the organization variable set, its base layer and its named environment overlays.
+      operationId: deleteOrganizationVariables
       x-ai-tool: true
       tags: [Organization]
       security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
+        - BearerAuth: [environment:delete]
+        - ApiKeys: [environment:delete]
+      responses:
+        "204":
+          description: Organization variable set deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /organization/variables/{key}:
+    parameters:
+      - $ref: "#/components/parameters/VariableKey"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    put:
+      summary: Set Organization Variable
+      description: >-
+        Creates or replaces one variable in the organization base layer. A
+        plain variable can be turned into a secret. A secret cannot be turned
+        back into a plain variable: delete it and create it again.
+      operationId: setOrganizationVariable
+      x-ai-tool: true
+      tags: [Organization]
+      security:
+        - BearerAuth: [environment:update]
+        - ApiKeys: [environment:update]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateOrganizationEnvironmentRequest"
+              $ref: "#/components/schemas/SetVariableRequest"
       responses:
         "200":
-          description: Organization environment updated successfully.
+          description: Variable stored successfully.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Environment"
+                $ref: "#/components/schemas/VariableSet"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
     delete:
-      summary: Delete Organization Environment
-      description: Deletes the organization environment and its named overlays.
-      operationId: deleteOrganizationEnvironment
+      summary: Delete Organization Variable
+      description: Deletes one variable from the organization base layer.
+      operationId: deleteOrganizationVariable
       x-ai-tool: true
       tags: [Organization]
       security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
+        - BearerAuth: [environment:delete]
+        - ApiKeys: [environment:delete]
       responses:
         "204":
-          description: Organization environment deleted successfully or already deleted.
+          description: Variable deleted successfully or already deleted.
         "401":
           $ref: "#/components/responses/Unauthorized"
-
+  /organization/environments:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Environments
+      description: >-
+        Lists the organization's environments. Variables are not included; read
+        them from the organization variable set.
+      operationId: listEnvironments
+      x-ai-tool: true
+      tags: [Organization]
+      security:
+        - BearerAuth: [environment:read]
+        - ApiKeys: [environment:read]
+      responses:
+        "200":
+          description: Environments retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvironmentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create Environment
+      description: >-
+        Creates one environment. It starts empty, and stays empty until a
+        variable is written into it.
+      operationId: createEnvironment
+      x-ai-tool: true
+      tags: [Organization]
+      security:
+        - BearerAuth: [environment:create]
+        - ApiKeys: [environment:create]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnvironmentRequest"
+      responses:
+        "201":
+          description: Environment created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /organization/environments/{environment}:
+    parameters:
+      - $ref: "#/components/parameters/EnvironmentPath"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    delete:
+      summary: Delete Environment
+      description: >-
+        Deletes one environment and every variable in it. The base layer is
+        untouched.
+      operationId: deleteEnvironment
+      x-ai-tool: true
+      tags: [Organization]
+      security:
+        - BearerAuth: [environment:delete]
+        - ApiKeys: [environment:delete]
+      responses:
+        "204":
+          description: Environment deleted successfully.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /organization/environments/{environment}/variables/{key}:
+    parameters:
+      - $ref: "#/components/parameters/EnvironmentPath"
+      - $ref: "#/components/parameters/VariableKey"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    put:
+      summary: Set Environment Variable
+      description: >-
+        Creates or replaces one variable in an environment such as dev or prd.
+        The environment must already exist, so a misspelled name fails instead
+        of creating one. A plain variable can be turned into a secret; the
+        reverse is refused.
+      operationId: setEnvironmentVariable
+      x-ai-tool: true
+      tags: [Organization]
+      security:
+        - BearerAuth: [environment:update]
+        - ApiKeys: [environment:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetVariableRequest"
+      responses:
+        "200":
+          description: Variable stored successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VariableSet"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Environment Variable
+      description: >-
+        Deletes one variable from an environment. The environment must exist;
+        deleting a variable that does not exist succeeds.
+      operationId: deleteEnvironmentVariable
+      x-ai-tool: true
+      tags: [Organization]
+      security:
+        - BearerAuth: [environment:delete]
+        - ApiKeys: [environment:delete]
+      responses:
+        "204":
+          description: Variable deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /init:
     post:
       summary: Initialize current user organization
@@ -6075,7 +6475,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /api-keys:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -6135,7 +6534,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /api-keys/search:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -6169,7 +6567,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /permissions:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -6196,7 +6593,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /api-keys/self:
     get:
       summary: Get current API key identity
@@ -6223,7 +6619,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /api-keys/{id}:
     parameters:
       - $ref: "#/components/parameters/ApiKeyIdParameter"
@@ -6270,7 +6665,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /collections:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -6325,7 +6719,6 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
-
   /collections/{id}:
     parameters:
       - name: id
@@ -6400,7 +6793,6 @@ paths:
           description: Collection deleted successfully or already deleted.
         "401":
           $ref: "#/components/responses/Unauthorized"
-
   /collections/{id}/openapi-sync:
     parameters:
       - name: id
@@ -6431,7 +6823,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{id}/openapi-sync/run:
     parameters:
       - name: id
@@ -6472,7 +6863,6 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
   /collections/{id}/openapi-sync/history:
     parameters:
       - name: id
@@ -6551,7 +6941,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{id}/openapi-sync/operations/search:
     parameters:
       - name: id
@@ -6591,7 +6980,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /openapi-syncs/search:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -6624,7 +7012,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{id}/folders:
     parameters:
       - name: id
@@ -6684,7 +7071,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{collectionId}/folders/{folderId}:
     parameters:
       - name: collectionId
@@ -6747,7 +7133,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{id}/requests:
     parameters:
       - name: id
@@ -6830,7 +7215,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{collectionId}/requests/{requestId}:
     parameters:
       - name: collectionId
@@ -6913,7 +7297,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{collectionId}/requests/{requestId}/execute:
     parameters:
       - name: collectionId
@@ -6960,7 +7343,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/{collectionId}/requests/{requestId}/openapi-sync-history:
     parameters:
       - name: collectionId
@@ -7000,7 +7382,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /collections/import/openapi:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -7033,8 +7414,7 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
-
-  /flows/{id}/environments:
+  /flows/{id}/variables:
     parameters:
       - name: id
         in: path
@@ -7044,45 +7424,10 @@ paths:
           type: string
           format: uuid
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
-    post:
-      summary: Create or Update Flow Environment
-      description: Creates or updates environment variables for a flow.
-      operationId: createOrUpdateFlowEnvironment
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
-      requestBody:
-        description: Environment variables to set.
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateFlowEnvironmentRequest"
-      responses:
-        "200":
-          description: Environment updated successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Environment"
-        "201":
-          description: Environment created successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Environment"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
     get:
-      summary: Get Flow Environment
-      description: Retrieves environment variables for a flow.
-      operationId: getFlowEnvironment
+      summary: Get Flow Variables
+      description: Retrieves the variable set for a flow.
+      operationId: getFlowVariables
       x-ai-tool: true
       tags: [Flows]
       security:
@@ -7090,48 +7435,19 @@ paths:
         - ApiKeys: [flows:read]
       responses:
         "200":
-          description: Environment retrieved successfully (empty object if not exists).
+          description: Flow variable set retrieved successfully.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Environment"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    put:
-      summary: Update Flow Environment
-      description: Updates environment variables for a flow.
-      operationId: updateFlowEnvironment
-      x-ai-tool: true
-      tags: [Flows]
-      security:
-        - BearerAuth: [flows:update]
-        - ApiKeys: [flows:update]
-      requestBody:
-        description: Environment variables to update.
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateFlowEnvironmentRequest"
-      responses:
-        "200":
-          description: Environment updated successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Environment"
-        "400":
-          $ref: "#/components/responses/BadRequest"
+                $ref: "#/components/schemas/VariableSet"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
-      summary: Delete Flow Environment
-      description: Deletes environment variables for a flow.
-      operationId: deleteFlowEnvironment
+      summary: Delete Flow Variables
+      description: Deletes every variable for a flow.
+      operationId: deleteFlowVariables
       x-ai-tool: true
       tags: [Flows]
       security:
@@ -7139,12 +7455,69 @@ paths:
         - ApiKeys: [flows:delete]
       responses:
         "204":
-          description: Environment deleted successfully or already deleted.
+          description: Flow variable set deleted successfully or already deleted.
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
+  /flows/{id}/variables/{key}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the flow.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/VariableKey"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    put:
+      summary: Set Flow Variable
+      description: >-
+        Creates or replaces one flow variable. This is the only way to write a
+        secret. A plain variable can be turned into a secret. A secret cannot
+        be turned back into a plain variable.
+      operationId: setFlowVariable
+      x-ai-tool: true
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:update]
+        - ApiKeys: [flows:update]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetVariableRequest"
+      responses:
+        "200":
+          description: Variable stored successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VariableSet"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete Flow Variable
+      description: Deletes one flow variable.
+      operationId: deleteFlowVariable
+      x-ai-tool: true
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:delete]
+        - ApiKeys: [flows:delete]
+      responses:
+        "204":
+          description: Variable deleted successfully or already deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /flows/{id}/publish:
     parameters:
       - name: id
@@ -7177,7 +7550,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/{id}/versions:
     parameters:
       - name: id
@@ -7210,7 +7582,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/{id}/versions/{versionId}:
     parameters:
       - name: id
@@ -7248,7 +7619,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/{id}/versions/{versionId}/restore:
     parameters:
       - name: id
@@ -7290,7 +7660,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /operations:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -7314,7 +7683,6 @@ paths:
                   $ref: "#/components/schemas/OperationDefinition"
         "401":
           $ref: "#/components/responses/Unauthorized"
-
   /nodes:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -7338,6 +7706,99 @@ paths:
                   $ref: "#/components/schemas/NodeDefinition"
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  # Org-wide execution activity
+  /executions/summary:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Organization Execution Summary
+      description: |
+        Returns windowed run and failed counts plus current running and pending
+        counts for the organization. Running and pending ignore the window.
+      operationId: getExecutionsSummary
+      x-ai-tool: true
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      parameters:
+        - name: window
+          in: query
+          required: false
+          description: Lookback window for runs and failed. Defaults to 24h.
+          schema:
+            $ref: "#/components/schemas/ExecutionSummaryWindow"
+      responses:
+        "200":
+          description: Execution summary retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /executions:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Organization Executions
+      description: |
+        Retrieves org-wide execution activity, newest first. Rows are slim
+        activity records and do not include flow snapshots.
+      operationId: listExecutions
+      x-ai-tool: true
+      tags: [Flows]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+        - name: status
+          in: query
+          required: false
+          description: Filter by execution status.
+          schema:
+            $ref: "#/components/schemas/ExecutionStatus"
+        - name: trigger_type
+          in: query
+          required: false
+          description: Filter by trigger type.
+          schema:
+            $ref: "#/components/schemas/TriggerType"
+        - name: flow_id
+          in: query
+          required: false
+          description: Filter by flow identifier.
+          schema:
+            type: string
+            format: uuid
+        - name: since
+          in: query
+          required: false
+          description: Inclusive lower bound on started_at (RFC3339).
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Executions retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowExecutionActivityListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   # Flow Execution Tracking Endpoints
   /flows/{id}/executions:
@@ -7375,7 +7836,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/{flowId}/executions/{executionId}:
     parameters:
       - name: flowId
@@ -7413,7 +7873,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/{flowId}/executions/{executionId}/stream:
     parameters:
       - name: flowId
@@ -7452,7 +7911,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/{flowId}/executions/{executionId}/nodes:
     parameters:
       - name: flowId
@@ -7492,7 +7950,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flows/{flowId}/executions/{executionId}/nodes/{nodeId}:
     parameters:
       - name: flowId
@@ -7574,7 +8031,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /members:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -7613,7 +8069,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
   /flow-schedules:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -7682,7 +8137,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-
+        "409":
+          $ref: "#/components/responses/Conflict"
   /flow-schedules/preview-tags:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -7716,7 +8172,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
+        "409":
+          $ref: "#/components/responses/Conflict"
   /flow-schedules/{scheduleId}:
     parameters:
       - name: scheduleId
@@ -7777,6 +8234,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     delete:
       summary: Delete Flow Schedule
       description: Deletes a schedule and prevents future launches; prior execution history is preserved.
@@ -7793,7 +8252,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
   /flow-schedules/{scheduleId}/pause:
     parameters:
       - name: scheduleId
@@ -7826,7 +8284,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-
+        "409":
+          $ref: "#/components/responses/Conflict"
   /flow-schedules/{scheduleId}/resume:
     parameters:
       - name: scheduleId
@@ -7859,7 +8318,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-
+        "409":
+          $ref: "#/components/responses/Conflict"
   /flow-schedules/{scheduleId}/runs:
     parameters:
       - name: scheduleId
@@ -7895,7 +8355,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /flow-schedules/{scheduleId}/runs/{runId}:
     parameters:
       - name: scheduleId
@@ -7935,7 +8394,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-
   /assistant/chat:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"

@@ -1,63 +1,72 @@
-# CLI Environment Management
+# CLI Variable Management
 
-Bring environment-variable management (currently UI-only) into the CLI.
+`org env` and `flows env` manage the variables a flow execution reads.
 
-## Scopes
+## Layers
 
-Backend already exposes all three. No backend change.
+A **variable set** is what one owner has: its base variables plus its named
+environments. An **environment** is a named overlay such as `dev` or `prd`, and
+nothing else — the container is the variable set.
 
-| Scope | Backend resource | Selected when |
+| Layer | Resource | Applied when |
 | --- | --- | --- |
-| **Org base** | `variables` on `/organization/environment` | every execution |
-| **Named environment** (dev/stg/prd) | `environments` overlay map on `/organization/environment` | flow launch via `environment_key` |
-| **Flow** | `variables` on `/flows/{id}/environments` | every execution of that flow |
+| **Org base** | `/organization/variables` | every execution |
+| **Named environment** | `/organization/environments/{name}/variables/{key}` | flow launch via `environment_key` |
+| **Flow** | `/flows/{id}/variables` | every execution of that flow |
 
-Resolution precedence at launch (highest wins): **flow vars > org named overlay > org base**.
+Resolution precedence at launch, highest first: **flow > org environment > org base**.
+
+## Secrets
+
+A variable can be stored as a secret. It is encrypted at rest, a read never
+returns its value, and execution results, progress events and flow exports
+replace it with `***`.
+
+A plain variable can become a secret. The reverse is refused: delete it and set
+it again. That asymmetry is deliberate — the one-way direction only ever adds
+protection, and there is no way to reveal a value that has already been hidden.
+
+`--show-values` prints `<secret>` for a secret, not an empty string, because the
+value is withheld rather than unset.
 
 ## Command surface
 
-`org env` is the new group (org base + named overlays). `flows env` stays for per-flow and gains `unset` (import/export remain org-only for now).
-
 ```
-echopoint org env get [-e <name>]              # base vars; -e shows a named overlay
-echopoint org env set --var K=V [-e <name>]     # merge (read-modify-write); -e auto-creates overlay
+echopoint org env get [-e <name>] [--show-values]
+echopoint org env set --var K=V [-e <name>] [--secret]
 echopoint org env unset KEY [KEY...] [-e <name>]
-echopoint org env import --file <env.json|.env> [-e <name>]
-echopoint org env delete [--yes]                # delete whole org environment
-echopoint org env environments list             # list overlay names
-echopoint org env environments delete <name>    # drop one overlay
+echopoint org env import --file <env.json|.env> [-e <name>] [--secret]
+echopoint org env delete                        # delete the whole variable set
 
-echopoint flows env get|set|unset|delete <flow-id>   # existing + new unset
+echopoint org env environments list
+echopoint org env environments create <name>
+echopoint org env environments delete <name>    # drops the overlay and its variables
+
+echopoint flows env get|set|unset|delete <flow-id>
 ```
 
-`-o json|yaml` works on every read, mirroring existing commands.
+`-o json|yaml` works on every read.
 
-### Why read-modify-write
+## One write per variable
 
-The API has no per-key endpoint — only whole-object POST (upsert) / PUT (replace) / DELETE.
-`set`/`unset` therefore: GET current env → convert `map[string]EnvironmentVariable` to `map[string]string` (take `.Value`) → mutate → POST `createOrUpdate` with the merged object. `delete` (no key) calls DELETE.
+Every write addresses one variable: `PUT /organization/variables/{key}`, or the
+environment-scoped form. There is no whole-object upsert, so `set` and `unset`
+touch only the keys they are given and cannot clobber a concurrent write to a
+different key.
 
-## CLI changes (all in `echopoint-cli`)
+An environment has to exist before a variable can be written into it. A
+misspelled `-e` name fails with a 404 instead of silently creating an overlay
+nothing reads, which is why `environments create` exists.
 
-1. **`internal/api/openapi.yaml`** is the **full prod contract**, sourced from `https://api.echopoint.dev/openapi.yaml` (replacing the old hand-curated 28-path subset). Authoritative source of truth for codegen. Refresh by re-fetching and re-running the stripper below.
-   - **Strip codegen-breaking annotations**: remove every `x-go-type` and `x-go-type-import` — they map schemas to backend/framework Go packages (`echopoint/internal/...`, `nanostack-framework/pkg/...`, `echopoint-runner/pkg/...`) that the CLI's module cannot import. Stripping leaves plain enums/base types. Keep `x-go-type-skip-optional-pointer` and `x-enum-varnames` (no imports, improve generation).
-   - The full spec includes all path parameters (org header, pagination, filters), so generated methods gain a `*XxxParams` arg. The client request editor already injects `X-Organization-Id`, so call sites pass `nil` for params.
-2. **Regen client**: `go generate ./internal/api`.
-3. **`internal/commands/org_env.go`** (new): `newOrgCmd` → `org env ...`, mirroring `flow_env.go` style. Wire `newOrgCmd(state)` into `root.go` `AddCommand`.
-4. **`internal/commands/flow_env.go`**: add `unset` for parity.
+## Refreshing the contract
 
-### Refreshing the contract
+`internal/api/client.gen.go` and the embedded `internal/api/openapi.yaml` are
+generated. To refresh them:
 
-```sh
-curl -fsSL https://api.echopoint.dev/openapi.yaml -o /tmp/prod.yaml
-python3 scripts/strip_gotype.py /tmp/prod.yaml internal/api/openapi.yaml   # strips x-go-type + x-go-type-import
-go generate ./internal/api
-go build ./...   # fix any new call-site params
+```bash
+python3 scripts/strip_gotype.py <path-to-echopoint>/cmd/http/openapi.yaml internal/api/openapi.yaml
+cd internal/api && go generate ./...
 ```
 
-## Edge cases
-
-- **No org id**: org endpoints need org context. Error early with a clear message if neither flag, `ECHOPOINT_ORGANIZATION_ID`, nor stored creds provide one.
-- **No secret masking**: values are plaintext `value` server-side — no `isSecret` flag exists. `get` prints values as-is (same as `flows env`). Note for future.
-- **Empty env**: GET on a never-set org env returns 200 with empty maps; `set` still works (upsert).
-- **`-e` auto-create**: `set -e newname` creates the overlay; no separate "create environment" step.
+The stripping step removes `x-go-type` and `x-go-type-import`, whose import
+paths are not reachable from this module.
