@@ -173,18 +173,17 @@ func TestPrintVarsShowValuesReveals(t *testing.T) {
 func TestPrintVarsEmpty(t *testing.T) {
 	var buf bytes.Buffer
 	printVars(&buf, "Organization base variables", map[string]string{}, false)
-	if got := buf.String(); !strings.Contains(got, "No environment variables set") {
+	if got := buf.String(); !strings.Contains(got, "No variables set") {
 		t.Fatalf("got %q", got)
 	}
 }
 
-// TestNamedEnvGetPayload covers the -e <overlay> JSON/YAML path: names only
-// by default (a sorted array, never a map with emptied values), the raw map
-// with --show-values.
-func TestNamedEnvGetPayload(t *testing.T) {
-	vars := map[string]string{"B": "secret-b", "A": "secret-a"}
+// TestLayerPayload covers the JSON/YAML path of every "get": names only by
+// default, the values map when --show-values is passed.
+func TestLayerPayload(t *testing.T) {
+	vars := map[string]string{"B": "value-b", "A": "value-a"}
 
-	hidden := namedEnvGetPayload(vars, false)
+	hidden := layerPayload(vars, false)
 	names, ok := hidden.([]string)
 	if !ok {
 		t.Fatalf("expected []string payload when hidden, got %T", hidden)
@@ -193,7 +192,7 @@ func TestNamedEnvGetPayload(t *testing.T) {
 		t.Fatalf("got %v, want sorted names", names)
 	}
 
-	revealed := namedEnvGetPayload(vars, true)
+	revealed := layerPayload(vars, true)
 	got, ok := revealed.(map[string]string)
 	if !ok {
 		t.Fatalf("expected map[string]string payload when shown, got %T", revealed)
@@ -203,54 +202,28 @@ func TestNamedEnvGetPayload(t *testing.T) {
 	}
 }
 
-// TestOrgEnvGetPayload covers the base "org env get" (no -e) JSON/YAML path,
-// including the named-overlay names nested under it.
-func TestOrgEnvGetPayload(t *testing.T) {
-	base := map[string]string{"BASE_KEY": "base-secret"}
-	overlays := map[string]map[string]string{
-		"dev": {"echopointApiKey": "echopoint_org_apikey_devsecret"},
-	}
-	env := &api.Environment{
-		Variables: api.EnvironmentVariableSet{
-			"BASE_KEY": {Value: "base-secret"},
-		},
+// TestLayerValuesMarksSecrets pins what --show-values can reveal. A read never
+// returns a secret's value, so printing an empty string would read as "set to
+// nothing" rather than "withheld".
+func TestLayerValuesMarksSecrets(t *testing.T) {
+	plain := "https://api.example.com"
+	layer := api.VariableLayer{
+		"BASE_URL": {Value: &plain},
+		"API_KEY":  {Secret: true},
 	}
 
-	hidden := orgEnvGetPayload(env, base, overlays, false)
-	names, ok := hidden.(orgEnvNames)
-	if !ok {
-		t.Fatalf("expected orgEnvNames payload when hidden, got %T", hidden)
-	}
-	if !reflect.DeepEqual(names.Variables, []string{"BASE_KEY"}) {
-		t.Fatalf("got base names %v", names.Variables)
-	}
-	if !reflect.DeepEqual(names.Environments["dev"], []string{"echopointApiKey"}) {
-		t.Fatalf("got dev overlay names %v", names.Environments["dev"])
-	}
-
-	revealed := orgEnvGetPayload(env, base, overlays, true)
-	gotEnv, ok := revealed.(*api.Environment)
-	if !ok || gotEnv != env {
-		t.Fatalf("expected --show-values to return the raw environment unchanged, got %T", revealed)
+	got := layerValues(layer)
+	want := map[string]string{"BASE_URL": plain, "API_KEY": secretPlaceholder}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
 	}
 }
 
-// TestFlowEnvGetPayload covers the "flow env get" JSON/YAML path.
-func TestFlowEnvGetPayload(t *testing.T) {
-	vars := map[string]string{"TOKEN": "flow-secret"}
-	env := &api.Environment{Variables: api.EnvironmentVariableSet{"TOKEN": {Value: "flow-secret"}}}
-
-	hidden := flowEnvGetPayload(env, vars, false)
-	names, ok := hidden.([]string)
-	if !ok {
-		t.Fatalf("expected []string payload when hidden, got %T", hidden)
-	}
-	if !reflect.DeepEqual(names, []string{"TOKEN"}) {
-		t.Fatalf("got %v", names)
-	}
-
-	revealed := flowEnvGetPayload(env, vars, true)
-	if gotEnv, ok := revealed.(*api.Environment); !ok || gotEnv != env {
-		t.Fatalf("expected --show-values to return the raw environment unchanged, got %T", revealed)
+// A plain variable whose value the server omitted is not a secret, so it must
+// not borrow the secret marker.
+func TestLayerValuesLeavesAMissingPlainValueEmpty(t *testing.T) {
+	got := layerValues(api.VariableLayer{"ODD": {}})
+	if got["ODD"] != "" {
+		t.Fatalf("got %q, want an empty value", got["ODD"])
 	}
 }

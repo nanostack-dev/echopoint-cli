@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"os"
 	"sort"
@@ -17,36 +16,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// secretPlaceholder stands where a secret's value would be printed. A read
+// never returns one, so there is nothing else to show.
+const secretPlaceholder = "<secret>"
+
 // newOrgCmd creates the top-level "org" command group for organization-scoped
-// resources. Today it hosts environment management; future org-wide resources
+// resources. Today it hosts variable management; future org-wide resources
 // belong here too.
 func newOrgCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "org",
 		Short: "Manage organization-scoped resources",
 	}
-
 	cmd.AddCommand(newOrgEnvCmd(state))
-
 	return cmd
 }
 
-// newOrgEnvCmd manages the organization environment: base variables plus named
-// overlays (dev/stg/prd) selected at flow launch via --environment.
 func newOrgEnvCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "env",
-		Short: "Manage organization environment variables",
-		Long: `Manage the organization environment.
+		Short: "Manage organization variables",
+		Long: `Manage organization variables.
 
-The organization environment has two layers:
+A variable set holds two kinds of layer:
   - base variables, loaded for every flow execution
-  - named overlays (e.g. dev, staging, prod) selected at launch time
+  - named environments (e.g. dev, staging, prd) selected at launch time
 
-Base commands operate on the base layer. Target a named overlay with
---environment/-e; setting into a new name creates that overlay.`,
+A variable can be stored as a secret. A secret is encrypted at rest, is never
+returned by a read, and is replaced by ` + "`***`" + ` in execution results, progress
+events and flow exports. A plain variable can become a secret; the reverse is
+refused, so delete it and set it again.`,
 	}
-
 	cmd.AddCommand(
 		newOrgEnvGetCmd(state),
 		newOrgEnvSetCmd(state),
@@ -55,12 +55,10 @@ Base commands operate on the base layer. Target a named overlay with
 		newOrgEnvDeleteCmd(state),
 		newOrgEnvironmentsCmd(state),
 	)
-
 	return cmd
 }
 
-// requireOrg ensures an organization context is available before calling
-// organization-scoped endpoints, which require the X-Organization-Id header.
+// requireOrg fails before any call that needs an organization context.
 func requireOrg(state *AppState) error {
 	if strings.TrimSpace(state.OrganizationID) == "" {
 		return fmt.Errorf(
@@ -70,11 +68,11 @@ func requireOrg(state *AppState) error {
 	return nil
 }
 
-// fetchOrgEnv loads the current organization environment.
-func fetchOrgEnv(state *AppState) (*api.Environment, error) {
-	resp, err := state.Client.API().GetOrganizationEnvironmentWithResponse(context.Background(), nil)
+// fetchOrgVariables reads the organization's variable set.
+func fetchOrgVariables(state *AppState) (*api.VariableSet, error) {
+	resp, err := state.Client.API().GetOrganizationVariablesWithResponse(context.Background(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get organization environment: %w", err)
+		return nil, fmt.Errorf("failed to get organization variables: %w", err)
 	}
 	if resp.JSON200 == nil {
 		return nil, formatAPIError(resp.HTTPResponse, resp.Body)
@@ -82,49 +80,80 @@ func fetchOrgEnv(state *AppState) (*api.Environment, error) {
 	return resp.JSON200, nil
 }
 
-// orgEnvToInputs flattens an Environment response into mutable string maps for
-// read-modify-write upserts (the API has no per-key endpoint).
-func orgEnvToInputs(env *api.Environment) (map[string]string, map[string]map[string]string) {
-	base := make(map[string]string)
-	if env != nil {
-		for k, v := range env.Variables {
-			base[k] = v.Value
+// layerValues flattens a layer for display. A secret has no value to show, so
+// it renders as the placeholder rather than an empty string, which would read
+// as "set to nothing".
+func layerValues(layer api.VariableLayer) map[string]string {
+	values := make(map[string]string, len(layer))
+	for name, variable := range layer {
+		switch {
+		case variable.Secret:
+			values[name] = secretPlaceholder
+		case variable.Value != nil:
+			values[name] = *variable.Value
+		default:
+			values[name] = ""
 		}
 	}
-
-	overlays := make(map[string]map[string]string)
-	if env != nil && env.Environments != nil {
-		for name, set := range env.Environments {
-			vars := make(map[string]string, len(set))
-			for k, v := range set {
-				vars[k] = v.Value
-			}
-			overlays[name] = vars
-		}
-	}
-
-	return base, overlays
+	return values
 }
 
-// upsertOrgEnv sends the merged maps back to the API.
-func upsertOrgEnv(state *AppState, base map[string]string, overlays map[string]map[string]string) error {
-	varsInput := api.EnvironmentVariablesInput(base)
-
-	envInput := make(api.NamedEnvironmentVariablesInput, len(overlays))
-	for name, vars := range overlays {
-		envInput[name] = api.EnvironmentVariablesInput(vars)
+// setOrgVariable writes one variable into the base layer or into a named
+// environment. The environment has to exist already, so a misspelled name
+// fails rather than quietly creating a layer nothing reads.
+func setOrgVariable(state *AppState, environment, key, value string, secret bool) error {
+	body := api.SetVariableRequest{Value: value}
+	if secret {
+		body.Secret = &secret
 	}
 
-	req := api.CreateOrUpdateOrganizationEnvironmentJSONRequestBody{
-		Variables:    &varsInput,
-		Environments: &envInput,
+	if environment == "" {
+		resp, err := state.Client.API().SetOrganizationVariableWithResponse(
+			context.Background(), key, nil, api.SetOrganizationVariableJSONRequestBody(body),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to set %s: %w", key, err)
+		}
+		if resp.JSON200 == nil {
+			return formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return nil
 	}
 
-	resp, err := state.Client.API().CreateOrUpdateOrganizationEnvironmentWithResponse(context.Background(), nil, req)
+	resp, err := state.Client.API().SetEnvironmentVariableWithResponse(
+		context.Background(), environment, key, nil, api.SetEnvironmentVariableJSONRequestBody(body),
+	)
 	if err != nil {
-		return fmt.Errorf("failed to update organization environment: %w", err)
+		return fmt.Errorf("failed to set %s in %s: %w", key, environment, err)
 	}
-	if resp.JSON200 == nil && resp.JSON201 == nil {
+	if resp.JSON200 == nil {
+		return formatAPIError(resp.HTTPResponse, resp.Body)
+	}
+	return nil
+}
+
+// deleteOrgVariable removes one variable from the base layer or an environment.
+func deleteOrgVariable(state *AppState, environment, key string) error {
+	if environment == "" {
+		resp, err := state.Client.API().DeleteOrganizationVariableWithResponse(
+			context.Background(), key, nil,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to delete %s: %w", key, err)
+		}
+		if resp.StatusCode() != http.StatusNoContent {
+			return formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return nil
+	}
+
+	resp, err := state.Client.API().DeleteEnvironmentVariableWithResponse(
+		context.Background(), environment, key, nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete %s from %s: %w", key, environment, err)
+	}
+	if resp.StatusCode() != http.StatusNoContent {
 		return formatAPIError(resp.HTTPResponse, resp.Body)
 	}
 	return nil
@@ -143,10 +172,10 @@ func sortedKeys(vars map[string]string) []string {
 // printVars renders a flat variable map for table output, sorted by key. By
 // default values are hidden (names only) so a credential never lands in
 // scrollback or a screenshot by accident; showValues opts into printing the
-// actual values.
+// actual values. A secret prints as the placeholder either way.
 func printVars(w io.Writer, title string, vars map[string]string, showValues bool) {
 	if len(vars) == 0 {
-		fmt.Fprintln(w, "No environment variables set")
+		fmt.Fprintln(w, "No variables set")
 		return
 	}
 	keys := sortedKeys(vars)
@@ -165,45 +194,14 @@ func printVars(w io.Writer, title string, vars map[string]string, showValues boo
 	}
 }
 
-// orgEnvNames is the redacted JSON/YAML shape for the base "org env get"
-// command (no --environment): variable names only, never values.
-type orgEnvNames struct {
-	Variables    []string            `json:"variables"              yaml:"variables"`
-	Environments map[string][]string `json:"environments,omitempty" yaml:"environments,omitempty"`
-}
+// variableNames is the redacted JSON/YAML shape: names only, never values.
+func variableNames(vars map[string]string) []string { return sortedKeys(vars) }
 
-// orgEnvGetPayload builds the value to render for the base "org env get"
-// path. With showValues it returns the raw environment (unchanged
-// behaviour); otherwise it returns a sorted list of variable names per
-// layer so a map with emptied-out values never gets emitted.
-func orgEnvGetPayload(
-	env *api.Environment,
-	base map[string]string,
-	overlays map[string]map[string]string,
-	showValues bool,
-) any {
-	if showValues {
-		return env
-	}
-
-	out := orgEnvNames{Variables: sortedKeys(base)}
-	if len(overlays) > 0 {
-		out.Environments = make(map[string][]string, len(overlays))
-		for name, vars := range overlays {
-			out.Environments[name] = sortedKeys(vars)
-		}
-	}
-	return out
-}
-
-// namedEnvGetPayload builds the value to render for the "-e" named-overlay
-// path (org env get -e <name>, and flow env get). With showValues it returns
-// the raw variable map; otherwise it returns a sorted list of names.
-func namedEnvGetPayload(vars map[string]string, showValues bool) any {
+func layerPayload(vars map[string]string, showValues bool) any {
 	if showValues {
 		return vars
 	}
-	return sortedKeys(vars)
+	return variableNames(vars)
 }
 
 func newOrgEnvGetCmd(state *AppState) *cobra.Command {
@@ -214,11 +212,12 @@ func newOrgEnvGetCmd(state *AppState) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "get",
-		Short: "Get organization environment variables",
-		Long: `Get organization environment variables.
+		Short: "Get organization variables",
+		Long: `Get organization variables.
 
-An organization environment can hold live credentials, so variable values are
-hidden by default and only names are shown. Pass --show-values to reveal them.`,
+A variable set can hold live credentials, so values are hidden by default and
+only names are shown. Pass --show-values to reveal them. A secret has no value
+to reveal: a read never returns one.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -228,54 +227,61 @@ hidden by default and only names are shown. Pass --show-values to reveal them.`,
 				return err
 			}
 
-			env, err := fetchOrgEnv(state)
+			set, err := fetchOrgVariables(state)
 			if err != nil {
 				return err
 			}
 
-			base, overlays := orgEnvToInputs(env)
-
 			if environment != "" {
-				vars, ok := overlays[environment]
+				layer, ok := set.Environments[environment]
 				if !ok {
-					return fmt.Errorf("named environment %q not found", environment)
+					return fmt.Errorf("environment %q not found", environment)
 				}
+				vars := layerValues(layer)
 				switch state.OutputFormat {
 				case output.FormatJSON:
-					return output.PrintJSON(os.Stdout, namedEnvGetPayload(vars, showValues))
+					return output.PrintJSON(os.Stdout, layerPayload(vars, showValues))
 				case output.FormatYAML:
-					return output.PrintYAML(os.Stdout, namedEnvGetPayload(vars, showValues))
+					return output.PrintYAML(os.Stdout, layerPayload(vars, showValues))
 				}
 				printVars(
 					os.Stdout,
-					fmt.Sprintf("Organization environment %q variables", environment),
+					fmt.Sprintf("Environment %q variables", environment),
 					vars,
 					showValues,
 				)
 				return nil
 			}
 
+			base := layerValues(set.Base)
+			names := make([]string, 0, len(set.Environments))
+			for name := range set.Environments {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+
 			switch state.OutputFormat {
 			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, orgEnvGetPayload(env, base, overlays, showValues))
+				return output.PrintJSON(os.Stdout, map[string]any{
+					"base":         layerPayload(base, showValues),
+					"environments": names,
+				})
 			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, orgEnvGetPayload(env, base, overlays, showValues))
+				return output.PrintYAML(os.Stdout, map[string]any{
+					"base":         layerPayload(base, showValues),
+					"environments": names,
+				})
 			}
 
 			printVars(os.Stdout, "Organization base variables", base, showValues)
-			if len(overlays) > 0 {
-				names := make([]string, 0, len(overlays))
-				for name := range overlays {
-					names = append(names, name)
-				}
-				sort.Strings(names)
-				fmt.Printf("\nNamed environments: %s\n", strings.Join(names, ", "))
+			if len(names) > 0 {
+				fmt.Printf("\nEnvironments: %s\n", strings.Join(names, ", "))
 			}
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named overlay instead of the base layer")
+	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
 	cmd.Flags().BoolVar(&showValues, "show-values", false, "Reveal variable values instead of names only")
 	return cmd
 }
@@ -284,21 +290,27 @@ func newOrgEnvSetCmd(state *AppState) *cobra.Command {
 	var (
 		variables   []string
 		environment string
+		secret      bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "set",
-		Short: "Set organization environment variables",
-		Long: `Set organization environment variables.
+		Short: "Set organization variables",
+		Long: `Set organization variables.
 
-Existing variables are preserved; only the provided keys are added or updated
-(read-modify-write). Use --environment/-e to target a named overlay; a new name
-creates the overlay.
+Each variable is written on its own; the others are left alone. Use
+--environment/-e to target a named environment, which has to exist already.
+
+Pass --secret to encrypt the values at rest. A read never returns a secret, and
+execution results, progress events and flow exports replace it with ` + "`***`" + `. A
+plain variable can become a secret; the reverse is refused, so delete it and set
+it again.
 
 Examples:
   echopoint org env set --var KEY=value
   echopoint org env set --var KEY1=v1 --var KEY2=v2
-  echopoint org env set -e prod --var BASE_URL=https://api.example.com`,
+  echopoint org env set -e prd --var BASE_URL=https://api.example.com
+  echopoint org env set --secret --var API_KEY=sk-live-...`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -307,48 +319,37 @@ Examples:
 			if err := requireOrg(state); err != nil {
 				return err
 			}
+			if len(variables) == 0 {
+				return fmt.Errorf("at least one --var KEY=value is required")
+			}
 
 			updates, err := parseVarFlags(variables)
 			if err != nil {
 				return err
 			}
-			if len(updates) == 0 {
-				return fmt.Errorf("no variables provided. Use --var KEY=value")
-			}
 
-			env, err := fetchOrgEnv(state)
-			if err != nil {
-				return err
-			}
-			base, overlays := orgEnvToInputs(env)
-
-			target := base
-			if environment != "" {
-				if overlays[environment] == nil {
-					overlays[environment] = make(map[string]string)
+			for _, key := range sortedKeys(updates) {
+				if err := setOrgVariable(state, environment, key, updates[key], secret); err != nil {
+					return err
 				}
-				target = overlays[environment]
-			}
-			maps.Copy(target, updates)
-
-			if err := upsertOrgEnv(state, base, overlays); err != nil {
-				return err
 			}
 
-			scope := "organization base"
+			target := "base layer"
 			if environment != "" {
-				scope = fmt.Sprintf("environment %q", environment)
+				target = fmt.Sprintf("environment %q", environment)
 			}
-			fmt.Printf("✓ Set %d variable(s) on %s\n", len(updates), scope)
-			for k := range updates {
-				fmt.Printf("  %s\n", k)
+			kind := "variable(s)"
+			if secret {
+				kind = "secret(s)"
 			}
+			fmt.Printf("Set %d %s in the %s\n", len(updates), kind, target)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&variables, "var", nil, "Environment variable in KEY=value format (repeatable)")
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named overlay instead of the base layer")
+	cmd.Flags().StringArrayVar(&variables, "var", nil, "Variable in KEY=value format (repeatable)")
+	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
+	cmd.Flags().BoolVar(&secret, "secret", false, "Store the values as secrets (encrypted, never read back)")
 	return cmd
 }
 
@@ -357,7 +358,7 @@ func newOrgEnvUnsetCmd(state *AppState) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "unset KEY [KEY...]",
-		Short: "Remove organization environment variables",
+		Short: "Remove organization variables",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -367,41 +368,22 @@ func newOrgEnvUnsetCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			env, err := fetchOrgEnv(state)
-			if err != nil {
-				return err
+			for _, key := range args {
+				if err := deleteOrgVariable(state, environment, key); err != nil {
+					return err
+				}
 			}
-			base, overlays := orgEnvToInputs(env)
 
-			target := base
+			target := "base layer"
 			if environment != "" {
-				target = overlays[environment]
-				if target == nil {
-					return fmt.Errorf("named environment %q not found", environment)
-				}
+				target = fmt.Sprintf("environment %q", environment)
 			}
-
-			removed := 0
-			for _, k := range args {
-				if _, ok := target[k]; ok {
-					delete(target, k)
-					removed++
-				}
-			}
-			if removed == 0 {
-				fmt.Println("No matching variables to remove")
-				return nil
-			}
-
-			if err := upsertOrgEnv(state, base, overlays); err != nil {
-				return err
-			}
-			fmt.Printf("✓ Removed %d variable(s)\n", removed)
+			fmt.Printf("Removed %d variable(s) from the %s\n", len(args), target)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named overlay instead of the base layer")
+	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
 	return cmd
 }
 
@@ -409,15 +391,16 @@ func newOrgEnvImportCmd(state *AppState) *cobra.Command {
 	var (
 		file        string
 		environment string
+		secret      bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "import",
-		Short: "Import organization environment variables from a file",
+		Short: "Import organization variables from a file",
 		Long: `Import variables from a JSON object ({"KEY":"value"}) or a dotenv (KEY=value) file.
 
-Imported keys are merged into the target layer (existing keys are preserved
-unless overwritten).`,
+Each variable is written on its own; the others are left alone. Pass --secret to
+store every imported value as a secret.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -438,40 +421,31 @@ unless overwritten).`,
 				return fmt.Errorf("no variables found in %s", file)
 			}
 
-			env, err := fetchOrgEnv(state)
-			if err != nil {
-				return err
-			}
-			base, overlays := orgEnvToInputs(env)
-
-			target := base
-			if environment != "" {
-				if overlays[environment] == nil {
-					overlays[environment] = make(map[string]string)
+			for _, key := range sortedKeys(updates) {
+				if err := setOrgVariable(state, environment, key, updates[key], secret); err != nil {
+					return err
 				}
-				target = overlays[environment]
 			}
-			maps.Copy(target, updates)
 
-			if err := upsertOrgEnv(state, base, overlays); err != nil {
-				return err
+			target := "base layer"
+			if environment != "" {
+				target = fmt.Sprintf("environment %q", environment)
 			}
-			fmt.Printf("✓ Imported %d variable(s) from %s\n", len(updates), file)
+			fmt.Printf("Imported %d variable(s) into the %s from %s\n", len(updates), target, file)
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&file, "file", "", "Path to a JSON or dotenv file")
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named overlay instead of the base layer")
+	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
+	cmd.Flags().BoolVar(&secret, "secret", false, "Store the imported values as secrets")
 	return cmd
 }
 
 func newOrgEnvDeleteCmd(state *AppState) *cobra.Command {
-	var yes bool
-
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete the entire organization environment",
+		Short: "Delete the entire organization variable set",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -481,46 +455,41 @@ func newOrgEnvDeleteCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			if !yes {
-				return fmt.Errorf("this deletes ALL org variables and overlays; re-run with --yes")
-			}
-
-			resp, err := state.Client.API().DeleteOrganizationEnvironmentWithResponse(context.Background(), nil)
+			resp, err := state.Client.API().DeleteOrganizationVariablesWithResponse(
+				context.Background(), nil,
+			)
 			if err != nil {
-				return fmt.Errorf("failed to delete organization environment: %w", err)
+				return fmt.Errorf("failed to delete organization variables: %w", err)
 			}
-			if resp.HTTPResponse.StatusCode != http.StatusNoContent {
+			if resp.StatusCode() != http.StatusNoContent {
 				return formatAPIError(resp.HTTPResponse, resp.Body)
 			}
-			fmt.Println("✓ Organization environment deleted")
+
+			fmt.Println("Deleted the organization variable set")
 			return nil
 		},
 	}
-
-	cmd.Flags().BoolVar(&yes, "yes", false, "Skip confirmation")
 	return cmd
 }
 
-// newOrgEnvironmentsCmd manages the named overlays as a set.
 func newOrgEnvironmentsCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "environments",
-		Aliases: []string{"envs"},
-		Short:   "Manage named organization environment overlays",
+		Aliases: []string{"env"},
+		Short:   "Manage named organization environments",
 	}
-
 	cmd.AddCommand(
 		newOrgEnvironmentsListCmd(state),
+		newOrgEnvironmentsCreateCmd(state),
 		newOrgEnvironmentsDeleteCmd(state),
 	)
-
 	return cmd
 }
 
 func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
 		Use:   listVerb,
-		Short: "List named environment overlays",
+		Short: "List named environments",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -530,15 +499,17 @@ func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			env, err := fetchOrgEnv(state)
+			resp, err := state.Client.API().ListEnvironmentsWithResponse(context.Background(), nil)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to list environments: %w", err)
 			}
-			_, overlays := orgEnvToInputs(env)
+			if resp.JSON200 == nil {
+				return formatAPIError(resp.HTTPResponse, resp.Body)
+			}
 
-			names := make([]string, 0, len(overlays))
-			for name := range overlays {
-				names = append(names, name)
+			names := make([]string, 0, len(resp.JSON200.Items))
+			for _, environment := range resp.JSON200.Items {
+				names = append(names, environment.Name)
 			}
 			sort.Strings(names)
 
@@ -550,12 +521,45 @@ func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
 			}
 
 			if len(names) == 0 {
-				fmt.Println("No named environments")
+				fmt.Println("No environments")
 				return nil
 			}
 			for _, name := range names {
-				fmt.Printf("  %s (%d variables)\n", name, len(overlays[name]))
+				fmt.Printf("  %s\n", name)
 			}
+			return nil
+		},
+	}
+}
+
+func newOrgEnvironmentsCreateCmd(state *AppState) *cobra.Command {
+	return &cobra.Command{
+		Use:   "create <name>",
+		Short: "Create a named environment",
+		Long: `Create a named environment such as dev or prd.
+
+It starts empty, and stays empty until a variable is written into it.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireToken(state); err != nil {
+				return err
+			}
+			if err := requireOrg(state); err != nil {
+				return err
+			}
+
+			resp, err := state.Client.API().CreateEnvironmentWithResponse(
+				context.Background(), nil,
+				api.CreateEnvironmentJSONRequestBody{Name: args[0]},
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create environment %q: %w", args[0], err)
+			}
+			if resp.JSON201 == nil {
+				return formatAPIError(resp.HTTPResponse, resp.Body)
+			}
+
+			fmt.Printf("Created environment %q\n", resp.JSON201.Name)
 			return nil
 		},
 	}
@@ -564,7 +568,7 @@ func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
 func newOrgEnvironmentsDeleteCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <name>",
-		Short: "Delete a named environment overlay",
+		Short: "Delete a named environment and every variable in it",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -574,21 +578,17 @@ func newOrgEnvironmentsDeleteCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			name := args[0]
-			env, err := fetchOrgEnv(state)
+			resp, err := state.Client.API().DeleteEnvironmentWithResponse(
+				context.Background(), args[0], nil,
+			)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to delete environment %q: %w", args[0], err)
 			}
-			base, overlays := orgEnvToInputs(env)
-			if _, ok := overlays[name]; !ok {
-				return fmt.Errorf("named environment %q not found", name)
+			if resp.StatusCode() != http.StatusNoContent {
+				return formatAPIError(resp.HTTPResponse, resp.Body)
 			}
-			delete(overlays, name)
 
-			if err := upsertOrgEnv(state, base, overlays); err != nil {
-				return err
-			}
-			fmt.Printf("✓ Deleted named environment %q\n", name)
+			fmt.Printf("Deleted environment %q\n", args[0])
 			return nil
 		},
 	}
@@ -599,7 +599,7 @@ func parseVarFlags(flags []string) (map[string]string, error) {
 	out := make(map[string]string, len(flags))
 	for _, v := range flags {
 		parts := strings.SplitN(v, "=", 2)
-		if len(parts) != 2 {
+		if len(parts) != 2 || parts[0] == "" {
 			return nil, fmt.Errorf("invalid variable format: %s (expected KEY=value)", v)
 		}
 		out[parts[0]] = parts[1]

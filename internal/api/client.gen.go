@@ -244,24 +244,6 @@ func (e DelayFlowNodeType) Valid() bool {
 	}
 }
 
-// Defines values for EnvironmentOwnerType.
-const (
-	EnvironmentOwnerTypeFlow         EnvironmentOwnerType = "flow"
-	EnvironmentOwnerTypeOrganization EnvironmentOwnerType = "organization"
-)
-
-// Valid indicates whether the value is a known member of the EnvironmentOwnerType enum.
-func (e EnvironmentOwnerType) Valid() bool {
-	switch e {
-	case EnvironmentOwnerTypeFlow:
-		return true
-	case EnvironmentOwnerTypeOrganization:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ExecutionStatus.
 const (
 	ExecutionStatusCancelled ExecutionStatus = "cancelled"
@@ -283,6 +265,27 @@ func (e ExecutionStatus) Valid() bool {
 	case ExecutionStatusPending:
 		return true
 	case ExecutionStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExecutionSummaryWindow.
+const (
+	N1h  ExecutionSummaryWindow = "1h"
+	N24h ExecutionSummaryWindow = "24h"
+	N7d  ExecutionSummaryWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the ExecutionSummaryWindow enum.
+func (e ExecutionSummaryWindow) Valid() bool {
+	switch e {
+	case N1h:
+		return true
+	case N24h:
+		return true
+	case N7d:
 		return true
 	default:
 		return false
@@ -1078,6 +1081,24 @@ func (e TriggerType) Valid() bool {
 	}
 }
 
+// Defines values for VariableSetOwnerType.
+const (
+	VariableSetOwnerTypeFlow         VariableSetOwnerType = "flow"
+	VariableSetOwnerTypeOrganization VariableSetOwnerType = "organization"
+)
+
+// Valid indicates whether the value is a known member of the VariableSetOwnerType enum.
+func (e VariableSetOwnerType) Valid() bool {
+	switch e {
+	case VariableSetOwnerTypeFlow:
+		return true
+	case VariableSetOwnerTypeOrganization:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WebhookRequestSearchRequestSortBy.
 const (
 	WebhookRequestSearchRequestSortByIpAddress  WebhookRequestSearchRequestSortBy = "ip_address"
@@ -1463,6 +1484,29 @@ type BulkMoveFlowsResult struct {
 	MovedFlows int `json:"moved_flows"`
 }
 
+// CloudJobPayload Runnable payload for a Cloud job. Returned only to a caller that presents
+// the matching job token. The raw token is never stored or echoed.
+type CloudJobPayload struct {
+	// CloudDurationSeconds Wall-clock cap for this Cloud run, from the organization license,
+	// optionally tightened by the execution timeout_seconds.
+	CloudDurationSeconds int32              `json:"cloud_duration_seconds"`
+	ExecutionId          openapi_types.UUID `json:"execution_id"`
+	FlowId               openapi_types.UUID `json:"flow_id"`
+	FlowSnapshot         FlowDefinition     `json:"flow_snapshot"`
+	JobId                openapi_types.UUID `json:"job_id"`
+
+	// ReferencedFlows Additional flow snapshots available to module nodes during execution.
+	ReferencedFlows *ReferencedFlows `json:"referenced_flows,omitempty"`
+
+	// RunnerInputs Effective root inputs snapshot resolved for a runner execution.
+	RunnerInputs RunnerInputs `json:"runner_inputs"`
+
+	// SecretInputKeys Names the runner inputs whose values are secrets. The executor must replace each of these values with `***` in every result, event, and log line it emits.
+	//
+	// Examples: ["API_KEY","DB_PASSWORD"]
+	SecretInputKeys *SecretInputKeys `json:"secret_input_keys,omitempty"`
+}
+
 // Collection defines model for Collection.
 type Collection struct {
 	// CreatedAt Timestamp when the collection was created
@@ -1626,7 +1670,7 @@ type CollectionRequest struct {
 	UpdatedAt time.Time `json:"updated_at"`
 
 	// Url Request URL. Supports template variables such as {{baseUrl}}/users/123.
-	// Templates are resolved from the active organization environment in the request workspace.
+	// Templates are resolved from the organization variable set in the request workspace.
 	//
 	//
 	// Examples: {{baseUrl}}/users/123
@@ -1770,12 +1814,12 @@ type CreateCollectionRequest struct {
 	Source *CollectionSource `json:"source,omitempty"`
 }
 
-// CreateFlowEnvironmentRequest Request to create or update flow environment
-type CreateFlowEnvironmentRequest struct {
-	// Variables Environment variables to set
+// CreateEnvironmentRequest defines model for CreateEnvironmentRequest.
+type CreateEnvironmentRequest struct {
+	// Name The environment name, such as dev or prd.
 	//
-	// Examples: {"API_KEY":"secret123","BASE_URL":"https://api.example.com"}
-	Variables EnvironmentVariablesInput `json:"variables"`
+	// Examples: prd
+	Name string `json:"name"`
 }
 
 // CreateFlowFolderRequest defines model for CreateFlowFolderRequest.
@@ -1791,7 +1835,7 @@ type CreateFlowFolderRequest struct {
 
 // CreateFlowRequest defines model for CreateFlowRequest.
 type CreateFlowRequest struct {
-	// AutoLayout Recompute node positions on create using backend layout.
+	// AutoLayout Recompute node positions on create using backend layout. Also clears every edge's pinned borders, so the new arrangement uses floating endpoints.
 	AutoLayout *bool `json:"auto_layout,omitempty"`
 
 	// Description Optional description of the flow.
@@ -1905,7 +1949,7 @@ type CreateRequestRequest struct {
 	Timeout *int `json:"timeout,omitempty"`
 
 	// Url Request URL. Supports template variables such as {{baseUrl}}/users/123.
-	// Templates are resolved from the active organization environment in the request workspace.
+	// Templates are resolved from the organization variable set in the request workspace.
 	//
 	//
 	// Examples: {{baseUrl}}/users/123
@@ -2026,72 +2070,33 @@ type DelayNodeData struct {
 	Duration int `json:"duration"`
 }
 
-// Environment defines model for Environment.
+// Environment One named environment. It exists on its own, so an environment with no variables is a real environment and survives a round trip.
 type Environment struct {
 	// CreatedAt When the environment was created
 	CreatedAt time.Time `json:"created_at"`
-
-	// Environments Named environment overlays owned by this environment resource.
-	Environments NamedEnvironmentVariableSets `json:"environments"`
 
 	// Id Server-generated unique identifier
 	//
 	// Examples: 550e8400-e29b-41d4-a716-446655440000
 	Id openapi_types.UUID `json:"id"`
 
-	// OrganizationId Organization ID that owns this environment.
+	// Name The environment name, such as dev or prd.
 	//
-	// Examples: org_123
-	OrganizationId string `json:"organization_id"`
-
-	// OwnerId The owner (flow, organization, workspace, etc.)
-	//
-	// Examples: 550e8400-e29b-41d4-a716-446655440100
-	OwnerId openapi_types.UUID `json:"owner_id"`
-
-	// OwnerType Type of owner
-	//
-	// Examples: flow
-	OwnerType EnvironmentOwnerType `json:"owner_type"`
+	// Examples: prd
+	Name string `json:"name"`
 
 	// UpdatedAt When the environment was last updated
 	UpdatedAt time.Time `json:"updated_at"`
-
-	// Variables Environment variables as key-value pairs
-	//
-	// Examples: {"API_KEY":{"created_at":"2025-11-09T10:00:00Z","organization_id":"org_123","updated_at":"2025-11-09T10:00:00Z","value":"secret123"},"BASE_URL":{"created_at":"2025-11-09T10:05:00Z","organization_id":"org_123","updated_at":"2025-11-09T10:05:00Z","value":"https://api.example.com"}}
-	Variables EnvironmentVariableSet `json:"variables"`
 }
 
-// EnvironmentOwnerType Type of owner
-//
-// Examples: flow
-type EnvironmentOwnerType string
+// EnvironmentLayers Named environment overlays such as dev, stg1, or prd.
+type EnvironmentLayers map[string]VariableLayer
 
-// EnvironmentVariable defines model for EnvironmentVariable.
-type EnvironmentVariable struct {
-	// CreatedAt When the variable was created
-	CreatedAt time.Time `json:"created_at"`
-
-	// OrganizationId Organization ID that owns this variable.
-	//
-	// Examples: org_123
-	OrganizationId string `json:"organization_id"`
-
-	// UpdatedAt When the variable was last updated
-	UpdatedAt time.Time `json:"updated_at"`
-
-	// Value The variable value
-	//
-	// Examples: https://api.example.com
-	Value string `json:"value"`
+// EnvironmentListResponse The organization's environments, without their variables.
+type EnvironmentListResponse struct {
+	// Items Environments sorted by name.
+	Items []Environment `json:"items"`
 }
-
-// EnvironmentVariableSet Flat key/value environment variables with audit metadata.
-type EnvironmentVariableSet map[string]EnvironmentVariable
-
-// EnvironmentVariablesInput Examples: {"API_KEY":"secret123","BASE_URL":"https://api.example.com"}
-type EnvironmentVariablesInput map[string]string
 
 // EphemeralCompletionRequest Terminal result for an ephemeral execution, published by a caller-owned runner via the
 // CLI. Mirrors the self-hosted runner completion payload without claim/lease/identity
@@ -2158,7 +2163,7 @@ type ExecuteRequestRequest struct {
 	Timeout *int `json:"timeout,omitempty"`
 
 	// Url Request URL. Supports template variables such as {{baseUrl}}/users/123.
-	// Templates are resolved from the active organization environment in the request workspace.
+	// Templates are resolved from the organization variable set in the request workspace.
 	//
 	//
 	// Examples: {{baseUrl}}/users/123
@@ -2198,6 +2203,30 @@ type ExecutedRequestResponse struct {
 // ExecutionStatus Status of a flow execution
 type ExecutionStatus string
 
+// ExecutionSummary defines model for ExecutionSummary.
+type ExecutionSummary struct {
+	// Failed Executions with status=failed and started_at greater than or equal to since.
+	Failed int64 `json:"failed"`
+
+	// Pending Executions currently pending, any started_at.
+	Pending int64 `json:"pending"`
+
+	// Running Executions currently running, any started_at.
+	Running int64 `json:"running"`
+
+	// Runs Executions with started_at greater than or equal to since.
+	Runs int64 `json:"runs"`
+
+	// Since Inclusive lower bound used for runs and failed.
+	Since time.Time `json:"since"`
+
+	// Window Lookback window for runs and failed counts. Running and pending are current.
+	Window ExecutionSummaryWindow `json:"window"`
+}
+
+// ExecutionSummaryWindow Lookback window for runs and failed counts. Running and pending are current.
+type ExecutionSummaryWindow string
+
 // ExportedFlow defines model for ExportedFlow.
 type ExportedFlow struct {
 	// Description Description of what the flow does
@@ -2208,7 +2237,7 @@ type ExportedFlow struct {
 	// Edges Connections between nodes
 	Edges []FlowEdge `json:"edges"`
 
-	// InitialInputs Initial input variables for the flow (from environment)
+	// InitialInputs Initial input variables for the flow (from its variable set)
 	InitialInputs map[string]interface{} `json:"initialInputs"`
 
 	// Name Name of the flow
@@ -2310,9 +2339,9 @@ type FlowEdge struct {
 	// Examples: req-1
 	Source string `json:"source"`
 
-	// SourceHandle Optional source handle ID used for anchor-specific edge routing
+	// SourceHandle Border of the source node the edge is pinned to: top, right, bottom, or left. Absent means the endpoint floats and meets the border that faces the target node. An auto-layout update clears this field.
 	//
-	// Examples: source-right-step-login
+	// Examples: right
 	SourceHandle *string `json:"source_handle,omitempty"`
 
 	// Target ID of the target node
@@ -2320,9 +2349,9 @@ type FlowEdge struct {
 	// Examples: req-success
 	Target string `json:"target"`
 
-	// TargetHandle Optional target handle ID used for anchor-specific edge routing
+	// TargetHandle Border of the target node the edge is pinned to: top, right, bottom, or left. Absent means the endpoint floats and meets the border that faces the source node. An auto-layout update clears this field.
 	//
-	// Examples: target-left-step-auth
+	// Examples: left
 	TargetHandle *string `json:"target_handle,omitempty"`
 
 	// Type Condition for following this edge
@@ -2351,6 +2380,22 @@ type FlowExecution struct {
 	// ErrorMessage Error message if execution failed
 	ErrorMessage *string `json:"error_message,omitempty"`
 
+	// ExecutedBy Runner process that ran the flow. A Cloud execution names the Cloud worker container, such as cloud-worker:<container id>. Null until the runner reports, and for an execution no runner ever ran.
+	//
+	// Examples: cloud-worker:b1c2d3e4f5
+	ExecutedBy *string `json:"executed_by,omitempty"`
+
+	// ExecutionStartedAt When the runner started the flow. The interval from started_at is the wait before execution.
+	ExecutionStartedAt *time.Time `json:"execution_started_at,omitempty"`
+
+	// ExecutorBootId Boot identifier of that runner process. Two executions on the same runner with different boot ids ran across a restart.
+	ExecutorBootId *openapi_types.UUID `json:"executor_boot_id,omitempty"`
+
+	// ExecutorVersion Runner build that ran the flow.
+	//
+	// Examples: v0.46.0
+	ExecutorVersion *string `json:"executor_version,omitempty"`
+
 	// FlowId ID of the flow that was executed
 	//
 	// Examples: 650e8400-e29b-41d4-a716-446655440000
@@ -2372,7 +2417,7 @@ type FlowExecution struct {
 	// ReferencedFlows Additional flow snapshots available to module nodes during execution.
 	ReferencedFlows ReferencedFlows `json:"referenced_flows"`
 
-	// RunnerInputs Effective root inputs snapshot resolved for a runner execution.
+	// RunnerInputs Effective root inputs for this execution. A secret value reads as `***`.
 	RunnerInputs RunnerInputs `json:"runner_inputs"`
 
 	// RunnerType Execution backend selected for this execution.
@@ -2381,7 +2426,7 @@ type FlowExecution struct {
 	// ScheduleRunId Schedule run that launched this execution; null for manual/CI launches.
 	ScheduleRunId *openapi_types.UUID `json:"schedule_run_id,omitempty"`
 
-	// StartedAt When the execution started
+	// StartedAt When the execution was created. An execution waits for a runner before it runs, so this is not the moment the flow started. execution_started_at is that moment.
 	StartedAt time.Time `json:"started_at"`
 
 	// Status Status of a flow execution
@@ -2399,6 +2444,49 @@ type FlowExecution struct {
 	// by this value.
 	TriggerType *TriggerType `json:"trigger_type,omitempty"`
 	UpdatedAt   time.Time    `json:"updated_at"`
+}
+
+// FlowExecutionActivity Slim org-wide execution row for activity surfaces. Omits flow_snapshot, runner_inputs, referenced_flows, trigger_metadata, and execution_result.
+type FlowExecutionActivity struct {
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+
+	// EnvironmentKey Named environment overlaid for this execution. Null when unset.
+	EnvironmentKey *string            `json:"environment_key,omitempty"`
+	ErrorCode      *string            `json:"error_code,omitempty"`
+	ErrorMessage   *string            `json:"error_message,omitempty"`
+	FlowId         openapi_types.UUID `json:"flow_id"`
+
+	// FlowName Current flows.name. Always present. Null means the flow is deleted or missing, and null is the only signal for that. The execution history stays after the flow is gone.
+	FlowName       *string            `json:"flow_name"`
+	Id             openapi_types.UUID `json:"id"`
+	OrganizationId string             `json:"organization_id"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` returns an execution package for a short-lived
+	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	RunnerType    RunnerType          `json:"runner_type"`
+	ScheduleRunId *openapi_types.UUID `json:"schedule_run_id,omitempty"`
+	StartedAt     time.Time           `json:"started_at"`
+
+	// Status Status of a flow execution
+	Status ExecutionStatus `json:"status"`
+
+	// TriggerType How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
+	// (e.g. GitHub Actions) carrying source-control provenance; `scheduled` is an app-owned flow
+	// schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
+	// by this value.
+	TriggerType *TriggerType `json:"trigger_type,omitempty"`
+}
+
+// FlowExecutionActivityListResponse defines model for FlowExecutionActivityListResponse.
+type FlowExecutionActivityListResponse struct {
+	// Count The number of items returned in this response.
+	Count int                     `json:"count"`
+	Items []FlowExecutionActivity `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
 }
 
 // FlowExecutionListResponse defines model for FlowExecutionListResponse.
@@ -2988,12 +3076,6 @@ type MoveFlowFolderRequest struct {
 	// ParentId New parent folder, or null to move the folder to the root.
 	ParentId *openapi_types.UUID `json:"parent_id"`
 }
-
-// NamedEnvironmentVariableSets Named environment overlays such as dev, stg1, or prd.
-type NamedEnvironmentVariableSets map[string]EnvironmentVariableSet
-
-// NamedEnvironmentVariablesInput Examples: {"dev":{"BASE_URL":"https://dev.api.example.com"},"prd":{"BASE_URL":"https://api.example.com"}}
-type NamedEnvironmentVariablesInput map[string]EnvironmentVariablesInput
 
 // NodeDefinition defines model for NodeDefinition.
 type NodeDefinition struct {
@@ -3760,6 +3842,9 @@ type RunnerJobCompletionRequest struct {
 	// RunnerId Stable runner identifier across restarts.
 	RunnerId string `json:"runner_id"`
 
+	// RunnerVersion Runner build that ran the job. Recorded on the execution as executor_version to make a bad build identifiable.
+	RunnerVersion *string `json:"runner_version,omitempty"`
+
 	// StartedAt Time the runner started executing the claimed job.
 	StartedAt time.Time `json:"started_at"`
 
@@ -3796,6 +3881,9 @@ type RunnerJobHeartbeatRequest struct {
 
 	// RunnerId Stable runner identifier across restarts.
 	RunnerId string `json:"runner_id"`
+
+	// RunnerVersion Runner build that runs the job. Recorded on the execution as executor_version to make a bad build identifiable.
+	RunnerVersion *string `json:"runner_version,omitempty"`
 }
 
 // RunnerJobHeartbeatResult defines model for RunnerJobHeartbeatResult.
@@ -3850,6 +3938,11 @@ type RunnerJobPayload struct {
 
 	// ReferencedFlows Additional flow snapshots available to module nodes during execution.
 	ReferencedFlows *ReferencedFlows `json:"referenced_flows,omitempty"`
+
+	// SecretInputKeys Names the runner inputs whose values are secrets. The executor must replace each of these values with `***` in every result, event, and log line it emits.
+	//
+	// Examples: ["API_KEY","DB_PASSWORD"]
+	SecretInputKeys *SecretInputKeys `json:"secret_input_keys,omitempty"`
 }
 
 // RunnerJobProgressEvent defines model for RunnerJobProgressEvent.
@@ -3952,6 +4045,11 @@ type SearchRequest struct {
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
+// SecretInputKeys Names the runner inputs whose values are secrets. The executor must replace each of these values with `***` in every result, event, and log line it emits.
+//
+// Examples: ["API_KEY","DB_PASSWORD"]
+type SecretInputKeys = []string
+
 // SetVariableFlowNode defines model for SetVariableFlowNode.
 type SetVariableFlowNode struct {
 	// Assertions Validation assertions for the node
@@ -3989,6 +4087,17 @@ type SetVariableNodeData struct {
 	//
 	// Examples: {"retries":3,"tenant":"{{login.orgId}}"}
 	Variables map[string]interface{} `json:"variables"`
+}
+
+// SetVariableRequest defines model for SetVariableRequest.
+type SetVariableRequest struct {
+	// Secret Set to true to store the value as a secret. A secret is encrypted at rest and is never returned by a read. Sending false for a key that is already a secret is refused.
+	Secret *bool `json:"secret,omitempty"`
+
+	// Value The variable value.
+	//
+	// Examples: https://api.example.com
+	Value string `json:"value"`
 }
 
 // SortDirection defines model for SortDirection.
@@ -4088,14 +4197,6 @@ type UpdateCollectionRequest struct {
 	Name *string `json:"name,omitempty"`
 }
 
-// UpdateFlowEnvironmentRequest Request to update flow environment
-type UpdateFlowEnvironmentRequest struct {
-	// Variables Environment variables to update
-	//
-	// Examples: {"API_KEY":"secret123","BASE_URL":"https://api.example.com"}
-	Variables EnvironmentVariablesInput `json:"variables"`
-}
-
 // UpdateFlowFolderRequest Partial folder update. Omit a field to leave it unchanged. Prefer POST /flows/folders/{folderId}/move for reparenting — it is the single move endpoint and can also move a folder back to the root, which this pointer field cannot express.
 type UpdateFlowFolderRequest struct {
 	// Name New folder name.
@@ -4107,7 +4208,7 @@ type UpdateFlowFolderRequest struct {
 
 // UpdateFlowRequest defines model for UpdateFlowRequest.
 type UpdateFlowRequest struct {
-	// AutoLayout Recompute node positions on update using backend layout.
+	// AutoLayout Recompute node positions on update using backend layout. Also clears every edge's pinned borders, so the new arrangement uses floating endpoints.
 	AutoLayout *bool `json:"auto_layout,omitempty"`
 
 	// Description Optional description of the flow.
@@ -4180,19 +4281,6 @@ type UpdateFolderRequest struct {
 	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
-// UpdateOrganizationEnvironmentRequest Request to replace the organization environment layers.
-type UpdateOrganizationEnvironmentRequest struct {
-	// Environments Named organization environment overlays selected at launch time.
-	//
-	// Examples: {"dev":{"BASE_URL":"https://dev.api.example.com"},"prd":{"BASE_URL":"https://api.example.com"}}
-	Environments *NamedEnvironmentVariablesInput `json:"environments,omitempty"`
-
-	// Variables Base organization variables loaded for every execution.
-	//
-	// Examples: {"API_KEY":"secret123","BASE_URL":"https://api.example.com"}
-	Variables *EnvironmentVariablesInput `json:"variables,omitempty"`
-}
-
 // UpdateRequestRequest defines model for UpdateRequestRequest.
 type UpdateRequestRequest struct {
 	Auth *CollectionRequestAuth `json:"auth,omitempty"`
@@ -4222,7 +4310,7 @@ type UpdateRequestRequest struct {
 	Timeout *int `json:"timeout,omitempty"`
 
 	// Url Request URL. Supports template variables such as {{baseUrl}}/users/123.
-	// Templates are resolved from the active organization environment in the request workspace.
+	// Templates are resolved from the organization variable set in the request workspace.
 	//
 	//
 	// Examples: {{baseUrl}}/users/123
@@ -4247,18 +4335,72 @@ type UpsertOpenAPISyncConfigRequest struct {
 	UseBaseUrlVariable *bool `json:"use_base_url_variable,omitempty"`
 }
 
-// UpsertOrganizationEnvironmentRequest Request to create or update the organization environment layers.
-type UpsertOrganizationEnvironmentRequest struct {
-	// Environments Named organization environment overlays selected at launch time.
-	//
-	// Examples: {"dev":{"BASE_URL":"https://dev.api.example.com"},"prd":{"BASE_URL":"https://api.example.com"}}
-	Environments *NamedEnvironmentVariablesInput `json:"environments,omitempty"`
+// Variable defines model for Variable.
+type Variable struct {
+	// CreatedAt When the variable was created
+	CreatedAt time.Time `json:"created_at"`
 
-	// Variables Base organization variables loaded for every execution.
+	// OrganizationId Organization ID that owns this variable.
 	//
-	// Examples: {"API_KEY":"secret123","BASE_URL":"https://api.example.com"}
-	Variables *EnvironmentVariablesInput `json:"variables,omitempty"`
+	// Examples: org_123
+	OrganizationId string `json:"organization_id"`
+
+	// Secret Whether the value is a secret. A secret is encrypted at rest, is never returned by a read, and is replaced by `***` in execution results, progress events, and flow exports. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+	Secret bool `json:"secret"`
+
+	// UpdatedAt When the variable was last updated
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Value The variable value. Absent when `secret` is true: a secret value is write-only and is never returned by any read.
+	//
+	// Examples: https://api.example.com
+	Value *string `json:"value,omitempty"`
 }
+
+// VariableLayer Flat key/value variables with audit metadata.
+type VariableLayer map[string]Variable
+
+// VariableSet defines model for VariableSet.
+type VariableSet struct {
+	// Base The base layer, applied before any environment overlay.
+	//
+	// Examples: {"API_KEY":{"created_at":"2025-11-09T10:00:00Z","organization_id":"org_123","updated_at":"2025-11-09T10:00:00Z","value":"secret123"},"BASE_URL":{"created_at":"2025-11-09T10:05:00Z","organization_id":"org_123","updated_at":"2025-11-09T10:05:00Z","value":"https://api.example.com"}}
+	Base VariableLayer `json:"base"`
+
+	// CreatedAt When the variable set was created
+	CreatedAt time.Time `json:"created_at"`
+
+	// Environments Named environment overlays owned by this variable set.
+	Environments EnvironmentLayers `json:"environments"`
+
+	// Id Server-generated unique identifier
+	//
+	// Examples: 550e8400-e29b-41d4-a716-446655440000
+	Id openapi_types.UUID `json:"id"`
+
+	// OrganizationId Organization ID that owns this variable set.
+	//
+	// Examples: org_123
+	OrganizationId string `json:"organization_id"`
+
+	// OwnerId The owner (flow, organization, workspace, etc.)
+	//
+	// Examples: 550e8400-e29b-41d4-a716-446655440100
+	OwnerId openapi_types.UUID `json:"owner_id"`
+
+	// OwnerType Type of owner
+	//
+	// Examples: flow
+	OwnerType VariableSetOwnerType `json:"owner_type"`
+
+	// UpdatedAt When the variable set was last updated
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// VariableSetOwnerType Type of owner
+//
+// Examples: flow
+type VariableSetOwnerType string
 
 // Webhook defines model for Webhook.
 type Webhook struct {
@@ -4466,6 +4608,9 @@ type ApiKeyIdParameter = string
 // ApiKeyPermissionTypeParameter The API key permission catalog to return. `custom` is the full grantable catalog, `runner` is runner-only scopes, and `ci` is the curated preset for CI/CD (flow execution + ephemeral runner completion).
 type ApiKeyPermissionTypeParameter = ApiKeyPermissionType
 
+// EnvironmentPath defines model for EnvironmentPath.
+type EnvironmentPath = string
+
 // LimitParameter defines model for LimitParameter.
 type LimitParameter = int32
 
@@ -4477,6 +4622,9 @@ type RequiredOrganizationIDHeader = string
 
 // RunnerJobIDParameter defines model for RunnerJobIDParameter.
 type RunnerJobIDParameter = openapi_types.UUID
+
+// VariableKey defines model for VariableKey.
+type VariableKey = string
 
 // WebhookIdParameter Examples: wh_abc123def456
 type WebhookIdParameter = string
@@ -4724,6 +4872,39 @@ type AddRequestParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListExecutionsParams defines parameters for ListExecutions.
+type ListExecutionsParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip.
+	Offset OffsetParameter `form:"offset" json:"offset"`
+
+	// Status Filter by execution status.
+	Status *ExecutionStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// TriggerType Filter by trigger type.
+	TriggerType *TriggerType `form:"trigger_type,omitempty" json:"trigger_type,omitempty"`
+
+	// FlowId Filter by flow identifier.
+	FlowId *openapi_types.UUID `form:"flow_id,omitempty" json:"flow_id,omitempty"`
+
+	// Since Inclusive lower bound on started_at (RFC3339).
+	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetExecutionsSummaryParams defines parameters for GetExecutionsSummary.
+type GetExecutionsSummaryParams struct {
+	// Window Lookback window for runs and failed. Defaults to 24h.
+	Window *ExecutionSummaryWindow `form:"window,omitempty" json:"window,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListFlowSchedulesParams defines parameters for ListFlowSchedules.
 type ListFlowSchedulesParams struct {
 	// Limit Maximum number of items per page.
@@ -4922,30 +5103,6 @@ type UpdateFlowParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// DeleteFlowEnvironmentParams defines parameters for DeleteFlowEnvironment.
-type DeleteFlowEnvironmentParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// GetFlowEnvironmentParams defines parameters for GetFlowEnvironment.
-type GetFlowEnvironmentParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// CreateOrUpdateFlowEnvironmentParams defines parameters for CreateOrUpdateFlowEnvironment.
-type CreateOrUpdateFlowEnvironmentParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// UpdateFlowEnvironmentParams defines parameters for UpdateFlowEnvironment.
-type UpdateFlowEnvironmentParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
 // ListFlowExecutionsParams defines parameters for ListFlowExecutions.
 type ListFlowExecutionsParams struct {
 	// Limit Maximum number of items per page.
@@ -4982,6 +5139,30 @@ type LaunchFlowParams struct {
 
 // PublishFlowParams defines parameters for PublishFlow.
 type PublishFlowParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteFlowVariablesParams defines parameters for DeleteFlowVariables.
+type DeleteFlowVariablesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetFlowVariablesParams defines parameters for GetFlowVariables.
+type GetFlowVariablesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteFlowVariableParams defines parameters for DeleteFlowVariable.
+type DeleteFlowVariableParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetFlowVariableParams defines parameters for SetFlowVariable.
+type SetFlowVariableParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -5043,26 +5224,56 @@ type ListOperationsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// DeleteOrganizationEnvironmentParams defines parameters for DeleteOrganizationEnvironment.
-type DeleteOrganizationEnvironmentParams struct {
+// ListEnvironmentsParams defines parameters for ListEnvironments.
+type ListEnvironmentsParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// GetOrganizationEnvironmentParams defines parameters for GetOrganizationEnvironment.
-type GetOrganizationEnvironmentParams struct {
+// CreateEnvironmentParams defines parameters for CreateEnvironment.
+type CreateEnvironmentParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// CreateOrUpdateOrganizationEnvironmentParams defines parameters for CreateOrUpdateOrganizationEnvironment.
-type CreateOrUpdateOrganizationEnvironmentParams struct {
+// DeleteEnvironmentParams defines parameters for DeleteEnvironment.
+type DeleteEnvironmentParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// UpdateOrganizationEnvironmentParams defines parameters for UpdateOrganizationEnvironment.
-type UpdateOrganizationEnvironmentParams struct {
+// DeleteEnvironmentVariableParams defines parameters for DeleteEnvironmentVariable.
+type DeleteEnvironmentVariableParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetEnvironmentVariableParams defines parameters for SetEnvironmentVariable.
+type SetEnvironmentVariableParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteOrganizationVariablesParams defines parameters for DeleteOrganizationVariables.
+type DeleteOrganizationVariablesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetOrganizationVariablesParams defines parameters for GetOrganizationVariables.
+type GetOrganizationVariablesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteOrganizationVariableParams defines parameters for DeleteOrganizationVariable.
+type DeleteOrganizationVariableParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetOrganizationVariableParams defines parameters for SetOrganizationVariable.
+type SetOrganizationVariableParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -5234,23 +5445,23 @@ type SearchFlowsJSONRequestBody = FlowSearchRequest
 // UpdateFlowJSONRequestBody defines body for UpdateFlow for application/json ContentType.
 type UpdateFlowJSONRequestBody = UpdateFlowRequest
 
-// CreateOrUpdateFlowEnvironmentJSONRequestBody defines body for CreateOrUpdateFlowEnvironment for application/json ContentType.
-type CreateOrUpdateFlowEnvironmentJSONRequestBody = CreateFlowEnvironmentRequest
-
-// UpdateFlowEnvironmentJSONRequestBody defines body for UpdateFlowEnvironment for application/json ContentType.
-type UpdateFlowEnvironmentJSONRequestBody = UpdateFlowEnvironmentRequest
-
 // LaunchFlowJSONRequestBody defines body for LaunchFlow for application/json ContentType.
 type LaunchFlowJSONRequestBody = LaunchFlowRequest
+
+// SetFlowVariableJSONRequestBody defines body for SetFlowVariable for application/json ContentType.
+type SetFlowVariableJSONRequestBody = SetVariableRequest
 
 // SearchOpenAPISyncConfigsJSONRequestBody defines body for SearchOpenAPISyncConfigs for application/json ContentType.
 type SearchOpenAPISyncConfigsJSONRequestBody = OpenAPISyncConfigSearchRequest
 
-// CreateOrUpdateOrganizationEnvironmentJSONRequestBody defines body for CreateOrUpdateOrganizationEnvironment for application/json ContentType.
-type CreateOrUpdateOrganizationEnvironmentJSONRequestBody = UpsertOrganizationEnvironmentRequest
+// CreateEnvironmentJSONRequestBody defines body for CreateEnvironment for application/json ContentType.
+type CreateEnvironmentJSONRequestBody = CreateEnvironmentRequest
 
-// UpdateOrganizationEnvironmentJSONRequestBody defines body for UpdateOrganizationEnvironment for application/json ContentType.
-type UpdateOrganizationEnvironmentJSONRequestBody = UpdateOrganizationEnvironmentRequest
+// SetEnvironmentVariableJSONRequestBody defines body for SetEnvironmentVariable for application/json ContentType.
+type SetEnvironmentVariableJSONRequestBody = SetVariableRequest
+
+// SetOrganizationVariableJSONRequestBody defines body for SetOrganizationVariable for application/json ContentType.
+type SetOrganizationVariableJSONRequestBody = SetVariableRequest
 
 // SearchResourcesJSONRequestBody defines body for SearchResources for application/json ContentType.
 type SearchResourcesJSONRequestBody = ResourceSearchRequest
@@ -6706,6 +6917,22 @@ type ClientInterface interface {
 	// Corresponds with POST /collections/{id}/requests (the `AddRequest` operationId).
 	AddRequest(ctx context.Context, id openapi_types.UUID, params *AddRequestParams, body AddRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListExecutions List Organization Executions
+	//
+	// Retrieves org-wide execution activity, newest first. Rows are slim
+	// activity records and do not include flow snapshots.
+	//
+	// Corresponds with GET /executions (the `ListExecutions` operationId).
+	ListExecutions(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetExecutionsSummary Get Organization Execution Summary
+	//
+	// Returns windowed run and failed counts plus current running and pending
+	// counts for the organization. Running and pending ignore the window.
+	//
+	// Corresponds with GET /executions/summary (the `GetExecutionsSummary` operationId).
+	GetExecutionsSummary(ctx context.Context, params *GetExecutionsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListFlowSchedules List Flow Schedules
 	//
 	// Lists flow schedules for the organization with optional filtering by enabled state.
@@ -7017,56 +7244,6 @@ type ClientInterface interface {
 	// Corresponds with PUT /flows/{id} (the `UpdateFlow` operationId).
 	UpdateFlow(ctx context.Context, id openapi_types.UUID, params *UpdateFlowParams, body UpdateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteFlowEnvironment Delete Flow Environment
-	//
-	// Deletes environment variables for a flow.
-	//
-	// Corresponds with DELETE /flows/{id}/environments (the `DeleteFlowEnvironment` operationId).
-	DeleteFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *DeleteFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetFlowEnvironment Get Flow Environment
-	//
-	// Retrieves environment variables for a flow.
-	//
-	// Corresponds with GET /flows/{id}/environments (the `GetFlowEnvironment` operationId).
-	GetFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *GetFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateOrUpdateFlowEnvironmentWithBody Create or Update Flow Environment
-	//
-	// Creates or updates environment variables for a flow.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-	CreateOrUpdateFlowEnvironmentWithBody(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateOrUpdateFlowEnvironment Create or Update Flow Environment
-	//
-	// Creates or updates environment variables for a flow.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-	CreateOrUpdateFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, body CreateOrUpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateFlowEnvironmentWithBody Update Flow Environment
-	//
-	// Updates environment variables for a flow.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-	UpdateFlowEnvironmentWithBody(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateFlowEnvironment Update Flow Environment
-	//
-	// Updates environment variables for a flow.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-	UpdateFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, body UpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListFlowExecutions List Flow Executions
 	//
 	// Retrieves execution history for a specific flow with pagination.
@@ -7076,7 +7253,7 @@ type ClientInterface interface {
 
 	// ExportFlow Export Flow
 	//
-	// Returns the raw flow definition JSON formatted for the flow engine.
+	// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
 	//
 	// Corresponds with GET /flows/{id}/export (the `ExportFlow` operationId).
 	ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -7111,6 +7288,45 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /flows/{id}/publish (the `PublishFlow` operationId).
 	PublishFlow(ctx context.Context, id openapi_types.UUID, params *PublishFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteFlowVariables Delete Flow Variables
+	//
+	// Deletes every variable for a flow.
+	//
+	// Corresponds with DELETE /flows/{id}/variables (the `DeleteFlowVariables` operationId).
+	DeleteFlowVariables(ctx context.Context, id openapi_types.UUID, params *DeleteFlowVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetFlowVariables Get Flow Variables
+	//
+	// Retrieves the variable set for a flow.
+	//
+	// Corresponds with GET /flows/{id}/variables (the `GetFlowVariables` operationId).
+	GetFlowVariables(ctx context.Context, id openapi_types.UUID, params *GetFlowVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteFlowVariable Delete Flow Variable
+	//
+	// Deletes one flow variable.
+	//
+	// Corresponds with DELETE /flows/{id}/variables/{key} (the `DeleteFlowVariable` operationId).
+	DeleteFlowVariable(ctx context.Context, id openapi_types.UUID, key VariableKey, params *DeleteFlowVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetFlowVariableWithBody Set Flow Variable
+	//
+	// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+	SetFlowVariableWithBody(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetFlowVariable Set Flow Variable
+	//
+	// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+	SetFlowVariable(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListFlowVersions List Flow Versions
 	//
@@ -7190,55 +7406,101 @@ type ClientInterface interface {
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteOrganizationEnvironment Delete Organization Environment
+	// ListEnvironments List Environments
 	//
-	// Deletes the organization environment and its named overlays.
+	// Lists the organization's environments. Variables are not included; read them from the organization variable set.
 	//
-	// Corresponds with DELETE /organization/environment (the `DeleteOrganizationEnvironment` operationId).
-	DeleteOrganizationEnvironment(ctx context.Context, params *DeleteOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+	ListEnvironments(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetOrganizationEnvironment Get Organization Environment
+	// CreateEnvironmentWithBody Create Environment
 	//
-	// Retrieves the organization base environment and named environment overlays.
-	//
-	// Corresponds with GET /organization/environment (the `GetOrganizationEnvironment` operationId).
-	GetOrganizationEnvironment(ctx context.Context, params *GetOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateOrUpdateOrganizationEnvironmentWithBody Create or Update Organization Environment
-	//
-	// Creates or updates the organization base environment and named environment overlays.
+	// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 	//
 	// Takes any type of body and a specified content type.
 	//
-	// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-	CreateOrUpdateOrganizationEnvironmentWithBody(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+	CreateEnvironmentWithBody(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateOrUpdateOrganizationEnvironment Create or Update Organization Environment
+	// CreateEnvironment Create Environment
 	//
-	// Creates or updates the organization base environment and named environment overlays.
+	// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 	//
 	// Takes a body of the `application/json` content type.
 	//
-	// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-	CreateOrUpdateOrganizationEnvironment(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, body CreateOrUpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+	CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// UpdateOrganizationEnvironmentWithBody Update Organization Environment
+	// DeleteEnvironment Delete Environment
 	//
-	// Replaces the organization base environment and named environment overlays.
+	// Deletes one environment and every variable in it. The base layer is untouched.
+	//
+	// Corresponds with DELETE /organization/environments/{environment} (the `DeleteEnvironment` operationId).
+	DeleteEnvironment(ctx context.Context, environment EnvironmentPath, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteEnvironmentVariable Delete Environment Variable
+	//
+	// Deletes one variable from an environment. The environment must exist; deleting a variable that does not exist succeeds.
+	//
+	// Corresponds with DELETE /organization/environments/{environment}/variables/{key} (the `DeleteEnvironmentVariable` operationId).
+	DeleteEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetEnvironmentVariableWithBody Set Environment Variable
+	//
+	// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 	//
 	// Takes any type of body and a specified content type.
 	//
-	// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-	UpdateOrganizationEnvironmentWithBody(ctx context.Context, params *UpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+	SetEnvironmentVariableWithBody(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// UpdateOrganizationEnvironment Update Organization Environment
+	// SetEnvironmentVariable Set Environment Variable
 	//
-	// Replaces the organization base environment and named environment overlays.
+	// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 	//
 	// Takes a body of the `application/json` content type.
 	//
-	// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-	UpdateOrganizationEnvironment(ctx context.Context, params *UpdateOrganizationEnvironmentParams, body UpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+	SetEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, body SetEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteOrganizationVariables Delete Organization Variables
+	//
+	// Deletes the organization variable set, its base layer and its named environment overlays.
+	//
+	// Corresponds with DELETE /organization/variables (the `DeleteOrganizationVariables` operationId).
+	DeleteOrganizationVariables(ctx context.Context, params *DeleteOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOrganizationVariables Get Organization Variables
+	//
+	// Retrieves the organization variable set, its base layer and its named environment overlays.
+	//
+	// Corresponds with GET /organization/variables (the `GetOrganizationVariables` operationId).
+	GetOrganizationVariables(ctx context.Context, params *GetOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteOrganizationVariable Delete Organization Variable
+	//
+	// Deletes one variable from the organization base layer.
+	//
+	// Corresponds with DELETE /organization/variables/{key} (the `DeleteOrganizationVariable` operationId).
+	DeleteOrganizationVariable(ctx context.Context, key VariableKey, params *DeleteOrganizationVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetOrganizationVariableWithBody Set Organization Variable
+	//
+	// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+	SetOrganizationVariableWithBody(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetOrganizationVariable Set Organization Variable
+	//
+	// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+	SetOrganizationVariable(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, body SetOrganizationVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListPermissions List Available Permissions
 	//
@@ -7298,7 +7560,8 @@ type ClientInterface interface {
 	// HeartbeatRunnerJobsWithBody Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process.
+	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -7308,7 +7571,8 @@ type ClientInterface interface {
 	// HeartbeatRunnerJobs Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process.
+	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -7338,6 +7602,8 @@ type ClientInterface interface {
 	// CompleteRunnerJobWithBody Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -7347,6 +7613,8 @@ type ClientInterface interface {
 	// CompleteRunnerJob Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -7355,7 +7623,9 @@ type ClientInterface interface {
 
 	// SendRunnerJobEventsWithBody Append progress events for a claimed runner job
 	//
-	// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -7364,17 +7634,35 @@ type ClientInterface interface {
 
 	// SendRunnerJobEvents Append progress events for a claimed runner job
 	//
-	// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /runner/jobs/{jobId}/events (the `SendRunnerJobEvents` operationId).
 	SendRunnerJobEvents(ctx context.Context, jobId RunnerJobIDParameter, body SendRunnerJobEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetCloudJobPayload Fetch the Cloud job payload
+	//
+	// Returns the flow snapshot, runner inputs, referenced flows, and Cloud
+	// duration for a Cloud job. Authenticate with the job token. The token is
+	// never persisted. Self-hosted and ephemeral jobs are not served here.
+	//
+	// The payload is single-use. The first call claims it; a later call is
+	// refused with 409. Message delivery to a Cloud worker is at-least-once,
+	// so a redelivered job can reach a second worker that holds the same
+	// valid token, and a Cloud job must never run twice.
+	//
+	// Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
+	GetCloudJobPayload(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListLiveRunners List live self-hosted runners
 	//
 	// Returns the currently live self-hosted runners observed for the active organization,
 	// based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
+	// Cloud workers are never listed: a Cloud container is a transient worker of the
+	// shared pool, not a runner that the organization operates.
 	//
 	// Corresponds with GET /runners (the `ListLiveRunners` operationId).
 	ListLiveRunners(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8364,6 +8652,42 @@ func (c *Client) AddRequest(ctx context.Context, id openapi_types.UUID, params *
 	return c.Client.Do(req)
 }
 
+// ListExecutions List Organization Executions
+//
+// Retrieves org-wide execution activity, newest first. Rows are slim
+// activity records and do not include flow snapshots.
+//
+// Corresponds with GET /executions (the `ListExecutions` operationId).
+func (c *Client) ListExecutions(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListExecutionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetExecutionsSummary Get Organization Execution Summary
+//
+// Returns windowed run and failed counts plus current running and pending
+// counts for the organization. Running and pending ignore the window.
+//
+// Corresponds with GET /executions/summary (the `GetExecutionsSummary` operationId).
+func (c *Client) GetExecutionsSummary(ctx context.Context, params *GetExecutionsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetExecutionsSummaryRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListFlowSchedules List Flow Schedules
 //
 // Lists flow schedules for the organization with optional filtering by enabled state.
@@ -9055,116 +9379,6 @@ func (c *Client) UpdateFlow(ctx context.Context, id openapi_types.UUID, params *
 	return c.Client.Do(req)
 }
 
-// DeleteFlowEnvironment Delete Flow Environment
-//
-// Deletes environment variables for a flow.
-//
-// Corresponds with DELETE /flows/{id}/environments (the `DeleteFlowEnvironment` operationId).
-func (c *Client) DeleteFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *DeleteFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteFlowEnvironmentRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetFlowEnvironment Get Flow Environment
-//
-// Retrieves environment variables for a flow.
-//
-// Corresponds with GET /flows/{id}/environments (the `GetFlowEnvironment` operationId).
-func (c *Client) GetFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *GetFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFlowEnvironmentRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// CreateOrUpdateFlowEnvironmentWithBody Create or Update Flow Environment
-//
-// Creates or updates environment variables for a flow.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-func (c *Client) CreateOrUpdateFlowEnvironmentWithBody(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateOrUpdateFlowEnvironmentRequestWithBody(c.Server, id, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// CreateOrUpdateFlowEnvironment Create or Update Flow Environment
-//
-// Creates or updates environment variables for a flow.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-func (c *Client) CreateOrUpdateFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, body CreateOrUpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateOrUpdateFlowEnvironmentRequest(c.Server, id, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// UpdateFlowEnvironmentWithBody Update Flow Environment
-//
-// Updates environment variables for a flow.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-func (c *Client) UpdateFlowEnvironmentWithBody(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateFlowEnvironmentRequestWithBody(c.Server, id, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// UpdateFlowEnvironment Update Flow Environment
-//
-// Updates environment variables for a flow.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-func (c *Client) UpdateFlowEnvironment(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, body UpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateFlowEnvironmentRequest(c.Server, id, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // ListFlowExecutions List Flow Executions
 //
 // Retrieves execution history for a specific flow with pagination.
@@ -9184,7 +9398,7 @@ func (c *Client) ListFlowExecutions(ctx context.Context, id openapi_types.UUID, 
 
 // ExportFlow Export Flow
 //
-// Returns the raw flow definition JSON formatted for the flow engine.
+// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
 //
 // Corresponds with GET /flows/{id}/export (the `ExportFlow` operationId).
 func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -9250,6 +9464,95 @@ func (c *Client) LaunchFlow(ctx context.Context, id openapi_types.UUID, params *
 // Corresponds with POST /flows/{id}/publish (the `PublishFlow` operationId).
 func (c *Client) PublishFlow(ctx context.Context, id openapi_types.UUID, params *PublishFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPublishFlowRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteFlowVariables Delete Flow Variables
+//
+// Deletes every variable for a flow.
+//
+// Corresponds with DELETE /flows/{id}/variables (the `DeleteFlowVariables` operationId).
+func (c *Client) DeleteFlowVariables(ctx context.Context, id openapi_types.UUID, params *DeleteFlowVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteFlowVariablesRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetFlowVariables Get Flow Variables
+//
+// Retrieves the variable set for a flow.
+//
+// Corresponds with GET /flows/{id}/variables (the `GetFlowVariables` operationId).
+func (c *Client) GetFlowVariables(ctx context.Context, id openapi_types.UUID, params *GetFlowVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFlowVariablesRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteFlowVariable Delete Flow Variable
+//
+// Deletes one flow variable.
+//
+// Corresponds with DELETE /flows/{id}/variables/{key} (the `DeleteFlowVariable` operationId).
+func (c *Client) DeleteFlowVariable(ctx context.Context, id openapi_types.UUID, key VariableKey, params *DeleteFlowVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteFlowVariableRequest(c.Server, id, key, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetFlowVariableWithBody Set Flow Variable
+//
+// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+func (c *Client) SetFlowVariableWithBody(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetFlowVariableRequestWithBody(c.Server, id, key, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetFlowVariable Set Flow Variable
+//
+// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+func (c *Client) SetFlowVariable(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetFlowVariableRequest(c.Server, id, key, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9438,13 +9741,13 @@ func (c *Client) ListOperations(ctx context.Context, params *ListOperationsParam
 	return c.Client.Do(req)
 }
 
-// DeleteOrganizationEnvironment Delete Organization Environment
+// ListEnvironments List Environments
 //
-// Deletes the organization environment and its named overlays.
+// Lists the organization's environments. Variables are not included; read them from the organization variable set.
 //
-// Corresponds with DELETE /organization/environment (the `DeleteOrganizationEnvironment` operationId).
-func (c *Client) DeleteOrganizationEnvironment(ctx context.Context, params *DeleteOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteOrganizationEnvironmentRequest(c.Server, params)
+// Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+func (c *Client) ListEnvironments(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListEnvironmentsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9455,32 +9758,15 @@ func (c *Client) DeleteOrganizationEnvironment(ctx context.Context, params *Dele
 	return c.Client.Do(req)
 }
 
-// GetOrganizationEnvironment Get Organization Environment
+// CreateEnvironmentWithBody Create Environment
 //
-// Retrieves the organization base environment and named environment overlays.
-//
-// Corresponds with GET /organization/environment (the `GetOrganizationEnvironment` operationId).
-func (c *Client) GetOrganizationEnvironment(ctx context.Context, params *GetOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetOrganizationEnvironmentRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// CreateOrUpdateOrganizationEnvironmentWithBody Create or Update Organization Environment
-//
-// Creates or updates the organization base environment and named environment overlays.
+// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 //
 // Takes any type of body and a specified content type.
 //
-// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-func (c *Client) CreateOrUpdateOrganizationEnvironmentWithBody(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateOrUpdateOrganizationEnvironmentRequestWithBody(c.Server, params, contentType, body)
+// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+func (c *Client) CreateEnvironmentWithBody(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateEnvironmentRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9491,15 +9777,15 @@ func (c *Client) CreateOrUpdateOrganizationEnvironmentWithBody(ctx context.Conte
 	return c.Client.Do(req)
 }
 
-// CreateOrUpdateOrganizationEnvironment Create or Update Organization Environment
+// CreateEnvironment Create Environment
 //
-// Creates or updates the organization base environment and named environment overlays.
+// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 //
 // Takes a body of the `application/json` content type.
 //
-// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-func (c *Client) CreateOrUpdateOrganizationEnvironment(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, body CreateOrUpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateOrUpdateOrganizationEnvironmentRequest(c.Server, params, body)
+// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+func (c *Client) CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateEnvironmentRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9510,15 +9796,49 @@ func (c *Client) CreateOrUpdateOrganizationEnvironment(ctx context.Context, para
 	return c.Client.Do(req)
 }
 
-// UpdateOrganizationEnvironmentWithBody Update Organization Environment
+// DeleteEnvironment Delete Environment
 //
-// Replaces the organization base environment and named environment overlays.
+// Deletes one environment and every variable in it. The base layer is untouched.
+//
+// Corresponds with DELETE /organization/environments/{environment} (the `DeleteEnvironment` operationId).
+func (c *Client) DeleteEnvironment(ctx context.Context, environment EnvironmentPath, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteEnvironmentRequest(c.Server, environment, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteEnvironmentVariable Delete Environment Variable
+//
+// Deletes one variable from an environment. The environment must exist; deleting a variable that does not exist succeeds.
+//
+// Corresponds with DELETE /organization/environments/{environment}/variables/{key} (the `DeleteEnvironmentVariable` operationId).
+func (c *Client) DeleteEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteEnvironmentVariableRequest(c.Server, environment, key, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetEnvironmentVariableWithBody Set Environment Variable
+//
+// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 //
 // Takes any type of body and a specified content type.
 //
-// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-func (c *Client) UpdateOrganizationEnvironmentWithBody(ctx context.Context, params *UpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateOrganizationEnvironmentRequestWithBody(c.Server, params, contentType, body)
+// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+func (c *Client) SetEnvironmentVariableWithBody(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetEnvironmentVariableRequestWithBody(c.Server, environment, key, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9529,15 +9849,104 @@ func (c *Client) UpdateOrganizationEnvironmentWithBody(ctx context.Context, para
 	return c.Client.Do(req)
 }
 
-// UpdateOrganizationEnvironment Update Organization Environment
+// SetEnvironmentVariable Set Environment Variable
 //
-// Replaces the organization base environment and named environment overlays.
+// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 //
 // Takes a body of the `application/json` content type.
 //
-// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-func (c *Client) UpdateOrganizationEnvironment(ctx context.Context, params *UpdateOrganizationEnvironmentParams, body UpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateOrganizationEnvironmentRequest(c.Server, params, body)
+// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+func (c *Client) SetEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, body SetEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetEnvironmentVariableRequest(c.Server, environment, key, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteOrganizationVariables Delete Organization Variables
+//
+// Deletes the organization variable set, its base layer and its named environment overlays.
+//
+// Corresponds with DELETE /organization/variables (the `DeleteOrganizationVariables` operationId).
+func (c *Client) DeleteOrganizationVariables(ctx context.Context, params *DeleteOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteOrganizationVariablesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOrganizationVariables Get Organization Variables
+//
+// Retrieves the organization variable set, its base layer and its named environment overlays.
+//
+// Corresponds with GET /organization/variables (the `GetOrganizationVariables` operationId).
+func (c *Client) GetOrganizationVariables(ctx context.Context, params *GetOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrganizationVariablesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteOrganizationVariable Delete Organization Variable
+//
+// Deletes one variable from the organization base layer.
+//
+// Corresponds with DELETE /organization/variables/{key} (the `DeleteOrganizationVariable` operationId).
+func (c *Client) DeleteOrganizationVariable(ctx context.Context, key VariableKey, params *DeleteOrganizationVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteOrganizationVariableRequest(c.Server, key, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetOrganizationVariableWithBody Set Organization Variable
+//
+// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+func (c *Client) SetOrganizationVariableWithBody(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetOrganizationVariableRequestWithBody(c.Server, key, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetOrganizationVariable Set Organization Variable
+//
+// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+func (c *Client) SetOrganizationVariable(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, body SetOrganizationVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetOrganizationVariableRequest(c.Server, key, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9656,7 +10065,8 @@ func (c *Client) CompleteEphemeralExecution(ctx context.Context, executionId ope
 // HeartbeatRunnerJobsWithBody Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process.
+// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes any type of body and a specified content type.
 //
@@ -9676,7 +10086,8 @@ func (c *Client) HeartbeatRunnerJobsWithBody(ctx context.Context, contentType st
 // HeartbeatRunnerJobs Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process.
+// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -9736,6 +10147,8 @@ func (c *Client) NextRunnerJob(ctx context.Context, body NextRunnerJobJSONReques
 // CompleteRunnerJobWithBody Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes any type of body and a specified content type.
 //
@@ -9755,6 +10168,8 @@ func (c *Client) CompleteRunnerJobWithBody(ctx context.Context, jobId RunnerJobI
 // CompleteRunnerJob Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -9773,7 +10188,9 @@ func (c *Client) CompleteRunnerJob(ctx context.Context, jobId RunnerJobIDParamet
 
 // SendRunnerJobEventsWithBody Append progress events for a claimed runner job
 //
-// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes any type of body and a specified content type.
 //
@@ -9792,7 +10209,9 @@ func (c *Client) SendRunnerJobEventsWithBody(ctx context.Context, jobId RunnerJo
 
 // SendRunnerJobEvents Append progress events for a claimed runner job
 //
-// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -9809,10 +10228,36 @@ func (c *Client) SendRunnerJobEvents(ctx context.Context, jobId RunnerJobIDParam
 	return c.Client.Do(req)
 }
 
+// GetCloudJobPayload Fetch the Cloud job payload
+//
+// Returns the flow snapshot, runner inputs, referenced flows, and Cloud
+// duration for a Cloud job. Authenticate with the job token. The token is
+// never persisted. Self-hosted and ephemeral jobs are not served here.
+//
+// The payload is single-use. The first call claims it; a later call is
+// refused with 409. Message delivery to a Cloud worker is at-least-once,
+// so a redelivered job can reach a second worker that holds the same
+// valid token, and a Cloud job must never run twice.
+//
+// Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
+func (c *Client) GetCloudJobPayload(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCloudJobPayloadRequest(c.Server, jobId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListLiveRunners List live self-hosted runners
 //
 // Returns the currently live self-hosted runners observed for the active organization,
 // based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
+// Cloud workers are never listed: a Cloud container is a transient worker of the
+// shared pool, not a runner that the organization operates.
 //
 // Corresponds with GET /runners (the `ListLiveRunners` operationId).
 func (c *Client) ListLiveRunners(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -11988,6 +12433,192 @@ func NewAddRequestRequestWithBody(server string, id openapi_types.UUID, params *
 	return req, nil
 }
 
+// NewListExecutionsRequest constructs an http.Request for the ListExecutions method
+func NewListExecutionsRequest(server string, params *ListExecutionsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/executions")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.Status != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "status", *params.Status, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.TriggerType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "trigger_type", *params.TriggerType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.FlowId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_id", *params.FlowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Since != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "since", *params.Since, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date-time"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetExecutionsSummaryRequest constructs an http.Request for the GetExecutionsSummary method
+func NewGetExecutionsSummaryRequest(server string, params *GetExecutionsSummaryParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/executions/summary")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewListFlowSchedulesRequest constructs an http.Request for the ListFlowSchedules method
 func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams) (*http.Request, error) {
 	var err error
@@ -13576,220 +14207,6 @@ func NewUpdateFlowRequestWithBody(server string, id openapi_types.UUID, params *
 	return req, nil
 }
 
-// NewDeleteFlowEnvironmentRequest constructs an http.Request for the DeleteFlowEnvironment method
-func NewDeleteFlowEnvironmentRequest(server string, id openapi_types.UUID, params *DeleteFlowEnvironmentParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flows/%s/environments", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewGetFlowEnvironmentRequest constructs an http.Request for the GetFlowEnvironment method
-func NewGetFlowEnvironmentRequest(server string, id openapi_types.UUID, params *GetFlowEnvironmentParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flows/%s/environments", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewCreateOrUpdateFlowEnvironmentRequest calls the generic CreateOrUpdateFlowEnvironment builder with application/json body
-func NewCreateOrUpdateFlowEnvironmentRequest(server string, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, body CreateOrUpdateFlowEnvironmentJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateOrUpdateFlowEnvironmentRequestWithBody(server, id, params, "application/json", bodyReader)
-}
-
-// NewCreateOrUpdateFlowEnvironmentRequestWithBody constructs an http.Request for the CreateOrUpdateFlowEnvironment method, with any body, and a specified content type
-func NewCreateOrUpdateFlowEnvironmentRequestWithBody(server string, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flows/%s/environments", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewUpdateFlowEnvironmentRequest calls the generic UpdateFlowEnvironment builder with application/json body
-func NewUpdateFlowEnvironmentRequest(server string, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, body UpdateFlowEnvironmentJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdateFlowEnvironmentRequestWithBody(server, id, params, "application/json", bodyReader)
-}
-
-// NewUpdateFlowEnvironmentRequestWithBody constructs an http.Request for the UpdateFlowEnvironment method, with any body, and a specified content type
-func NewUpdateFlowEnvironmentRequestWithBody(server string, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flows/%s/environments", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
 // NewListFlowExecutionsRequest constructs an http.Request for the ListFlowExecutions method
 func NewListFlowExecutionsRequest(server string, id openapi_types.UUID, params *ListFlowExecutionsParams) (*http.Request, error) {
 	var err error
@@ -14043,6 +14460,221 @@ func NewPublishFlowRequest(server string, id openapi_types.UUID, params *Publish
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteFlowVariablesRequest constructs an http.Request for the DeleteFlowVariables method
+func NewDeleteFlowVariablesRequest(server string, id openapi_types.UUID, params *DeleteFlowVariablesParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/%s/variables", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetFlowVariablesRequest constructs an http.Request for the GetFlowVariables method
+func NewGetFlowVariablesRequest(server string, id openapi_types.UUID, params *GetFlowVariablesParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/%s/variables", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteFlowVariableRequest constructs an http.Request for the DeleteFlowVariable method
+func NewDeleteFlowVariableRequest(server string, id openapi_types.UUID, key VariableKey, params *DeleteFlowVariableParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/%s/variables/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSetFlowVariableRequest calls the generic SetFlowVariable builder with application/json body
+func NewSetFlowVariableRequest(server string, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetFlowVariableRequestWithBody(server, id, key, params, "application/json", bodyReader)
+}
+
+// NewSetFlowVariableRequestWithBody constructs an http.Request for the SetFlowVariable method, with any body, and a specified content type
+func NewSetFlowVariableRequestWithBody(server string, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/%s/variables/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -14516,8 +15148,8 @@ func NewListOperationsRequest(server string, params *ListOperationsParams) (*htt
 	return req, nil
 }
 
-// NewDeleteOrganizationEnvironmentRequest constructs an http.Request for the DeleteOrganizationEnvironment method
-func NewDeleteOrganizationEnvironmentRequest(server string, params *DeleteOrganizationEnvironmentParams) (*http.Request, error) {
+// NewListEnvironmentsRequest constructs an http.Request for the ListEnvironments method
+func NewListEnvironmentsRequest(server string, params *ListEnvironmentsParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -14525,47 +15157,7 @@ func NewDeleteOrganizationEnvironmentRequest(server string, params *DeleteOrgani
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/organization/environment")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewGetOrganizationEnvironmentRequest constructs an http.Request for the GetOrganizationEnvironment method
-func NewGetOrganizationEnvironmentRequest(server string, params *GetOrganizationEnvironmentParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/organization/environment")
+	operationPath := fmt.Sprintf("/organization/environments")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -14596,19 +15188,19 @@ func NewGetOrganizationEnvironmentRequest(server string, params *GetOrganization
 	return req, nil
 }
 
-// NewCreateOrUpdateOrganizationEnvironmentRequest calls the generic CreateOrUpdateOrganizationEnvironment builder with application/json body
-func NewCreateOrUpdateOrganizationEnvironmentRequest(server string, params *CreateOrUpdateOrganizationEnvironmentParams, body CreateOrUpdateOrganizationEnvironmentJSONRequestBody) (*http.Request, error) {
+// NewCreateEnvironmentRequest calls the generic CreateEnvironment builder with application/json body
+func NewCreateEnvironmentRequest(server string, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateOrUpdateOrganizationEnvironmentRequestWithBody(server, params, "application/json", bodyReader)
+	return NewCreateEnvironmentRequestWithBody(server, params, "application/json", bodyReader)
 }
 
-// NewCreateOrUpdateOrganizationEnvironmentRequestWithBody constructs an http.Request for the CreateOrUpdateOrganizationEnvironment method, with any body, and a specified content type
-func NewCreateOrUpdateOrganizationEnvironmentRequestWithBody(server string, params *CreateOrUpdateOrganizationEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
+// NewCreateEnvironmentRequestWithBody constructs an http.Request for the CreateEnvironment method, with any body, and a specified content type
+func NewCreateEnvironmentRequestWithBody(server string, params *CreateEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -14616,7 +15208,7 @@ func NewCreateOrUpdateOrganizationEnvironmentRequestWithBody(server string, para
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/organization/environment")
+	operationPath := fmt.Sprintf("/organization/environments")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -14649,19 +15241,176 @@ func NewCreateOrUpdateOrganizationEnvironmentRequestWithBody(server string, para
 	return req, nil
 }
 
-// NewUpdateOrganizationEnvironmentRequest calls the generic UpdateOrganizationEnvironment builder with application/json body
-func NewUpdateOrganizationEnvironmentRequest(server string, params *UpdateOrganizationEnvironmentParams, body UpdateOrganizationEnvironmentJSONRequestBody) (*http.Request, error) {
+// NewDeleteEnvironmentRequest constructs an http.Request for the DeleteEnvironment method
+func NewDeleteEnvironmentRequest(server string, environment EnvironmentPath, params *DeleteEnvironmentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "environment", environment, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/environments/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteEnvironmentVariableRequest constructs an http.Request for the DeleteEnvironmentVariable method
+func NewDeleteEnvironmentVariableRequest(server string, environment EnvironmentPath, key VariableKey, params *DeleteEnvironmentVariableParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "environment", environment, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/environments/%s/variables/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSetEnvironmentVariableRequest calls the generic SetEnvironmentVariable builder with application/json body
+func NewSetEnvironmentVariableRequest(server string, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, body SetEnvironmentVariableJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateOrganizationEnvironmentRequestWithBody(server, params, "application/json", bodyReader)
+	return NewSetEnvironmentVariableRequestWithBody(server, environment, key, params, "application/json", bodyReader)
 }
 
-// NewUpdateOrganizationEnvironmentRequestWithBody constructs an http.Request for the UpdateOrganizationEnvironment method, with any body, and a specified content type
-func NewUpdateOrganizationEnvironmentRequestWithBody(server string, params *UpdateOrganizationEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
+// NewSetEnvironmentVariableRequestWithBody constructs an http.Request for the SetEnvironmentVariable method, with any body, and a specified content type
+func NewSetEnvironmentVariableRequestWithBody(server string, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "environment", environment, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/environments/%s/variables/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteOrganizationVariablesRequest constructs an http.Request for the DeleteOrganizationVariables method
+func NewDeleteOrganizationVariablesRequest(server string, params *DeleteOrganizationVariablesParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -14669,7 +15418,152 @@ func NewUpdateOrganizationEnvironmentRequestWithBody(server string, params *Upda
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/organization/environment")
+	operationPath := fmt.Sprintf("/organization/variables")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetOrganizationVariablesRequest constructs an http.Request for the GetOrganizationVariables method
+func NewGetOrganizationVariablesRequest(server string, params *GetOrganizationVariablesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/variables")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteOrganizationVariableRequest constructs an http.Request for the DeleteOrganizationVariable method
+func NewDeleteOrganizationVariableRequest(server string, key VariableKey, params *DeleteOrganizationVariableParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/variables/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSetOrganizationVariableRequest calls the generic SetOrganizationVariable builder with application/json body
+func NewSetOrganizationVariableRequest(server string, key VariableKey, params *SetOrganizationVariableParams, body SetOrganizationVariableJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetOrganizationVariableRequestWithBody(server, key, params, "application/json", bodyReader)
+}
+
+// NewSetOrganizationVariableRequestWithBody constructs an http.Request for the SetOrganizationVariable method, with any body, and a specified content type
+func NewSetOrganizationVariableRequestWithBody(server string, key VariableKey, params *SetOrganizationVariableParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/variables/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -15048,6 +15942,40 @@ func NewSendRunnerJobEventsRequestWithBody(server string, jobId RunnerJobIDParam
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetCloudJobPayloadRequest constructs an http.Request for the GetCloudJobPayload method
+func NewGetCloudJobPayloadRequest(server string, jobId RunnerJobIDParameter) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "jobId", jobId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/runner/jobs/%s/payload", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -16261,6 +17189,26 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /collections/{id}/requests (the `AddRequest` operationId).
 	AddRequestWithResponse(ctx context.Context, id openapi_types.UUID, params *AddRequestParams, body AddRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*AddRequestResponse, error)
 
+	// ListExecutionsWithResponse List Organization Executions
+	//
+	// Retrieves org-wide execution activity, newest first. Rows are slim
+	// activity records and do not include flow snapshots.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /executions (the `ListExecutions` operationId).
+	ListExecutionsWithResponse(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*ListExecutionsResponse, error)
+
+	// GetExecutionsSummaryWithResponse Get Organization Execution Summary
+	//
+	// Returns windowed run and failed counts plus current running and pending
+	// counts for the organization. Running and pending ignore the window.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /executions/summary (the `GetExecutionsSummary` operationId).
+	GetExecutionsSummaryWithResponse(ctx context.Context, params *GetExecutionsSummaryParams, reqEditors ...RequestEditorFn) (*GetExecutionsSummaryResponse, error)
+
 	// ListFlowSchedulesWithResponse List Flow Schedules
 	//
 	// Lists flow schedules for the organization with optional filtering by enabled state.
@@ -16608,60 +17556,6 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /flows/{id} (the `UpdateFlow` operationId).
 	UpdateFlowWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateFlowParams, body UpdateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowResponse, error)
 
-	// DeleteFlowEnvironmentWithResponse Delete Flow Environment
-	//
-	// Deletes environment variables for a flow.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with DELETE /flows/{id}/environments (the `DeleteFlowEnvironment` operationId).
-	DeleteFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteFlowEnvironmentResponse, error)
-
-	// GetFlowEnvironmentWithResponse Get Flow Environment
-	//
-	// Retrieves environment variables for a flow.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /flows/{id}/environments (the `GetFlowEnvironment` operationId).
-	GetFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *GetFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*GetFlowEnvironmentResponse, error)
-
-	// CreateOrUpdateFlowEnvironmentWithBodyWithResponse Create or Update Flow Environment
-	//
-	// Creates or updates environment variables for a flow.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-	CreateOrUpdateFlowEnvironmentWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrUpdateFlowEnvironmentResponse, error)
-
-	// CreateOrUpdateFlowEnvironmentWithResponse Create or Update Flow Environment
-	//
-	// Creates or updates environment variables for a flow.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-	CreateOrUpdateFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, body CreateOrUpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrUpdateFlowEnvironmentResponse, error)
-
-	// UpdateFlowEnvironmentWithBodyWithResponse Update Flow Environment
-	//
-	// Updates environment variables for a flow.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-	UpdateFlowEnvironmentWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowEnvironmentResponse, error)
-
-	// UpdateFlowEnvironmentWithResponse Update Flow Environment
-	//
-	// Updates environment variables for a flow.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-	UpdateFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, body UpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowEnvironmentResponse, error)
-
 	// ListFlowExecutionsWithResponse List Flow Executions
 	//
 	// Retrieves execution history for a specific flow with pagination.
@@ -16673,7 +17567,7 @@ type ClientWithResponsesInterface interface {
 
 	// ExportFlowWithResponse Export Flow
 	//
-	// Returns the raw flow definition JSON formatted for the flow engine.
+	// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -16712,6 +17606,51 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /flows/{id}/publish (the `PublishFlow` operationId).
 	PublishFlowWithResponse(ctx context.Context, id openapi_types.UUID, params *PublishFlowParams, reqEditors ...RequestEditorFn) (*PublishFlowResponse, error)
+
+	// DeleteFlowVariablesWithResponse Delete Flow Variables
+	//
+	// Deletes every variable for a flow.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /flows/{id}/variables (the `DeleteFlowVariables` operationId).
+	DeleteFlowVariablesWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteFlowVariablesParams, reqEditors ...RequestEditorFn) (*DeleteFlowVariablesResponse, error)
+
+	// GetFlowVariablesWithResponse Get Flow Variables
+	//
+	// Retrieves the variable set for a flow.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /flows/{id}/variables (the `GetFlowVariables` operationId).
+	GetFlowVariablesWithResponse(ctx context.Context, id openapi_types.UUID, params *GetFlowVariablesParams, reqEditors ...RequestEditorFn) (*GetFlowVariablesResponse, error)
+
+	// DeleteFlowVariableWithResponse Delete Flow Variable
+	//
+	// Deletes one flow variable.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /flows/{id}/variables/{key} (the `DeleteFlowVariable` operationId).
+	DeleteFlowVariableWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *DeleteFlowVariableParams, reqEditors ...RequestEditorFn) (*DeleteFlowVariableResponse, error)
+
+	// SetFlowVariableWithBodyWithResponse Set Flow Variable
+	//
+	// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+	SetFlowVariableWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetFlowVariableResponse, error)
+
+	// SetFlowVariableWithResponse Set Flow Variable
+	//
+	// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+	SetFlowVariableWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlowVariableResponse, error)
 
 	// ListFlowVersionsWithResponse List Flow Versions
 	//
@@ -16807,59 +17746,113 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperationsWithResponse(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*ListOperationsResponse, error)
 
-	// DeleteOrganizationEnvironmentWithResponse Delete Organization Environment
+	// ListEnvironmentsWithResponse List Environments
 	//
-	// Deletes the organization environment and its named overlays.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with DELETE /organization/environment (the `DeleteOrganizationEnvironment` operationId).
-	DeleteOrganizationEnvironmentWithResponse(ctx context.Context, params *DeleteOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationEnvironmentResponse, error)
-
-	// GetOrganizationEnvironmentWithResponse Get Organization Environment
-	//
-	// Retrieves the organization base environment and named environment overlays.
+	// Lists the organization's environments. Variables are not included; read them from the organization variable set.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with GET /organization/environment (the `GetOrganizationEnvironment` operationId).
-	GetOrganizationEnvironmentWithResponse(ctx context.Context, params *GetOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*GetOrganizationEnvironmentResponse, error)
+	// Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+	ListEnvironmentsWithResponse(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*ListEnvironmentsResponse, error)
 
-	// CreateOrUpdateOrganizationEnvironmentWithBodyWithResponse Create or Update Organization Environment
+	// CreateEnvironmentWithBodyWithResponse Create Environment
 	//
-	// Creates or updates the organization base environment and named environment overlays.
+	// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-	CreateOrUpdateOrganizationEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrUpdateOrganizationEnvironmentResponse, error)
+	// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+	CreateEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
 
-	// CreateOrUpdateOrganizationEnvironmentWithResponse Create or Update Organization Environment
+	// CreateEnvironmentWithResponse Create Environment
 	//
-	// Creates or updates the organization base environment and named environment overlays.
+	// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-	CreateOrUpdateOrganizationEnvironmentWithResponse(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, body CreateOrUpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrUpdateOrganizationEnvironmentResponse, error)
+	// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+	CreateEnvironmentWithResponse(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
 
-	// UpdateOrganizationEnvironmentWithBodyWithResponse Update Organization Environment
+	// DeleteEnvironmentWithResponse Delete Environment
 	//
-	// Replaces the organization base environment and named environment overlays.
+	// Deletes one environment and every variable in it. The base layer is untouched.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /organization/environments/{environment} (the `DeleteEnvironment` operationId).
+	DeleteEnvironmentWithResponse(ctx context.Context, environment EnvironmentPath, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteEnvironmentResponse, error)
+
+	// DeleteEnvironmentVariableWithResponse Delete Environment Variable
+	//
+	// Deletes one variable from an environment. The environment must exist; deleting a variable that does not exist succeeds.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /organization/environments/{environment}/variables/{key} (the `DeleteEnvironmentVariable` operationId).
+	DeleteEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*DeleteEnvironmentVariableResponse, error)
+
+	// SetEnvironmentVariableWithBodyWithResponse Set Environment Variable
+	//
+	// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-	UpdateOrganizationEnvironmentWithBodyWithResponse(ctx context.Context, params *UpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateOrganizationEnvironmentResponse, error)
+	// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+	SetEnvironmentVariableWithBodyWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetEnvironmentVariableResponse, error)
 
-	// UpdateOrganizationEnvironmentWithResponse Update Organization Environment
+	// SetEnvironmentVariableWithResponse Set Environment Variable
 	//
-	// Replaces the organization base environment and named environment overlays.
+	// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-	UpdateOrganizationEnvironmentWithResponse(ctx context.Context, params *UpdateOrganizationEnvironmentParams, body UpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateOrganizationEnvironmentResponse, error)
+	// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+	SetEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, body SetEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetEnvironmentVariableResponse, error)
+
+	// DeleteOrganizationVariablesWithResponse Delete Organization Variables
+	//
+	// Deletes the organization variable set, its base layer and its named environment overlays.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /organization/variables (the `DeleteOrganizationVariables` operationId).
+	DeleteOrganizationVariablesWithResponse(ctx context.Context, params *DeleteOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationVariablesResponse, error)
+
+	// GetOrganizationVariablesWithResponse Get Organization Variables
+	//
+	// Retrieves the organization variable set, its base layer and its named environment overlays.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /organization/variables (the `GetOrganizationVariables` operationId).
+	GetOrganizationVariablesWithResponse(ctx context.Context, params *GetOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*GetOrganizationVariablesResponse, error)
+
+	// DeleteOrganizationVariableWithResponse Delete Organization Variable
+	//
+	// Deletes one variable from the organization base layer.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /organization/variables/{key} (the `DeleteOrganizationVariable` operationId).
+	DeleteOrganizationVariableWithResponse(ctx context.Context, key VariableKey, params *DeleteOrganizationVariableParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationVariableResponse, error)
+
+	// SetOrganizationVariableWithBodyWithResponse Set Organization Variable
+	//
+	// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+	SetOrganizationVariableWithBodyWithResponse(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetOrganizationVariableResponse, error)
+
+	// SetOrganizationVariableWithResponse Set Organization Variable
+	//
+	// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+	SetOrganizationVariableWithResponse(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, body SetOrganizationVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetOrganizationVariableResponse, error)
 
 	// ListPermissionsWithResponse List Available Permissions
 	//
@@ -16921,7 +17914,8 @@ type ClientWithResponsesInterface interface {
 	// HeartbeatRunnerJobsWithBodyWithResponse Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process.
+	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -16931,7 +17925,8 @@ type ClientWithResponsesInterface interface {
 	// HeartbeatRunnerJobsWithResponse Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process.
+	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -16961,6 +17956,8 @@ type ClientWithResponsesInterface interface {
 	// CompleteRunnerJobWithBodyWithResponse Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -16970,6 +17967,8 @@ type ClientWithResponsesInterface interface {
 	// CompleteRunnerJobWithResponse Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -16978,7 +17977,9 @@ type ClientWithResponsesInterface interface {
 
 	// SendRunnerJobEventsWithBodyWithResponse Append progress events for a claimed runner job
 	//
-	// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -16987,17 +17988,37 @@ type ClientWithResponsesInterface interface {
 
 	// SendRunnerJobEventsWithResponse Append progress events for a claimed runner job
 	//
-	// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /runner/jobs/{jobId}/events (the `SendRunnerJobEvents` operationId).
 	SendRunnerJobEventsWithResponse(ctx context.Context, jobId RunnerJobIDParameter, body SendRunnerJobEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*SendRunnerJobEventsResponse, error)
 
+	// GetCloudJobPayloadWithResponse Fetch the Cloud job payload
+	//
+	// Returns the flow snapshot, runner inputs, referenced flows, and Cloud
+	// duration for a Cloud job. Authenticate with the job token. The token is
+	// never persisted. Self-hosted and ephemeral jobs are not served here.
+	//
+	// The payload is single-use. The first call claims it; a later call is
+	// refused with 409. Message delivery to a Cloud worker is at-least-once,
+	// so a redelivered job can reach a second worker that holds the same
+	// valid token, and a Cloud job must never run twice.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
+	GetCloudJobPayloadWithResponse(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*GetCloudJobPayloadResponse, error)
+
 	// ListLiveRunnersWithResponse List live self-hosted runners
 	//
 	// Returns the currently live self-hosted runners observed for the active organization,
 	// based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
+	// Cloud workers are never listed: a Cloud container is a transient worker of the
+	// shared pool, not a runner that the organization operates.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -17167,6 +18188,8 @@ type RunFlowScheduleNowResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -17182,6 +18205,11 @@ func (r RunFlowScheduleNowResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r RunFlowScheduleNowResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r RunFlowScheduleNowResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19023,6 +20051,130 @@ func (r AddRequestResponse) ContentType() string {
 	return ""
 }
 
+type ListExecutionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FlowExecutionActivityListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListExecutionsResponse) GetJSON200() *FlowExecutionActivityListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListExecutionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListExecutionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListExecutionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListExecutionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListExecutionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListExecutionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListExecutionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetExecutionsSummaryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ExecutionSummary
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetExecutionsSummaryResponse) GetJSON200() *ExecutionSummary {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetExecutionsSummaryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetExecutionsSummaryResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetExecutionsSummaryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r GetExecutionsSummaryResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetExecutionsSummaryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetExecutionsSummaryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetExecutionsSummaryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListFlowSchedulesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -19098,6 +20250,8 @@ type CreateFlowScheduleResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -19123,6 +20277,11 @@ func (r CreateFlowScheduleResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r CreateFlowScheduleResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19165,6 +20324,8 @@ type PreviewScheduleTagsResponse struct {
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
 	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -19185,6 +20346,11 @@ func (r PreviewScheduleTagsResponse) GetJSON401() *Unauthorized {
 // GetJSON403 returns the response for an HTTP 403 `application/json` response
 func (r PreviewScheduleTagsResponse) GetJSON403() *Forbidden {
 	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PreviewScheduleTagsResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19339,6 +20505,8 @@ type UpdateFlowScheduleResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -19364,6 +20532,11 @@ func (r UpdateFlowScheduleResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r UpdateFlowScheduleResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19406,6 +20579,8 @@ type PauseFlowScheduleResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -19426,6 +20601,11 @@ func (r PauseFlowScheduleResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r PauseFlowScheduleResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PauseFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19468,6 +20648,8 @@ type ResumeFlowScheduleResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -19488,6 +20670,11 @@ func (r ResumeFlowScheduleResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ResumeFlowScheduleResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ResumeFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19707,6 +20894,8 @@ type CreateFlowResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -19722,6 +20911,11 @@ func (r CreateFlowResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r CreateFlowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateFlowResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19758,15 +20952,26 @@ type ListFlowFoldersResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *FlowFolderListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
 	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r ListFlowFoldersResponse) GetJSON200() *FlowFolderListResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListFlowFoldersResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -19777,6 +20982,16 @@ func (r ListFlowFoldersResponse) GetJSON401() *Unauthorized {
 // GetJSON403 returns the response for an HTTP 403 `application/json` response
 func (r ListFlowFoldersResponse) GetJSON403() *Forbidden {
 	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListFlowFoldersResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ListFlowFoldersResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -19965,6 +21180,8 @@ type DeleteFlowFolderResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *FlowFolderDeletionResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -19978,6 +21195,11 @@ type DeleteFlowFolderResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r DeleteFlowFolderResponse) GetJSON200() *FlowFolderDeletionResult {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteFlowFolderResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -20680,6 +21902,8 @@ type UpdateFlowResponse struct {
 	JSON401 *Unauthorized
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -20700,6 +21924,11 @@ func (r UpdateFlowResponse) GetJSON401() *Unauthorized {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r UpdateFlowResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateFlowResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -20725,240 +21954,6 @@ func (r UpdateFlowResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r UpdateFlowResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type DeleteFlowEnvironmentResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r DeleteFlowEnvironmentResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r DeleteFlowEnvironmentResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r DeleteFlowEnvironmentResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteFlowEnvironmentResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteFlowEnvironmentResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r DeleteFlowEnvironmentResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetFlowEnvironmentResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Environment
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetFlowEnvironmentResponse) GetJSON200() *Environment {
-	return r.JSON200
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetFlowEnvironmentResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetFlowEnvironmentResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r GetFlowEnvironmentResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetFlowEnvironmentResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetFlowEnvironmentResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetFlowEnvironmentResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type CreateOrUpdateFlowEnvironmentResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Environment
-	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *Environment
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r CreateOrUpdateFlowEnvironmentResponse) GetJSON200() *Environment {
-	return r.JSON200
-}
-
-// GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r CreateOrUpdateFlowEnvironmentResponse) GetJSON201() *Environment {
-	return r.JSON201
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r CreateOrUpdateFlowEnvironmentResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r CreateOrUpdateFlowEnvironmentResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r CreateOrUpdateFlowEnvironmentResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r CreateOrUpdateFlowEnvironmentResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateOrUpdateFlowEnvironmentResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateOrUpdateFlowEnvironmentResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r CreateOrUpdateFlowEnvironmentResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type UpdateFlowEnvironmentResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Environment
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r UpdateFlowEnvironmentResponse) GetJSON200() *Environment {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r UpdateFlowEnvironmentResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r UpdateFlowEnvironmentResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r UpdateFlowEnvironmentResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r UpdateFlowEnvironmentResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateFlowEnvironmentResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateFlowEnvironmentResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r UpdateFlowEnvironmentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -21234,6 +22229,219 @@ func (r PublishFlowResponse) ContentType() string {
 	return ""
 }
 
+type DeleteFlowVariablesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteFlowVariablesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteFlowVariablesResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteFlowVariablesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFlowVariablesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFlowVariablesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteFlowVariablesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetFlowVariablesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *VariableSet
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetFlowVariablesResponse) GetJSON200() *VariableSet {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetFlowVariablesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetFlowVariablesResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetFlowVariablesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetFlowVariablesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetFlowVariablesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetFlowVariablesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteFlowVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteFlowVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteFlowVariableResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteFlowVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFlowVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFlowVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteFlowVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetFlowVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *VariableSet
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetFlowVariableResponse) GetJSON200() *VariableSet {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetFlowVariableResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetFlowVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetFlowVariableResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SetFlowVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetFlowVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetFlowVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetFlowVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListFlowVersionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -21468,6 +22676,8 @@ type GetMeResponse struct {
 	JSON200 *CurrentUserResponse
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalServerError
 }
@@ -21480,6 +22690,11 @@ func (r GetMeResponse) GetJSON200() *CurrentUserResponse {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetMeResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetMeResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -21736,73 +22951,32 @@ func (r ListOperationsResponse) ContentType() string {
 	return ""
 }
 
-type DeleteOrganizationEnvironmentResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r DeleteOrganizationEnvironmentResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetBody returns the raw response body bytes
-func (r DeleteOrganizationEnvironmentResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteOrganizationEnvironmentResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteOrganizationEnvironmentResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r DeleteOrganizationEnvironmentResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetOrganizationEnvironmentResponse struct {
+type ListEnvironmentsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Environment
+	JSON200 *EnvironmentListResponse
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetOrganizationEnvironmentResponse) GetJSON200() *Environment {
+func (r ListEnvironmentsResponse) GetJSON200() *EnvironmentListResponse {
 	return r.JSON200
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetOrganizationEnvironmentResponse) GetJSON401() *Unauthorized {
+func (r ListEnvironmentsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
 }
 
 // GetBody returns the raw response body bytes
-func (r GetOrganizationEnvironmentResponse) GetBody() []byte {
+func (r ListEnvironmentsResponse) GetBody() []byte {
 	return r.Body
 }
 
 // Status returns HTTPResponse.Status
-func (r GetOrganizationEnvironmentResponse) Status() string {
+func (r ListEnvironmentsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -21810,7 +22984,7 @@ func (r GetOrganizationEnvironmentResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetOrganizationEnvironmentResponse) StatusCode() int {
+func (r ListEnvironmentsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -21818,53 +22992,53 @@ func (r GetOrganizationEnvironmentResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetOrganizationEnvironmentResponse) ContentType() string {
+func (r ListEnvironmentsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
 	return ""
 }
 
-type CreateOrUpdateOrganizationEnvironmentResponse struct {
+type CreateEnvironmentResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Environment
 	// JSON201 the response for an HTTP 201 `application/json` response
 	JSON201 *Environment
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r CreateOrUpdateOrganizationEnvironmentResponse) GetJSON200() *Environment {
-	return r.JSON200
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r CreateOrUpdateOrganizationEnvironmentResponse) GetJSON201() *Environment {
+func (r CreateEnvironmentResponse) GetJSON201() *Environment {
 	return r.JSON201
 }
 
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r CreateOrUpdateOrganizationEnvironmentResponse) GetJSON400() *BadRequest {
+func (r CreateEnvironmentResponse) GetJSON400() *BadRequest {
 	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r CreateOrUpdateOrganizationEnvironmentResponse) GetJSON401() *Unauthorized {
+func (r CreateEnvironmentResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateEnvironmentResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
 // GetBody returns the raw response body bytes
-func (r CreateOrUpdateOrganizationEnvironmentResponse) GetBody() []byte {
+func (r CreateEnvironmentResponse) GetBody() []byte {
 	return r.Body
 }
 
 // Status returns HTTPResponse.Status
-func (r CreateOrUpdateOrganizationEnvironmentResponse) Status() string {
+func (r CreateEnvironmentResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -21872,7 +23046,7 @@ func (r CreateOrUpdateOrganizationEnvironmentResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r CreateOrUpdateOrganizationEnvironmentResponse) StatusCode() int {
+func (r CreateEnvironmentResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -21880,18 +23054,306 @@ func (r CreateOrUpdateOrganizationEnvironmentResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r CreateOrUpdateOrganizationEnvironmentResponse) ContentType() string {
+func (r CreateEnvironmentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
 	return ""
 }
 
-type UpdateOrganizationEnvironmentResponse struct {
+type DeleteEnvironmentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteEnvironmentResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteEnvironmentResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteEnvironmentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteEnvironmentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteEnvironmentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteEnvironmentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteEnvironmentVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteEnvironmentVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteEnvironmentVariableResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteEnvironmentVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteEnvironmentVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteEnvironmentVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteEnvironmentVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetEnvironmentVariableResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Environment
+	JSON200 *VariableSet
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetEnvironmentVariableResponse) GetJSON200() *VariableSet {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetEnvironmentVariableResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetEnvironmentVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetEnvironmentVariableResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SetEnvironmentVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetEnvironmentVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetEnvironmentVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetEnvironmentVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteOrganizationVariablesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteOrganizationVariablesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteOrganizationVariablesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteOrganizationVariablesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteOrganizationVariablesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteOrganizationVariablesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetOrganizationVariablesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *VariableSet
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetOrganizationVariablesResponse) GetJSON200() *VariableSet {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetOrganizationVariablesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetBody returns the raw response body bytes
+func (r GetOrganizationVariablesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOrganizationVariablesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOrganizationVariablesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOrganizationVariablesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteOrganizationVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteOrganizationVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteOrganizationVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteOrganizationVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteOrganizationVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteOrganizationVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetOrganizationVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *VariableSet
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -21899,27 +23361,27 @@ type UpdateOrganizationEnvironmentResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r UpdateOrganizationEnvironmentResponse) GetJSON200() *Environment {
+func (r SetOrganizationVariableResponse) GetJSON200() *VariableSet {
 	return r.JSON200
 }
 
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r UpdateOrganizationEnvironmentResponse) GetJSON400() *BadRequest {
+func (r SetOrganizationVariableResponse) GetJSON400() *BadRequest {
 	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r UpdateOrganizationEnvironmentResponse) GetJSON401() *Unauthorized {
+func (r SetOrganizationVariableResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
 }
 
 // GetBody returns the raw response body bytes
-func (r UpdateOrganizationEnvironmentResponse) GetBody() []byte {
+func (r SetOrganizationVariableResponse) GetBody() []byte {
 	return r.Body
 }
 
 // Status returns HTTPResponse.Status
-func (r UpdateOrganizationEnvironmentResponse) Status() string {
+func (r SetOrganizationVariableResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -21927,7 +23389,7 @@ func (r UpdateOrganizationEnvironmentResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r UpdateOrganizationEnvironmentResponse) StatusCode() int {
+func (r SetOrganizationVariableResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -21935,7 +23397,7 @@ func (r UpdateOrganizationEnvironmentResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r UpdateOrganizationEnvironmentResponse) ContentType() string {
+func (r SetOrganizationVariableResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -22446,6 +23908,75 @@ func (r SendRunnerJobEventsResponse) ContentType() string {
 	return ""
 }
 
+type GetCloudJobPayloadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CloudJobPayload
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetCloudJobPayloadResponse) GetJSON200() *CloudJobPayload {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetCloudJobPayloadResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetCloudJobPayloadResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetCloudJobPayloadResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetCloudJobPayloadResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetCloudJobPayloadResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetCloudJobPayloadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetCloudJobPayloadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetCloudJobPayloadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListLiveRunnersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -22930,6 +24461,27 @@ func (r SearchWebhooksResponse) ContentType() string {
 type DeleteWebhookResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteWebhookResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteWebhookResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteWebhookResponse) GetJSON404() *NotFound {
+	return r.JSON404
 }
 
 // GetBody returns the raw response body bytes
@@ -23910,6 +25462,38 @@ func (c *ClientWithResponses) AddRequestWithResponse(ctx context.Context, id ope
 	return ParseAddRequestResponse(rsp)
 }
 
+// ListExecutionsWithResponse List Organization Executions
+//
+// Retrieves org-wide execution activity, newest first. Rows are slim
+// activity records and do not include flow snapshots.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /executions (the `ListExecutions` operationId).
+func (c *ClientWithResponses) ListExecutionsWithResponse(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*ListExecutionsResponse, error) {
+	rsp, err := c.ListExecutions(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListExecutionsResponse(rsp)
+}
+
+// GetExecutionsSummaryWithResponse Get Organization Execution Summary
+//
+// Returns windowed run and failed counts plus current running and pending
+// counts for the organization. Running and pending ignore the window.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /executions/summary (the `GetExecutionsSummary` operationId).
+func (c *ClientWithResponses) GetExecutionsSummaryWithResponse(ctx context.Context, params *GetExecutionsSummaryParams, reqEditors ...RequestEditorFn) (*GetExecutionsSummaryResponse, error) {
+	rsp, err := c.GetExecutionsSummary(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetExecutionsSummaryResponse(rsp)
+}
+
 // ListFlowSchedulesWithResponse List Flow Schedules
 //
 // Lists flow schedules for the organization with optional filtering by enabled state.
@@ -24485,96 +26069,6 @@ func (c *ClientWithResponses) UpdateFlowWithResponse(ctx context.Context, id ope
 	return ParseUpdateFlowResponse(rsp)
 }
 
-// DeleteFlowEnvironmentWithResponse Delete Flow Environment
-//
-// Deletes environment variables for a flow.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with DELETE /flows/{id}/environments (the `DeleteFlowEnvironment` operationId).
-func (c *ClientWithResponses) DeleteFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteFlowEnvironmentResponse, error) {
-	rsp, err := c.DeleteFlowEnvironment(ctx, id, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteFlowEnvironmentResponse(rsp)
-}
-
-// GetFlowEnvironmentWithResponse Get Flow Environment
-//
-// Retrieves environment variables for a flow.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /flows/{id}/environments (the `GetFlowEnvironment` operationId).
-func (c *ClientWithResponses) GetFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *GetFlowEnvironmentParams, reqEditors ...RequestEditorFn) (*GetFlowEnvironmentResponse, error) {
-	rsp, err := c.GetFlowEnvironment(ctx, id, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetFlowEnvironmentResponse(rsp)
-}
-
-// CreateOrUpdateFlowEnvironmentWithBodyWithResponse Create or Update Flow Environment
-//
-// Creates or updates environment variables for a flow.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-func (c *ClientWithResponses) CreateOrUpdateFlowEnvironmentWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrUpdateFlowEnvironmentResponse, error) {
-	rsp, err := c.CreateOrUpdateFlowEnvironmentWithBody(ctx, id, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateOrUpdateFlowEnvironmentResponse(rsp)
-}
-
-// CreateOrUpdateFlowEnvironmentWithResponse Create or Update Flow Environment
-//
-// Creates or updates environment variables for a flow.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flows/{id}/environments (the `CreateOrUpdateFlowEnvironment` operationId).
-func (c *ClientWithResponses) CreateOrUpdateFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateFlowEnvironmentParams, body CreateOrUpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrUpdateFlowEnvironmentResponse, error) {
-	rsp, err := c.CreateOrUpdateFlowEnvironment(ctx, id, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateOrUpdateFlowEnvironmentResponse(rsp)
-}
-
-// UpdateFlowEnvironmentWithBodyWithResponse Update Flow Environment
-//
-// Updates environment variables for a flow.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-func (c *ClientWithResponses) UpdateFlowEnvironmentWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowEnvironmentResponse, error) {
-	rsp, err := c.UpdateFlowEnvironmentWithBody(ctx, id, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateFlowEnvironmentResponse(rsp)
-}
-
-// UpdateFlowEnvironmentWithResponse Update Flow Environment
-//
-// Updates environment variables for a flow.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with PUT /flows/{id}/environments (the `UpdateFlowEnvironment` operationId).
-func (c *ClientWithResponses) UpdateFlowEnvironmentWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateFlowEnvironmentParams, body UpdateFlowEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowEnvironmentResponse, error) {
-	rsp, err := c.UpdateFlowEnvironment(ctx, id, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateFlowEnvironmentResponse(rsp)
-}
-
 // ListFlowExecutionsWithResponse List Flow Executions
 //
 // Retrieves execution history for a specific flow with pagination.
@@ -24592,7 +26086,7 @@ func (c *ClientWithResponses) ListFlowExecutionsWithResponse(ctx context.Context
 
 // ExportFlowWithResponse Export Flow
 //
-// Returns the raw flow definition JSON formatted for the flow engine.
+// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -24654,6 +26148,81 @@ func (c *ClientWithResponses) PublishFlowWithResponse(ctx context.Context, id op
 		return nil, err
 	}
 	return ParsePublishFlowResponse(rsp)
+}
+
+// DeleteFlowVariablesWithResponse Delete Flow Variables
+//
+// Deletes every variable for a flow.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /flows/{id}/variables (the `DeleteFlowVariables` operationId).
+func (c *ClientWithResponses) DeleteFlowVariablesWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteFlowVariablesParams, reqEditors ...RequestEditorFn) (*DeleteFlowVariablesResponse, error) {
+	rsp, err := c.DeleteFlowVariables(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFlowVariablesResponse(rsp)
+}
+
+// GetFlowVariablesWithResponse Get Flow Variables
+//
+// Retrieves the variable set for a flow.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /flows/{id}/variables (the `GetFlowVariables` operationId).
+func (c *ClientWithResponses) GetFlowVariablesWithResponse(ctx context.Context, id openapi_types.UUID, params *GetFlowVariablesParams, reqEditors ...RequestEditorFn) (*GetFlowVariablesResponse, error) {
+	rsp, err := c.GetFlowVariables(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetFlowVariablesResponse(rsp)
+}
+
+// DeleteFlowVariableWithResponse Delete Flow Variable
+//
+// Deletes one flow variable.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /flows/{id}/variables/{key} (the `DeleteFlowVariable` operationId).
+func (c *ClientWithResponses) DeleteFlowVariableWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *DeleteFlowVariableParams, reqEditors ...RequestEditorFn) (*DeleteFlowVariableResponse, error) {
+	rsp, err := c.DeleteFlowVariable(ctx, id, key, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFlowVariableResponse(rsp)
+}
+
+// SetFlowVariableWithBodyWithResponse Set Flow Variable
+//
+// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+func (c *ClientWithResponses) SetFlowVariableWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetFlowVariableResponse, error) {
+	rsp, err := c.SetFlowVariableWithBody(ctx, id, key, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetFlowVariableResponse(rsp)
+}
+
+// SetFlowVariableWithResponse Set Flow Variable
+//
+// Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
+func (c *ClientWithResponses) SetFlowVariableWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlowVariableResponse, error) {
+	rsp, err := c.SetFlowVariable(ctx, id, key, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetFlowVariableResponse(rsp)
 }
 
 // ListFlowVersionsWithResponse List Flow Versions
@@ -24810,94 +26379,184 @@ func (c *ClientWithResponses) ListOperationsWithResponse(ctx context.Context, pa
 	return ParseListOperationsResponse(rsp)
 }
 
-// DeleteOrganizationEnvironmentWithResponse Delete Organization Environment
+// ListEnvironmentsWithResponse List Environments
 //
-// Deletes the organization environment and its named overlays.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with DELETE /organization/environment (the `DeleteOrganizationEnvironment` operationId).
-func (c *ClientWithResponses) DeleteOrganizationEnvironmentWithResponse(ctx context.Context, params *DeleteOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationEnvironmentResponse, error) {
-	rsp, err := c.DeleteOrganizationEnvironment(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteOrganizationEnvironmentResponse(rsp)
-}
-
-// GetOrganizationEnvironmentWithResponse Get Organization Environment
-//
-// Retrieves the organization base environment and named environment overlays.
+// Lists the organization's environments. Variables are not included; read them from the organization variable set.
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with GET /organization/environment (the `GetOrganizationEnvironment` operationId).
-func (c *ClientWithResponses) GetOrganizationEnvironmentWithResponse(ctx context.Context, params *GetOrganizationEnvironmentParams, reqEditors ...RequestEditorFn) (*GetOrganizationEnvironmentResponse, error) {
-	rsp, err := c.GetOrganizationEnvironment(ctx, params, reqEditors...)
+// Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+func (c *ClientWithResponses) ListEnvironmentsWithResponse(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*ListEnvironmentsResponse, error) {
+	rsp, err := c.ListEnvironments(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetOrganizationEnvironmentResponse(rsp)
+	return ParseListEnvironmentsResponse(rsp)
 }
 
-// CreateOrUpdateOrganizationEnvironmentWithBodyWithResponse Create or Update Organization Environment
+// CreateEnvironmentWithBodyWithResponse Create Environment
 //
-// Creates or updates the organization base environment and named environment overlays.
+// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-func (c *ClientWithResponses) CreateOrUpdateOrganizationEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrUpdateOrganizationEnvironmentResponse, error) {
-	rsp, err := c.CreateOrUpdateOrganizationEnvironmentWithBody(ctx, params, contentType, body, reqEditors...)
+// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+func (c *ClientWithResponses) CreateEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error) {
+	rsp, err := c.CreateEnvironmentWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateOrUpdateOrganizationEnvironmentResponse(rsp)
+	return ParseCreateEnvironmentResponse(rsp)
 }
 
-// CreateOrUpdateOrganizationEnvironmentWithResponse Create or Update Organization Environment
+// CreateEnvironmentWithResponse Create Environment
 //
-// Creates or updates the organization base environment and named environment overlays.
+// Creates one environment. It starts empty, and stays empty until a variable is written into it.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /organization/environment (the `CreateOrUpdateOrganizationEnvironment` operationId).
-func (c *ClientWithResponses) CreateOrUpdateOrganizationEnvironmentWithResponse(ctx context.Context, params *CreateOrUpdateOrganizationEnvironmentParams, body CreateOrUpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrUpdateOrganizationEnvironmentResponse, error) {
-	rsp, err := c.CreateOrUpdateOrganizationEnvironment(ctx, params, body, reqEditors...)
+// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
+func (c *ClientWithResponses) CreateEnvironmentWithResponse(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error) {
+	rsp, err := c.CreateEnvironment(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateOrUpdateOrganizationEnvironmentResponse(rsp)
+	return ParseCreateEnvironmentResponse(rsp)
 }
 
-// UpdateOrganizationEnvironmentWithBodyWithResponse Update Organization Environment
+// DeleteEnvironmentWithResponse Delete Environment
 //
-// Replaces the organization base environment and named environment overlays.
+// Deletes one environment and every variable in it. The base layer is untouched.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /organization/environments/{environment} (the `DeleteEnvironment` operationId).
+func (c *ClientWithResponses) DeleteEnvironmentWithResponse(ctx context.Context, environment EnvironmentPath, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteEnvironmentResponse, error) {
+	rsp, err := c.DeleteEnvironment(ctx, environment, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteEnvironmentResponse(rsp)
+}
+
+// DeleteEnvironmentVariableWithResponse Delete Environment Variable
+//
+// Deletes one variable from an environment. The environment must exist; deleting a variable that does not exist succeeds.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /organization/environments/{environment}/variables/{key} (the `DeleteEnvironmentVariable` operationId).
+func (c *ClientWithResponses) DeleteEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*DeleteEnvironmentVariableResponse, error) {
+	rsp, err := c.DeleteEnvironmentVariable(ctx, environment, key, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteEnvironmentVariableResponse(rsp)
+}
+
+// SetEnvironmentVariableWithBodyWithResponse Set Environment Variable
+//
+// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-func (c *ClientWithResponses) UpdateOrganizationEnvironmentWithBodyWithResponse(ctx context.Context, params *UpdateOrganizationEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateOrganizationEnvironmentResponse, error) {
-	rsp, err := c.UpdateOrganizationEnvironmentWithBody(ctx, params, contentType, body, reqEditors...)
+// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+func (c *ClientWithResponses) SetEnvironmentVariableWithBodyWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetEnvironmentVariableResponse, error) {
+	rsp, err := c.SetEnvironmentVariableWithBody(ctx, environment, key, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseUpdateOrganizationEnvironmentResponse(rsp)
+	return ParseSetEnvironmentVariableResponse(rsp)
 }
 
-// UpdateOrganizationEnvironmentWithResponse Update Organization Environment
+// SetEnvironmentVariableWithResponse Set Environment Variable
 //
-// Replaces the organization base environment and named environment overlays.
+// Creates or replaces one variable in an environment such as dev or prd. The environment must already exist, so a misspelled name fails instead of creating one. A plain variable can be turned into a secret; the reverse is refused.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
-// Corresponds with PUT /organization/environment (the `UpdateOrganizationEnvironment` operationId).
-func (c *ClientWithResponses) UpdateOrganizationEnvironmentWithResponse(ctx context.Context, params *UpdateOrganizationEnvironmentParams, body UpdateOrganizationEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateOrganizationEnvironmentResponse, error) {
-	rsp, err := c.UpdateOrganizationEnvironment(ctx, params, body, reqEditors...)
+// Corresponds with PUT /organization/environments/{environment}/variables/{key} (the `SetEnvironmentVariable` operationId).
+func (c *ClientWithResponses) SetEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetEnvironmentVariableParams, body SetEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetEnvironmentVariableResponse, error) {
+	rsp, err := c.SetEnvironmentVariable(ctx, environment, key, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseUpdateOrganizationEnvironmentResponse(rsp)
+	return ParseSetEnvironmentVariableResponse(rsp)
+}
+
+// DeleteOrganizationVariablesWithResponse Delete Organization Variables
+//
+// Deletes the organization variable set, its base layer and its named environment overlays.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /organization/variables (the `DeleteOrganizationVariables` operationId).
+func (c *ClientWithResponses) DeleteOrganizationVariablesWithResponse(ctx context.Context, params *DeleteOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationVariablesResponse, error) {
+	rsp, err := c.DeleteOrganizationVariables(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteOrganizationVariablesResponse(rsp)
+}
+
+// GetOrganizationVariablesWithResponse Get Organization Variables
+//
+// Retrieves the organization variable set, its base layer and its named environment overlays.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /organization/variables (the `GetOrganizationVariables` operationId).
+func (c *ClientWithResponses) GetOrganizationVariablesWithResponse(ctx context.Context, params *GetOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*GetOrganizationVariablesResponse, error) {
+	rsp, err := c.GetOrganizationVariables(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOrganizationVariablesResponse(rsp)
+}
+
+// DeleteOrganizationVariableWithResponse Delete Organization Variable
+//
+// Deletes one variable from the organization base layer.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /organization/variables/{key} (the `DeleteOrganizationVariable` operationId).
+func (c *ClientWithResponses) DeleteOrganizationVariableWithResponse(ctx context.Context, key VariableKey, params *DeleteOrganizationVariableParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationVariableResponse, error) {
+	rsp, err := c.DeleteOrganizationVariable(ctx, key, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteOrganizationVariableResponse(rsp)
+}
+
+// SetOrganizationVariableWithBodyWithResponse Set Organization Variable
+//
+// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+func (c *ClientWithResponses) SetOrganizationVariableWithBodyWithResponse(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetOrganizationVariableResponse, error) {
+	rsp, err := c.SetOrganizationVariableWithBody(ctx, key, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetOrganizationVariableResponse(rsp)
+}
+
+// SetOrganizationVariableWithResponse Set Organization Variable
+//
+// Creates or replaces one variable in the organization base layer. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /organization/variables/{key} (the `SetOrganizationVariable` operationId).
+func (c *ClientWithResponses) SetOrganizationVariableWithResponse(ctx context.Context, key VariableKey, params *SetOrganizationVariableParams, body SetOrganizationVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetOrganizationVariableResponse, error) {
+	rsp, err := c.SetOrganizationVariable(ctx, key, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetOrganizationVariableResponse(rsp)
 }
 
 // ListPermissionsWithResponse List Available Permissions
@@ -24990,7 +26649,8 @@ func (c *ClientWithResponses) CompleteEphemeralExecutionWithResponse(ctx context
 // HeartbeatRunnerJobsWithBodyWithResponse Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process.
+// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -25006,7 +26666,8 @@ func (c *ClientWithResponses) HeartbeatRunnerJobsWithBodyWithResponse(ctx contex
 // HeartbeatRunnerJobsWithResponse Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process.
+// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -25054,6 +26715,8 @@ func (c *ClientWithResponses) NextRunnerJobWithResponse(ctx context.Context, bod
 // CompleteRunnerJobWithBodyWithResponse Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -25069,6 +26732,8 @@ func (c *ClientWithResponses) CompleteRunnerJobWithBodyWithResponse(ctx context.
 // CompleteRunnerJobWithResponse Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -25083,7 +26748,9 @@ func (c *ClientWithResponses) CompleteRunnerJobWithResponse(ctx context.Context,
 
 // SendRunnerJobEventsWithBodyWithResponse Append progress events for a claimed runner job
 //
-// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -25098,7 +26765,9 @@ func (c *ClientWithResponses) SendRunnerJobEventsWithBodyWithResponse(ctx contex
 
 // SendRunnerJobEventsWithResponse Append progress events for a claimed runner job
 //
-// Accepts an ordered batch of self-hosted runner execution progress events for a previously claimed runner job.
+// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
+// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Do not send both headers.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -25111,10 +26780,34 @@ func (c *ClientWithResponses) SendRunnerJobEventsWithResponse(ctx context.Contex
 	return ParseSendRunnerJobEventsResponse(rsp)
 }
 
+// GetCloudJobPayloadWithResponse Fetch the Cloud job payload
+//
+// Returns the flow snapshot, runner inputs, referenced flows, and Cloud
+// duration for a Cloud job. Authenticate with the job token. The token is
+// never persisted. Self-hosted and ephemeral jobs are not served here.
+//
+// The payload is single-use. The first call claims it; a later call is
+// refused with 409. Message delivery to a Cloud worker is at-least-once,
+// so a redelivered job can reach a second worker that holds the same
+// valid token, and a Cloud job must never run twice.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
+func (c *ClientWithResponses) GetCloudJobPayloadWithResponse(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*GetCloudJobPayloadResponse, error) {
+	rsp, err := c.GetCloudJobPayload(ctx, jobId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetCloudJobPayloadResponse(rsp)
+}
+
 // ListLiveRunnersWithResponse List live self-hosted runners
 //
 // Returns the currently live self-hosted runners observed for the active organization,
 // based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
+// Cloud workers are never listed: a Cloud container is a transient worker of the
+// shared pool, not a runner that the organization operates.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -25419,6 +27112,13 @@ func ParseRunFlowScheduleNowResponse(rsp *http.Response) (*RunFlowScheduleNowRes
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -26785,6 +28485,100 @@ func ParseAddRequestResponse(rsp *http.Response) (*AddRequestResponse, error) {
 	return response, nil
 }
 
+// ParseListExecutionsResponse parses an HTTP response from a ListExecutionsWithResponse call
+func ParseListExecutionsResponse(rsp *http.Response) (*ListExecutionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListExecutionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowExecutionActivityListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetExecutionsSummaryResponse parses an HTTP response from a GetExecutionsSummaryWithResponse call
+func ParseGetExecutionsSummaryResponse(rsp *http.Response) (*GetExecutionsSummaryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetExecutionsSummaryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExecutionSummary
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListFlowSchedulesResponse parses an HTTP response from a ListFlowSchedulesWithResponse call
 func ParseListFlowSchedulesResponse(rsp *http.Response) (*ListFlowSchedulesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -26881,6 +28675,13 @@ func ParseCreateFlowScheduleResponse(rsp *http.Response) (*CreateFlowScheduleRes
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -26927,6 +28728,13 @@ func ParsePreviewScheduleTagsResponse(rsp *http.Response) (*PreviewScheduleTagsR
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -27065,6 +28873,13 @@ func ParseUpdateFlowScheduleResponse(rsp *http.Response) (*UpdateFlowScheduleRes
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -27112,6 +28927,13 @@ func ParsePauseFlowScheduleResponse(rsp *http.Response) (*PauseFlowScheduleRespo
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -27158,6 +28980,13 @@ func ParseResumeFlowScheduleResponse(rsp *http.Response) (*ResumeFlowScheduleRes
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -27333,6 +29162,13 @@ func ParseCreateFlowResponse(rsp *http.Response) (*CreateFlowResponse, error) {
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -27359,6 +29195,13 @@ func ParseListFlowFoldersResponse(rsp *http.Response) (*ListFlowFoldersResponse,
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -27372,6 +29215,20 @@ func ParseListFlowFoldersResponse(rsp *http.Response) (*ListFlowFoldersResponse,
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -27520,6 +29377,13 @@ func ParseDeleteFlowFolderResponse(rsp *http.Response) (*DeleteFlowFolderRespons
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -28074,182 +29938,12 @@ func ParseUpdateFlowResponse(rsp *http.Response) (*UpdateFlowResponse, error) {
 		}
 		response.JSON404 = &dest
 
-	}
-
-	return response, nil
-}
-
-// ParseDeleteFlowEnvironmentResponse parses an HTTP response from a DeleteFlowEnvironmentWithResponse call
-func ParseDeleteFlowEnvironmentResponse(rsp *http.Response) (*DeleteFlowEnvironmentResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteFlowEnvironmentResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case rsp.StatusCode == 204:
-		break // No content-type
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetFlowEnvironmentResponse parses an HTTP response from a GetFlowEnvironmentWithResponse call
-func ParseGetFlowEnvironmentResponse(rsp *http.Response) (*GetFlowEnvironmentResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetFlowEnvironmentResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Environment
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCreateOrUpdateFlowEnvironmentResponse parses an HTTP response from a CreateOrUpdateFlowEnvironmentWithResponse call
-func ParseCreateOrUpdateFlowEnvironmentResponse(rsp *http.Response) (*CreateOrUpdateFlowEnvironmentResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateOrUpdateFlowEnvironmentResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Environment
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest Environment
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUpdateFlowEnvironmentResponse parses an HTTP response from a UpdateFlowEnvironmentWithResponse call
-func ParseUpdateFlowEnvironmentResponse(rsp *http.Response) (*UpdateFlowEnvironmentResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateFlowEnvironmentResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Environment
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
+		response.JSON409 = &dest
 
 	}
 
@@ -28438,6 +30132,165 @@ func ParsePublishFlowResponse(rsp *http.Response) (*PublishFlowResponse, error) 
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFlowVariablesResponse parses an HTTP response from a DeleteFlowVariablesWithResponse call
+func ParseDeleteFlowVariablesResponse(rsp *http.Response) (*DeleteFlowVariablesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFlowVariablesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetFlowVariablesResponse parses an HTTP response from a GetFlowVariablesWithResponse call
+func ParseGetFlowVariablesResponse(rsp *http.Response) (*GetFlowVariablesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetFlowVariablesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VariableSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFlowVariableResponse parses an HTTP response from a DeleteFlowVariableWithResponse call
+func ParseDeleteFlowVariableResponse(rsp *http.Response) (*DeleteFlowVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFlowVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetFlowVariableResponse parses an HTTP response from a SetFlowVariableWithResponse call
+func ParseSetFlowVariableResponse(rsp *http.Response) (*SetFlowVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetFlowVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VariableSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
 		var dest BadRequest
@@ -28660,6 +30513,13 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -28832,51 +30692,22 @@ func ParseListOperationsResponse(rsp *http.Response) (*ListOperationsResponse, e
 	return response, nil
 }
 
-// ParseDeleteOrganizationEnvironmentResponse parses an HTTP response from a DeleteOrganizationEnvironmentWithResponse call
-func ParseDeleteOrganizationEnvironmentResponse(rsp *http.Response) (*DeleteOrganizationEnvironmentResponse, error) {
+// ParseListEnvironmentsResponse parses an HTTP response from a ListEnvironmentsWithResponse call
+func ParseListEnvironmentsResponse(rsp *http.Response) (*ListEnvironmentsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &DeleteOrganizationEnvironmentResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case rsp.StatusCode == 204:
-		break // No content-type
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetOrganizationEnvironmentResponse parses an HTTP response from a GetOrganizationEnvironmentWithResponse call
-func ParseGetOrganizationEnvironmentResponse(rsp *http.Response) (*GetOrganizationEnvironmentResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetOrganizationEnvironmentResponse{
+	response := &ListEnvironmentsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Environment
+		var dest EnvironmentListResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -28894,27 +30725,20 @@ func ParseGetOrganizationEnvironmentResponse(rsp *http.Response) (*GetOrganizati
 	return response, nil
 }
 
-// ParseCreateOrUpdateOrganizationEnvironmentResponse parses an HTTP response from a CreateOrUpdateOrganizationEnvironmentWithResponse call
-func ParseCreateOrUpdateOrganizationEnvironmentResponse(rsp *http.Response) (*CreateOrUpdateOrganizationEnvironmentResponse, error) {
+// ParseCreateEnvironmentResponse parses an HTTP response from a CreateEnvironmentWithResponse call
+func ParseCreateEnvironmentResponse(rsp *http.Response) (*CreateEnvironmentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &CreateOrUpdateOrganizationEnvironmentResponse{
+	response := &CreateEnvironmentResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Environment
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest Environment
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -28936,27 +30760,244 @@ func ParseCreateOrUpdateOrganizationEnvironmentResponse(rsp *http.Response) (*Cr
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
 }
 
-// ParseUpdateOrganizationEnvironmentResponse parses an HTTP response from a UpdateOrganizationEnvironmentWithResponse call
-func ParseUpdateOrganizationEnvironmentResponse(rsp *http.Response) (*UpdateOrganizationEnvironmentResponse, error) {
+// ParseDeleteEnvironmentResponse parses an HTTP response from a DeleteEnvironmentWithResponse call
+func ParseDeleteEnvironmentResponse(rsp *http.Response) (*DeleteEnvironmentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &UpdateOrganizationEnvironmentResponse{
+	response := &DeleteEnvironmentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteEnvironmentVariableResponse parses an HTTP response from a DeleteEnvironmentVariableWithResponse call
+func ParseDeleteEnvironmentVariableResponse(rsp *http.Response) (*DeleteEnvironmentVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteEnvironmentVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetEnvironmentVariableResponse parses an HTTP response from a SetEnvironmentVariableWithResponse call
+func ParseSetEnvironmentVariableResponse(rsp *http.Response) (*SetEnvironmentVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetEnvironmentVariableResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Environment
+		var dest VariableSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteOrganizationVariablesResponse parses an HTTP response from a DeleteOrganizationVariablesWithResponse call
+func ParseDeleteOrganizationVariablesResponse(rsp *http.Response) (*DeleteOrganizationVariablesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteOrganizationVariablesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOrganizationVariablesResponse parses an HTTP response from a GetOrganizationVariablesWithResponse call
+func ParseGetOrganizationVariablesResponse(rsp *http.Response) (*GetOrganizationVariablesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOrganizationVariablesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VariableSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteOrganizationVariableResponse parses an HTTP response from a DeleteOrganizationVariableWithResponse call
+func ParseDeleteOrganizationVariableResponse(rsp *http.Response) (*DeleteOrganizationVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteOrganizationVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetOrganizationVariableResponse parses an HTTP response from a SetOrganizationVariableWithResponse call
+func ParseSetOrganizationVariableResponse(rsp *http.Response) (*SetOrganizationVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetOrganizationVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VariableSet
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -29386,6 +31427,60 @@ func ParseSendRunnerJobEventsResponse(rsp *http.Response) (*SendRunnerJobEventsR
 	return response, nil
 }
 
+// ParseGetCloudJobPayloadResponse parses an HTTP response from a GetCloudJobPayloadWithResponse call
+func ParseGetCloudJobPayloadResponse(rsp *http.Response) (*GetCloudJobPayloadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetCloudJobPayloadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CloudJobPayload
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListLiveRunnersResponse parses an HTTP response from a ListLiveRunnersWithResponse call
 func ParseListLiveRunnersResponse(rsp *http.Response) (*ListLiveRunnersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -29743,6 +31838,33 @@ func ParseDeleteWebhookResponse(rsp *http.Response) (*DeleteWebhookResponse, err
 	response := &DeleteWebhookResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
