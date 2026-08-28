@@ -34,7 +34,7 @@ func newOrgCmd(state *AppState) *cobra.Command {
 
 func newOrgEnvCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "env",
+		Use:   envCommandName,
 		Short: "Manage organization variables",
 		Long: `Manage organization variables.
 
@@ -159,6 +159,14 @@ func deleteOrgVariable(state *AppState, environment, key string) error {
 	return nil
 }
 
+// layerTarget names the layer a write landed in, for the line printed after it.
+func layerTarget(environment string) string {
+	if environment == "" {
+		return "base layer"
+	}
+	return fmt.Sprintf("environment %q", environment)
+}
+
 // sortedKeys returns the keys of a string-valued map, sorted ascending.
 func sortedKeys(vars map[string]string) []string {
 	keys := make([]string, 0, len(vars))
@@ -263,13 +271,13 @@ to reveal: a read never returns one.`,
 			switch state.OutputFormat {
 			case output.FormatJSON:
 				return output.PrintJSON(os.Stdout, map[string]any{
-					"base":         layerPayload(base, showValues),
-					"environments": names,
+					"base":           layerPayload(base, showValues),
+					environmentsVerb: names,
 				})
 			case output.FormatYAML:
 				return output.PrintYAML(os.Stdout, map[string]any{
-					"base":         layerPayload(base, showValues),
-					"environments": names,
+					"base":           layerPayload(base, showValues),
+					environmentsVerb: names,
 				})
 			}
 
@@ -334,15 +342,11 @@ Examples:
 				}
 			}
 
-			target := "base layer"
-			if environment != "" {
-				target = fmt.Sprintf("environment %q", environment)
-			}
 			kind := "variable(s)"
 			if secret {
 				kind = "secret(s)"
 			}
-			fmt.Printf("Set %d %s in the %s\n", len(updates), kind, target)
+			fmt.Printf("Set %d %s in the %s\n", len(updates), kind, layerTarget(environment))
 			return nil
 		},
 	}
@@ -374,11 +378,7 @@ func newOrgEnvUnsetCmd(state *AppState) *cobra.Command {
 				}
 			}
 
-			target := "base layer"
-			if environment != "" {
-				target = fmt.Sprintf("environment %q", environment)
-			}
-			fmt.Printf("Removed %d variable(s) from the %s\n", len(args), target)
+			fmt.Printf("Removed %d variable(s) from the %s\n", len(args), layerTarget(environment))
 			return nil
 		},
 	}
@@ -427,11 +427,10 @@ store every imported value as a secret.`,
 				}
 			}
 
-			target := "base layer"
-			if environment != "" {
-				target = fmt.Sprintf("environment %q", environment)
-			}
-			fmt.Printf("Imported %d variable(s) into the %s from %s\n", len(updates), target, file)
+			fmt.Printf(
+				"Imported %d variable(s) into the %s from %s\n",
+				len(updates), layerTarget(environment), file,
+			)
 			return nil
 		},
 	}
@@ -444,7 +443,7 @@ store every imported value as a secret.`,
 
 func newOrgEnvDeleteCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete",
+		Use:   deleteVerb,
 		Short: "Delete the entire organization variable set",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -474,7 +473,7 @@ func newOrgEnvDeleteCmd(state *AppState) *cobra.Command {
 
 func newOrgEnvironmentsCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "environments",
+		Use:     environmentsVerb,
 		Aliases: []string{"env"},
 		Short:   "Manage named organization environments",
 	}
@@ -534,7 +533,7 @@ func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
 
 func newOrgEnvironmentsCreateCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "create <name>",
+		Use:   createVerb + " <name>",
 		Short: "Create a named environment",
 		Long: `Create a named environment such as dev or prd.
 
@@ -567,7 +566,7 @@ It starts empty, and stays empty until a variable is written into it.`,
 
 func newOrgEnvironmentsDeleteCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete <name>",
+		Use:   deleteVerb + " <name>",
 		Short: "Delete a named environment and every variable in it",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

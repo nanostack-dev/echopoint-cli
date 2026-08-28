@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 
@@ -16,7 +17,7 @@ import (
 // newFlowEnvCmd creates the env subcommand for flows.
 func newFlowEnvCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "env",
+		Use:   envCommandName,
 		Short: "Manage flow variables",
 		Long: `Manage flow variables.
 
@@ -211,7 +212,7 @@ func newFlowEnvUnsetCmd(state *AppState) *cobra.Command {
 
 func newFlowEnvDeleteCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete <flow-id>",
+		Use:   deleteVerb + " <flow-id>",
 		Short: "Delete all variables of a flow",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -251,9 +252,7 @@ func collectVarInputs(file string, flags []string) (map[string]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		for key, value := range fromFile {
-			updates[key] = value
-		}
+		maps.Copy(updates, fromFile)
 	}
 
 	if len(flags) > 0 {
@@ -261,9 +260,7 @@ func collectVarInputs(file string, flags []string) (map[string]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		for key, value := range fromFlags {
-			updates[key] = value
-		}
+		maps.Copy(updates, fromFlags)
 	}
 
 	return updates, nil
