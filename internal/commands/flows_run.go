@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -445,7 +446,11 @@ func runSingleFlow(
 		ctx, state, flowUUID, idempotencyKey, environment, versionID, outputFormat,
 	)
 	if launchErr != nil {
-		return errorResult(flowID, "", exitCodeForError(launchErr), launchErr.Error())
+		knownExecutionID := ""
+		if executionID != uuid.Nil {
+			knownExecutionID = executionID.String()
+		}
+		return errorResult(flowID, knownExecutionID, exitCodeForError(launchErr), launchErr.Error())
 	}
 
 	if terminalResult != nil {
@@ -499,7 +504,7 @@ func launchEphemeral(
 	versionID string,
 	outputFormat string,
 ) (*ephemeralPackage, uuid.UUID, *FlowRunResult, error) {
-	req := api.EphemeralLaunchRequest{}
+	req := api.LaunchFlowRequest{RunnerType: new(api.Ephemeral)}
 	if environment != "" {
 		req.EnvironmentKey = new(environment)
 	}
@@ -523,14 +528,14 @@ func launchEphemeral(
 		}
 	}
 
-	var params *api.LaunchEphemeralFlowParams
+	var params *api.LaunchFlowParams
 	if idempotencyKey != "" {
-		params = &api.LaunchEphemeralFlowParams{IdempotencyKey: &idempotencyKey}
+		params = &api.LaunchFlowParams{IdempotencyKey: &idempotencyKey}
 	}
 
 	progressf(outputFormat, "Launching flow %s (ephemeral)...\n", flowUUID)
 
-	resp, err := state.Client.API().LaunchEphemeralFlowWithResponse(ctx, flowUUID, params, req)
+	resp, err := state.Client.API().LaunchFlowWithResponse(ctx, flowUUID, params, req)
 	if err != nil {
 		return nil, uuid.UUID{}, nil, fmt.Errorf("launch flow: %w", err)
 	}
@@ -551,12 +556,33 @@ func launchEphemeral(
 		return nil, executionID, &result, nil
 	}
 
-	if resp.JSON202.Package == nil {
-		return nil, executionID, nil, errors.New(
-			"launch ephemeral flow: nonterminal response is missing the runtime package",
+	pkgResp, err := state.Client.API().AcquireEphemeralExecutionPackageWithResponse(ctx, executionID, nil)
+	if err != nil {
+		return nil, executionID, nil, fmt.Errorf(
+			"acquire runtime package for execution %s: delivery is uncertain; inspect the execution before retrying: %w",
+			executionID,
+			err,
 		)
 	}
-	epkg, err := apiPackageToEphemeralPackage(*resp.JSON202.Package)
+	if pkgResp.StatusCode() == http.StatusConflict {
+		return nil, executionID, nil, fmt.Errorf(
+			"execution %s is already running, terminal, or not ephemeral; runtime package was not acquired",
+			executionID,
+		)
+	}
+	if pkgResp.JSON200 == nil {
+		return nil, executionID, nil, fmt.Errorf(
+			"acquire runtime package for execution %s: unexpected status %d",
+			executionID,
+			pkgResp.StatusCode(),
+		)
+	}
+	if pkgResp.JSON200.ExecutionId != executionID || pkgResp.JSON200.FlowId != execution.FlowId {
+		return nil, executionID, nil, errors.New(
+			"acquire runtime package: response does not match the launched execution",
+		)
+	}
+	epkg, err := apiPackageToEphemeralPackage(*pkgResp.JSON200)
 	if err != nil {
 		return nil, executionID, nil, err
 	}

@@ -2,9 +2,12 @@
 
 Run Echopoint flows from any CI/CD system as **ephemeral runner** executions. The flow runs
 on your CI worker (not on Echopoint cloud-runner capacity); Echopoint resolves the flow
-definition and environment inputs and returns them in a dedicated runtime package, beside a
-masked execution summary, and records the result you publish. The CLI flow is: launch → run the
-runtime package → complete.
+definition and environment inputs and records the result you publish. The CLI flow is:
+launch → acquire runtime package → run locally → complete.
+
+All runner types launch through `POST /flows/{id}/launch`. The CLI sends
+`runner_type: ephemeral`, receives a masked execution, then calls
+`POST /runner/ephemeral/executions/{executionId}/package` to acquire its runnable inputs.
 
 ## Required API key scopes
 
@@ -12,7 +15,7 @@ Create an organization API key with exactly these two scopes:
 
 | Scope | Why it is needed |
 |-------|------------------|
-| `flows:execute` | Call the dedicated ephemeral launch endpoint and receive its runtime package: immutable flow definition, referenced flows, resolved inputs, and the names of secret inputs the runner must redact. |
+| `flows:execute` | Launch an ephemeral execution and acquire its runtime package: flow snapshot, referenced flows, resolved inputs, and the names of secret inputs the runner must redact. |
 | `runner:complete` | Publish the runner result for that execution via `POST /runner/ephemeral/executions/{executionId}/complete`. |
 
 `runner:claim` is **not** required for the ephemeral CI path — the action proactively launches a
@@ -20,16 +23,26 @@ known flow rather than claiming arbitrary queued work.
 
 ### Secret boundary (read this)
 
-The ephemeral launch endpoint returns a **runtime package** containing resolved inputs, including
+The execution package endpoint returns a **runtime package** containing resolved inputs, including
 any secrets referenced by the selected environment. Ordinary execution reads remain masked. The
 runtime values are delivered to the CI worker so the flow can run locally. They are:
 
-- present only in the launch response and runner memory on the worker,
-- omitted when an idempotency key replays an already-terminal execution,
+- present only in the package response and runner memory on the worker,
+- unavailable once the execution is running or terminal,
 - never logged by the CLI, runner, or action (the API key is masked via `::add-mask::`),
 - never written to `$GITHUB_OUTPUT` or the step summary.
 
 Use a dedicated, least-privilege organization API key for CI and store it as a repository secret.
+
+### Acquisition and retries
+
+Package acquisition atomically moves the execution from `pending` to `running`. Only one
+request succeeds; another request returns `409`, even after re-launching with the same
+idempotency key. The CLI does not retry acquisition or run from masked launch data.
+If the package response is lost, inspect the execution before starting another run: its
+status can be `running` even when the local engine never received the package.
+This prevents automatic duplicate execution, but does not guarantee delivery of the package.
+Terminal launch replays report the stored result without acquiring or executing again.
 
 ## GitHub Action
 

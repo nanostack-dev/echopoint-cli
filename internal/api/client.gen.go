@@ -2132,7 +2132,7 @@ type EphemeralCompletionResponse struct {
 }
 
 // EphemeralExecutionPackage Secret-bearing runtime package for a caller-owned ephemeral runner. This object is
-// returned only from the ephemeral runner launch endpoint and must never be logged.
+// returned only from the ephemeral execution package endpoint and must never be logged.
 type EphemeralExecutionPackage struct {
 	ExecutionId    openapi_types.UUID `json:"execution_id"`
 	FlowDefinition FlowDefinition     `json:"flow_definition"`
@@ -2148,36 +2148,6 @@ type EphemeralExecutionPackage struct {
 	//
 	// Examples: ["API_KEY","DB_PASSWORD"]
 	SecretInputKeys *SecretInputKeys `json:"secret_input_keys,omitempty"`
-}
-
-// EphemeralLaunchRequest Launch settings for a caller-owned ephemeral runner.
-type EphemeralLaunchRequest struct {
-	// EnvironmentKey Optional named organization environment to overlay before flow variables.
-	//
-	// Examples: dev
-	EnvironmentKey *string `json:"environment_key,omitempty"`
-
-	// TriggerMetadata Trigger provenance; shape determined by trigger_type.
-	TriggerMetadata *TriggerMetadata `json:"trigger_metadata,omitempty"`
-
-	// TriggerType How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
-	// (e.g. GitHub Actions) carrying source-control provenance; `scheduled` is an app-owned flow
-	// schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
-	// by this value.
-	TriggerType *TriggerType `json:"trigger_type,omitempty"`
-
-	// VersionId Optional immutable flow version to execute instead of the current definition.
-	VersionId *openapi_types.UUID `json:"version_id,omitempty"`
-}
-
-// EphemeralLaunchResponse Masked execution metadata plus a runtime package while the execution is non-terminal.
-// An idempotent replay of a terminal execution omits package so it cannot run twice.
-type EphemeralLaunchResponse struct {
-	Execution FlowExecution `json:"execution"`
-
-	// Package Secret-bearing runtime package for a caller-owned ephemeral runner. This object is
-	// returned only from the ephemeral runner launch endpoint and must never be logged.
-	Package *EphemeralExecutionPackage `json:"package,omitempty"`
 }
 
 // ExecuteRequestRequest defines model for ExecuteRequestRequest.
@@ -2906,8 +2876,8 @@ type JSONPathExtractorConfig struct {
 	Path string `json:"path"`
 }
 
-// LaunchFlowAcceptedResponse Accepted cloud or self-hosted execution. Runtime inputs in the execution read model are
-// redacted; caller-owned runners use the dedicated ephemeral launch endpoint.
+// LaunchFlowAcceptedResponse Accepted execution for any runner type. Runtime inputs in this read model are redacted.
+// Ephemeral runners acquire their runtime package through the execution package endpoint.
 type LaunchFlowAcceptedResponse struct {
 	Execution FlowExecution `json:"execution"`
 }
@@ -5350,11 +5320,8 @@ type CompleteEphemeralExecutionParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// LaunchEphemeralFlowParams defines parameters for LaunchEphemeralFlow.
-type LaunchEphemeralFlowParams struct {
-	// IdempotencyKey Stable key for idempotent CI retries.
-	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
-
+// AcquireEphemeralExecutionPackageParams defines parameters for AcquireEphemeralExecutionPackage.
+type AcquireEphemeralExecutionPackageParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -5528,9 +5495,6 @@ type SearchResourcesJSONRequestBody = ResourceSearchRequest
 
 // CompleteEphemeralExecutionJSONRequestBody defines body for CompleteEphemeralExecution for application/json ContentType.
 type CompleteEphemeralExecutionJSONRequestBody = EphemeralCompletionRequest
-
-// LaunchEphemeralFlowJSONRequestBody defines body for LaunchEphemeralFlow for application/json ContentType.
-type LaunchEphemeralFlowJSONRequestBody = EphemeralLaunchRequest
 
 // HeartbeatRunnerJobsJSONRequestBody defines body for HeartbeatRunnerJobs for application/json ContentType.
 type HeartbeatRunnerJobsJSONRequestBody = RunnerJobHeartbeatRequest
@@ -7327,7 +7291,8 @@ type ClientInterface interface {
 	// Real-time updates can be consumed separately from the execution stream endpoint.
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
-	// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+	// For runner_type=ephemeral, the caller acquires the runtime package through
+	// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -7340,7 +7305,8 @@ type ClientInterface interface {
 	// Real-time updates can be consumed separately from the execution stream endpoint.
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
-	// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+	// For runner_type=ephemeral, the caller acquires the runtime package through
+	// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -7622,27 +7588,17 @@ type ClientInterface interface {
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
 	CompleteEphemeralExecution(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, body CompleteEphemeralExecutionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// LaunchEphemeralFlowWithBody Launch an ephemeral flow execution
+	// AcquireEphemeralExecutionPackage Acquire an ephemeral execution runtime package
 	//
-	// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-	// the plaintext runtime package and secret key names required by the local runner. Ordinary
-	// execution reads remain masked. A terminal replay omits the package.
+	// Atomically moves a pending ephemeral execution to running and returns its plaintext
+	// runtime package. Only one caller can acquire a package. Repeated requests, including
+	// retries after a lost response, return 409; running and terminal executions cannot be
+	// acquired again. Re-launching with the same Idempotency-Key does not reset acquisition.
+	// If delivery is uncertain, inspect the execution instead of running it again.
+	// Ordinary launch and execution reads remain masked.
 	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-	LaunchEphemeralFlowWithBody(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// LaunchEphemeralFlow Launch an ephemeral flow execution
-	//
-	// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-	// the plaintext runtime package and secret key names required by the local runner. Ordinary
-	// execution reads remain masked. A terminal replay omits the package.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-	LaunchEphemeralFlow(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, body LaunchEphemeralFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with POST /runner/ephemeral/executions/{executionId}/package (the `AcquireEphemeralExecutionPackage` operationId).
+	AcquireEphemeralExecutionPackage(ctx context.Context, executionId openapi_types.UUID, params *AcquireEphemeralExecutionPackageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// HeartbeatRunnerJobsWithBody Renew leases for active runner jobs
 	//
@@ -9506,7 +9462,8 @@ func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *
 // Real-time updates can be consumed separately from the execution stream endpoint.
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
-// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+// For runner_type=ephemeral, the caller acquires the runtime package through
+// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 //
 // Takes any type of body and a specified content type.
 //
@@ -9529,7 +9486,8 @@ func (c *Client) LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 // Real-time updates can be consumed separately from the execution stream endpoint.
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
-// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+// For runner_type=ephemeral, the caller acquires the runtime package through
+// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -10151,38 +10109,18 @@ func (c *Client) CompleteEphemeralExecution(ctx context.Context, executionId ope
 	return c.Client.Do(req)
 }
 
-// LaunchEphemeralFlowWithBody Launch an ephemeral flow execution
+// AcquireEphemeralExecutionPackage Acquire an ephemeral execution runtime package
 //
-// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-// the plaintext runtime package and secret key names required by the local runner. Ordinary
-// execution reads remain masked. A terminal replay omits the package.
+// Atomically moves a pending ephemeral execution to running and returns its plaintext
+// runtime package. Only one caller can acquire a package. Repeated requests, including
+// retries after a lost response, return 409; running and terminal executions cannot be
+// acquired again. Re-launching with the same Idempotency-Key does not reset acquisition.
+// If delivery is uncertain, inspect the execution instead of running it again.
+// Ordinary launch and execution reads remain masked.
 //
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-func (c *Client) LaunchEphemeralFlowWithBody(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewLaunchEphemeralFlowRequestWithBody(c.Server, flowId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// LaunchEphemeralFlow Launch an ephemeral flow execution
-//
-// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-// the plaintext runtime package and secret key names required by the local runner. Ordinary
-// execution reads remain masked. A terminal replay omits the package.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-func (c *Client) LaunchEphemeralFlow(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, body LaunchEphemeralFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewLaunchEphemeralFlowRequest(c.Server, flowId, params, body)
+// Corresponds with POST /runner/ephemeral/executions/{executionId}/package (the `AcquireEphemeralExecutionPackage` operationId).
+func (c *Client) AcquireEphemeralExecutionPackage(ctx context.Context, executionId openapi_types.UUID, params *AcquireEphemeralExecutionPackageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcquireEphemeralExecutionPackageRequest(c.Server, executionId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -15903,24 +15841,13 @@ func NewCompleteEphemeralExecutionRequestWithBody(server string, executionId ope
 	return req, nil
 }
 
-// NewLaunchEphemeralFlowRequest calls the generic LaunchEphemeralFlow builder with application/json body
-func NewLaunchEphemeralFlowRequest(server string, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, body LaunchEphemeralFlowJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewLaunchEphemeralFlowRequestWithBody(server, flowId, params, "application/json", bodyReader)
-}
-
-// NewLaunchEphemeralFlowRequestWithBody constructs an http.Request for the LaunchEphemeralFlow method, with any body, and a specified content type
-func NewLaunchEphemeralFlowRequestWithBody(server string, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, contentType string, body io.Reader) (*http.Request, error) {
+// NewAcquireEphemeralExecutionPackageRequest constructs an http.Request for the AcquireEphemeralExecutionPackage method
+func NewAcquireEphemeralExecutionPackageRequest(server string, executionId openapi_types.UUID, params *AcquireEphemeralExecutionPackageParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "flowId", flowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "executionId", executionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
 	if err != nil {
 		return nil, err
 	}
@@ -15930,7 +15857,7 @@ func NewLaunchEphemeralFlowRequestWithBody(server string, flowId openapi_types.U
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/runner/ephemeral/flows/%s/launch", pathParam0)
+	operationPath := fmt.Sprintf("/runner/ephemeral/executions/%s/package", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -15940,34 +15867,21 @@ func NewLaunchEphemeralFlowRequestWithBody(server string, flowId openapi_types.U
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("Content-Type", contentType)
-
 	if params != nil {
 
-		if params.IdempotencyKey != nil {
-			var headerParam0 string
+		var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("Idempotency-Key", headerParam0)
-		}
-
-		var headerParam1 string
-
-		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam1)
+		req.Header.Set("X-Organization-ID", headerParam0)
 
 	}
 
@@ -17782,7 +17696,8 @@ type ClientWithResponsesInterface interface {
 	// Real-time updates can be consumed separately from the execution stream endpoint.
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
-	// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+	// For runner_type=ephemeral, the caller acquires the runtime package through
+	// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -17795,7 +17710,8 @@ type ClientWithResponsesInterface interface {
 	// Real-time updates can be consumed separately from the execution stream endpoint.
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
-	// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+	// For runner_type=ephemeral, the caller acquires the runtime package through
+	// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -18115,27 +18031,19 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
 	CompleteEphemeralExecutionWithResponse(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, body CompleteEphemeralExecutionJSONRequestBody, reqEditors ...RequestEditorFn) (*CompleteEphemeralExecutionResponse, error)
 
-	// LaunchEphemeralFlowWithBodyWithResponse Launch an ephemeral flow execution
+	// AcquireEphemeralExecutionPackageWithResponse Acquire an ephemeral execution runtime package
 	//
-	// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-	// the plaintext runtime package and secret key names required by the local runner. Ordinary
-	// execution reads remain masked. A terminal replay omits the package.
+	// Atomically moves a pending ephemeral execution to running and returns its plaintext
+	// runtime package. Only one caller can acquire a package. Repeated requests, including
+	// retries after a lost response, return 409; running and terminal executions cannot be
+	// acquired again. Re-launching with the same Idempotency-Key does not reset acquisition.
+	// If delivery is uncertain, inspect the execution instead of running it again.
+	// Ordinary launch and execution reads remain masked.
 	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-	LaunchEphemeralFlowWithBodyWithResponse(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LaunchEphemeralFlowResponse, error)
-
-	// LaunchEphemeralFlowWithResponse Launch an ephemeral flow execution
-	//
-	// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-	// the plaintext runtime package and secret key names required by the local runner. Ordinary
-	// execution reads remain masked. A terminal replay omits the package.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-	LaunchEphemeralFlowWithResponse(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, body LaunchEphemeralFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*LaunchEphemeralFlowResponse, error)
+	// Corresponds with POST /runner/ephemeral/executions/{executionId}/package (the `AcquireEphemeralExecutionPackage` operationId).
+	AcquireEphemeralExecutionPackageWithResponse(ctx context.Context, executionId openapi_types.UUID, params *AcquireEphemeralExecutionPackageParams, reqEditors ...RequestEditorFn) (*AcquireEphemeralExecutionPackageResponse, error)
 
 	// HeartbeatRunnerJobsWithBodyWithResponse Renew leases for active runner jobs
 	//
@@ -23837,11 +23745,16 @@ func (r CompleteEphemeralExecutionResponse) ContentType() string {
 	return ""
 }
 
-type LaunchEphemeralFlowResponse struct {
+// AcquireEphemeralExecutionPackageResponse200Headers the declared response headers of an HTTP 200 response for AcquireEphemeralExecutionPackage
+type AcquireEphemeralExecutionPackageResponse200Headers struct {
+	CacheControl *string
+}
+
+type AcquireEphemeralExecutionPackageResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON202 the response for an HTTP 202 `application/json` response
-	JSON202 *EphemeralLaunchResponse
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *EphemeralExecutionPackage
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -23854,50 +23767,52 @@ type LaunchEphemeralFlowResponse struct {
 	JSON409 *Conflict
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *AcquireEphemeralExecutionPackageResponse200Headers
 }
 
-// GetJSON202 returns the response for an HTTP 202 `application/json` response
-func (r LaunchEphemeralFlowResponse) GetJSON202() *EphemeralLaunchResponse {
-	return r.JSON202
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AcquireEphemeralExecutionPackageResponse) GetJSON200() *EphemeralExecutionPackage {
+	return r.JSON200
 }
 
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r LaunchEphemeralFlowResponse) GetJSON400() *BadRequest {
+func (r AcquireEphemeralExecutionPackageResponse) GetJSON400() *BadRequest {
 	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r LaunchEphemeralFlowResponse) GetJSON401() *Unauthorized {
+func (r AcquireEphemeralExecutionPackageResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
 }
 
 // GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r LaunchEphemeralFlowResponse) GetJSON403() *Forbidden {
+func (r AcquireEphemeralExecutionPackageResponse) GetJSON403() *Forbidden {
 	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r LaunchEphemeralFlowResponse) GetJSON404() *NotFound {
+func (r AcquireEphemeralExecutionPackageResponse) GetJSON404() *NotFound {
 	return r.JSON404
 }
 
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r LaunchEphemeralFlowResponse) GetJSON409() *Conflict {
+func (r AcquireEphemeralExecutionPackageResponse) GetJSON409() *Conflict {
 	return r.JSON409
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r LaunchEphemeralFlowResponse) GetJSON500() *InternalServerError {
+func (r AcquireEphemeralExecutionPackageResponse) GetJSON500() *InternalServerError {
 	return r.JSON500
 }
 
 // GetBody returns the raw response body bytes
-func (r LaunchEphemeralFlowResponse) GetBody() []byte {
+func (r AcquireEphemeralExecutionPackageResponse) GetBody() []byte {
 	return r.Body
 }
 
 // Status returns HTTPResponse.Status
-func (r LaunchEphemeralFlowResponse) Status() string {
+func (r AcquireEphemeralExecutionPackageResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -23905,7 +23820,7 @@ func (r LaunchEphemeralFlowResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r LaunchEphemeralFlowResponse) StatusCode() int {
+func (r AcquireEphemeralExecutionPackageResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -23913,7 +23828,7 @@ func (r LaunchEphemeralFlowResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r LaunchEphemeralFlowResponse) ContentType() string {
+func (r AcquireEphemeralExecutionPackageResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -26414,7 +26329,8 @@ func (c *ClientWithResponses) ExportFlowWithResponse(ctx context.Context, id ope
 // Real-time updates can be consumed separately from the execution stream endpoint.
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
-// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+// For runner_type=ephemeral, the caller acquires the runtime package through
+// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -26433,7 +26349,8 @@ func (c *ClientWithResponses) LaunchFlowWithBodyWithResponse(ctx context.Context
 // Real-time updates can be consumed separately from the execution stream endpoint.
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
-// Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+// For runner_type=ephemeral, the caller acquires the runtime package through
+// POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -26957,38 +26874,24 @@ func (c *ClientWithResponses) CompleteEphemeralExecutionWithResponse(ctx context
 	return ParseCompleteEphemeralExecutionResponse(rsp)
 }
 
-// LaunchEphemeralFlowWithBodyWithResponse Launch an ephemeral flow execution
+// AcquireEphemeralExecutionPackageWithResponse Acquire an ephemeral execution runtime package
 //
-// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-// the plaintext runtime package and secret key names required by the local runner. Ordinary
-// execution reads remain masked. A terminal replay omits the package.
+// Atomically moves a pending ephemeral execution to running and returns its plaintext
+// runtime package. Only one caller can acquire a package. Repeated requests, including
+// retries after a lost response, return 409; running and terminal executions cannot be
+// acquired again. Re-launching with the same Idempotency-Key does not reset acquisition.
+// If delivery is uncertain, inspect the execution instead of running it again.
+// Ordinary launch and execution reads remain masked.
 //
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+// Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-func (c *ClientWithResponses) LaunchEphemeralFlowWithBodyWithResponse(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LaunchEphemeralFlowResponse, error) {
-	rsp, err := c.LaunchEphemeralFlowWithBody(ctx, flowId, params, contentType, body, reqEditors...)
+// Corresponds with POST /runner/ephemeral/executions/{executionId}/package (the `AcquireEphemeralExecutionPackage` operationId).
+func (c *ClientWithResponses) AcquireEphemeralExecutionPackageWithResponse(ctx context.Context, executionId openapi_types.UUID, params *AcquireEphemeralExecutionPackageParams, reqEditors ...RequestEditorFn) (*AcquireEphemeralExecutionPackageResponse, error) {
+	rsp, err := c.AcquireEphemeralExecutionPackage(ctx, executionId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseLaunchEphemeralFlowResponse(rsp)
-}
-
-// LaunchEphemeralFlowWithResponse Launch an ephemeral flow execution
-//
-// Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-// the plaintext runtime package and secret key names required by the local runner. Ordinary
-// execution reads remain masked. A terminal replay omits the package.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /runner/ephemeral/flows/{flowId}/launch (the `LaunchEphemeralFlow` operationId).
-func (c *ClientWithResponses) LaunchEphemeralFlowWithResponse(ctx context.Context, flowId openapi_types.UUID, params *LaunchEphemeralFlowParams, body LaunchEphemeralFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*LaunchEphemeralFlowResponse, error) {
-	rsp, err := c.LaunchEphemeralFlow(ctx, flowId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseLaunchEphemeralFlowResponse(rsp)
+	return ParseAcquireEphemeralExecutionPackageResponse(rsp)
 }
 
 // HeartbeatRunnerJobsWithBodyWithResponse Renew leases for active runner jobs
@@ -31529,26 +31432,26 @@ func ParseCompleteEphemeralExecutionResponse(rsp *http.Response) (*CompleteEphem
 	return response, nil
 }
 
-// ParseLaunchEphemeralFlowResponse parses an HTTP response from a LaunchEphemeralFlowWithResponse call
-func ParseLaunchEphemeralFlowResponse(rsp *http.Response) (*LaunchEphemeralFlowResponse, error) {
+// ParseAcquireEphemeralExecutionPackageResponse parses an HTTP response from a AcquireEphemeralExecutionPackageWithResponse call
+func ParseAcquireEphemeralExecutionPackageResponse(rsp *http.Response) (*AcquireEphemeralExecutionPackageResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &LaunchEphemeralFlowResponse{
+	response := &AcquireEphemeralExecutionPackageResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
-		var dest EphemeralLaunchResponse
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EphemeralExecutionPackage
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON202 = &dest
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
 		var dest BadRequest
@@ -31592,6 +31495,19 @@ func ParseLaunchEphemeralFlowResponse(rsp *http.Response) (*LaunchEphemeralFlowR
 		}
 		response.JSON500 = &dest
 
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers AcquireEphemeralExecutionPackageResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		response.Headers200 = &headers
 	}
 
 	return response, nil

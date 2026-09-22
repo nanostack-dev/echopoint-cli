@@ -2541,26 +2541,6 @@ components:
           description: Trigger provenance; shape determined by trigger_type.
       description: Optional launch settings for selecting the execution backend and version.
 
-    EphemeralLaunchRequest:
-      type: object
-      properties:
-        environment_key:
-          type: string
-          description: Optional named organization environment to overlay before flow variables.
-          examples: ["dev"]
-        version_id:
-          type: string
-          format: uuid
-          description: Optional immutable flow version to execute instead of the current definition.
-        trigger_type:
-          $ref: "#/components/schemas/TriggerType"
-        trigger_metadata:
-          anyOf:
-            - $ref: "#/components/schemas/TriggerMetadata"
-            - type: "null"
-          description: Trigger provenance; shape determined by trigger_type.
-      description: Launch settings for a caller-owned ephemeral runner.
-
     RunnerJobTerminalStatus:
       type: string
       enum: [completed, failed]
@@ -3280,8 +3260,8 @@ components:
     LaunchFlowAcceptedResponse:
       type: object
       description: |
-        Accepted cloud or self-hosted execution. Runtime inputs in the execution read model are
-        redacted; caller-owned runners use the dedicated ephemeral launch endpoint.
+        Accepted execution for any runner type. Runtime inputs in this read model are redacted.
+        Ephemeral runners acquire their runtime package through the execution package endpoint.
       properties:
         execution:
           $ref: "#/components/schemas/FlowExecution"
@@ -3292,7 +3272,7 @@ components:
       type: object
       description: |
         Secret-bearing runtime package for a caller-owned ephemeral runner. This object is
-        returned only from the ephemeral runner launch endpoint and must never be logged.
+        returned only from the ephemeral execution package endpoint and must never be logged.
       properties:
         execution_id:
           type: string
@@ -3313,19 +3293,6 @@ components:
         - flow_id
         - flow_definition
         - inputs
-
-    EphemeralLaunchResponse:
-      type: object
-      description: |
-        Masked execution metadata plus a runtime package while the execution is non-terminal.
-        An idempotent replay of a terminal execution omits package so it cannot run twice.
-      properties:
-        execution:
-          $ref: "#/components/schemas/FlowExecution"
-        package:
-          $ref: "#/components/schemas/EphemeralExecutionPackage"
-      required:
-        - execution
 
     EphemeralCompletionRequest:
       type: object
@@ -5466,7 +5433,8 @@ paths:
         Real-time updates can be consumed separately from the execution stream endpoint.
         Specify a version_id in the request body to run a specific published version;
         omit it to run the current (mutable) flow definition.
-        Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
+        For runner_type=ephemeral, the caller acquires the runtime package through
+        POST /runner/ephemeral/executions/{executionId}/package, runs locally, and publishes completion.
       tags:
         - Flows
       security:
@@ -5499,8 +5467,8 @@ paths:
       responses:
         "202":
           description: |
-            Flow execution accepted. Cloud/self-hosted runners start asynchronously. For
-            caller-owned execution, use POST /runner/ephemeral/flows/{flowId}/launch.
+            Flow execution accepted. Cloud/self-hosted runners start asynchronously.
+            Ephemeral callers acquire the runtime package separately. This response always masks secrets.
           content:
             application/json:
               schema:
@@ -5521,50 +5489,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
-  /runner/ephemeral/flows/{flowId}/launch:
+  /runner/ephemeral/executions/{executionId}/package:
     parameters:
-      - name: flowId
+      - name: executionId
         in: path
         required: true
-        description: Flow to execute with a caller-owned ephemeral runner.
+        description: Pending ephemeral execution whose runtime package the caller will acquire.
         schema:
           type: string
           format: uuid
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
     post:
-      operationId: launchEphemeralFlow
+      operationId: acquireEphemeralExecutionPackage
       x-ai-danger: "Runner protocol - secret-bearing machine-to-machine payload, not an agent action."
-      summary: Launch an ephemeral flow execution
+      summary: Acquire an ephemeral execution runtime package
       description: |
-        Creates or idempotently replays an ephemeral execution. A non-terminal response includes
-        the plaintext runtime package and secret key names required by the local runner. Ordinary
-        execution reads remain masked. A terminal replay omits the package.
+        Atomically moves a pending ephemeral execution to running and returns its plaintext
+        runtime package. Only one caller can acquire a package. Repeated requests, including
+        retries after a lost response, return 409; running and terminal executions cannot be
+        acquired again. Re-launching with the same Idempotency-Key does not reset acquisition.
+        If delivery is uncertain, inspect the execution instead of running it again.
+        Ordinary launch and execution reads remain masked.
       tags:
         - Runner
       security:
         - ApiKeys: [flows:execute]
         - BearerAuth: [flows:execute]
-      parameters:
-        - name: Idempotency-Key
-          in: header
-          required: false
-          description: Stable key for idempotent CI retries.
-          schema:
-            type: string
-            maxLength: 255
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EphemeralLaunchRequest"
       responses:
-        "202":
-          description: Ephemeral execution accepted or replayed.
+        "200":
+          description: Runtime package acquired; the execution is now running.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always no-store because the response contains plaintext secrets.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EphemeralLaunchResponse"
+                $ref: "#/components/schemas/EphemeralExecutionPackage"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":

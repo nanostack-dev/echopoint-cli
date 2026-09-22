@@ -178,6 +178,8 @@ func TestFlowsRun_TagResolutionRunsResolvedFlows(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 			_ = json.NewEncoder(w).Encode(launchResponse(false))
+		case strings.HasSuffix(r.URL.Path, "/package") && r.Method == http.MethodPost:
+			servePackage(t, w, r)
 		case strings.Contains(r.URL.Path, "/complete") && r.Method == http.MethodPost:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)

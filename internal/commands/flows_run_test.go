@@ -61,10 +61,10 @@ func executionUUID() uuid.UUID {
 	return uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
 }
 
-// launchResponse builds an EphemeralLaunchResponse for tests.
+// launchResponse builds a masked launch response for tests.
 // When terminal is true the execution is returned with a completed status (idempotent replay).
 // When terminal is false the execution is pending and the caller should run the runner.
-func launchResponse(terminal bool) api.EphemeralLaunchResponse {
+func launchResponse(terminal bool) api.LaunchFlowAcceptedResponse {
 	runnerTypeEphemeral := api.Ephemeral
 	now := time.Now().UTC()
 
@@ -91,18 +91,28 @@ func launchResponse(terminal bool) api.EphemeralLaunchResponse {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	response := api.EphemeralLaunchResponse{Execution: execution}
-	if !terminal {
-		response.Package = &api.EphemeralExecutionPackage{
-			ExecutionId: execution.Id,
-			FlowId:      execution.FlowId,
-			FlowDefinition: api.FlowDefinition{
-				Name: "test", Version: "1.0", Nodes: []api.FlowNode{}, Edges: []api.FlowEdge{},
-			},
-			Inputs: api.RunnerInputs{},
-		}
+	return api.LaunchFlowAcceptedResponse{Execution: execution}
+}
+
+func packageResponse() api.EphemeralExecutionPackage {
+	return api.EphemeralExecutionPackage{
+		ExecutionId: executionUUID(),
+		FlowId:      flowUUID(),
+		FlowDefinition: api.FlowDefinition{
+			Name: "test", Version: "1.0", Nodes: []api.FlowNode{}, Edges: []api.FlowEdge{},
+		},
+		Inputs: api.RunnerInputs{},
 	}
-	return response
+}
+
+func servePackage(t *testing.T, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
+	if r.Method != http.MethodPost ||
+		r.URL.Path != "/runner/ephemeral/executions/"+executionUUID().String()+"/package" {
+		t.Errorf("unexpected package request: %s %s", r.Method, r.URL.Path)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(packageResponse())
 }
 
 func publishResponse() api.EphemeralCompletionResponse {
@@ -413,9 +423,24 @@ func setupFakeAPIServer(
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.Contains(r.URL.Path, "/launch") && r.Method == http.MethodPost:
+			if r.URL.Path != "/flows/"+flowUUID().String()+"/launch" {
+				t.Errorf("unexpected launch route: %s", r.URL.Path)
+			}
+			var request api.LaunchFlowRequest
+			if err := json.NewDecoder(r.Body).
+				Decode(&request); err != nil || request.RunnerType == nil ||
+				*request.RunnerType != api.Ephemeral {
+				t.Errorf("launch must select ephemeral runner: %#v, err=%v", request, err)
+			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(launchStatus)
 			json.NewEncoder(w).Encode(launchResp)
+		case strings.HasSuffix(r.URL.Path, "/package"):
+			if response, ok := launchResp.(api.LaunchFlowAcceptedResponse); ok &&
+				isTerminalStatus(string(response.Execution.Status)) {
+				t.Error("terminal replay must not acquire a package")
+			}
+			servePackage(t, w, r)
 		case strings.Contains(r.URL.Path, "/complete") && r.Method == http.MethodPost:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(publishStatus)
@@ -496,10 +521,23 @@ func TestIntegration_TerminalIdempotentReplay(t *testing.T) {
 	_ = exitCode
 }
 
-func TestIntegration_NonterminalLaunchWithoutPackageFailsClosed(t *testing.T) {
-	response := launchResponse(false)
-	response.Package = nil
-	srv := setupFakeAPIServer(t, response, http.StatusAccepted, nil, http.StatusOK)
+func TestIntegration_PackageAcquisitionConflictFailsClosed(t *testing.T) {
+	packageCalls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/flows/" + flowUUID().String() + "/launch":
+			w.WriteHeader(http.StatusAccepted)
+			json.NewEncoder(w).Encode(launchResponse(false))
+		case "/runner/ephemeral/executions/" + executionUUID().String() + "/package":
+			packageCalls++
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]any{})
+		default:
+			t.Errorf("must not execute or publish after acquisition failure: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
 	defer srv.Close()
 
 	state := makeState(t, "test-api-key", "", srv.URL)
@@ -513,8 +551,11 @@ func TestIntegration_NonterminalLaunchWithoutPackageFailsClosed(t *testing.T) {
 	if len(results) != 1 || results[0].ErrorMessage == nil {
 		t.Fatalf("expected one failed result, got %#v", results)
 	}
-	if !strings.Contains(*results[0].ErrorMessage, "missing the runtime package") {
+	if !strings.Contains(*results[0].ErrorMessage, "runtime package was not acquired") {
 		t.Fatalf("unexpected error: %s", *results[0].ErrorMessage)
+	}
+	if packageCalls != 1 {
+		t.Fatalf("expected one acquisition attempt, got %d", packageCalls)
 	}
 }
 
@@ -552,6 +593,72 @@ func TestRunEphemeralRunnerPreservesSecretKeysAndRedactsResult(t *testing.T) {
 	}
 }
 
+func TestLaunchEphemeralAcquiresPlaintextPackage(t *testing.T) {
+	secret := "test-runtime-token"
+	packageCalls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/flows/" + flowUUID().String() + "/launch":
+			response := launchResponse(false)
+			response.Execution.RunnerInputs = api.RunnerInputs{"API_TOKEN": "***"}
+			w.WriteHeader(http.StatusAccepted)
+			json.NewEncoder(w).Encode(response)
+		case "/runner/ephemeral/executions/" + executionUUID().String() + "/package":
+			packageCalls++
+			pkg := packageResponse()
+			pkg.Inputs = api.RunnerInputs{"API_TOKEN": secret}
+			pkg.SecretInputKeys = &api.SecretInputKeys{"API_TOKEN"}
+			json.NewEncoder(w).Encode(pkg)
+		default:
+			t.Errorf("unexpected request: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	state := makeState(t, "test-api-key", "", srv.URL)
+	pkg, id, terminal, err := launchEphemeral(context.Background(), state, flowUUID(), "", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packageCalls != 1 || terminal != nil || id != executionUUID() || pkg == nil {
+		t.Fatalf("unexpected acquisition: calls=%d id=%s terminal=%v", packageCalls, id, terminal)
+	}
+	if pkg.Inputs["API_TOKEN"] != secret || len(pkg.SecretInputKeys) != 1 || pkg.SecretInputKeys[0] != "API_TOKEN" {
+		t.Fatal("runtime inputs and secret metadata were not preserved")
+	}
+}
+
+func TestLaunchEphemeralMalformedPackageIsNotRetriedOrPublished(t *testing.T) {
+	packageCalls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/flows/" + flowUUID().String() + "/launch":
+			w.WriteHeader(http.StatusAccepted)
+			json.NewEncoder(w).Encode(launchResponse(false))
+		case "/runner/ephemeral/executions/" + executionUUID().String() + "/package":
+			packageCalls++
+			w.Write([]byte(`{"inputs":{"API_TOKEN":"secret-body-must-not-be-logged"}`))
+		default:
+			t.Errorf("must not publish after uncertain delivery: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	state := makeState(t, "test-api-key", "", srv.URL)
+	results, code := executeFlows(context.Background(), state, []string{flowUUID().String()}, "", "", "", 1, "")
+	if code != exitError || packageCalls != 1 || len(results) != 1 || results[0].ErrorMessage == nil {
+		t.Fatalf("unexpected uncertain-delivery result: code=%d calls=%d", code, packageCalls)
+	}
+	message := *results[0].ErrorMessage
+	if results[0].ExecutionID != executionUUID().String() {
+		t.Fatal("uncertain delivery must retain the execution ID for inspection")
+	}
+	if !strings.Contains(message, "delivery is uncertain") ||
+		strings.Contains(message, "secret-body-must-not-be-logged") {
+		t.Fatal("uncertain delivery must be reported without exposing the response body")
+	}
+}
+
 func TestIntegration_MultipleFlowsSequential(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("skipping on windows due to shell script runner")
@@ -572,6 +679,8 @@ func TestIntegration_MultipleFlowsSequential(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 			json.NewEncoder(w).Encode(launchResponse(false))
+		case strings.HasSuffix(r.URL.Path, "/package"):
+			servePackage(t, w, r)
 		case strings.Contains(r.URL.Path, "/complete"):
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -652,6 +761,10 @@ func TestIntegration_ParallelBounding(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(publishResponse())
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/package") {
+			servePackage(t, w, r)
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
