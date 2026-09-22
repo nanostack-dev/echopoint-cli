@@ -2,9 +2,9 @@
 
 Run Echopoint flows from any CI/CD system as **ephemeral runner** executions. The flow runs
 on your CI worker (not on Echopoint cloud-runner capacity); Echopoint resolves the flow
-definition and environment inputs and returns them on the launched execution
-(`flow_snapshot` / `runner_inputs` / `referenced_flows`), and records the result you publish.
-The CLI flow is: launch → run the runner from the execution → complete.
+definition and environment inputs and returns them in a dedicated runtime package, beside a
+masked execution summary, and records the result you publish. The CLI flow is: launch → run the
+runtime package → complete.
 
 ## Required API key scopes
 
@@ -12,7 +12,7 @@ Create an organization API key with exactly these two scopes:
 
 | Scope | Why it is needed |
 |-------|------------------|
-| `flows:execute` | Launch an ephemeral execution **and** receive its runnable data: the immutable flow definition (`flow_snapshot`), referenced flows, and the resolved execution inputs/env (`runner_inputs`) for the created execution. |
+| `flows:execute` | Call the dedicated ephemeral launch endpoint and receive its runtime package: immutable flow definition, referenced flows, resolved inputs, and the names of secret inputs the runner must redact. |
 | `runner:complete` | Publish the runner result for that execution via `POST /runner/ephemeral/executions/{executionId}/complete`. |
 
 `runner:claim` is **not** required for the ephemeral CI path — the action proactively launches a
@@ -20,12 +20,12 @@ known flow rather than claiming arbitrary queued work.
 
 ### Secret boundary (read this)
 
-For `runner_type = ephemeral`, `flows:execute` grants the right to receive the **resolved
-inputs/env** (`runner_inputs`) on the execution it creates — including any secrets referenced by the
-selected environment. Those values are delivered to the CI worker so the flow can run locally. They
-are:
+The ephemeral launch endpoint returns a **runtime package** containing resolved inputs, including
+any secrets referenced by the selected environment. Ordinary execution reads remain masked. The
+runtime values are delivered to the CI worker so the flow can run locally. They are:
 
-- present only on the launched execution on the worker,
+- present only in the launch response and runner memory on the worker,
+- omitted when an idempotency key replays an already-terminal execution,
 - never logged by the CLI, runner, or action (the API key is masked via `::add-mask::`),
 - never written to `$GITHUB_OUTPUT` or the step summary.
 

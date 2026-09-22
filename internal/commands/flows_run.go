@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"strings"
 	"sync"
@@ -115,7 +114,8 @@ type ephemeralPackage struct {
 	FlowID          string         `json:"flow_id"`
 	FlowDefinition  map[string]any `json:"flow_definition"`
 	Inputs          map[string]any `json:"inputs"`
-	ReferencedFlows map[string]any `json:"referenced_flows"`
+	SecretInputKeys []string       `json:"secret_input_keys,omitempty"`
+	ReferencedFlows map[string]any `json:"referenced_flows,omitempty"`
 }
 
 // ephemeralResult is the JSON the runner writes to stdout.
@@ -147,8 +147,8 @@ func newFlowsRunCmd(state *AppState) *cobra.Command {
 		Short: "Run one or more flows using an ephemeral runner",
 		Long: `Run one or more flows locally using the ephemeral runner mode.
 
-The CLI launches each flow on the server with runner_type=ephemeral, receives
-an execution package, runs it using echopoint-runner, and publishes the result.
+The CLI launches each flow through the ephemeral runner endpoint, receives a
+runtime package, runs it using echopoint-runner, and publishes the result.
 
 Authentication: a logged-in session (echopoint auth login) or an organization
 API key (--api-key / ECHOPOINT_API_KEY). An organization ID is always required
@@ -499,10 +499,7 @@ func launchEphemeral(
 	versionID string,
 	outputFormat string,
 ) (*ephemeralPackage, uuid.UUID, *FlowRunResult, error) {
-	runnerTypEphemeral := api.Ephemeral
-	req := api.LaunchFlowRequest{
-		RunnerType: &runnerTypEphemeral,
-	}
+	req := api.EphemeralLaunchRequest{}
 	if environment != "" {
 		req.EnvironmentKey = new(environment)
 	}
@@ -526,14 +523,14 @@ func launchEphemeral(
 		}
 	}
 
-	var params *api.LaunchFlowParams
+	var params *api.LaunchEphemeralFlowParams
 	if idempotencyKey != "" {
-		params = &api.LaunchFlowParams{IdempotencyKey: &idempotencyKey}
+		params = &api.LaunchEphemeralFlowParams{IdempotencyKey: &idempotencyKey}
 	}
 
 	progressf(outputFormat, "Launching flow %s (ephemeral)...\n", flowUUID)
 
-	resp, err := state.Client.API().LaunchFlowWithResponse(ctx, flowUUID, params, req)
+	resp, err := state.Client.API().LaunchEphemeralFlowWithResponse(ctx, flowUUID, params, req)
 	if err != nil {
 		return nil, uuid.UUID{}, nil, fmt.Errorf("launch flow: %w", err)
 	}
@@ -554,7 +551,15 @@ func launchEphemeral(
 		return nil, executionID, &result, nil
 	}
 
-	epkg := executionToEphemeralPackage(execution)
+	if resp.JSON202.Package == nil {
+		return nil, executionID, nil, errors.New(
+			"launch ephemeral flow: nonterminal response is missing the runtime package",
+		)
+	}
+	epkg, err := apiPackageToEphemeralPackage(*resp.JSON202.Package)
+	if err != nil {
+		return nil, executionID, nil, err
+	}
 	return &epkg, executionID, nil, nil
 }
 
@@ -562,29 +567,16 @@ func isTerminalStatus(status string) bool {
 	return status == statusCompleted || status == statusFailed || status == statusCancelled
 }
 
-func executionToEphemeralPackage(execution api.FlowExecution) ephemeralPackage {
-	var flowDef map[string]any
-	flowDefBytes, _ := json.Marshal(execution.FlowSnapshot)
-	_ = json.Unmarshal(flowDefBytes, &flowDef)
-
-	inputs := map[string]any{}
-	maps.Copy(inputs, execution.RunnerInputs)
-
-	referenced := map[string]any{}
-	for k, v := range execution.ReferencedFlows {
-		refBytes, _ := json.Marshal(v)
-		var refObj any
-		_ = json.Unmarshal(refBytes, &refObj)
-		referenced[k] = refObj
+func apiPackageToEphemeralPackage(pkg api.EphemeralExecutionPackage) (ephemeralPackage, error) {
+	data, err := json.Marshal(pkg)
+	if err != nil {
+		return ephemeralPackage{}, fmt.Errorf("marshal ephemeral runtime package: %w", err)
 	}
-
-	return ephemeralPackage{
-		ExecutionID:     execution.Id.String(),
-		FlowID:          execution.FlowId.String(),
-		FlowDefinition:  flowDef,
-		Inputs:          inputs,
-		ReferencedFlows: referenced,
+	var result ephemeralPackage
+	if err := json.Unmarshal(data, &result); err != nil {
+		return ephemeralPackage{}, fmt.Errorf("decode ephemeral runtime package: %w", err)
 	}
+	return result, nil
 }
 
 // runEphemeralRunner executes the ephemeral package in-process using the

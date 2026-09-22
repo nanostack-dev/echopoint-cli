@@ -61,10 +61,10 @@ func executionUUID() uuid.UUID {
 	return uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
 }
 
-// launchResponse builds a LaunchFlowAcceptedResponse for tests.
+// launchResponse builds an EphemeralLaunchResponse for tests.
 // When terminal is true the execution is returned with a completed status (idempotent replay).
 // When terminal is false the execution is pending and the caller should run the runner.
-func launchResponse(terminal bool) api.LaunchFlowAcceptedResponse {
+func launchResponse(terminal bool) api.EphemeralLaunchResponse {
 	runnerTypeEphemeral := api.Ephemeral
 	now := time.Now().UTC()
 
@@ -91,7 +91,18 @@ func launchResponse(terminal bool) api.LaunchFlowAcceptedResponse {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	return api.LaunchFlowAcceptedResponse{Execution: execution}
+	response := api.EphemeralLaunchResponse{Execution: execution}
+	if !terminal {
+		response.Package = &api.EphemeralExecutionPackage{
+			ExecutionId: execution.Id,
+			FlowId:      execution.FlowId,
+			FlowDefinition: api.FlowDefinition{
+				Name: "test", Version: "1.0", Nodes: []api.FlowNode{}, Edges: []api.FlowEdge{},
+			},
+			Inputs: api.RunnerInputs{},
+		}
+	}
+	return response
 }
 
 func publishResponse() api.EphemeralCompletionResponse {
@@ -483,6 +494,62 @@ func TestIntegration_TerminalIdempotentReplay(t *testing.T) {
 		t.Errorf("runner should not be called on terminal replay; got error: %v", *results[0].ErrorMessage)
 	}
 	_ = exitCode
+}
+
+func TestIntegration_NonterminalLaunchWithoutPackageFailsClosed(t *testing.T) {
+	response := launchResponse(false)
+	response.Package = nil
+	srv := setupFakeAPIServer(t, response, http.StatusAccepted, nil, http.StatusOK)
+	defer srv.Close()
+
+	state := makeState(t, "test-api-key", "", srv.URL)
+	results, exitCode := executeFlows(
+		context.Background(), state, []string{flowUUID().String()}, "", "", "", 1, "",
+	)
+
+	if exitCode != exitError {
+		t.Fatalf("expected exit code %d, got %d", exitError, exitCode)
+	}
+	if len(results) != 1 || results[0].ErrorMessage == nil {
+		t.Fatalf("expected one failed result, got %#v", results)
+	}
+	if !strings.Contains(*results[0].ErrorMessage, "missing the runtime package") {
+		t.Fatalf("unexpected error: %s", *results[0].ErrorMessage)
+	}
+}
+
+func TestRunEphemeralRunnerPreservesSecretKeysAndRedactsResult(t *testing.T) {
+	const secret = "ep_live_must_not_escape"
+	pkg := &ephemeralPackage{
+		ExecutionID: executionUUID().String(),
+		FlowID:      flowUUID().String(),
+		FlowDefinition: map[string]any{
+			"name": "secret flow",
+			"nodes": []any{map[string]any{
+				"id":   "emit",
+				"type": "set_variable",
+				"data": map[string]any{"variables": map[string]any{"token": "{{apiToken}}"}},
+			}},
+			"edges": []any{},
+		},
+		Inputs:          map[string]any{"apiToken": secret},
+		SecretInputKeys: []string{"apiToken"},
+	}
+
+	result, err := runEphemeralRunner(pkg)
+	if err != nil {
+		t.Fatalf("run ephemeral runner: %v", err)
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if strings.Contains(string(encoded), secret) {
+		t.Fatalf("runner result leaked secret: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), "***") {
+		t.Fatalf("runner result should contain redaction mask: %s", encoded)
+	}
 }
 
 func TestIntegration_MultipleFlowsSequential(t *testing.T) {

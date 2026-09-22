@@ -2541,6 +2541,26 @@ components:
           description: Trigger provenance; shape determined by trigger_type.
       description: Optional launch settings for selecting the execution backend and version.
 
+    EphemeralLaunchRequest:
+      type: object
+      properties:
+        environment_key:
+          type: string
+          description: Optional named organization environment to overlay before flow variables.
+          examples: ["dev"]
+        version_id:
+          type: string
+          format: uuid
+          description: Optional immutable flow version to execute instead of the current definition.
+        trigger_type:
+          $ref: "#/components/schemas/TriggerType"
+        trigger_metadata:
+          anyOf:
+            - $ref: "#/components/schemas/TriggerMetadata"
+            - type: "null"
+          description: Trigger provenance; shape determined by trigger_type.
+      description: Launch settings for a caller-owned ephemeral runner.
+
     RunnerJobTerminalStatus:
       type: string
       enum: [completed, failed]
@@ -2573,6 +2593,8 @@ components:
           type: object
           additionalProperties: true
           description: Child flow-specific static input overrides applied before module bindings.
+        secret_input_keys:
+          $ref: "#/components/schemas/SecretInputKeys"
       required:
         - flow_definition
 
@@ -3258,12 +3280,50 @@ components:
     LaunchFlowAcceptedResponse:
       type: object
       description: |
-        Uniform launch response for every runner type. The returned execution already carries
-        the runnable data (flow_snapshot, runner_inputs, referenced_flows); an ephemeral runner
-        executes directly from those fields — no separate package is returned.
+        Accepted cloud or self-hosted execution. Runtime inputs in the execution read model are
+        redacted; caller-owned runners use the dedicated ephemeral launch endpoint.
       properties:
         execution:
           $ref: "#/components/schemas/FlowExecution"
+      required:
+        - execution
+
+    EphemeralExecutionPackage:
+      type: object
+      description: |
+        Secret-bearing runtime package for a caller-owned ephemeral runner. This object is
+        returned only from the ephemeral runner launch endpoint and must never be logged.
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        flow_id:
+          type: string
+          format: uuid
+        flow_definition:
+          $ref: "#/components/schemas/FlowDefinition"
+        inputs:
+          $ref: "#/components/schemas/RunnerInputs"
+        secret_input_keys:
+          $ref: "#/components/schemas/SecretInputKeys"
+        referenced_flows:
+          $ref: "#/components/schemas/ReferencedFlows"
+      required:
+        - execution_id
+        - flow_id
+        - flow_definition
+        - inputs
+
+    EphemeralLaunchResponse:
+      type: object
+      description: |
+        Masked execution metadata plus a runtime package while the execution is non-terminal.
+        An idempotent replay of a terminal execution omits package so it cannot run twice.
+      properties:
+        execution:
+          $ref: "#/components/schemas/FlowExecution"
+        package:
+          $ref: "#/components/schemas/EphemeralExecutionPackage"
       required:
         - execution
 
@@ -5406,6 +5466,7 @@ paths:
         Real-time updates can be consumed separately from the execution stream endpoint.
         Specify a version_id in the request body to run a specific published version;
         omit it to run the current (mutable) flow definition.
+        Ephemeral executions must use POST /runner/ephemeral/flows/{flowId}/launch.
       tags:
         - Flows
       security:
@@ -5431,9 +5492,7 @@ paths:
           description: |
             Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
             by organization, flow, environment key, version ID, runner type, trigger type, and the
-            key digest. A matching non-terminal ephemeral launch returns the original package; a
-            matching terminal one returns the execution summary without a package; reusing the key
-            with different scoped parameters returns 409 Conflict.
+            key digest. Reusing the key with different scoped parameters returns 409 Conflict.
           schema:
             type: string
             maxLength: 255
@@ -5441,9 +5500,7 @@ paths:
         "202":
           description: |
             Flow execution accepted. Cloud/self-hosted runners start asynchronously. For
-            `runner_type = ephemeral` the caller runs the execution locally from the returned
-            execution's flow_snapshot/runner_inputs/referenced_flows, then reports the result to
-            POST /runner/ephemeral/executions/{executionId}/complete.
+            caller-owned execution, use POST /runner/ephemeral/flows/{flowId}/launch.
           content:
             application/json:
               schema:
@@ -5464,6 +5521,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
+  /runner/ephemeral/flows/{flowId}/launch:
+    parameters:
+      - name: flowId
+        in: path
+        required: true
+        description: Flow to execute with a caller-owned ephemeral runner.
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      operationId: launchEphemeralFlow
+      x-ai-danger: "Runner protocol - secret-bearing machine-to-machine payload, not an agent action."
+      summary: Launch an ephemeral flow execution
+      description: |
+        Creates or idempotently replays an ephemeral execution. A non-terminal response includes
+        the plaintext runtime package and secret key names required by the local runner. Ordinary
+        execution reads remain masked. A terminal replay omits the package.
+      tags:
+        - Runner
+      security:
+        - ApiKeys: [flows:execute]
+        - BearerAuth: [flows:execute]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Stable key for idempotent CI retries.
+          schema:
+            type: string
+            maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EphemeralLaunchRequest"
+      responses:
+        "202":
+          description: Ephemeral execution accepted or replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EphemeralLaunchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /runner/ephemeral/executions/{executionId}/complete:
     parameters:
       - name: executionId
