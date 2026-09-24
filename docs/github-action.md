@@ -1,31 +1,28 @@
 # Running flows in CI: `echopoint flows run` and the GitHub Action
 
 Run Echopoint flows from any CI/CD system as **ephemeral runner** executions. The flow runs
-on your CI worker (not on Echopoint cloud-runner capacity); Echopoint resolves the flow
-definition and environment inputs and returns them on the launched execution
-(`flow_snapshot` / `runner_inputs` / `referenced_flows`), and records the result you publish.
-The CLI flow is: launch → run the runner from the execution → complete.
+on your CI worker. Echopoint creates a one-shot Job for the execution and delivers its resolved
+inputs only when the CLI claims that Job. The CLI reports progress, renews the Job lease, and
+completes it using the one-Job token. The flow is: launch → claim → run and report.
 
 ## Required API key scopes
 
-Create an organization API key with exactly these two scopes:
+Create an organization API key with this scope:
 
 | Scope | Why it is needed |
 |-------|------------------|
-| `flows:execute` | Launch an ephemeral execution **and** receive its runnable data: the immutable flow definition (`flow_snapshot`), referenced flows, and the resolved execution inputs/env (`runner_inputs`) for the created execution. |
-| `runner:complete` | Publish the runner result for that execution via `POST /runner/ephemeral/executions/{executionId}/complete`. |
+| `flows:execute` | Launch an ephemeral execution and claim its one-shot Job. The claim returns the runnable flow, resolved inputs, and a token scoped to that Job. |
 
-`runner:claim` is **not** required for the ephemeral CI path — the action proactively launches a
-known flow rather than claiming arbitrary queued work.
+The CLI uses the Job token for events, heartbeats, and completion. It does not need
+`runner:claim` or `runner:complete` on the API key.
 
 ### Secret boundary (read this)
 
-For `runner_type = ephemeral`, `flows:execute` grants the right to receive the **resolved
-inputs/env** (`runner_inputs`) on the execution it creates — including any secrets referenced by the
-selected environment. Those values are delivered to the CI worker so the flow can run locally. They
-are:
+For `runner_type = ephemeral`, `flows:execute` grants the right to claim the Job and receive its
+resolved inputs, including secrets referenced by the selected environment. Those values are
+delivered once to the CI worker so the flow can run locally. They are:
 
-- present only on the launched execution on the worker,
+- present only in the one-time claim response on the worker,
 - never logged by the CLI, runner, or action (the API key is masked via `::add-mask::`),
 - never written to `$GITHUB_OUTPUT` or the step summary.
 
@@ -45,7 +42,7 @@ Use a dedicated, least-privilege organization API key for CI and store it as a r
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `api-key` | yes | — | API key with `flows:execute` + `runner:complete`. |
+| `api-key` | yes | — | API key with `flows:execute`. |
 | `organization-id` | yes | — | Echopoint organization ID. |
 | `flow-id` | one of | — | A single flow ID. Mutually exclusive with `flow-ids` / `tags`. |
 | `flow-ids` | one of | — | Comma- or newline-separated flow IDs. Mutually exclusive with `flow-id` / `tags`. |
@@ -214,15 +211,13 @@ Ephemeral launch is idempotent so CI retries do not duplicate side-effecting run
 `--idempotency-key` (or let GitHub Actions derive one). The server scopes idempotency by
 organization, flow, environment key, version ID, runner type, trigger type, and the key digest:
 
-- **Matching key + same scope, execution not terminal** → the original (still runnable) execution
-  is returned and the flow runs once.
+- **Matching key + same scope, execution not terminal** → the original execution is returned.
+  The CLI claims its Job once; a second claim is refused, so the flow does not run twice.
 - **Matching key + same scope, execution already terminal** → the existing terminal execution is
   returned; the CLI reports the existing result and does **not** re-run the flow.
 - **Same key reused with different scoped parameters** (different flow, environment, version,
   trigger, or runner type) → `409 Conflict`.
 
 For multiple flow IDs, an explicit or CI-derived key is treated as a *base* key; the CLI derives
-a stable per-flow key so each launch retries safely. There is no separate active lease in v1:
-idempotency prevents duplicate execution records, but a CI system that starts two workers for the
-same pending execution before cancelling the first may run the flow twice — avoid concurrent
-duplicate workers when side effects matter.
+a stable per-flow key so each launch retries safely. If a claim response is lost, the CLI exits
+without running the flow. Inspect that execution before retrying: the Job may already be claimed.

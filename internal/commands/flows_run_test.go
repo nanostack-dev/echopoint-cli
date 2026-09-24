@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -61,6 +60,16 @@ func executionUUID() uuid.UUID {
 	return uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
 }
 
+func fakeFlowDefinition() api.FlowDefinition {
+	var definition api.FlowDefinition
+	raw := `{"name":"test","version":"1.0","nodes":[` +
+		`{"id":"wait","type":"delay","data":{"duration":1}}],"edges":[]}`
+	if err := json.Unmarshal([]byte(raw), &definition); err != nil {
+		panic(err)
+	}
+	return definition
+}
+
 // launchResponse builds a LaunchFlowAcceptedResponse for tests.
 // When terminal is true the execution is returned with a completed status (idempotent replay).
 // When terminal is false the execution is pending and the caller should run the runner.
@@ -74,15 +83,10 @@ func launchResponse(terminal bool) api.LaunchFlowAcceptedResponse {
 	}
 
 	execution := api.FlowExecution{
-		Id:             executionUUID(),
-		FlowId:         flowUUID(),
-		OrganizationId: "org_test",
-		FlowSnapshot: api.FlowDefinition{
-			Name:    "test",
-			Version: "1.0",
-			Nodes:   []api.FlowNode{},
-			Edges:   []api.FlowEdge{},
-		},
+		Id:              executionUUID(),
+		FlowId:          flowUUID(),
+		OrganizationId:  "org_test",
+		FlowSnapshot:    fakeFlowDefinition(),
 		RunnerInputs:    api.RunnerInputs{},
 		ReferencedFlows: api.ReferencedFlows{},
 		Status:          status,
@@ -93,36 +97,6 @@ func launchResponse(terminal bool) api.LaunchFlowAcceptedResponse {
 	}
 	return api.LaunchFlowAcceptedResponse{Execution: execution}
 }
-
-func publishResponse() api.EphemeralCompletionResponse {
-	runnerTypeEphemeral := api.Ephemeral
-	now := time.Now().UTC()
-	completedStatus := api.ExecutionStatus("completed")
-	return api.EphemeralCompletionResponse{
-		Execution: api.FlowExecution{
-			Id:             executionUUID(),
-			FlowId:         flowUUID(),
-			OrganizationId: "org_test",
-			FlowSnapshot: api.FlowDefinition{
-				Name: "test", Version: "1.0",
-				Nodes: []api.FlowNode{}, Edges: []api.FlowEdge{},
-			},
-			RunnerInputs:    api.RunnerInputs{},
-			ReferencedFlows: api.ReferencedFlows{},
-			Status:          completedStatus,
-			RunnerType:      &runnerTypeEphemeral,
-			StartedAt:       now,
-			CompletedAt:     &now,
-			CreatedAt:       now,
-			UpdatedAt:       now,
-		},
-		Nodes: []api.NodeExecutionResult{},
-	}
-}
-
-// buildFakeRunner builds a tiny shell script (or bat on Windows) that acts
-// as echopoint-runner in ephemeral mode.  It reads stdin, writes a completed
-// result JSON to stdout, and exits 0.
 
 // ── auth resolution unit tests ────────────────────────────────────────────────
 
@@ -394,36 +368,104 @@ func TestMultiFlowRunOutput_JSON(t *testing.T) {
 
 // ── integration tests with fake API + fake runner ─────────────────────────────
 
-func setupFakeAPIServer(
-	t *testing.T, launchResp any, launchStatus int,
-	publishResp any, publishStatus int,
-) *httptest.Server {
+func fakeClaimResponse() api.EphemeralJobClaimResponse {
+	return api.EphemeralJobClaimResponse{
+		JobToken: "one-job-token",
+		Job: api.RunnerJobPayload{
+			JobId:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440003"),
+			ExecutionId:    executionUUID(),
+			FlowId:         flowUUID(),
+			LeaseExpiresAt: time.Now().UTC().Add(time.Minute),
+			FlowDefinition: launchResponse(false).Execution.FlowSnapshot,
+			Inputs:         api.RunnerInputs{},
+		},
+	}
+}
+
+func serveFakeJobRequest(w http.ResponseWriter, r *http.Request) bool {
+	switch {
+	case strings.Contains(r.URL.Path, "/claim"):
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(fakeClaimResponse())
+	case strings.Contains(r.URL.Path, "/events"):
+		var body struct {
+			Events []struct {
+				Sequence int64 `json:"sequence"`
+			} `json:"events"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		sequence := int64(0)
+		if len(body.Events) > 0 {
+			sequence = body.Events[len(body.Events)-1].Sequence
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]int64{"last_accepted_sequence": sequence})
+	case strings.Contains(r.URL.Path, "/complete"):
+		w.WriteHeader(http.StatusNoContent)
+	case strings.Contains(r.URL.Path, "/heartbeat"):
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]map[string]any{{"job_id": fakeClaimResponse().Job.JobId, "status": "renewed"}})
+	default:
+		return false
+	}
+	return true
+}
+
+func setupFakeAPIServer(t *testing.T, launchResp any, launchStatus int) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.Contains(r.URL.Path, "/launch") && r.Method == http.MethodPost:
+		if strings.Contains(r.URL.Path, "/launch") && r.Method == http.MethodPost {
+			var body struct {
+				EphemeralJobVersion int `json:"ephemeral_job_version"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.EphemeralJobVersion != 1 {
+				t.Errorf("launch must opt in to Job protocol: body=%+v err=%v", body, err)
+			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(launchStatus)
-			json.NewEncoder(w).Encode(launchResp)
-		case strings.Contains(r.URL.Path, "/complete") && r.Method == http.MethodPost:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(publishStatus)
-			json.NewEncoder(w).Encode(publishResp)
-		default:
+			_ = json.NewEncoder(w).Encode(launchResp)
+			return
+		}
+		if !serveFakeJobRequest(w, r) {
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 }
 
-func TestIntegration_SuccessfulEphemeralExecution(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows due to shell script runner")
-	}
+func TestIntegration_ClaimConflictNeverRunsFlow(t *testing.T) {
+	var reports int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/launch"):
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusAccepted)
+			_ = json.NewEncoder(w).Encode(launchResponse(false))
+		case strings.Contains(r.URL.Path, "/claim"):
+			w.WriteHeader(http.StatusConflict)
+		default:
+			reports++
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
 
-	srv := setupFakeAPIServer(t,
-		launchResponse(false), http.StatusAccepted,
-		publishResponse(), http.StatusOK,
+	state := makeState(t, "test-api-key", "", srv.URL)
+	results, code := executeFlows(
+		context.Background(), state, []string{flowUUID().String()}, "", "", "", 1, "",
 	)
+	if code != exitError || len(results) != 1 || reports != 0 {
+		t.Fatalf(
+			"claim conflict must stop before runner reports: code=%d results=%+v reports=%d",
+			code, results, reports,
+		)
+	}
+	if results[0].ErrorMessage == nil || !strings.Contains(*results[0].ErrorMessage, "inspect execution") {
+		t.Fatalf("claim conflict should name the execution for recovery: %+v", results[0])
+	}
+}
+
+func TestIntegration_SuccessfulEphemeralExecution(t *testing.T) {
+	srv := setupFakeAPIServer(t, launchResponse(false), http.StatusAccepted)
 	defer srv.Close()
 
 	state := makeState(t, "test-api-key", "", srv.URL)
@@ -454,10 +496,7 @@ func TestIntegration_SuccessfulEphemeralExecution(t *testing.T) {
 func TestIntegration_TerminalIdempotentReplay(t *testing.T) {
 	// When the server returns a launch response with a terminal execution status,
 	// the CLI should NOT run the runner and should report the existing status.
-	srv := setupFakeAPIServer(t,
-		launchResponse(true), http.StatusAccepted,
-		nil, http.StatusOK,
-	)
+	srv := setupFakeAPIServer(t, launchResponse(true), http.StatusAccepted)
 	defer srv.Close()
 
 	state := makeState(t, "test-api-key", "", srv.URL)
@@ -486,10 +525,6 @@ func TestIntegration_TerminalIdempotentReplay(t *testing.T) {
 }
 
 func TestIntegration_MultipleFlowsSequential(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows due to shell script runner")
-	}
-
 	var mu struct {
 		sync.Mutex
 		calls []string
@@ -505,12 +540,10 @@ func TestIntegration_MultipleFlowsSequential(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 			json.NewEncoder(w).Encode(launchResponse(false))
-		case strings.Contains(r.URL.Path, "/complete"):
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(publishResponse())
 		default:
-			w.WriteHeader(http.StatusNotFound)
+			if !serveFakeJobRequest(w, r) {
+				w.WriteHeader(http.StatusNotFound)
+			}
 		}
 	}))
 	defer srv.Close()
@@ -551,10 +584,6 @@ func TestIntegration_MultipleFlowsSequential(t *testing.T) {
 }
 
 func TestIntegration_ParallelBounding(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows due to shell script runner")
-	}
-
 	var mu struct {
 		sync.Mutex
 		active    int
@@ -581,10 +610,7 @@ func TestIntegration_ParallelBounding(t *testing.T) {
 			json.NewEncoder(w).Encode(launchResponse(false))
 			return
 		}
-		if strings.Contains(r.URL.Path, "/complete") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(publishResponse())
+		if serveFakeJobRequest(w, r) {
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -626,56 +652,6 @@ func TestIntegration_InvalidParallel(t *testing.T) {
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error for --parallel=0")
-	}
-}
-
-func TestIntegration_PublishRetryOnTransient(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows due to shell script runner")
-	}
-
-	var attempts int
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/complete") {
-			attempts++
-			if attempts < 3 {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(publishResponse())
-			return
-		}
-		if strings.Contains(r.URL.Path, "/launch") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusAccepted)
-			json.NewEncoder(w).Encode(launchResponse(false))
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-
-	state := makeState(t, "test-api-key", "", srv.URL)
-	ctx := context.Background()
-
-	runnerResult := &ephemeralResult{
-		Status:      "completed",
-		StartedAt:   time.Now().Format(time.RFC3339),
-		CompletedAt: time.Now().Add(time.Second).Format(time.RFC3339),
-		DurationMs:  1000,
-	}
-
-	resp, err := publishResult(ctx, state, flowUUID(), executionUUID(), runnerResult, "")
-	if err != nil {
-		t.Fatalf("expected success after retries, got: %v", err)
-	}
-	if resp == nil {
-		t.Fatal("expected non-nil publish response")
-	}
-	if attempts != 3 {
-		t.Errorf("expected 3 attempts (2 failures + 1 success), got %d", attempts)
 	}
 }
 

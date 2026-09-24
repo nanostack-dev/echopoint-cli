@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/nanostack-dev/echopoint-runner/pkg/ephemeral"
+	"github.com/nanostack-dev/echopoint-runner/pkg/jobrunner"
 
 	"echopoint-cli/internal/api"
 	"echopoint-cli/internal/output"
@@ -109,26 +109,6 @@ type MultiFlowRunOutput struct {
 	Results    []FlowRunResult `json:"results"`
 }
 
-// ephemeralPackage is the JSON the runner reads from stdin.
-type ephemeralPackage struct {
-	ExecutionID     string         `json:"execution_id"`
-	FlowID          string         `json:"flow_id"`
-	FlowDefinition  map[string]any `json:"flow_definition"`
-	Inputs          map[string]any `json:"inputs"`
-	ReferencedFlows map[string]any `json:"referenced_flows"`
-}
-
-// ephemeralResult is the JSON the runner writes to stdout.
-type ephemeralResult struct {
-	Status       string         `json:"status"`
-	StartedAt    string         `json:"started_at"`
-	CompletedAt  string         `json:"completed_at"`
-	DurationMs   int64          `json:"duration_ms"`
-	Result       map[string]any `json:"result"`
-	ErrorMessage *string        `json:"error_message"`
-	ErrorCode    *string        `json:"error_code"`
-}
-
 func newFlowsRunCmd(state *AppState) *cobra.Command {
 	var (
 		flagEnvironment    string
@@ -147,8 +127,8 @@ func newFlowsRunCmd(state *AppState) *cobra.Command {
 		Short: "Run one or more flows using an ephemeral runner",
 		Long: `Run one or more flows locally using the ephemeral runner mode.
 
-The CLI launches each flow on the server with runner_type=ephemeral, receives
-an execution package, runs it using echopoint-runner, and publishes the result.
+The CLI launches each flow on the server with runner_type=ephemeral, claims its
+one-shot Job, and runs it with live progress and completion reporting.
 
 Authentication: a logged-in session (echopoint auth login) or an organization
 API key (--api-key / ECHOPOINT_API_KEY). An organization ID is always required
@@ -162,10 +142,8 @@ Exit codes:
   4  timeout`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Ephemeral execution needs an org-scoped credential for both launch
-			// (flows:execute) and result publication. The completion endpoint accepts
-			// ApiKeys:[runner:complete] or a session bearer carrying flows:execute, so
-			// either a stored login or an API key works; an org ID is always required.
+			// Launch and one-time claim use flows:execute. Reporting uses the
+			// one-Job token returned by the claim.
 			if state.APIKey == "" && state.Token == "" {
 				return runError(
 					cmd,
@@ -441,7 +419,7 @@ func runSingleFlow(
 		return errorResult(flowID, "", exitError, fmt.Sprintf("invalid flow id %q: %v", flowID, err))
 	}
 
-	pkg, executionID, terminalResult, launchErr := launchEphemeral(
+	executionID, terminalResult, launchErr := launchEphemeral(
 		ctx, state, flowUUID, idempotencyKey, environment, versionID, outputFormat,
 	)
 	if launchErr != nil {
@@ -452,28 +430,30 @@ func runSingleFlow(
 		return *terminalResult
 	}
 
-	runnerResult, runErr := runEphemeralRunner(pkg)
+	bootID := uuid.Must(uuid.NewV7())
+	job, token, claimErr := claimEphemeralJob(ctx, state, executionID, bootID, outputFormat)
+	if claimErr != nil {
+		return errorResult(flowID, executionID.String(), exitCodeForError(claimErr), claimErr.Error())
+	}
+
+	runnerClient, clientErr := jobrunner.NewClient(jobrunner.Config{
+		BaseURL:  state.Client.BaseURL(),
+		JobToken: token,
+		RunnerID: "echopoint-cli",
+		BootID:   bootID,
+		Timeout:  state.Config.API.Timeout,
+	})
+	if clientErr != nil {
+		return errorResult(flowID, executionID.String(), exitError, clientErr.Error())
+	}
+	runnerResult, runErr := runnerClient.Run(ctx, job)
+	if ctx.Err() != nil {
+		return errorResult(flowID, executionID.String(), exitCodeForError(ctx.Err()), ctx.Err().Error())
+	}
 	if runErr != nil {
-		badResult := &ephemeralResult{
-			Status:       statusFailed,
-			StartedAt:    time.Now().UTC().Format(time.RFC3339),
-			CompletedAt:  time.Now().UTC().Format(time.RFC3339),
-			DurationMs:   0,
-			ErrorMessage: new(runErr.Error()),
-			ErrorCode:    new("RUNNER_ERROR"),
-		}
-		// Best-effort failure publication; ignore its error so the original failure
-		// (including a timeout) determines the exit code.
-		_, _ = publishResult(ctx, state, flowUUID, executionID, badResult, outputFormat)
 		return errorResult(flowID, executionID.String(), exitCodeForError(runErr), runErr.Error())
 	}
-
-	publishResp, pubErr := publishResult(ctx, state, flowUUID, executionID, runnerResult, outputFormat)
-	if pubErr != nil {
-		return errorResult(flowID, executionID.String(), exitCodeForError(pubErr), pubErr.Error())
-	}
-
-	return buildRunResult(flowID, executionID.String(), publishResp, runnerResult)
+	return buildRunResultFromJob(flowID, executionID.String(), runnerResult)
 }
 
 // exitCodeForError classifies an operational error into a stable CI exit code:
@@ -498,10 +478,12 @@ func launchEphemeral(
 	environment string,
 	versionID string,
 	outputFormat string,
-) (*ephemeralPackage, uuid.UUID, *FlowRunResult, error) {
+) (uuid.UUID, *FlowRunResult, error) {
 	runnerTypEphemeral := api.Ephemeral
+	jobVersion := api.LaunchFlowRequestEphemeralJobVersion(1)
 	req := api.LaunchFlowRequest{
-		RunnerType: &runnerTypEphemeral,
+		RunnerType:          &runnerTypEphemeral,
+		EphemeralJobVersion: &jobVersion,
 	}
 	if environment != "" {
 		req.EnvironmentKey = new(environment)
@@ -509,7 +491,7 @@ func launchEphemeral(
 	if versionID != "" {
 		vid, err := uuid.Parse(versionID)
 		if err != nil {
-			return nil, uuid.UUID{}, nil, fmt.Errorf("invalid version-id %q: %w", versionID, err)
+			return uuid.UUID{}, nil, fmt.Errorf("invalid version-id %q: %w", versionID, err)
 		}
 		req.VersionId = &vid
 	}
@@ -520,7 +502,7 @@ func launchEphemeral(
 		if git := buildGitHubTriggerMetadata(); git != nil {
 			var tm api.TriggerMetadata
 			if err := tm.FromGitTriggerMetadata(*git); err != nil {
-				return nil, uuid.UUID{}, nil, fmt.Errorf("build trigger metadata: %w", err)
+				return uuid.UUID{}, nil, fmt.Errorf("build trigger metadata: %w", err)
 			}
 			req.TriggerMetadata = &tm
 		}
@@ -535,10 +517,10 @@ func launchEphemeral(
 
 	resp, err := state.Client.API().LaunchFlowWithResponse(ctx, flowUUID, params, req)
 	if err != nil {
-		return nil, uuid.UUID{}, nil, fmt.Errorf("launch flow: %w", err)
+		return uuid.UUID{}, nil, fmt.Errorf("launch flow: %w", err)
 	}
 	if resp.JSON202 == nil {
-		return nil, uuid.UUID{}, nil, fmt.Errorf(
+		return uuid.UUID{}, nil, fmt.Errorf(
 			"launch flow: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
 		)
 	}
@@ -551,170 +533,127 @@ func launchEphemeral(
 	// must not run the runner in this case — just surface the existing status.
 	if isTerminalStatus(string(execution.Status)) {
 		result := buildRunResultFromExecution(execution.FlowId.String(), executionID.String(), execution)
-		return nil, executionID, &result, nil
+		return executionID, &result, nil
 	}
 
-	epkg := executionToEphemeralPackage(execution)
-	return &epkg, executionID, nil, nil
+	return executionID, nil, nil
 }
 
 func isTerminalStatus(status string) bool {
 	return status == statusCompleted || status == statusFailed || status == statusCancelled
 }
 
-func executionToEphemeralPackage(execution api.FlowExecution) ephemeralPackage {
-	var flowDef map[string]any
-	flowDefBytes, _ := json.Marshal(execution.FlowSnapshot)
-	_ = json.Unmarshal(flowDefBytes, &flowDef)
-
-	inputs := map[string]any{}
-	maps.Copy(inputs, execution.RunnerInputs)
-
-	referenced := map[string]any{}
-	for k, v := range execution.ReferencedFlows {
-		refBytes, _ := json.Marshal(v)
-		var refObj any
-		_ = json.Unmarshal(refBytes, &refObj)
-		referenced[k] = refObj
-	}
-
-	return ephemeralPackage{
-		ExecutionID:     execution.Id.String(),
-		FlowID:          execution.FlowId.String(),
-		FlowDefinition:  flowDef,
-		Inputs:          inputs,
-		ReferencedFlows: referenced,
-	}
-}
-
-// runEphemeralRunner executes the ephemeral package in-process using the
-// embedded echopoint-runner (pkg/ephemeral). The runner is a library dependency,
-// so the CLI is a single self-contained binary — there is no separate
-// echopoint-runner binary to install, find on PATH, or keep in version sync, and
-// its version is pinned by go.mod. The package round-trips through JSON to reuse
-// the wire types that both sides already agree on.
-func runEphemeralRunner(pkg *ephemeralPackage) (*ephemeralResult, error) {
-	pkgBytes, err := json.Marshal(pkg)
-	if err != nil {
-		return nil, fmt.Errorf("marshal package: %w", err)
-	}
-
-	var runnerPkg ephemeral.Package
-	if err := json.Unmarshal(pkgBytes, &runnerPkg); err != nil {
-		return nil, fmt.Errorf("build runner package: %w", err)
-	}
-
-	runnerResult := ephemeral.Run(&runnerPkg)
-
-	resultBytes, err := json.Marshal(runnerResult)
-	if err != nil {
-		return nil, fmt.Errorf("marshal runner result: %w", err)
-	}
-
-	var result ephemeralResult
-	if err := json.Unmarshal(resultBytes, &result); err != nil {
-		return nil, fmt.Errorf("parse runner result: %w", err)
-	}
-	return &result, nil
-}
-
-func publishResult(
+// claimEphemeralJob fetches the Job payload and token once. A lost claim response
+// is deliberately not retried: the Job may already be running or claimed.
+func claimEphemeralJob(
 	ctx context.Context,
 	state *AppState,
-	_ uuid.UUID,
 	executionID uuid.UUID,
-	result *ephemeralResult,
+	bootID uuid.UUID,
 	outputFormat string,
-) (*api.EphemeralCompletionResponse, error) {
-	status := api.RunnerJobTerminalStatus(result.Status)
-	req := api.EphemeralCompletionRequest{
-		Status:       status,
-		DurationMs:   result.DurationMs,
-		ErrorMessage: result.ErrorMessage,
-		ErrorCode:    result.ErrorCode,
-	}
-
-	startedAt, _ := time.Parse(time.RFC3339, result.StartedAt)
-	completedAt, _ := time.Parse(time.RFC3339, result.CompletedAt)
-	req.StartedAt = startedAt
-	req.CompletedAt = completedAt
-
-	if result.Result != nil {
-		req.Result = &result.Result
-	}
-
-	progressf(outputFormat, "Publishing result for execution %s...\n", executionID)
-
-	params := &api.CompleteEphemeralExecutionParams{
-		XOrganizationID: state.OrganizationID,
-	}
-
-	var lastErr error
-	for attempt := range 3 {
-		if attempt > 0 {
-			select {
-			case <-ctx.Done():
-				// Wrap the context error so exitCodeForError classifies a timeout (4) or
-				// cancellation (2) rather than a generic contract error (3).
-				return nil, fmt.Errorf("publish cancelled: %w", ctx.Err())
-			case <-time.After(time.Duration(attempt) * 2 * time.Second):
-			}
-		}
-
-		resp, err := state.Client.API().CompleteEphemeralExecutionWithResponse(ctx, executionID, params, req)
-		if err != nil {
-			lastErr = fmt.Errorf("publish result: %w", err)
-			continue
-		}
-
-		if resp.StatusCode() == 200 && resp.JSON200 != nil {
-			return resp.JSON200, nil
-		}
-
-		if resp.StatusCode() >= 500 {
-			lastErr = fmt.Errorf("publish result: server error %d: %s", resp.StatusCode(), string(resp.Body))
-			continue
-		}
-
-		return nil, fmt.Errorf(
-			"publish result: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
+) (jobrunner.Job, string, error) {
+	progressf(outputFormat, "Claiming Job for execution %s...\n", executionID)
+	params := &api.ClaimEphemeralJobParams{XOrganizationID: state.OrganizationID}
+	response, err := state.Client.API().ClaimEphemeralJobWithResponse(
+		ctx, executionID, params,
+		api.EphemeralJobClaimRequest{RunnerId: "echopoint-cli", BootId: bootID},
+	)
+	if err != nil {
+		return jobrunner.Job{}, "", fmt.Errorf(
+			"claim ephemeral Job: %w; inspect execution %s before retrying", err, executionID,
 		)
 	}
-
-	return nil, lastErr
+	if response.JSON200 == nil {
+		return jobrunner.Job{}, "", fmt.Errorf(
+			"claim ephemeral Job: status %d: %s; inspect execution %s before retrying",
+			response.StatusCode(), string(response.Body), executionID,
+		)
+	}
+	// The generated API and embedded runner share the same JSON Job contract.
+	encoded, err := json.Marshal(response.JSON200.Job)
+	if err != nil {
+		return jobrunner.Job{}, "", fmt.Errorf("encode claimed Job: %w", err)
+	}
+	var job jobrunner.Job
+	if err := json.Unmarshal(encoded, &job); err != nil {
+		return jobrunner.Job{}, "", fmt.Errorf("decode claimed Job: %w", err)
+	}
+	return job, response.JSON200.JobToken, nil
 }
 
-func buildRunResult(
-	flowID, executionID string,
-	resp *api.EphemeralCompletionResponse,
-	runnerResult *ephemeralResult,
-) FlowRunResult {
-	execution := resp.Execution
-	nodes := buildNodeList(resp.Nodes)
-	attachAssertions(nodes, runnerResult)
-
-	statusStr := string(execution.Status)
-	success := execution.Status == statusCompleted
-	exitCode := exitSuccess
-	if !success {
-		exitCode = exitFlowFailed
+func buildRunResultFromJob(flowID, executionID string, runnerResult jobrunner.Result) FlowRunResult {
+	success := runnerResult.Status == statusCompleted &&
+		runnerResult.Execution != nil && runnerResult.Execution.Success
+	code := exitFlowFailed
+	status := statusFailed
+	if success {
+		code = exitSuccess
+		status = statusCompleted
 	}
-
-	var durationMs int64
-	if execution.StartedAt != (time.Time{}) && execution.CompletedAt != nil {
-		durationMs = execution.CompletedAt.Sub(execution.StartedAt).Milliseconds()
-	}
-
-	return FlowRunResult{
+	report := FlowRunResult{
 		ExecutionID:  executionID,
 		FlowID:       flowID,
-		Status:       statusStr,
+		Status:       status,
 		Success:      success,
-		ExitCode:     exitCode,
-		DurationMs:   durationMs,
-		ErrorMessage: execution.ErrorMessage,
-		Nodes:        nodes,
+		ExitCode:     code,
+		ErrorMessage: runnerResult.ErrorMessage,
+		Nodes:        []FlowRunNode{},
 	}
+	if runnerResult.Execution == nil {
+		return report
+	}
+	report.DurationMs = runnerResult.Execution.DurationMS
+	if report.ErrorMessage == nil {
+		report.ErrorMessage = runnerResult.Execution.ErrorMsg
+	}
+	encoded, err := json.Marshal(runnerResult.Execution)
+	if err != nil {
+		return report
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(encoded, &payload); err != nil {
+		return report
+	}
+	report.Nodes = buildJobNodeList(payload)
+	attachAssertions(report.Nodes, payload)
+	return report
+}
+
+func buildJobNodeList(result map[string]any) []FlowRunNode {
+	raw, ok := result["execution_results"].(map[string]any)
+	if !ok {
+		return []FlowRunNode{}
+	}
+	nodes := make([]FlowRunNode, 0, len(raw))
+	for nodeID, value := range raw {
+		node, ok := value.(map[string]any)
+		if !ok {
+			continue
+		}
+		status := statusCompleted
+		if node["skip_reason"] != nil {
+			status = "skipped"
+		} else if node["error_message"] != nil {
+			status = statusFailed
+		}
+		var errorMessage *string
+		if message, ok := node["error_message"].(string); ok {
+			errorMessage = &message
+		}
+		name, _ := node["display_name"].(string)
+		nodeType, _ := node["node_type"].(string)
+		var durationMs *int
+		if value, ok := node["duration_ms"].(float64); ok {
+			duration := int(value)
+			durationMs = &duration
+		}
+		nodes = append(nodes, FlowRunNode{
+			NodeID: nodeID, DisplayName: name, NodeType: nodeType,
+			Status: status, DurationMs: durationMs, ErrorMsg: errorMessage,
+		})
+	}
+	sort.Slice(nodes, func(i, j int) bool { return nodes[i].NodeID < nodes[j].NodeID })
+	return nodes
 }
 
 func buildRunResultFromExecution(flowID, executionID string, execution api.FlowExecution) FlowRunResult {
@@ -745,14 +684,12 @@ func buildRunResultFromExecution(flowID, executionID string, execution api.FlowE
 	}
 }
 
-// attachAssertions enriches the control-plane node list with the per-assertion
-// outcomes the runner recorded locally (expected/actual/passed). The completion
-// response does not carry these, but the raw runner payload does.
-func attachAssertions(nodes []FlowRunNode, runnerResult *ephemeralResult) {
-	if runnerResult == nil || runnerResult.Result == nil {
+// attachAssertions adds the runner's per-assertion outcomes to local node summaries.
+func attachAssertions(nodes []FlowRunNode, result map[string]any) {
+	if result == nil {
 		return
 	}
-	byNode := extractAssertionsByNode(runnerResult.Result)
+	byNode := extractAssertionsByNode(result)
 	for i := range nodes {
 		if assertions, ok := byNode[nodes[i].NodeID]; ok {
 			nodes[i].Assertions = assertions
@@ -785,26 +722,6 @@ func extractAssertionsByNode(result map[string]any) map[string][]AssertionSummar
 		}
 	}
 	return out
-}
-
-func buildNodeList(nodes []api.NodeExecutionResult) []FlowRunNode {
-	result := make([]FlowRunNode, 0, len(nodes))
-	for _, n := range nodes {
-		var durationMs *int
-		if n.DurationMs != nil {
-			v := *n.DurationMs
-			durationMs = &v
-		}
-		result = append(result, FlowRunNode{
-			NodeID:      n.NodeId,
-			DisplayName: n.DisplayName,
-			NodeType:    string(n.NodeType),
-			Status:      string(n.Status),
-			DurationMs:  durationMs,
-			ErrorMsg:    n.ErrorMessage,
-		})
-	}
-	return result
 }
 
 func aggregateExitCode(results []FlowRunResult) int {

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -152,10 +151,6 @@ func TestFlowsRun_InvalidMatchMode(t *testing.T) {
 // flow IDs via /flows/search, then the existing launch/run path executes each resolved
 // flow. Uses --parallel 2 to confirm parallelism is preserved for tag-resolved runs.
 func TestFlowsRun_TagResolutionRunsResolvedFlows(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows due to shell script runner")
-	}
-
 	ids := []string{
 		"550e8400-e29b-41d4-a716-446655440020",
 		"550e8400-e29b-41d4-a716-446655440021",
@@ -178,12 +173,10 @@ func TestFlowsRun_TagResolutionRunsResolvedFlows(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 			_ = json.NewEncoder(w).Encode(launchResponse(false))
-		case strings.Contains(r.URL.Path, "/complete") && r.Method == http.MethodPost:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(publishResponse())
 		default:
-			w.WriteHeader(http.StatusNotFound)
+			if !serveFakeJobRequest(w, r) {
+				w.WriteHeader(http.StatusNotFound)
+			}
 		}
 	}))
 	defer srv.Close()
