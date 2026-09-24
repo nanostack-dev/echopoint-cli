@@ -436,13 +436,17 @@ func runSingleFlow(
 		return errorResult(flowID, executionID.String(), exitCodeForError(claimErr), claimErr.Error())
 	}
 
-	runnerResult, runErr := jobrunner.Run(ctx, jobrunner.Config{
+	runnerClient, clientErr := jobrunner.NewClient(jobrunner.Config{
 		BaseURL:  state.Client.BaseURL(),
 		JobToken: token,
 		RunnerID: "echopoint-cli",
 		BootID:   bootID,
 		Timeout:  state.Config.API.Timeout,
-	}, job)
+	})
+	if clientErr != nil {
+		return errorResult(flowID, executionID.String(), exitError, clientErr.Error())
+	}
+	runnerResult, runErr := runnerClient.Run(ctx, job)
 	if ctx.Err() != nil {
 		return errorResult(flowID, executionID.String(), exitCodeForError(ctx.Err()), ctx.Err().Error())
 	}
@@ -539,7 +543,7 @@ func isTerminalStatus(status string) bool {
 	return status == statusCompleted || status == statusFailed || status == statusCancelled
 }
 
-// claimEphemeralJob fetches the runnable package and token once. A lost claim response
+// claimEphemeralJob fetches the Job payload and token once. A lost claim response
 // is deliberately not retried: the Job may already be running or claimed.
 func claimEphemeralJob(
 	ctx context.Context,
