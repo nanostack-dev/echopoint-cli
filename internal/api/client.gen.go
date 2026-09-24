@@ -409,6 +409,21 @@ func (e HttpMethod) Valid() bool {
 	}
 }
 
+// Defines values for LaunchFlowRequestEphemeralJobVersion.
+const (
+	N1 LaunchFlowRequestEphemeralJobVersion = 1
+)
+
+// Valid indicates whether the value is a known member of the LaunchFlowRequestEphemeralJobVersion enum.
+func (e LaunchFlowRequestEphemeralJobVersion) Valid() bool {
+	switch e {
+	case N1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LoopFlowNodeType.
 const (
 	Loop LoopFlowNodeType = "loop"
@@ -1883,8 +1898,7 @@ type CreateFlowScheduleRequest struct {
 
 	// RunnerType Execution backend used to run a flow.
 	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` returns an execution package for a short-lived
-	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
 	RunnerType RunnerType `json:"runner_type"`
 
 	// StartsAt Optional UTC anchor; defaults to creation time when omitted.
@@ -2129,6 +2143,20 @@ type EphemeralCompletionRequest struct {
 type EphemeralCompletionResponse struct {
 	Execution FlowExecution         `json:"execution"`
 	Nodes     []NodeExecutionResult `json:"nodes"`
+}
+
+// EphemeralJobClaimRequest defines model for EphemeralJobClaimRequest.
+type EphemeralJobClaimRequest struct {
+	BootId   openapi_types.UUID `json:"boot_id"`
+	RunnerId string             `json:"runner_id"`
+}
+
+// EphemeralJobClaimResponse One-time delivery of the Job credential and runnable payload.
+type EphemeralJobClaimResponse struct {
+	Job RunnerJobPayload `json:"job"`
+
+	// JobToken Short-lived credential for this Job's heartbeat, events, and completion.
+	JobToken string `json:"job_token"`
 }
 
 // ExecuteRequestRequest defines model for ExecuteRequestRequest.
@@ -2463,8 +2491,7 @@ type FlowExecutionActivity struct {
 
 	// RunnerType Execution backend used to run a flow.
 	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` returns an execution package for a short-lived
-	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
 	RunnerType    RunnerType          `json:"runner_type"`
 	ScheduleRunId *openapi_types.UUID `json:"schedule_run_id,omitempty"`
 	StartedAt     time.Time           `json:"started_at"`
@@ -2601,8 +2628,7 @@ type FlowSchedule struct {
 
 	// RunnerType Execution backend used to run a flow.
 	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` returns an execution package for a short-lived
-	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
 	RunnerType RunnerType `json:"runner_type"`
 
 	// StartsAt UTC anchor for the recurrence.
@@ -2857,9 +2883,8 @@ type JSONPathExtractorConfig struct {
 	Path string `json:"path"`
 }
 
-// LaunchFlowAcceptedResponse Uniform launch response for every runner type. The returned execution already carries
-// the runnable data (flow_snapshot, runner_inputs, referenced_flows); an ephemeral runner
-// executes directly from those fields — no separate package is returned.
+// LaunchFlowAcceptedResponse Uniform launch response for every runner type. Ephemeral clients claim the Job using
+// the execution ID; runnable inputs are delivered only in that one-time claim response.
 type LaunchFlowAcceptedResponse struct {
 	Execution FlowExecution `json:"execution"`
 }
@@ -2871,10 +2896,12 @@ type LaunchFlowRequest struct {
 	// Examples: dev
 	EnvironmentKey *string `json:"environment_key,omitempty"`
 
+	// EphemeralJobVersion Required when runner_type is ephemeral. Prevents older clients from executing masked launch data.
+	EphemeralJobVersion *LaunchFlowRequestEphemeralJobVersion `json:"ephemeral_job_version,omitempty"`
+
 	// RunnerType Execution backend used to run a flow.
 	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` returns an execution package for a short-lived
-	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
 	RunnerType *RunnerType `json:"runner_type,omitempty"`
 
 	// TriggerMetadata Trigger provenance; shape determined by trigger_type.
@@ -2890,6 +2917,9 @@ type LaunchFlowRequest struct {
 	// is used. Specify a version ID to run an immutable snapshot.
 	VersionId *openapi_types.UUID `json:"version_id,omitempty"`
 }
+
+// LaunchFlowRequestEphemeralJobVersion Required when runner_type is ephemeral. Prevents older clients from executing masked launch data.
+type LaunchFlowRequestEphemeralJobVersion int
 
 // LiveRunner defines model for LiveRunner.
 type LiveRunner struct {
@@ -3567,6 +3597,11 @@ type ReferencedFlow struct {
 
 	// InputOverrides Child flow-specific static input overrides applied before module bindings.
 	InputOverrides *map[string]interface{} `json:"input_overrides,omitempty"`
+
+	// SecretInputKeys Names the runner inputs whose values are secrets. The executor must replace each of these values with `***` in every result, event, and log line it emits.
+	//
+	// Examples: ["API_KEY","DB_PASSWORD"]
+	SecretInputKeys *SecretInputKeys `json:"secret_input_keys,omitempty"`
 }
 
 // ReferencedFlows Additional flow snapshots available to module nodes during execution.
@@ -3972,8 +4007,7 @@ type RunnerJobTerminalStatus string
 
 // RunnerType Execution backend used to run a flow.
 // `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-// customer runner, and `ephemeral` returns an execution package for a short-lived
-// caller-owned runner (e.g. CI) to execute locally and then publish results.
+// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
 type RunnerType string
 
 // ScheduleLaunchFailure A flow that could not be launched when a schedule run fired (flow deleted between
@@ -4256,8 +4290,7 @@ type UpdateFlowScheduleRequest struct {
 
 	// RunnerType Execution backend used to run a flow.
 	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` returns an execution package for a short-lived
-	// caller-owned runner (e.g. CI) to execute locally and then publish results.
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
 	RunnerType RunnerType `json:"runner_type"`
 	StartsAt   *time.Time `json:"starts_at,omitempty"`
 
@@ -5128,8 +5161,7 @@ type ExportFlowParams struct {
 type LaunchFlowParams struct {
 	// IdempotencyKey Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
 	// by organization, flow, environment key, version ID, runner type, trigger type, and the
-	// key digest. A matching non-terminal ephemeral launch returns the original package; a
-	// matching terminal one returns the execution summary without a package; reusing the key
+	// key digest. A matching launch returns the original execution; reusing the key
 	// with different scoped parameters returns 409 Conflict.
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 
@@ -5289,6 +5321,12 @@ type ListPermissionsParams struct {
 
 // SearchResourcesParams defines parameters for SearchResources.
 type SearchResourcesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ClaimEphemeralJobParams defines parameters for ClaimEphemeralJob.
+type ClaimEphemeralJobParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -5465,6 +5503,9 @@ type SetOrganizationVariableJSONRequestBody = SetVariableRequest
 
 // SearchResourcesJSONRequestBody defines body for SearchResources for application/json ContentType.
 type SearchResourcesJSONRequestBody = ResourceSearchRequest
+
+// ClaimEphemeralJobJSONRequestBody defines body for ClaimEphemeralJob for application/json ContentType.
+type ClaimEphemeralJobJSONRequestBody = EphemeralJobClaimRequest
 
 // CompleteEphemeralExecutionJSONRequestBody defines body for CompleteEphemeralExecution for application/json ContentType.
 type CompleteEphemeralExecutionJSONRequestBody = EphemeralCompletionRequest
@@ -7527,6 +7568,28 @@ type ClientInterface interface {
 	// Corresponds with POST /resources/search (the `SearchResources` operationId).
 	SearchResources(ctx context.Context, params *SearchResourcesParams, body SearchResourcesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ClaimEphemeralJobWithBody Claim one ephemeral Job
+	//
+	// Atomically claims the Job for this execution and returns its runnable payload and
+	// one-job token once. A repeated or concurrent claim returns 409; the caller must
+	// inspect execution state rather than run the flow a second time.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+	ClaimEphemeralJobWithBody(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ClaimEphemeralJob Claim one ephemeral Job
+	//
+	// Atomically claims the Job for this execution and returns its runnable payload and
+	// one-job token once. A repeated or concurrent claim returns 409; the caller must
+	// inspect execution state rather than run the flow a second time.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+	ClaimEphemeralJob(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, body ClaimEphemeralJobJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CompleteEphemeralExecutionWithBody Complete an ephemeral execution
 	//
 	// Reports the terminal result for an ephemeral execution produced by a caller-owned
@@ -7560,7 +7623,7 @@ type ClientInterface interface {
 	// HeartbeatRunnerJobsWithBody Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes any type of body and a specified content type.
@@ -7571,7 +7634,7 @@ type ClientInterface interface {
 	// HeartbeatRunnerJobs Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type.
@@ -7602,7 +7665,7 @@ type ClientInterface interface {
 	// CompleteRunnerJobWithBody Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type.
@@ -7613,7 +7676,7 @@ type ClientInterface interface {
 	// CompleteRunnerJob Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type.
@@ -7624,7 +7687,7 @@ type ClientInterface interface {
 	// SendRunnerJobEventsWithBody Append progress events for a claimed runner job
 	//
 	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type.
@@ -7635,7 +7698,7 @@ type ClientInterface interface {
 	// SendRunnerJobEvents Append progress events for a claimed runner job
 	//
 	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type.
@@ -10012,6 +10075,48 @@ func (c *Client) SearchResources(ctx context.Context, params *SearchResourcesPar
 	return c.Client.Do(req)
 }
 
+// ClaimEphemeralJobWithBody Claim one ephemeral Job
+//
+// Atomically claims the Job for this execution and returns its runnable payload and
+// one-job token once. A repeated or concurrent claim returns 409; the caller must
+// inspect execution state rather than run the flow a second time.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+func (c *Client) ClaimEphemeralJobWithBody(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewClaimEphemeralJobRequestWithBody(c.Server, executionId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ClaimEphemeralJob Claim one ephemeral Job
+//
+// Atomically claims the Job for this execution and returns its runnable payload and
+// one-job token once. A repeated or concurrent claim returns 409; the caller must
+// inspect execution state rather than run the flow a second time.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+func (c *Client) ClaimEphemeralJob(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, body ClaimEphemeralJobJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewClaimEphemeralJobRequest(c.Server, executionId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // CompleteEphemeralExecutionWithBody Complete an ephemeral execution
 //
 // Reports the terminal result for an ephemeral execution produced by a caller-owned
@@ -10065,7 +10170,7 @@ func (c *Client) CompleteEphemeralExecution(ctx context.Context, executionId ope
 // HeartbeatRunnerJobsWithBody Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 // Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes any type of body and a specified content type.
@@ -10086,7 +10191,7 @@ func (c *Client) HeartbeatRunnerJobsWithBody(ctx context.Context, contentType st
 // HeartbeatRunnerJobs Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 // Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes a body of the `application/json` content type.
@@ -10147,7 +10252,7 @@ func (c *Client) NextRunnerJob(ctx context.Context, body NextRunnerJobJSONReques
 // CompleteRunnerJobWithBody Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes any type of body and a specified content type.
@@ -10168,7 +10273,7 @@ func (c *Client) CompleteRunnerJobWithBody(ctx context.Context, jobId RunnerJobI
 // CompleteRunnerJob Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes a body of the `application/json` content type.
@@ -10189,7 +10294,7 @@ func (c *Client) CompleteRunnerJob(ctx context.Context, jobId RunnerJobIDParamet
 // SendRunnerJobEventsWithBody Append progress events for a claimed runner job
 //
 // Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes any type of body and a specified content type.
@@ -10210,7 +10315,7 @@ func (c *Client) SendRunnerJobEventsWithBody(ctx context.Context, jobId RunnerJo
 // SendRunnerJobEvents Append progress events for a claimed runner job
 //
 // Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes a body of the `application/json` content type.
@@ -15712,6 +15817,66 @@ func NewSearchResourcesRequestWithBody(server string, params *SearchResourcesPar
 	return req, nil
 }
 
+// NewClaimEphemeralJobRequest calls the generic ClaimEphemeralJob builder with application/json body
+func NewClaimEphemeralJobRequest(server string, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, body ClaimEphemeralJobJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewClaimEphemeralJobRequestWithBody(server, executionId, params, "application/json", bodyReader)
+}
+
+// NewClaimEphemeralJobRequestWithBody constructs an http.Request for the ClaimEphemeralJob method, with any body, and a specified content type
+func NewClaimEphemeralJobRequestWithBody(server string, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "executionId", executionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/runner/ephemeral/executions/%s/claim", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewCompleteEphemeralExecutionRequest calls the generic CompleteEphemeralExecution builder with application/json body
 func NewCompleteEphemeralExecutionRequest(server string, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, body CompleteEphemeralExecutionJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -17881,6 +18046,28 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /resources/search (the `SearchResources` operationId).
 	SearchResourcesWithResponse(ctx context.Context, params *SearchResourcesParams, body SearchResourcesJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchResourcesResponse, error)
 
+	// ClaimEphemeralJobWithBodyWithResponse Claim one ephemeral Job
+	//
+	// Atomically claims the Job for this execution and returns its runnable payload and
+	// one-job token once. A repeated or concurrent claim returns 409; the caller must
+	// inspect execution state rather than run the flow a second time.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+	ClaimEphemeralJobWithBodyWithResponse(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ClaimEphemeralJobResponse, error)
+
+	// ClaimEphemeralJobWithResponse Claim one ephemeral Job
+	//
+	// Atomically claims the Job for this execution and returns its runnable payload and
+	// one-job token once. A repeated or concurrent claim returns 409; the caller must
+	// inspect execution state rather than run the flow a second time.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+	ClaimEphemeralJobWithResponse(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, body ClaimEphemeralJobJSONRequestBody, reqEditors ...RequestEditorFn) (*ClaimEphemeralJobResponse, error)
+
 	// CompleteEphemeralExecutionWithBodyWithResponse Complete an ephemeral execution
 	//
 	// Reports the terminal result for an ephemeral execution produced by a caller-owned
@@ -17914,7 +18101,7 @@ type ClientWithResponsesInterface interface {
 	// HeartbeatRunnerJobsWithBodyWithResponse Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -17925,7 +18112,7 @@ type ClientWithResponsesInterface interface {
 	// HeartbeatRunnerJobsWithResponse Renew leases for active runner jobs
 	//
 	// Refreshes the lease for the claimed runner jobs that are still actively executing
-	// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+	// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 	// Self-hosted jobs keep X-Api-Key. Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -17956,7 +18143,7 @@ type ClientWithResponsesInterface interface {
 	// CompleteRunnerJobWithBodyWithResponse Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -17967,7 +18154,7 @@ type ClientWithResponsesInterface interface {
 	// CompleteRunnerJobWithResponse Complete a claimed runner job
 	//
 	// Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -17978,7 +18165,7 @@ type ClientWithResponsesInterface interface {
 	// SendRunnerJobEventsWithBodyWithResponse Append progress events for a claimed runner job
 	//
 	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -17989,7 +18176,7 @@ type ClientWithResponsesInterface interface {
 	// SendRunnerJobEventsWithResponse Append progress events for a claimed runner job
 	//
 	// Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-	// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+	// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 	// Do not send both headers.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -23528,6 +23715,89 @@ func (r SearchResourcesResponse) ContentType() string {
 	return ""
 }
 
+type ClaimEphemeralJobResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *EphemeralJobClaimResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ClaimEphemeralJobResponse) GetJSON200() *EphemeralJobClaimResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ClaimEphemeralJobResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ClaimEphemeralJobResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ClaimEphemeralJobResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ClaimEphemeralJobResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ClaimEphemeralJobResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ClaimEphemeralJobResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ClaimEphemeralJobResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ClaimEphemeralJobResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ClaimEphemeralJobResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ClaimEphemeralJobResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type CompleteEphemeralExecutionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -26604,6 +26874,40 @@ func (c *ClientWithResponses) SearchResourcesWithResponse(ctx context.Context, p
 	return ParseSearchResourcesResponse(rsp)
 }
 
+// ClaimEphemeralJobWithBodyWithResponse Claim one ephemeral Job
+//
+// Atomically claims the Job for this execution and returns its runnable payload and
+// one-job token once. A repeated or concurrent claim returns 409; the caller must
+// inspect execution state rather than run the flow a second time.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+func (c *ClientWithResponses) ClaimEphemeralJobWithBodyWithResponse(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ClaimEphemeralJobResponse, error) {
+	rsp, err := c.ClaimEphemeralJobWithBody(ctx, executionId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseClaimEphemeralJobResponse(rsp)
+}
+
+// ClaimEphemeralJobWithResponse Claim one ephemeral Job
+//
+// Atomically claims the Job for this execution and returns its runnable payload and
+// one-job token once. A repeated or concurrent claim returns 409; the caller must
+// inspect execution state rather than run the flow a second time.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
+func (c *ClientWithResponses) ClaimEphemeralJobWithResponse(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, body ClaimEphemeralJobJSONRequestBody, reqEditors ...RequestEditorFn) (*ClaimEphemeralJobResponse, error) {
+	rsp, err := c.ClaimEphemeralJob(ctx, executionId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseClaimEphemeralJobResponse(rsp)
+}
+
 // CompleteEphemeralExecutionWithBodyWithResponse Complete an ephemeral execution
 //
 // Reports the terminal result for an ephemeral execution produced by a caller-owned
@@ -26649,7 +26953,7 @@ func (c *ClientWithResponses) CompleteEphemeralExecutionWithResponse(ctx context
 // HeartbeatRunnerJobsWithBodyWithResponse Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 // Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -26666,7 +26970,7 @@ func (c *ClientWithResponses) HeartbeatRunnerJobsWithBodyWithResponse(ctx contex
 // HeartbeatRunnerJobsWithResponse Renew leases for active runner jobs
 //
 // Refreshes the lease for the claimed runner jobs that are still actively executing
-// on the current runner process. Cloud jobs authenticate with X-Job-Token.
+// on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
 // Self-hosted jobs keep X-Api-Key. Do not send both headers.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -26715,7 +27019,7 @@ func (c *ClientWithResponses) NextRunnerJobWithResponse(ctx context.Context, bod
 // CompleteRunnerJobWithBodyWithResponse Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -26732,7 +27036,7 @@ func (c *ClientWithResponses) CompleteRunnerJobWithBodyWithResponse(ctx context.
 // CompleteRunnerJobWithResponse Complete a claimed runner job
 //
 // Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -26749,7 +27053,7 @@ func (c *ClientWithResponses) CompleteRunnerJobWithResponse(ctx context.Context,
 // SendRunnerJobEventsWithBodyWithResponse Append progress events for a claimed runner job
 //
 // Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -26766,7 +27070,7 @@ func (c *ClientWithResponses) SendRunnerJobEventsWithBodyWithResponse(ctx contex
 // SendRunnerJobEventsWithResponse Append progress events for a claimed runner job
 //
 // Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-// Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+// Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
 // Do not send both headers.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -31110,6 +31414,74 @@ func ParseSearchResourcesResponse(rsp *http.Response) (*SearchResourcesResponse,
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseClaimEphemeralJobResponse parses an HTTP response from a ClaimEphemeralJobWithResponse call
+func ParseClaimEphemeralJobResponse(rsp *http.Response) (*ClaimEphemeralJobResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ClaimEphemeralJobResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EphemeralJobClaimResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 

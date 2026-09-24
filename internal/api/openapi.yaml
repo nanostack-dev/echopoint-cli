@@ -2515,13 +2515,16 @@ components:
       description: |
         Execution backend used to run a flow.
         `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-        customer runner, and `ephemeral` returns an execution package for a short-lived
-        caller-owned runner (e.g. CI) to execute locally and then publish results.
+        customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
     LaunchFlowRequest:
       type: object
       properties:
         runner_type:
           $ref: "#/components/schemas/RunnerType"
+        ephemeral_job_version:
+          type: integer
+          enum: [1]
+          description: Required when runner_type is ephemeral. Prevents older clients from executing masked launch data.
         environment_key:
           type: string
           description: Optional named organization environment to overlay before flow variables.
@@ -2573,6 +2576,8 @@ components:
           type: object
           additionalProperties: true
           description: Child flow-specific static input overrides applied before module bindings.
+        secret_input_keys:
+          $ref: "#/components/schemas/SecretInputKeys"
       required:
         - flow_definition
 
@@ -2673,6 +2678,27 @@ components:
         - runner_id
         - boot_id
         - max_parallel_flows
+
+    EphemeralJobClaimRequest:
+      type: object
+      properties:
+        runner_id:
+          type: string
+        boot_id:
+          type: string
+          format: uuid
+      required: [runner_id, boot_id]
+
+    EphemeralJobClaimResponse:
+      type: object
+      description: One-time delivery of the Job credential and runnable payload.
+      properties:
+        job_token:
+          type: string
+          description: Short-lived credential for this Job's heartbeat, events, and completion.
+        job:
+          $ref: "#/components/schemas/RunnerJobPayload"
+      required: [job_token, job]
 
     SecretInputKeys:
       type: array
@@ -3258,9 +3284,8 @@ components:
     LaunchFlowAcceptedResponse:
       type: object
       description: |
-        Uniform launch response for every runner type. The returned execution already carries
-        the runnable data (flow_snapshot, runner_inputs, referenced_flows); an ephemeral runner
-        executes directly from those fields — no separate package is returned.
+        Uniform launch response for every runner type. Ephemeral clients claim the Job using
+        the execution ID; runnable inputs are delivered only in that one-time claim response.
       properties:
         execution:
           $ref: "#/components/schemas/FlowExecution"
@@ -5431,8 +5456,7 @@ paths:
           description: |
             Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
             by organization, flow, environment key, version ID, runner type, trigger type, and the
-            key digest. A matching non-terminal ephemeral launch returns the original package; a
-            matching terminal one returns the execution summary without a package; reusing the key
+            key digest. A matching launch returns the original execution; reusing the key
             with different scoped parameters returns 409 Conflict.
           schema:
             type: string
@@ -5440,10 +5464,8 @@ paths:
       responses:
         "202":
           description: |
-            Flow execution accepted. Cloud/self-hosted runners start asynchronously. For
-            `runner_type = ephemeral` the caller runs the execution locally from the returned
-            execution's flow_snapshot/runner_inputs/referenced_flows, then reports the result to
-            POST /runner/ephemeral/executions/{executionId}/complete.
+            Flow execution accepted. Cloud/self-hosted runners start asynchronously. An ephemeral
+            caller claims its one-shot Job at POST /runner/ephemeral/executions/{executionId}/claim.
           content:
             application/json:
               schema:
@@ -5464,6 +5486,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
+  /runner/ephemeral/executions/{executionId}/claim:
+    parameters:
+      - name: executionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    post:
+      operationId: claimEphemeralJob
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
+      summary: Claim one ephemeral Job
+      description: |
+        Atomically claims the Job for this execution and returns its runnable payload and
+        one-job token once. A repeated or concurrent claim returns 409; the caller must
+        inspect execution state rather than run the flow a second time.
+      tags: [Runner]
+      security:
+        - BearerAuth: [flows:execute]
+        - ApiKeys: [flows:execute]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EphemeralJobClaimRequest"
+      responses:
+        "200":
+          description: Claimed Job and one-job token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EphemeralJobClaimResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /runner/ephemeral/executions/{executionId}/complete:
     parameters:
       - name: executionId
@@ -5632,7 +5701,7 @@ paths:
       summary: Complete a claimed runner job
       description: |
         Accepts a one-shot terminal runner completion report for a previously claimed runner job.
-        Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+        Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
         Do not send both headers.
       tags:
         - Runner
@@ -5669,7 +5738,7 @@ paths:
       summary: Append progress events for a claimed runner job
       description: |
         Accepts an ordered batch of runner execution progress events for a previously claimed runner job.
-        Cloud jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
+        Cloud and Ephemeral jobs authenticate with X-Job-Token. Self-hosted jobs keep X-Api-Key.
         Do not send both headers.
       tags:
         - Runner
@@ -5708,7 +5777,7 @@ paths:
       summary: Renew leases for active runner jobs
       description: |
         Refreshes the lease for the claimed runner jobs that are still actively executing
-        on the current runner process. Cloud jobs authenticate with X-Job-Token.
+        on the current runner process. Cloud and Ephemeral jobs authenticate with X-Job-Token.
         Self-hosted jobs keep X-Api-Key. Do not send both headers.
       tags:
         - Runner
