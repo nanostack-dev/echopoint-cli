@@ -10,16 +10,14 @@ const (
 	tJSONPath   = "jsonPath"
 )
 
-// runnerResultWith builds an ephemeralResult mirroring the runner payload shape
+// runnerResultWith builds a payload mirroring the runner result shape
 // (result.execution_results[nodeID].assertion_results).
-func runnerResultWith(nodeID string, assertions []map[string]any) *ephemeralResult {
-	return &ephemeralResult{
-		Result: map[string]any{
-			"execution_results": map[string]any{
-				nodeID: map[string]any{
-					"node_id":           nodeID,
-					"assertion_results": toAnySlice(assertions),
-				},
+func runnerResultWith(nodeID string, assertions []map[string]any) map[string]any {
+	return map[string]any{
+		"execution_results": map[string]any{
+			nodeID: map[string]any{
+				"node_id":           nodeID,
+				"assertion_results": toAnySlice(assertions),
 			},
 		},
 	}
@@ -39,7 +37,7 @@ func TestExtractAssertionsByNode(t *testing.T) {
 		{"index": 1, "extractor": tJSONPath, "operator": tEquals, "expected": "a", "actual": "b", "passed": false},
 	})
 
-	byNode := extractAssertionsByNode(result.Result)
+	byNode := extractAssertionsByNode(result)
 	got := byNode["ping"]
 	if len(got) != 2 {
 		t.Fatalf("expected 2 assertions for ping, got %d", len(got))
