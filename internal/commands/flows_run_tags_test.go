@@ -147,6 +147,27 @@ func TestFlowsRun_InvalidMatchMode(t *testing.T) {
 	}
 }
 
+func TestFlowsRun_ExitCodeErrorPrintsNoCobraUsage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	state := makeState(t, "test-api-key", "", srv.URL)
+	cmd := newFlowsRunCmd(state)
+	cmd.SetArgs([]string{"--tag", "prod", "--match-mode", "bogus"})
+	var buf bytes.Buffer
+	cmd.SetErr(&buf)
+	cmd.SetOut(&buf)
+
+	_ = cmd.Execute()
+	for _, noise := range []string{"Error:", "Usage:"} {
+		if strings.Contains(buf.String(), noise) {
+			t.Errorf("cobra printed %q for an exit code error:\n%s", noise, buf.String())
+		}
+	}
+}
+
 // TestFlowsRun_TagResolutionRunsResolvedFlows exercises the full path: --tag resolves
 // flow IDs via /flows/search, then the existing launch/run path executes each resolved
 // flow. Uses --parallel 2 to confirm parallelism is preserved for tag-resolved runs.

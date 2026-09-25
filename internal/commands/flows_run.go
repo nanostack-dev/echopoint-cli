@@ -140,7 +140,9 @@ Exit codes:
   2  cancelled
   3  API / runner / contract error
   4  timeout`,
-		Args: cobra.ArbitraryArgs,
+		Args:          cobra.ArbitraryArgs,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Launch and one-time claim use flows:execute. Reporting uses the
 			// one-Job token returned by the claim.
