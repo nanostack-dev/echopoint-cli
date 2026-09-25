@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"strings"
 	"testing"
 
 	"echopoint-cli/internal/api"
@@ -58,5 +59,19 @@ func TestValidateReferences(t *testing.T) {
 	// Without the edge, the reference is unreachable.
 	if got := validateReferences(nodes, ids, nil); len(got) != 1 {
 		t.Errorf("expected 1 unreachable-reference problem, got %v", got)
+	}
+}
+
+func TestValidateReferencesAcceptsLaunchInputs(t *testing.T) {
+	nodes := []api.FlowNode{
+		requestNodeWithURL("register", "{{webhook.url}}"),
+		requestNodeWithURL("poll", "{{webhook.requests_url}}"),
+		requestNodeWithURL("typo", "{{missing.url}}"),
+	}
+	ids := map[string]bool{"register": true, "poll": true, "typo": true}
+
+	got := validateReferences(nodes, ids, nil)
+	if len(got) != 1 || !strings.Contains(got[0], `no node "missing" exists`) {
+		t.Errorf("expected only the {{missing.url}} problem, got %v", got)
 	}
 }
