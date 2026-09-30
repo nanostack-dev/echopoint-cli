@@ -32,6 +32,7 @@ func newFlowNodeCmd(state *AppState) *cobra.Command {
 		newFlowNodeUpdateCmd(state),
 		newFlowNodeOutputCmd(state),
 		newFlowNodeAssertionCmd(state),
+		newFlowNodeExpectCmd(state),
 	)
 
 	return cmd
@@ -40,7 +41,7 @@ func newFlowNodeCmd(state *AppState) *cobra.Command {
 // newFlowNodeAddCmd adds a new node to a flow
 func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 	var nodeType, name, method, url, headers, body, moduleFlowID, customID, runWhen string
-	var duration int
+	var duration, timeoutMs, settleMs int
 	var inputBindings, outputBindings, afterNodes []string
 
 	cmd := &cobra.Command{
@@ -55,6 +56,11 @@ Examples:
 
   # Add a delay node
   echopoint flows node add <flow-id> --type delay --name "Wait" --duration 5000
+
+  # Add a webhook wait as the final check of a flow; then add its expected
+  # events with 'flows node expect add'
+  echopoint flows node add <flow-id> --id events --type webhook_wait --name "Every invitation event" \
+    --timeout 30000 --settle 3000 --run-when always --after resend-invite
 
   # Add a module node that runs another flow (reuse a flow inside this one)
   echopoint flows node add <flow-id> --type module --name "Login" \
@@ -131,6 +137,8 @@ Examples:
 				headers:        headers,
 				body:           body,
 				duration:       duration,
+				timeoutMs:      timeoutMs,
+				settleMs:       settleMs,
 				moduleFlowID:   moduleFlowID,
 				inputBindings:  inputBindings,
 				outputBindings: outputBindings,
@@ -193,7 +201,7 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request, delay or module)")
+	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request, delay, module or webhook_wait)")
 	cmd.Flags().StringVar(&customID, "id", "",
 		"Custom node ID, unique within the flow (auto-generated UUID if omitted)")
 	cmd.Flags().StringVar(&runWhen, "run-when", "",
@@ -206,6 +214,9 @@ Examples:
 	cmd.Flags().StringVar(&headers, "headers", "", "HTTP headers as JSON (for request nodes)")
 	cmd.Flags().StringVar(&body, "body", "", "Request body (for request nodes)")
 	cmd.Flags().IntVar(&duration, "duration", 0, "Delay duration in milliseconds (for delay nodes)")
+	cmd.Flags().IntVar(&timeoutMs, "timeout", 0, "Wait budget in milliseconds (for webhook_wait nodes; default 30000)")
+	cmd.Flags().IntVar(&settleMs, "settle", 0,
+		"How long to keep listening once every expected event arrived (for webhook_wait nodes)")
 	cmd.Flags().StringVar(&moduleFlowID, "flow-id", "", "Referenced child flow ID (for module nodes)")
 	cmd.Flags().StringArrayVar(&inputBindings, "input", nil,
 		"Module input binding key=value (for module nodes; repeatable)")
@@ -448,7 +459,7 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 	var name, extractorType, path, headerName string
 
 	cmd := &cobra.Command{
-		Use:   "add <flow-id> <node-id>",
+		Use:   addToNodeUse,
 		Short: "Add an output to a node",
 		Args:  cobra.ExactArgs(2),
 		Long: `Add an output extractor to a node.
@@ -478,7 +489,10 @@ Examples:
 			nodeID := args[1]
 
 			// Validate extractor type
-			validExtractors := []string{"jsonPath", "statusCode", "body", "header"}
+			validExtractors := []string{
+				string(api.ExtractorTypeJsonPath), string(api.ExtractorTypeStatusCode),
+				string(api.ExtractorTypeBody), string(api.ExtractorTypeHeader),
+			}
 			if !containsString(validExtractors, extractorType) {
 				return fmt.Errorf("invalid extractor type: %s (must be one of: %v)", extractorType, validExtractors)
 			}
@@ -712,10 +726,10 @@ func newFlowNodeAssertionCmd(state *AppState) *cobra.Command {
 
 // newFlowNodeAssertionAddCmd adds an assertion to a node
 func newFlowNodeAssertionAddCmd(state *AppState) *cobra.Command {
-	var extractorType, path, operatorType, value string
+	var extractorType, path, headerName, operatorType, value string
 
 	cmd := &cobra.Command{
-		Use:   "add <flow-id> <node-id>",
+		Use:   addToNodeUse,
 		Short: "Add an assertion to a node",
 		Args:  cobra.ExactArgs(2),
 		Long: `Add an assertion to validate node execution.
@@ -729,6 +743,10 @@ Examples:
 
   # Assert response contains string
   echopoint flows node assertion add <flow-id> <node-id> --extractor body --operator contains --value "success"
+
+  # On a webhook wait with expected events, an assertion is a check on every event
+  echopoint flows node assertion add <flow-id> events --extractor header --header-name webhook-signature \
+    --operator startsWith --value "v1,"
 
 Available operators: equals, notEquals, contains, notContains, greaterThan, lessThan,
 greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, regex`,
@@ -745,29 +763,17 @@ greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, rege
 			nodeID := args[1]
 
 			// Validate extractor type
-			validExtractors := []string{"statusCode", "jsonPath", "body", "header"}
+			validExtractors := []string{
+				string(api.ExtractorTypeStatusCode), string(api.ExtractorTypeJsonPath),
+				string(api.ExtractorTypeBody), string(api.ExtractorTypeHeader),
+			}
 			if !containsString(validExtractors, extractorType) {
 				return fmt.Errorf("invalid extractor type: %s (must be one of: %v)", extractorType, validExtractors)
 			}
 
 			// Validate operator type
-			validOperators := []string{
-				"equals",
-				"notEquals",
-				"contains",
-				"notContains",
-				"greaterThan",
-				"lessThan",
-				"greaterThanOrEqual",
-				"lessThanOrEqual",
-				"empty",
-				"notEmpty",
-				"startsWith",
-				"endsWith",
-				"regex",
-			}
-			if !containsString(validOperators, operatorType) {
-				return fmt.Errorf("invalid operator type: %s (must be one of: %v)", operatorType, validOperators)
+			if !containsString(assertionOperators, operatorType) {
+				return fmt.Errorf("invalid operator type: %s (must be one of: %v)", operatorType, assertionOperators)
 			}
 
 			// Get current flow
@@ -786,6 +792,12 @@ greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, rege
 			extractorData := make(map[string]any)
 			if path != "" {
 				extractorData["path"] = path
+			}
+			if headerName != "" {
+				extractorData["header_name"] = headerName
+			}
+			if extractorType == string(api.ExtractorTypeHeader) && headerName == "" {
+				return fmt.Errorf("--header-name is required for the header extractor")
 			}
 
 			// Build operator data
@@ -818,11 +830,25 @@ greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, rege
 						definition.Nodes[i].FromRequestFlowNode(n)
 						found = true
 					}
+				case api.WebhookWaitFlowNode:
+					if n.Id == nodeID {
+						assertions := append(derefAssertions(n.Assertions), api.CompositeAssertion{
+							ExtractorType: api.ExtractorType(extractorType),
+							ExtractorData: extractorData,
+							OperatorType:  api.OperatorType(operatorType),
+							OperatorData:  operatorData,
+						})
+						n.Assertions = &assertions
+						if encodeErr := definition.Nodes[i].FromWebhookWaitFlowNode(n); encodeErr != nil {
+							return fmt.Errorf("failed to encode node: %w", encodeErr)
+						}
+						found = true
+					}
 				}
 			}
 
 			if !found {
-				return fmt.Errorf("request node not found: %s", nodeID)
+				return fmt.Errorf("request or webhook wait node not found: %s", nodeID)
 			}
 
 			// Update flow with auto-layout enabled
@@ -855,6 +881,8 @@ greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, rege
 		&extractorType, "extractor", "", "Extractor type (statusCode, jsonPath, body, header)")
 	cmd.Flags().StringVar(
 		&path, "path", "", "Path for jsonPath extractor")
+	cmd.Flags().StringVar(
+		&headerName, "header-name", "", "Header name for the header extractor")
 	cmd.Flags().StringVar(
 		&operatorType, "operator", "", "Operator type (equals, notEquals, contains, etc.)")
 	cmd.Flags().StringVar(
@@ -955,7 +983,7 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 // nodeBuildInput carries the fields needed to construct a flow node.
 type nodeBuildInput struct {
 	id, nodeType, name, method, url, headers, body, moduleFlowID string
-	duration                                                     int
+	duration, timeoutMs, settleMs                                int
 	inputBindings, outputBindings                                []string
 	runWhen                                                      *api.FlowNodeRunWhen
 }
@@ -1006,8 +1034,26 @@ func buildFlowNode(in nodeBuildInput) (api.FlowNode, error) {
 			RunWhen:     in.runWhen,
 			Data:        moduleData,
 		})
+	case nodeTypeWebhookWait:
+		data := api.WebhookWaitNodeData{}
+		if in.timeoutMs > 0 {
+			data.TimeoutMs = &in.timeoutMs
+		}
+		if in.settleMs > 0 {
+			data.SettleMs = &in.settleMs
+		}
+		if err := node.FromWebhookWaitFlowNode(api.WebhookWaitFlowNode{
+			Id:          in.id,
+			Type:        nodeTypeWebhookWait,
+			DisplayName: in.name,
+			RunWhen:     in.runWhen,
+			Data:        data,
+		}); err != nil {
+			return node, err
+		}
 	default:
-		return node, fmt.Errorf("invalid node type: %s (must be 'request', 'delay' or 'module')", in.nodeType)
+		return node, fmt.Errorf(
+			"invalid node type: %s (must be 'request', 'delay', 'module' or 'webhook_wait')", in.nodeType)
 	}
 	return node, nil
 }
@@ -1098,4 +1144,11 @@ func containsString(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func derefAssertions(assertions *[]api.CompositeAssertion) []api.CompositeAssertion {
+	if assertions == nil {
+		return nil
+	}
+	return *assertions
 }

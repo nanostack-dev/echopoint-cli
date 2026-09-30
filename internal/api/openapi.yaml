@@ -50,7 +50,7 @@ components:
       type: apiKey
       in: header
       name: X-Job-Token
-      description: "Single-use Cloud job token. The control plane stores only a hash."
+      description: "Token of one claimed job (Cloud, ephemeral, or self-hosted). The control plane stores only a hash."
   parameters:
     VariableKey:
       name: key
@@ -1230,6 +1230,7 @@ components:
         - $ref: "#/components/schemas/LoopFlowNode"
         - $ref: "#/components/schemas/PollFlowNode"
         - $ref: "#/components/schemas/SseFlowNode"
+        - $ref: "#/components/schemas/WebhookWaitFlowNode"
       discriminator:
         propertyName: type
         mapping:
@@ -1242,6 +1243,7 @@ components:
           loop: "#/components/schemas/LoopFlowNode"
           poll: "#/components/schemas/PollFlowNode"
           sse: "#/components/schemas/SseFlowNode"
+          webhook_wait: "#/components/schemas/WebhookWaitFlowNode"
 
     RequestFlowNode:
       allOf:
@@ -1359,6 +1361,79 @@ components:
               $ref: "#/components/schemas/SseNodeData"
           required:
             - data
+
+    WebhookWaitFlowNode:
+      allOf:
+        - $ref: "#/components/schemas/BaseFlowNode"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: "webhook_wait"
+            data:
+              $ref: "#/components/schemas/WebhookWaitNodeData"
+          required:
+            - data
+
+    WebhookWaitNodeData:
+      type: object
+      description: |
+        Polls the webhook requests captured for this execution until a stored request passes the
+        node's assertions. Launch creates a webhook for this run and injects its ingest URL as `webhook.url`, and `webhook.requests_url` for this node. The webhook is deleted when the run ends. Default timeout is 30 seconds.
+        Assertion values resolve `{{node.output}}` templates from completed steps before they compare, so a
+        wait can name the resource an event must be about.
+      properties:
+        timeout_ms:
+          type: integer
+          description: Wait budget in milliseconds. Defaults to 30000. Launch refuses a value above the execution `timeout_seconds` or the license `max_cloud_execution_duration_seconds`.
+          default: 30000
+          examples: [30000]
+        settle_ms:
+          type: integer
+          minimum: 0
+          description: |
+            How long the wait keeps listening once every expectation has its events, so an
+            expectation with a `max` sees an extra event that arrives late. Only used with `expect`.
+            Defaults to 0.
+          default: 0
+          examples: [3000]
+        expect:
+          type: array
+          description: |
+            The events this wait expects, each a named group of assertions. An event satisfies a group
+            when it passes every assertion of the group, and one event counts toward one group only.
+            With `expect`, the node's own `assertions` validate every event a group claimed. Without it,
+            the node's assertions pick the first request that passes them. The node result reports each
+            group in `expectations`, and for a group that found nothing, the closest request check by check.
+          items:
+            $ref: "#/components/schemas/WebhookExpectation"
+
+    WebhookExpectation:
+      type: object
+      description: One event the wait expects, described by the assertions it must pass.
+      required:
+        - name
+        - assertions
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: What the event is, in the words the run report uses.
+          examples: ["Invitation accepted"]
+        min:
+          type: integer
+          minimum: 0
+          default: 1
+          description: Fewest events that must satisfy the group. 0 with `max` 0 means the event must never arrive.
+        max:
+          type: integer
+          minimum: 0
+          description: Most events that may satisfy the group. Absent means no upper bound.
+        assertions:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CompositeAssertion"
 
     RequestNodeData:
       type: object
@@ -1973,9 +2048,11 @@ components:
         auto_layout:
           type: boolean
           description: >-
-            Recompute node positions on create using backend layout. Also
-            clears every edge's pinned borders, so the new arrangement uses
-            floating endpoints.
+            Discard any node positions sent with the flow and clear every
+            edge's pinned borders. The editor lays the flow out from the size
+            each node renders at the next time it is opened, and saves those
+            positions. Omitting node_positions has the same effect on
+            positions.
         metadata:
           $ref: "#/components/schemas/FlowMetadata"
         tags:
@@ -2017,9 +2094,9 @@ components:
         auto_layout:
           type: boolean
           description: >-
-            Recompute node positions on update using backend layout. Also
-            clears every edge's pinned borders, so the new arrangement uses
-            floating endpoints.
+            Discard the saved node positions and clear every edge's pinned
+            borders. The editor lays the flow out from the size each node
+            renders at the next time it is opened, and saves those positions.
         metadata:
           $ref: "#/components/schemas/FlowMetadata"
         tags:
@@ -2194,7 +2271,12 @@ components:
       properties:
         node_positions:
           type: object
-          description: Map of node IDs to their x,y positions in the editor.
+          description: >-
+            Map of node IDs to the top-left x,y of each node in the editor. A
+            node missing from the map is placed by the editor beside the nodes
+            it connects to, from the size it renders at, and never moves a
+            node that has a position. Agents creating or extending a flow can
+            leave positions out.
           additionalProperties:
             type: object
             properties:
@@ -2776,6 +2858,12 @@ components:
           $ref: "#/components/schemas/SecretInputKeys"
         referenced_flows:
           $ref: "#/components/schemas/ReferencedFlows"
+        job_token:
+          type: string
+          description: |
+            Token of this claimed job, returned once by a self-hosted claim. The runner
+            sends it as X-Job-Token to read the webhook requests of this run. Absent on
+            an ephemeral claim, which returns its token beside the job.
       required:
         - job_id
         - execution_id
@@ -5016,6 +5104,10 @@ paths:
                 $ref: "#/components/schemas/Webhook"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /webhooks/{id}:
     parameters:
       - $ref: "#/components/parameters/WebhookIdParameter"
@@ -7186,6 +7278,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     delete:
       summary: Delete Folder
       description: Deletes a folder (requests moved to collection root).
@@ -7942,6 +8036,29 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /runner/jobs/{jobId}/webhook-requests:
+    parameters:
+      - $ref: "#/components/parameters/RunnerJobIDParameter"
+    get:
+      summary: List the webhook requests of a job's run
+      description: |
+        Returns the requests captured by the run webhook of this job's execution,
+        oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
+        with the job token. The request is refused once the execution is terminal.
+      operationId: listRunnerJobWebhookRequests
+      x-ai-danger: "Runner protocol - machine-to-machine, not an agent action."
+      tags: [Runner]
+      security:
+        - JobToken: []
+      responses:
+        "200":
+          description: Captured requests of this run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookRequestListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /flows/{flowId}/executions/{executionId}/stream:
     parameters:
       - name: flowId
