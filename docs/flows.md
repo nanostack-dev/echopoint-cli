@@ -306,6 +306,63 @@ View assertions with `echopoint flows get <flow-id>` to find the index.
 
 ---
 
+## Webhook Waits and Expected Events
+
+A webhook wait reads the requests a run's own webhook received. Launch injects its
+URL as `{{webhook.url}}`: point the system under test at it (for example as a
+product's event endpoint), then check what arrived.
+
+Use one wait at the end of the flow as its final check. It expects a set of named
+events and reports a verdict for each:
+
+```bash
+# The final check runs even when a trigger branch failed
+echopoint flows node add <flow-id> --id events --type webhook_wait \
+  --name "Every invitation event" --timeout 30000 --settle 3000 \
+  --run-when always --after update-invite --after resend-invite
+
+# One expected event per effect, tied to its resource with a template
+echopoint flows node expect add <flow-id> events --name "Role changed" --once \
+  --match '$.type equals organization.invitation.updated' \
+  --match '$.data.invitation_id equals {{invite-member.id}}'
+
+echopoint flows node expect add <flow-id> events --name "Resent with a new token" \
+  --match '$.type equals organization.invitation.updated' \
+  --match '$.data.invitation_id equals {{invite-resend.id}}'
+
+# An event that must not happen
+echopoint flows node expect add <flow-id> events --name "No accept after withdrawal" --never \
+  --match '$.type equals organization.invitation.accepted' \
+  --match '$.data.invitation_id equals {{invite-withdraw.id}}'
+
+# Checks every event must pass
+echopoint flows node assertion add <flow-id> events --extractor header \
+  --header-name webhook-signature --operator startsWith --value "v1,"
+```
+
+How it judges:
+
+- A `--match` is `<target> <operator> [value]`. The target is a JSONPath into the
+  body (`$.type`), a header (`header:webhook-signature`), or the whole `body`.
+  Values resolve `{{node.output}}` templates.
+- An event satisfies an expected event when it passes all its checks. One event
+  counts for one expected event only, so two expected events with the same checks
+  need two events. Events are assigned oldest first, in the order the expected
+  events were added: add the specific ones before the broad ones.
+- `--once`, `--never`, `--min` and `--max` bound the count; the default is at least
+  once. `--settle` keeps listening after every expected event has arrived, so a
+  late extra still fails `--once` or `--never`.
+- The node's own assertions run on every event an expected event claimed.
+- A template with no value (its step failed) fails only its expected event, with
+  `not evaluated`. The node fails with `WEBHOOK_WAIT_EXPECTATIONS_FAILED`, and for
+  an expected event that found nothing, the result names the closest request and
+  each check's expected and actual value.
+
+Remove one with `echopoint flows node expect remove <flow-id> <node-id> "<name>"`.
+
+A wait without expected events keeps its older behaviour: it waits for the first
+request that passes its assertions.
+
 ## Edge Management
 
 Connect nodes to define execution flow.

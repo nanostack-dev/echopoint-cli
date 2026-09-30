@@ -1159,6 +1159,21 @@ func (e WebhookSortField) Valid() bool {
 	}
 }
 
+// Defines values for WebhookWaitFlowNodeType.
+const (
+	WebhookWait WebhookWaitFlowNodeType = "webhook_wait"
+)
+
+// Valid indicates whether the value is a known member of the WebhookWaitFlowNodeType enum.
+func (e WebhookWaitFlowNodeType) Valid() bool {
+	switch e {
+	case WebhookWait:
+		return true
+	default:
+		return false
+	}
+}
+
 // ApiError defines model for ApiError.
 type ApiError struct {
 	// Code A machine-readable error code.
@@ -1850,7 +1865,7 @@ type CreateFlowFolderRequest struct {
 
 // CreateFlowRequest defines model for CreateFlowRequest.
 type CreateFlowRequest struct {
-	// AutoLayout Recompute node positions on create using backend layout. Also clears every edge's pinned borders, so the new arrangement uses floating endpoints.
+	// AutoLayout Discard any node positions sent with the flow and clear every edge's pinned borders. The editor lays the flow out from the size each node renders at the next time it is opened, and saves those positions. Omitting node_positions has the same effect on positions.
 	AutoLayout *bool `json:"auto_layout,omitempty"`
 
 	// Description Optional description of the flow.
@@ -2577,7 +2592,7 @@ type FlowListResponse struct {
 
 // FlowMetadata Frontend-specific metadata including UI layout information and execution defaults.
 type FlowMetadata struct {
-	// NodePositions Map of node IDs to their x,y positions in the editor.
+	// NodePositions Map of node IDs to the top-left x,y of each node in the editor. A node missing from the map is placed by the editor beside the nodes it connects to, from the size it renders at, and never moves a node that has a position. Agents creating or extending a flow can leave positions out.
 	NodePositions *map[string]struct {
 		X *float32 `json:"x,omitempty"`
 		Y *float32 `json:"y,omitempty"`
@@ -3968,6 +3983,11 @@ type RunnerJobPayload struct {
 	// JobId Claimed runner job identifier.
 	JobId openapi_types.UUID `json:"job_id"`
 
+	// JobToken Token of this claimed job, returned once by a self-hosted claim. The runner
+	// sends it as X-Job-Token to read the webhook requests of this run. Absent on
+	// an ephemeral claim, which returns its token beside the job.
+	JobToken *string `json:"job_token,omitempty"`
+
 	// LeaseExpiresAt Time when the current claim lease expires unless renewed.
 	LeaseExpiresAt time.Time `json:"lease_expires_at"`
 
@@ -4242,7 +4262,7 @@ type UpdateFlowFolderRequest struct {
 
 // UpdateFlowRequest defines model for UpdateFlowRequest.
 type UpdateFlowRequest struct {
-	// AutoLayout Recompute node positions on update using backend layout. Also clears every edge's pinned borders, so the new arrangement uses floating endpoints.
+	// AutoLayout Discard the saved node positions and clear every edge's pinned borders. The editor lays the flow out from the size each node renders at the next time it is opened, and saves those positions.
 	AutoLayout *bool `json:"auto_layout,omitempty"`
 
 	// Description Optional description of the flow.
@@ -4464,6 +4484,22 @@ type Webhook struct {
 	Url string `json:"url"`
 }
 
+// WebhookExpectation One event the wait expects, described by the assertions it must pass.
+type WebhookExpectation struct {
+	Assertions []CompositeAssertion `json:"assertions"`
+
+	// Max Most events that may satisfy the group. Absent means no upper bound.
+	Max *int `json:"max,omitempty"`
+
+	// Min Fewest events that must satisfy the group. 0 with `max` 0 means the event must never arrive.
+	Min *int `json:"min,omitempty"`
+
+	// Name What the event is, in the words the run report uses.
+	//
+	// Examples: Invitation accepted
+	Name string `json:"name"`
+}
+
 // WebhookFilter defines model for WebhookFilter.
 type WebhookFilter struct {
 	// Ids Filter by specific webhook IDs.
@@ -4621,6 +4657,64 @@ type WebhookSearchRequest struct {
 
 // WebhookSortField Field to sort webhook endpoint search results by.
 type WebhookSortField string
+
+// WebhookWaitFlowNode defines model for WebhookWaitFlowNode.
+type WebhookWaitFlowNode struct {
+	// Assertions Validation assertions for the node
+	Assertions *[]CompositeAssertion `json:"assertions,omitempty"`
+
+	// Data Polls the webhook requests captured for this execution until a stored request passes the
+	// node's assertions. Launch creates a webhook for this run and injects its ingest URL as `webhook.url`, and `webhook.requests_url` for this node. The webhook is deleted when the run ends. Default timeout is 30 seconds.
+	// Assertion values resolve `{{node.output}}` templates from completed steps before they compare, so a
+	// wait can name the resource an event must be about.
+	Data WebhookWaitNodeData `json:"data"`
+
+	// DisplayName Human-readable name for the node
+	//
+	// Examples: My Node
+	DisplayName string `json:"display_name"`
+
+	// Id Unique identifier for the node
+	//
+	// Examples: node-1
+	Id string `json:"id"`
+
+	// Outputs Named outputs extracted from the response/data
+	Outputs *[]Output `json:"outputs,omitempty"`
+
+	// RunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
+	RunWhen *FlowNodeRunWhen        `json:"run_when,omitempty"`
+	Type    WebhookWaitFlowNodeType `json:"type"`
+}
+
+// WebhookWaitFlowNodeType defines model for WebhookWaitFlowNode.Type.
+type WebhookWaitFlowNodeType string
+
+// WebhookWaitNodeData Polls the webhook requests captured for this execution until a stored request passes the
+// node's assertions. Launch creates a webhook for this run and injects its ingest URL as `webhook.url`, and `webhook.requests_url` for this node. The webhook is deleted when the run ends. Default timeout is 30 seconds.
+// Assertion values resolve `{{node.output}}` templates from completed steps before they compare, so a
+// wait can name the resource an event must be about.
+type WebhookWaitNodeData struct {
+	// Expect The events this wait expects, each a named group of assertions. An event satisfies a group
+	// when it passes every assertion of the group, and one event counts toward one group only.
+	// With `expect`, the node's own `assertions` validate every event a group claimed. Without it,
+	// the node's assertions pick the first request that passes them. The node result reports each
+	// group in `expectations`, and for a group that found nothing, the closest request check by check.
+	Expect *[]WebhookExpectation `json:"expect,omitempty"`
+
+	// SettleMs How long the wait keeps listening once every expectation has its events, so an
+	// expectation with a `max` sees an extra event that arrives late. Only used with `expect`.
+	// Defaults to 0.
+	//
+	//
+	// Examples: 3000
+	SettleMs *int `json:"settle_ms,omitempty"`
+
+	// TimeoutMs Wait budget in milliseconds. Defaults to 30000. Launch refuses a value above the execution `timeout_seconds` or the license `max_cloud_execution_duration_seconds`.
+	//
+	// Examples: 30000
+	TimeoutMs *int `json:"timeout_ms,omitempty"`
+}
 
 // XMLPathExtractorConfig defines model for XMLPathExtractorConfig.
 type XMLPathExtractorConfig struct {
@@ -6186,6 +6280,40 @@ func (t *FlowNode) MergeSseFlowNode(v SseFlowNode) error {
 	return err
 }
 
+// AsWebhookWaitFlowNode returns the union data inside the FlowNode as a WebhookWaitFlowNode
+func (t FlowNode) AsWebhookWaitFlowNode() (WebhookWaitFlowNode, error) {
+	var body WebhookWaitFlowNode
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromWebhookWaitFlowNode overwrites any union data inside the FlowNode as the provided WebhookWaitFlowNode
+func (t *FlowNode) FromWebhookWaitFlowNode(v WebhookWaitFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"webhook_wait"}`))
+	t.union = b
+	return err
+}
+
+// MergeWebhookWaitFlowNode performs a merge with any union data inside the FlowNode, using the provided WebhookWaitFlowNode
+func (t *FlowNode) MergeWebhookWaitFlowNode(v WebhookWaitFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"webhook_wait"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t FlowNode) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"type"`
@@ -6218,6 +6346,8 @@ func (t FlowNode) ValueByDiscriminator() (interface{}, error) {
 		return t.AsSetVariableFlowNode()
 	case "sse":
 		return t.AsSseFlowNode()
+	case "webhook_wait":
+		return t.AsWebhookWaitFlowNode()
 	default:
 		return nil, errors.New("unknown discriminator value: " + discriminator)
 	}
@@ -7719,6 +7849,15 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
 	GetCloudJobPayload(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListRunnerJobWebhookRequests List the webhook requests of a job's run
+	//
+	// Returns the requests captured by the run webhook of this job's execution,
+	// oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
+	// with the job token. The request is refused once the execution is terminal.
+	//
+	// Corresponds with GET /runner/jobs/{jobId}/webhook-requests (the `ListRunnerJobWebhookRequests` operationId).
+	ListRunnerJobWebhookRequests(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListLiveRunners List live self-hosted runners
 	//
@@ -10347,6 +10486,25 @@ func (c *Client) SendRunnerJobEvents(ctx context.Context, jobId RunnerJobIDParam
 // Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
 func (c *Client) GetCloudJobPayload(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetCloudJobPayloadRequest(c.Server, jobId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListRunnerJobWebhookRequests List the webhook requests of a job's run
+//
+// Returns the requests captured by the run webhook of this job's execution,
+// oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
+// with the job token. The request is refused once the execution is terminal.
+//
+// Corresponds with GET /runner/jobs/{jobId}/webhook-requests (the `ListRunnerJobWebhookRequests` operationId).
+func (c *Client) ListRunnerJobWebhookRequests(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListRunnerJobWebhookRequestsRequest(c.Server, jobId)
 	if err != nil {
 		return nil, err
 	}
@@ -16145,6 +16303,40 @@ func NewGetCloudJobPayloadRequest(server string, jobId RunnerJobIDParameter) (*h
 	return req, nil
 }
 
+// NewListRunnerJobWebhookRequestsRequest constructs an http.Request for the ListRunnerJobWebhookRequests method
+func NewListRunnerJobWebhookRequestsRequest(server string, jobId RunnerJobIDParameter) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "jobId", jobId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/runner/jobs/%s/webhook-requests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListLiveRunnersRequest constructs an http.Request for the ListLiveRunners method
 func NewListLiveRunnersRequest(server string, params *ListLiveRunnersParams) (*http.Request, error) {
 	var err error
@@ -18200,6 +18392,17 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
 	GetCloudJobPayloadWithResponse(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*GetCloudJobPayloadResponse, error)
 
+	// ListRunnerJobWebhookRequestsWithResponse List the webhook requests of a job's run
+	//
+	// Returns the requests captured by the run webhook of this job's execution,
+	// oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
+	// with the job token. The request is refused once the execution is terminal.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /runner/jobs/{jobId}/webhook-requests (the `ListRunnerJobWebhookRequests` operationId).
+	ListRunnerJobWebhookRequestsWithResponse(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*ListRunnerJobWebhookRequestsResponse, error)
+
 	// ListLiveRunnersWithResponse List live self-hosted runners
 	//
 	// Returns the currently live self-hosted runners observed for the active organization,
@@ -19162,6 +19365,8 @@ type UpdateFolderResponse struct {
 	JSON401 *Unauthorized
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -19182,6 +19387,11 @@ func (r UpdateFolderResponse) GetJSON401() *Unauthorized {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r UpdateFolderResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateFolderResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -24247,6 +24457,54 @@ func (r GetCloudJobPayloadResponse) ContentType() string {
 	return ""
 }
 
+type ListRunnerJobWebhookRequestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WebhookRequestListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListRunnerJobWebhookRequestsResponse) GetJSON200() *WebhookRequestListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListRunnerJobWebhookRequestsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetBody returns the raw response body bytes
+func (r ListRunnerJobWebhookRequestsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListRunnerJobWebhookRequestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListRunnerJobWebhookRequestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListRunnerJobWebhookRequestsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListLiveRunnersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -24625,6 +24883,10 @@ type CreateWebhookResponse struct {
 	JSON201 *Webhook
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -24635,6 +24897,16 @@ func (r CreateWebhookResponse) GetJSON201() *Webhook {
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
 func (r CreateWebhookResponse) GetJSON400() *BadRequest {
 	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateWebhookResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateWebhookResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -27106,6 +27378,23 @@ func (c *ClientWithResponses) GetCloudJobPayloadWithResponse(ctx context.Context
 	return ParseGetCloudJobPayloadResponse(rsp)
 }
 
+// ListRunnerJobWebhookRequestsWithResponse List the webhook requests of a job's run
+//
+// Returns the requests captured by the run webhook of this job's execution,
+// oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
+// with the job token. The request is refused once the execution is terminal.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /runner/jobs/{jobId}/webhook-requests (the `ListRunnerJobWebhookRequests` operationId).
+func (c *ClientWithResponses) ListRunnerJobWebhookRequestsWithResponse(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*ListRunnerJobWebhookRequestsResponse, error) {
+	rsp, err := c.ListRunnerJobWebhookRequests(ctx, jobId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListRunnerJobWebhookRequestsResponse(rsp)
+}
+
 // ListLiveRunnersWithResponse List live self-hosted runners
 //
 // Returns the currently live self-hosted runners observed for the active organization,
@@ -28019,6 +28308,13 @@ func ParseUpdateFolderResponse(rsp *http.Response) (*UpdateFolderResponse, error
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -31853,6 +32149,39 @@ func ParseGetCloudJobPayloadResponse(rsp *http.Response) (*GetCloudJobPayloadRes
 	return response, nil
 }
 
+// ParseListRunnerJobWebhookRequestsResponse parses an HTTP response from a ListRunnerJobWebhookRequestsWithResponse call
+func ParseListRunnerJobWebhookRequestsResponse(rsp *http.Response) (*ListRunnerJobWebhookRequestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListRunnerJobWebhookRequestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WebhookRequestListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListLiveRunnersResponse parses an HTTP response from a ListLiveRunnersWithResponse call
 func ParseListLiveRunnersResponse(rsp *http.Response) (*ListLiveRunnersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -32146,6 +32475,20 @@ func ParseCreateWebhookResponse(rsp *http.Response) (*CreateWebhookResponse, err
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
