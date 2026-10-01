@@ -185,7 +185,7 @@ Extract data from node responses for use in downstream nodes.
 ```bash
 echopoint flows node output add <flow-id> <node-id> \
   --name "token" \
-  --extractor jsonPath \
+  --extractor json_path \
   --path "$.accessToken"
 ```
 
@@ -193,7 +193,7 @@ echopoint flows node output add <flow-id> <node-id> \
 ```bash
 echopoint flows node output add <flow-id> <node-id> \
   --name "status" \
-  --extractor statusCode
+  --extractor status_code
 ```
 
 **Body Extractor:**
@@ -213,8 +213,8 @@ echopoint flows node output add <flow-id> <node-id> \
 
 **Flags:**
 - `--name` (required): Output name for referencing in other nodes
-- `--extractor` (required): Type - `jsonPath`, `statusCode`, `body`, or `header`
-- `--path`: JSONPath expression (for jsonPath extractor)
+- `--extractor` (required): Type - `json_path`, `status_code`, `body`, or `header`
+- `--path`: JSONPath expression (for json_path extractor)
 - `--header-name`: Header name (for header extractor)
 
 ### Remove Output
@@ -234,7 +234,7 @@ Reference outputs using the template syntax:
 Example:
 ```bash
 # Node 1 extracts token
-echopoint flows node output add <flow-id> <node1-id> --name "token" --extractor jsonPath --path "$.token"
+echopoint flows node output add <flow-id> <node1-id> --name "token" --extractor json_path --path "$.token"
 
 # Node 2 uses the token in headers
 echopoint flows node add <flow-id> --type request --name "Authenticated Request" \
@@ -254,7 +254,7 @@ Add validation assertions to ensure responses meet expectations.
 **Status Code Assertion:**
 ```bash
 echopoint flows node assertion add <flow-id> <node-id> \
-  --extractor statusCode \
+  --extractor status_code \
   --operator equals \
   --value "200"
 ```
@@ -262,7 +262,7 @@ echopoint flows node assertion add <flow-id> <node-id> \
 **JSONPath Assertion:**
 ```bash
 echopoint flows node assertion add <flow-id> <node-id> \
-  --extractor jsonPath \
+  --extractor json_path \
   --path "$.status" \
   --operator equals \
   --value "success"
@@ -277,24 +277,26 @@ echopoint flows node assertion add <flow-id> <node-id> \
 ```
 
 **Flags:**
-- `--extractor` (required): Type - `statusCode`, `jsonPath`, `body`, or `header`
-- `--path`: Path for jsonPath extractor
+- `--extractor` (required): Type - `status_code`, `json_path`, `body`, `header`, or `query_param` (webhook waits only)
+- `--path`: Path for json_path extractor
+- `--header-name`: Header name for the header extractor
+- `--param-name`: Query param name for the query_param extractor
 - `--operator` (required): Comparison operator
 - `--value`: Expected value for comparison
 
 **Available Operators:**
 - `equals` - Exact match
-- `notEquals` - Not equal
+- `not_equals` - Not equal
 - `contains` - Contains substring
-- `notContains` - Does not contain
-- `greaterThan` - Numeric greater than
-- `lessThan` - Numeric less than
-- `greaterThanOrEqual` - Numeric >=
-- `lessThanOrEqual` - Numeric <=
+- `not_contains` - Does not contain
+- `greater_than` - Numeric greater than
+- `less_than` - Numeric less than
+- `greater_than_or_equal` - Numeric >=
+- `less_than_or_equal` - Numeric <=
 - `empty` - Empty value
-- `notEmpty` - Non-empty value
-- `startsWith` - Starts with prefix
-- `endsWith` - Ends with suffix
+- `not_empty` - Non-empty value
+- `starts_with` - Starts with prefix
+- `ends_with` - Ends with suffix
 - `regex` - Matches regex pattern
 
 ### Remove Assertion
@@ -337,13 +339,13 @@ echopoint flows node expect add <flow-id> events --name "No accept after withdra
 
 # Checks every event must pass
 echopoint flows node assertion add <flow-id> events --extractor header \
-  --header-name webhook-signature --operator startsWith --value "v1,"
+  --header-name webhook-signature --operator starts_with --value "v1,"
 ```
 
 How it judges:
 
 - A `--match` is `<target> <operator> [value]`. The target is a JSONPath into the
-  body (`$.type`), a header (`header:webhook-signature`), or the whole `body`.
+  body (`$.type`), a header (`header:webhook-signature`), a query param (`query:q`), or the whole `body`.
   Values resolve `{{node.output}}` templates.
 - An event satisfies an expected event when it passes all its checks. One event
   counts for one expected event only, so two expected events with the same checks
@@ -425,7 +427,7 @@ LOGIN_NODE=$(echopoint flows node add "$FLOW_ID" \
 
 echopoint flows node output add "$FLOW_ID" "$LOGIN_NODE" \
   --name "token" \
-  --extractor jsonPath \
+  --extractor json_path \
   --path "$.accessToken"
 
 # Step 2: Create resource
@@ -440,11 +442,11 @@ CREATE_NODE=$(echopoint flows node add "$FLOW_ID" \
 
 echopoint flows node output add "$FLOW_ID" "$CREATE_NODE" \
   --name "product_id" \
-  --extractor jsonPath \
+  --extractor json_path \
   --path "$.id"
 
 echopoint flows node assertion add "$FLOW_ID" "$CREATE_NODE" \
-  --extractor statusCode \
+  --extractor status_code \
   --operator equals \
   --value "201"
 
@@ -458,7 +460,7 @@ GET_NODE=$(echopoint flows node add "$FLOW_ID" \
   | grep -o 'Node added: [^[:space:]]*' | awk '{print $3}')
 
 echopoint flows node assertion add "$FLOW_ID" "$GET_NODE" \
-  --extractor statusCode \
+  --extractor status_code \
   --operator equals \
   --value "200"
 

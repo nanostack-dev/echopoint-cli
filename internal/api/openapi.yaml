@@ -33,6 +33,10 @@ tags:
     description: Self-hosted runner control-plane operations
   - name: Assistant
     description: Workspace AI assistant chat operations.
+  - name: Members
+    description: Organization members.
+  - name: Invitations
+    description: Invitations of people to the current organization.
 # servers removed to avoid host-header validation warnings under oapi validator
 components:
   securitySchemes:
@@ -70,6 +74,15 @@ components:
         type: string
         maxLength: 255
         pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+    InvitationId:
+      name: invitationId
+      in: path
+      required: true
+      description: The invitation identifier.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
     LimitParameter:
       name: limit
       in: query
@@ -349,7 +362,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CurrentUserOrganization"
-          description: The user's active organization memberships.
+          description: >-
+            Every organization the user belongs to, oldest membership first,
+            then by organization id. The first entry is usually the personal
+            organization, but not always: an invitation accepted before the
+            personal organization exists comes first. Empty until the
+            membership is ready.
       required:
         - id
         - organizations
@@ -1698,7 +1716,7 @@ components:
               $ref: "#/components/schemas/ExtractorType"
             path:
               type: string
-              description: Path for extraction (used by jsonPath, xmlPath, header extractors)
+              description: Path for extraction (used by json_path, xml_path, header extractors)
               examples: ["$.user.id"]
             header_name:
               type: string
@@ -3156,7 +3174,7 @@ components:
           description: Zero-based position of the assertion on the node.
         extractor:
           type: string
-          description: Extractor that produced the actual value (e.g. statusCode, jsonPath).
+          description: Extractor that produced the actual value (e.g. status_code, json_path).
         operator:
           type: string
           description: Operator applied (e.g. equals, contains, regex, between).
@@ -4302,11 +4320,12 @@ components:
       type: string
       enum:
         # Extractors
-        - "jsonPath"
-        - "xmlPath"
-        - "statusCode"
+        - "json_path"
+        - "xml_path"
+        - "status_code"
         - "header"
         - "body"
+        - "query_param"
         # Assertions
         - "string"
         - "number"
@@ -4334,6 +4353,7 @@ components:
                 - $ref: "#/components/schemas/HeaderExtractorConfig"
                 - $ref: "#/components/schemas/StatusCodeExtractorConfig"
                 - $ref: "#/components/schemas/BodyExtractorConfig"
+                - $ref: "#/components/schemas/QueryParamExtractorConfig"
           required:
             - type
             - category
@@ -4349,30 +4369,36 @@ components:
     ExtractorType:
       type: string
       enum:
-        - "jsonPath"
-        - "xmlPath"
-        - "statusCode"
+        - "json_path"
+        - "xml_path"
+        - "status_code"
         - "header"
         - "body"
-      description: Type of extractor to use for data extraction
+        - "query_param"
+      description: |
+        Type of extractor to use for data extraction.
+        `body` gives the parsed body. When the body is a JSON object or array, the text operators
+        (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
+        `query_param` reads a query parameter of the request a `webhook_wait` node received;
+        an HTTP response has none.
 
     # Operator Type Enum
     OperatorType:
       type: string
       enum:
         - "equals"
-        - "notEquals"
+        - "not_equals"
         - "contains"
-        - "notContains"
-        - "startsWith"
-        - "endsWith"
+        - "not_contains"
+        - "starts_with"
+        - "ends_with"
         - "regex"
         - "empty"
-        - "notEmpty"
-        - "greaterThan"
-        - "lessThan"
-        - "greaterThanOrEqual"
-        - "lessThanOrEqual"
+        - "not_empty"
+        - "greater_than"
+        - "less_than"
+        - "greater_than_or_equal"
+        - "less_than_or_equal"
         - "between"
       description: Operator to apply in assertions
 
@@ -4429,6 +4455,19 @@ components:
           examples: [null]
       required:
         - header_name
+
+    QueryParamExtractorConfig:
+      type: object
+      description: |
+        Reads one query parameter of the request a webhook_wait node received.
+        A parameter present with no value (`?q=`) gives an empty string; a missing parameter fails the assertion.
+      properties:
+        param_name:
+          type: string
+          description: Query parameter name (case-sensitive)
+          examples: ["q"]
+      required:
+        - param_name
 
     StatusCodeExtractorConfig:
       type: object
@@ -4656,10 +4695,15 @@ components:
           description: Display name of the member, when set.
         role:
           $ref: "#/components/schemas/OrganizationMemberRole"
+        joined_at:
+          type: string
+          format: date-time
+          description: When the member joined the organization.
       required:
         - user_id
         - email
         - role
+        - joined_at
 
     OrganizationMemberRole:
       type: object
@@ -4689,6 +4733,116 @@ components:
         - items
         - count
         - total
+
+    OrganizationInvitation:
+      type: object
+      description: >-
+        A pending invitation to the current organization. The invitation token is
+        never part of it.
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the invitation.
+        email:
+          type: string
+          format: email
+          description: The invited email address. It never changes.
+        expires_at:
+          type: string
+          format: date-time
+          description: When the invitation link stops working.
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - expires_at
+        - created_at
+
+    OrganizationInvitationListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationInvitation"
+        count:
+          type: integer
+        total:
+          type: integer
+          format: int64
+      required:
+        - items
+        - count
+        - total
+
+    CreateOrganizationInvitationRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: The email address to invite. The role is always admin.
+      required:
+        - email
+
+    InvitationTokenRequest:
+      type: object
+      description: The invitation token from the link in the invitation email.
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: The invitation token. It is never logged and never returned.
+      required:
+        - token
+
+    InvitationLookupStatus:
+      type: string
+      description: >-
+        The state of the invitation. `expired` is derived on read: a pending
+        invitation past its expiry.
+      enum: [ pending, expired, accepted ]
+
+    InvitationLookupResponse:
+      type: object
+      description: >-
+        An invitation as the invited person sees it. The invitation token is
+        never part of it.
+      properties:
+        organization_name:
+          type: string
+          description: The name of the organization the invitation is for.
+        email:
+          type: string
+          format: email
+          description: The invited email address.
+        expires_at:
+          type: string
+          format: date-time
+          description: When the invitation stops being acceptable.
+        status:
+          $ref: "#/components/schemas/InvitationLookupStatus"
+      required:
+        - organization_name
+        - email
+        - expires_at
+        - status
+
+    AcceptedInvitationResponse:
+      type: object
+      description: The organization the caller belongs to after accepting.
+      properties:
+        organization_id:
+          type: string
+        organization_name:
+          type: string
+      required:
+        - organization_id
+        - organization_name
 
     FlowSchedule:
       type: object
@@ -6385,7 +6539,18 @@ paths:
   /me:
     get:
       summary: Get current user and organization context
-      description: Returns the authenticated user profile and resolved organization context.
+      description: >-
+        Returns the authenticated user profile and every organization the user
+        belongs to, each with the role and permissions the user holds in it.
+        Organizations are ordered by membership creation, oldest first, then by
+        organization id, so the order does not change between calls. The first
+        entry is usually the personal organization, but not always: an
+        invitation accepted before the personal organization exists comes
+        first. The client picks one
+        organization and sends its id in the X-Organization-ID header of every
+        other request. The permissions of that request are those of the picked
+        organization, and a request for an organization the user does not belong
+        to is refused with 403.
       operationId: getMe
       x-ai-danger: "User identity route - API-key callers use get_current_api_key instead."
       tags: [ Auth ]
@@ -8255,6 +8420,247 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /invitations:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Pending Organization Invitations
+      description: |
+        Lists the pending invitations of the current organization: invited, not
+        accepted, not expired. An expired or accepted invitation is not listed.
+        The invitation token is never part of a response.
+      operationId: listOrganizationInvitations
+      x-ai-danger: "Membership change - invitations grant admin access; requires a human session."
+      tags: [Invitations]
+      security:
+        - BearerAuth: [invitations:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Pending invitations retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationInvitationListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Invite A Member
+      description: |
+        Invites an email address to the current organization as an admin and
+        emails the invitation link. The role is always admin: the caller cannot
+        choose it. The organization's members plus its pending invitations must
+        stay within the licensed `max_members`, counting the new invitation.
+
+        The invitation link is sent by email only. The invitation token is never
+        part of a response.
+
+        Error codes:
+        - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+          fill the licensed `max_members`. Delete an invitation or raise the plan.
+        - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+          invitation. Resend or delete it.
+        - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+        - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+          invitation exists and no seat is held. Retry.
+      operationId: createOrganizationInvitation
+      x-ai-danger: "Membership change - invitations grant admin access; requires a human session."
+      tags: [Invitations]
+      security:
+        - BearerAuth: [invitations:create]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrganizationInvitationRequest"
+      responses:
+        "201":
+          description: Invitation created and emailed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationInvitation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /invitations/{invitationId}:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+      - $ref: "#/components/parameters/InvitationId"
+    delete:
+      summary: Delete An Invitation
+      description: |
+        Deletes an invitation of the current organization. Its link stops
+        working and its seat is free again. An invitation of another
+        organization answers 404.
+      operationId: deleteOrganizationInvitation
+      x-ai-danger: "Membership change - requires a human session."
+      tags: [Invitations]
+      security:
+        - BearerAuth: [invitations:delete]
+      responses:
+        "204":
+          description: Invitation deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /invitations/{invitationId}/resend:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+      - $ref: "#/components/parameters/InvitationId"
+    post:
+      summary: Resend An Invitation
+      description: |
+        Replaces the link of a pending invitation, extends its expiry, and
+        emails the new link. The old link stops working. An expired or accepted
+        invitation answers 409. If the email cannot be sent the invitation stays
+        and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+      operationId: resendOrganizationInvitation
+      x-ai-danger: "Membership change - requires a human session."
+      tags: [Invitations]
+      security:
+        - BearerAuth: [invitations:create]
+      responses:
+        "200":
+          description: Invitation link replaced and emailed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationInvitation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /invitations/lookup:
+    post:
+      summary: Look Up An Invitation By Its Token
+      description: |
+        Shows the invitation behind a token, as the invited person may see it:
+        the organization name, the invited email address, the expiry and the
+        status. It never returns the token.
+
+        The caller is a signed-in user who is not a member yet, so the request
+        carries no `X-Organization-ID`. An expired or accepted invitation is
+        found too: read `status`.
+
+        Error codes:
+        - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+      operationId: lookupOrganizationInvitation
+      x-ai-danger: "Invitee flow - requires a human session of the invited person."
+      tags: [Invitations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationTokenRequest"
+      responses:
+        "200":
+          description: Invitation found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationLookupResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /invitations/accept:
+    post:
+      summary: Accept An Invitation
+      description: |
+        Accepts the invitation behind a token for the signed-in user, who
+        becomes a member of the organization with the invited role. The request
+        carries no `X-Organization-ID`: the caller is not a member yet.
+
+        The checks run in this order. The Product User of the caller must exist.
+        The invitation must exist. The caller must not be a member of the
+        organization already. The invitation must be pending. The verified
+        primary email address of the caller must equal the invited address,
+        ignoring case. One more member must fit within the licensed
+        `max_members`. Pending invitations are seat reservations and do not
+        count at accept, so only a join that overflows the license is refused.
+
+        A new user gets a personal organization when the Clerk sync completes.
+        Call accept after `GET /me` reports `READY`, or the personal
+        organization is never created.
+
+        Error codes:
+        - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+          yet. Retry shortly.
+        - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+        - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+          resend it.
+        - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+          someone else.
+        - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+          of the caller is not the invited address. The error metadata
+          `invited_email` carries the invited address.
+        - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+          organization already, and the invitation stays as it is. The error
+          metadata `organization_id` and `organization_name` identify the
+          organization so the caller can open it.
+        - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+          `max_members`. An admin frees a seat. The error metadata `limit`
+          carries the licensed number.
+        - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+      operationId: acceptOrganizationInvitation
+      x-ai-danger: "Membership change - requires a human session of the invited person."
+      tags: [Invitations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationTokenRequest"
+      responses:
+        "200":
+          description: Invitation accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptedInvitationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /flow-schedules:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"

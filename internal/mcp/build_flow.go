@@ -35,14 +35,14 @@ const (
 const (
 	keyType             = "type"
 	keyName             = "name"
-	extractorJSONPath   = "jsonPath"
-	extractorStatusCode = "statusCode"
+	extractorJSONPath   = "json_path"
+	extractorStatusCode = "status_code"
 	operatorEquals      = "equals"
 	edgeTypeSuccess     = "success"
 )
 
-// flatAssert is one assertion in the ergonomic form. Either status (statusCode
-// equals) or path (jsonPath + op) is set.
+// flatAssert is one assertion in the ergonomic form. Either status (status_code
+// equals) or path (json_path + op) is set.
 type flatAssert struct {
 	Status int    `json:"status,omitempty"`
 	Path   string `json:"path,omitempty"`
@@ -59,7 +59,7 @@ type flatNode struct {
 	URL     string            `json:"url,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"`
 	Body    string            `json:"body,omitempty"`
-	Outputs map[string]string `json:"outputs,omitempty"` // request: name->jsonPath; module: name->childNode.key
+	Outputs map[string]string `json:"outputs,omitempty"` // request: name->json_path; module: name->childNode.key
 	Asserts []flatAssert      `json:"asserts,omitempty"`
 	FlowID  string            `json:"flow_id,omitempty"` // module only
 	Inputs  map[string]string `json:"inputs,omitempty"`  // module only
@@ -340,7 +340,7 @@ func buildFlowDoc(f flatFlow) map[string]any {
 	return doc
 }
 
-// buildOutputs converts name->jsonPath into the request node output shape, in
+// buildOutputs converts name->json_path into the request node output shape, in
 // stable key order so the document is deterministic.
 func buildOutputs(m map[string]string) []map[string]any {
 	if len(m) == 0 {
@@ -362,7 +362,7 @@ func buildOutputs(m map[string]string) []map[string]any {
 }
 
 // buildAssertion expands the shorthand into the full nested assertion. status
-// becomes a statusCode-equals check; otherwise it is a jsonPath check with the
+// becomes a status_code-equals check; otherwise it is a json_path check with the
 // given operator (default equals).
 func buildAssertion(a flatAssert) map[string]any {
 	if a.Status != 0 {

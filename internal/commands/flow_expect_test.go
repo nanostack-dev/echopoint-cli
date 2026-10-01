@@ -11,18 +11,29 @@ func TestParseMatch_ReadsAJSONPathCheckWithATemplateValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.ExtractorType != "jsonPath" || got.ExtractorData["path"] != "$.data.invitation_id" ||
+	if got.ExtractorType != "json_path" || got.ExtractorData["path"] != "$.data.invitation_id" ||
 		got.OperatorType != "equals" || got.OperatorData["value"] != "{{invite-member.id}}" {
 		t.Errorf("got %+v", got)
 	}
 }
 
 func TestParseMatch_ReadsAHeaderCheckUnderTheContractKey(t *testing.T) {
-	got, err := parseMatch("header:webhook-signature startsWith v1,")
+	got, err := parseMatch("header:webhook-signature starts_with v1,")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.ExtractorType != "header" || got.ExtractorData["header_name"] != "webhook-signature" {
+		t.Errorf("got %+v", got)
+	}
+}
+
+func TestParseMatch_ReadsAQueryParamCheckUnderTheContractKey(t *testing.T) {
+	got, err := parseMatch("query:q equals x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ExtractorType != "query_param" || got.ExtractorData["param_name"] != "q" ||
+		got.OperatorData["value"] != "x" {
 		t.Errorf("got %+v", got)
 	}
 }
@@ -38,12 +49,12 @@ func TestParseMatch_KeepsSpacesInTheValue(t *testing.T) {
 }
 
 func TestParseMatch_ReadsAValuelessOperator(t *testing.T) {
-	got, err := parseMatch("$.data.product_user_id notEmpty")
+	got, err := parseMatch("$.data.product_user_id not_empty")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, has := got.OperatorData["value"]; has {
-		t.Errorf("notEmpty must carry no value: %+v", got.OperatorData)
+		t.Errorf("not_empty must carry no value: %+v", got.OperatorData)
 	}
 }
 
@@ -54,7 +65,7 @@ func TestParseMatch_RefusesMalformedChecks(t *testing.T) {
 		"type equals order.created",
 		"header: equals x",
 		"$.type equals",
-		"$.id notEmpty oops",
+		"$.id not_empty oops",
 	} {
 		if _, err := parseMatch(match); err == nil {
 			t.Errorf("%q: expected an error", match)

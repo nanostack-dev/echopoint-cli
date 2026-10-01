@@ -22,7 +22,7 @@ const webhookWaitFlowJSON = `{
     "type": "request",
     "data": {"method": "POST", "url": "{{webhook.url}}", "headers": {"Content-Type": "application/json"},
              "body": "{\"event\":\"order.created\"}"},
-    "assertions": [{"extractor_type": "statusCode", "extractor_data": {}, "operator_type": "equals",
+    "assertions": [{"extractor_type": "status_code", "extractor_data": {}, "operator_type": "equals",
                     "operator_data": {"value": "200"}}]
   }, {
     "id": "wait-event",
@@ -30,7 +30,7 @@ const webhookWaitFlowJSON = `{
     "type": "webhook_wait",
     "data": {"timeout_ms": 2000},
     "assertions": [{
-      "extractor_type": "jsonPath",
+      "extractor_type": "json_path",
       "extractor_data": {"path": "$.event"},
       "operator_type": "equals",
       "operator_data": {"value": "order.created"}
