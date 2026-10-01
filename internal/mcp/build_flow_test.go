@@ -25,7 +25,7 @@ func TestValidateFlatFlow(t *testing.T) {
 						Outputs: map[string]string{"id": "$.id"},
 						Asserts: []flatAssert{{Status: 200}}},
 					{ID: "get", Method: "GET", URL: "{{base}}/x/{{call.id}}",
-						Asserts: []flatAssert{{Path: "$.id", Op: "notEmpty"}}},
+						Asserts: []flatAssert{{Path: "$.id", Op: "not_empty"}}},
 				},
 				Edges: []string{"setup>call", "call>get"},
 			},
@@ -186,17 +186,17 @@ func TestBuildFlowDoc(t *testing.T) {
 	if len(call.Outputs) != 1 || call.Outputs[0]["name"] != "id" {
 		t.Fatalf("call outputs wrong: %+v", call.Outputs)
 	}
-	// First assert is the status shorthand -> statusCode equals 201.
+	// First assert is the status shorthand -> status_code equals 201.
 	a0 := call.Assertions[0]
-	if a0["extractor_type"] != "statusCode" || a0["operator_type"] != "equals" {
+	if a0["extractor_type"] != "status_code" || a0["operator_type"] != "equals" {
 		t.Fatalf("status assert wrong: %+v", a0)
 	}
 	if od, _ := a0["operator_data"].(map[string]any); od["value"] != "201" {
 		t.Fatalf("status assert value wrong: %+v", a0)
 	}
-	// Second assert is a jsonPath equals.
+	// Second assert is a json_path equals.
 	a1 := call.Assertions[1]
-	if a1["extractor_type"] != "jsonPath" || a1["operator_type"] != "equals" {
+	if a1["extractor_type"] != "json_path" || a1["operator_type"] != "equals" {
 		t.Fatalf("path assert wrong: %+v", a1)
 	}
 

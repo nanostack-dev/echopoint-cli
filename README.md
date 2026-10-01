@@ -281,7 +281,7 @@ echopoint flows node add <parent-flow-id> \
 # Add JSONPath output
 echopoint flows node output add <flow-id> <node-id> \
   --name "token" \
-  --extractor jsonPath \
+  --extractor json_path \
   --path "$.accessToken"
 
 # Add body output
@@ -298,13 +298,13 @@ echopoint flows node output remove <flow-id> <node-id> <output-name>
 ```bash
 # Add status code assertion
 echopoint flows node assertion add <flow-id> <node-id> \
-  --extractor statusCode \
+  --extractor status_code \
   --operator equals \
   --value "200"
 
 # Add JSONPath assertion
 echopoint flows node assertion add <flow-id> <node-id> \
-  --extractor jsonPath \
+  --extractor json_path \
   --path "$.status" \
   --operator equals \
   --value "success"

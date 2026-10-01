@@ -466,10 +466,10 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 
 Examples:
   # Add a JSONPath extractor
-  echopoint flows node output add <flow-id> <node-id> --name "token" --extractor jsonPath --path "$.token"
+  echopoint flows node output add <flow-id> <node-id> --name "token" --extractor json_path --path "$.token"
 
   # Add a status code extractor
-  echopoint flows node output add <flow-id> <node-id> --name "status" --extractor statusCode
+  echopoint flows node output add <flow-id> <node-id> --name "status" --extractor status_code
 
   # Add a body extractor
   echopoint flows node output add <flow-id> <node-id> --name "response" --extractor body
@@ -604,8 +604,8 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "Output name")
-	cmd.Flags().StringVar(&extractorType, "extractor", "", "Extractor type (jsonPath, statusCode, body, header)")
-	cmd.Flags().StringVar(&path, "path", "", "Path for jsonPath extractor")
+	cmd.Flags().StringVar(&extractorType, "extractor", "", "Extractor type (json_path, status_code, body, header)")
+	cmd.Flags().StringVar(&path, "path", "", "Path for json_path extractor")
 	cmd.Flags().StringVar(&headerName, "header-name", "", "Header name for header extractor")
 
 	_ = cmd.MarkFlagRequired("name")
@@ -726,7 +726,7 @@ func newFlowNodeAssertionCmd(state *AppState) *cobra.Command {
 
 // newFlowNodeAssertionAddCmd adds an assertion to a node
 func newFlowNodeAssertionAddCmd(state *AppState) *cobra.Command {
-	var extractorType, path, headerName, operatorType, value string
+	var extractorType, path, headerName, paramName, operatorType, value string
 
 	cmd := &cobra.Command{
 		Use:   addToNodeUse,
@@ -736,20 +736,20 @@ func newFlowNodeAssertionAddCmd(state *AppState) *cobra.Command {
 
 Examples:
   # Assert status code equals 200
-  echopoint flows node assertion add <flow-id> <node-id> --extractor statusCode --operator equals --value "200"
+  echopoint flows node assertion add <flow-id> <node-id> --extractor status_code --operator equals --value "200"
 
   # Assert JSONPath value equals expected
-  echopoint flows node assertion add <flow-id> <node-id> --extractor jsonPath --path "$.name" --operator equals --value "test"
+  echopoint flows node assertion add <flow-id> <node-id> --extractor json_path --path "$.name" --operator equals --value "test"
 
   # Assert response contains string
   echopoint flows node assertion add <flow-id> <node-id> --extractor body --operator contains --value "success"
 
   # On a webhook wait with expected events, an assertion is a check on every event
   echopoint flows node assertion add <flow-id> events --extractor header --header-name webhook-signature \
-    --operator startsWith --value "v1,"
+    --operator starts_with --value "v1,"
 
-Available operators: equals, notEquals, contains, notContains, greaterThan, lessThan,
-greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, regex`,
+Available operators: equals, not_equals, contains, not_contains, greater_than, less_than,
+greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_with, regex`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -798,6 +798,12 @@ greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, rege
 			}
 			if extractorType == string(api.ExtractorTypeHeader) && headerName == "" {
 				return fmt.Errorf("--header-name is required for the header extractor")
+			}
+			if paramName != "" {
+				extractorData["param_name"] = paramName
+			}
+			if extractorType == string(api.ExtractorTypeQueryParam) && paramName == "" {
+				return fmt.Errorf("--param-name is required for the query_param extractor")
 			}
 
 			// Build operator data
@@ -878,13 +884,15 @@ greaterThanOrEqual, lessThanOrEqual, empty, notEmpty, startsWith, endsWith, rege
 	}
 
 	cmd.Flags().StringVar(
-		&extractorType, "extractor", "", "Extractor type (statusCode, jsonPath, body, header)")
+		&extractorType, "extractor", "", "Extractor type (status_code, json_path, body, header, query_param)")
 	cmd.Flags().StringVar(
-		&path, "path", "", "Path for jsonPath extractor")
+		&path, "path", "", "Path for json_path extractor")
 	cmd.Flags().StringVar(
 		&headerName, "header-name", "", "Header name for the header extractor")
 	cmd.Flags().StringVar(
-		&operatorType, "operator", "", "Operator type (equals, notEquals, contains, etc.)")
+		&paramName, "param-name", "", "Query param name for the query_param extractor (webhook waits only)")
+	cmd.Flags().StringVar(
+		&operatorType, "operator", "", "Operator type (equals, not_equals, contains, etc.)")
 	cmd.Flags().StringVar(
 		&value, "value", "", "Expected value for comparison")
 

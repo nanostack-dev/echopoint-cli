@@ -296,9 +296,10 @@ func (e ExecutionSummaryWindow) Valid() bool {
 const (
 	ExtractorTypeBody       ExtractorType = "body"
 	ExtractorTypeHeader     ExtractorType = "header"
-	ExtractorTypeJsonPath   ExtractorType = "jsonPath"
-	ExtractorTypeStatusCode ExtractorType = "statusCode"
-	ExtractorTypeXmlPath    ExtractorType = "xmlPath"
+	ExtractorTypeJsonPath   ExtractorType = "json_path"
+	ExtractorTypeQueryParam ExtractorType = "query_param"
+	ExtractorTypeStatusCode ExtractorType = "status_code"
+	ExtractorTypeXmlPath    ExtractorType = "xml_path"
 )
 
 // Valid indicates whether the value is a known member of the ExtractorType enum.
@@ -309,6 +310,8 @@ func (e ExtractorType) Valid() bool {
 	case ExtractorTypeHeader:
 		return true
 	case ExtractorTypeJsonPath:
+		return true
+	case ExtractorTypeQueryParam:
 		return true
 	case ExtractorTypeStatusCode:
 		return true
@@ -403,6 +406,27 @@ func (e HttpMethod) Valid() bool {
 	case POST:
 		return true
 	case PUT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InvitationLookupStatus.
+const (
+	InvitationLookupStatusAccepted InvitationLookupStatus = "accepted"
+	InvitationLookupStatusExpired  InvitationLookupStatus = "expired"
+	InvitationLookupStatusPending  InvitationLookupStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the InvitationLookupStatus enum.
+func (e InvitationLookupStatus) Valid() bool {
+	switch e {
+	case InvitationLookupStatusAccepted:
+		return true
+	case InvitationLookupStatusExpired:
+		return true
+	case InvitationLookupStatusPending:
 		return true
 	default:
 		return false
@@ -678,11 +702,12 @@ const (
 	OperationTypeBody       OperationType = "body"
 	OperationTypeBoolean    OperationType = "boolean"
 	OperationTypeHeader     OperationType = "header"
-	OperationTypeJsonPath   OperationType = "jsonPath"
+	OperationTypeJsonPath   OperationType = "json_path"
 	OperationTypeNumber     OperationType = "number"
-	OperationTypeStatusCode OperationType = "statusCode"
+	OperationTypeQueryParam OperationType = "query_param"
+	OperationTypeStatusCode OperationType = "status_code"
 	OperationTypeString     OperationType = "string"
-	OperationTypeXmlPath    OperationType = "xmlPath"
+	OperationTypeXmlPath    OperationType = "xml_path"
 )
 
 // Valid indicates whether the value is a known member of the OperationType enum.
@@ -697,6 +722,8 @@ func (e OperationType) Valid() bool {
 	case OperationTypeJsonPath:
 		return true
 	case OperationTypeNumber:
+		return true
+	case OperationTypeQueryParam:
 		return true
 	case OperationTypeStatusCode:
 		return true
@@ -714,17 +741,17 @@ const (
 	OperatorTypeBetween            OperatorType = "between"
 	OperatorTypeContains           OperatorType = "contains"
 	OperatorTypeEmpty              OperatorType = "empty"
-	OperatorTypeEndsWith           OperatorType = "endsWith"
+	OperatorTypeEndsWith           OperatorType = "ends_with"
 	OperatorTypeEquals             OperatorType = "equals"
-	OperatorTypeGreaterThan        OperatorType = "greaterThan"
-	OperatorTypeGreaterThanOrEqual OperatorType = "greaterThanOrEqual"
-	OperatorTypeLessThan           OperatorType = "lessThan"
-	OperatorTypeLessThanOrEqual    OperatorType = "lessThanOrEqual"
-	OperatorTypeNotContains        OperatorType = "notContains"
-	OperatorTypeNotEmpty           OperatorType = "notEmpty"
-	OperatorTypeNotEquals          OperatorType = "notEquals"
+	OperatorTypeGreaterThan        OperatorType = "greater_than"
+	OperatorTypeGreaterThanOrEqual OperatorType = "greater_than_or_equal"
+	OperatorTypeLessThan           OperatorType = "less_than"
+	OperatorTypeLessThanOrEqual    OperatorType = "less_than_or_equal"
+	OperatorTypeNotContains        OperatorType = "not_contains"
+	OperatorTypeNotEmpty           OperatorType = "not_empty"
+	OperatorTypeNotEquals          OperatorType = "not_equals"
 	OperatorTypeRegex              OperatorType = "regex"
-	OperatorTypeStartsWith         OperatorType = "startsWith"
+	OperatorTypeStartsWith         OperatorType = "starts_with"
 )
 
 // Valid indicates whether the value is a known member of the OperatorType enum.
@@ -1172,6 +1199,12 @@ func (e WebhookWaitFlowNodeType) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AcceptedInvitationResponse The organization the caller belongs to after accepting.
+type AcceptedInvitationResponse struct {
+	OrganizationId   string `json:"organization_id"`
+	OrganizationName string `json:"organization_name"`
 }
 
 // ApiError defines model for ApiError.
@@ -1816,7 +1849,11 @@ type CompositeAssertion struct {
 	// Examples: {"path":"$.user.name"}
 	ExtractorData map[string]interface{} `json:"extractor_data"`
 
-	// ExtractorType Type of extractor to use for data extraction
+	// ExtractorType Type of extractor to use for data extraction.
+	// `body` gives the parsed body. When the body is a JSON object or array, the text operators
+	// (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
+	// `query_param` reads a query parameter of the request a `webhook_wait` node received;
+	// an HTTP response has none.
 	ExtractorType ExtractorType `json:"extractor_type"`
 
 	// OperatorData Configuration for the operator
@@ -1943,6 +1980,12 @@ type CreateFolderRequest struct {
 	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
+// CreateOrganizationInvitationRequest defines model for CreateOrganizationInvitationRequest.
+type CreateOrganizationInvitationRequest struct {
+	// Email The email address to invite. The role is always admin.
+	Email openapi_types.Email `json:"email"`
+}
+
 // CreateRequestRequest defines model for CreateRequestRequest.
 type CreateRequestRequest struct {
 	Auth *CollectionRequestAuth `json:"auth,omitempty"`
@@ -2004,7 +2047,7 @@ type CurrentUser struct {
 	// Name User display name from Nanostack product user profile when available.
 	Name *string `json:"name,omitempty"`
 
-	// Organizations The user's active organization memberships.
+	// Organizations Every organization the user belongs to, oldest membership first, then by organization id. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. Empty until the membership is ready.
 	Organizations []CurrentUserOrganization `json:"organizations"`
 
 	// UserId Nanostack user identifier.
@@ -2297,7 +2340,11 @@ type ExportedFlow struct {
 	Version string `json:"version"`
 }
 
-// ExtractorType Type of extractor to use for data extraction
+// ExtractorType Type of extractor to use for data extraction.
+// `body` gives the parsed body. When the body is a JSON object or array, the text operators
+// (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
+// `query_param` reads a query parameter of the request a `webhook_wait` node received;
+// an HTTP response has none.
 type ExtractorType string
 
 // Flow defines model for Flow.
@@ -2885,6 +2932,30 @@ type InlineFlowDefinition struct {
 	Nodes []FlowNode  `json:"nodes"`
 }
 
+// InvitationLookupResponse An invitation as the invited person sees it. The invitation token is never part of it.
+type InvitationLookupResponse struct {
+	// Email The invited email address.
+	Email openapi_types.Email `json:"email"`
+
+	// ExpiresAt When the invitation stops being acceptable.
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// OrganizationName The name of the organization the invitation is for.
+	OrganizationName string `json:"organization_name"`
+
+	// Status The state of the invitation. `expired` is derived on read: a pending invitation past its expiry.
+	Status InvitationLookupStatus `json:"status"`
+}
+
+// InvitationLookupStatus The state of the invitation. `expired` is derived on read: a pending invitation past its expiry.
+type InvitationLookupStatus string
+
+// InvitationTokenRequest The invitation token from the link in the invitation email.
+type InvitationTokenRequest struct {
+	// Token The invitation token. It is never logged and never returned.
+	Token string `json:"token"`
+}
+
 // JSONPathExtractorConfig defines model for JSONPathExtractorConfig.
 type JSONPathExtractorConfig struct {
 	// DefaultValue Default value if path not found
@@ -3460,10 +3531,34 @@ type OperationType string
 // OperatorType Operator to apply in assertions
 type OperatorType string
 
+// OrganizationInvitation A pending invitation to the current organization. The invitation token is never part of it.
+type OrganizationInvitation struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// Email The invited email address. It never changes.
+	Email openapi_types.Email `json:"email"`
+
+	// ExpiresAt When the invitation link stops working.
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Id Unique identifier of the invitation.
+	Id string `json:"id"`
+}
+
+// OrganizationInvitationListResponse defines model for OrganizationInvitationListResponse.
+type OrganizationInvitationListResponse struct {
+	Count int                      `json:"count"`
+	Items []OrganizationInvitation `json:"items"`
+	Total int64                    `json:"total"`
+}
+
 // OrganizationMember A member of the current organization, as seen by echopoint (proxied from anchor).
 type OrganizationMember struct {
 	// Email Email address of the member; usable as an alert recipient.
 	Email openapi_types.Email `json:"email"`
+
+	// JoinedAt When the member joined the organization.
+	JoinedAt time.Time `json:"joined_at"`
 
 	// Name Display name of the member, when set.
 	Name *string `json:"name,omitempty"`
@@ -3497,12 +3592,16 @@ type Output struct {
 		// Examples: x-custom-id
 		HeaderName *string `json:"header_name,omitempty"`
 
-		// Path Path for extraction (used by jsonPath, xmlPath, header extractors)
+		// Path Path for extraction (used by json_path, xml_path, header extractors)
 		//
 		// Examples: $.user.id
 		Path *string `json:"path,omitempty"`
 
-		// Type Type of extractor to use for data extraction
+		// Type Type of extractor to use for data extraction.
+		// `body` gives the parsed body. When the body is a JSON object or array, the text operators
+		// (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
+		// `query_param` reads a query parameter of the request a `webhook_wait` node received;
+		// an HTTP response has none.
 		Type ExtractorType `json:"type"`
 	} `json:"extractor"`
 
@@ -3604,6 +3703,15 @@ type PollNodeData struct {
 	//
 	// Examples: 60000
 	TimeoutMs *int `json:"timeout_ms,omitempty"`
+}
+
+// QueryParamExtractorConfig Reads one query parameter of the request a webhook_wait node received.
+// A parameter present with no value (`?q=`) gives an empty string; a missing parameter fails the assertion.
+type QueryParamExtractorConfig struct {
+	// ParamName Query parameter name (case-sensitive)
+	//
+	// Examples: q
+	ParamName string `json:"param_name"`
 }
 
 // ReferencedFlow defines model for ReferencedFlow.
@@ -4738,6 +4846,9 @@ type ApiKeyPermissionTypeParameter = ApiKeyPermissionType
 // EnvironmentPath defines model for EnvironmentPath.
 type EnvironmentPath = string
 
+// InvitationId defines model for InvitationId.
+type InvitationId = string
+
 // LimitParameter defines model for LimitParameter.
 type LimitParameter = int32
 
@@ -5317,6 +5428,36 @@ type RestoreFlowVersionParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListOrganizationInvitationsParams defines parameters for ListOrganizationInvitations.
+type ListOrganizationInvitationsParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip.
+	Offset OffsetParameter `form:"offset" json:"offset"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// CreateOrganizationInvitationParams defines parameters for CreateOrganizationInvitation.
+type CreateOrganizationInvitationParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteOrganizationInvitationParams defines parameters for DeleteOrganizationInvitation.
+type DeleteOrganizationInvitationParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ResendOrganizationInvitationParams defines parameters for ResendOrganizationInvitation.
+type ResendOrganizationInvitationParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListOrganizationMembersParams defines parameters for ListOrganizationMembers.
 type ListOrganizationMembersParams struct {
 	// Limit Maximum number of items per page.
@@ -5582,6 +5723,15 @@ type LaunchFlowJSONRequestBody = LaunchFlowRequest
 
 // SetFlowVariableJSONRequestBody defines body for SetFlowVariable for application/json ContentType.
 type SetFlowVariableJSONRequestBody = SetVariableRequest
+
+// CreateOrganizationInvitationJSONRequestBody defines body for CreateOrganizationInvitation for application/json ContentType.
+type CreateOrganizationInvitationJSONRequestBody = CreateOrganizationInvitationRequest
+
+// AcceptOrganizationInvitationJSONRequestBody defines body for AcceptOrganizationInvitation for application/json ContentType.
+type AcceptOrganizationInvitationJSONRequestBody = InvitationTokenRequest
+
+// LookupOrganizationInvitationJSONRequestBody defines body for LookupOrganizationInvitation for application/json ContentType.
+type LookupOrganizationInvitationJSONRequestBody = InvitationTokenRequest
 
 // SearchOpenAPISyncConfigsJSONRequestBody defines body for SearchOpenAPISyncConfigs for application/json ContentType.
 type SearchOpenAPISyncConfigsJSONRequestBody = OpenAPISyncConfigSearchRequest
@@ -6483,6 +6633,32 @@ func (t *OperationDefinition_Config) FromBodyExtractorConfig(v BodyExtractorConf
 
 // MergeBodyExtractorConfig performs a merge with any union data inside the OperationDefinition_Config, using the provided BodyExtractorConfig
 func (t *OperationDefinition_Config) MergeBodyExtractorConfig(v BodyExtractorConfig) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsQueryParamExtractorConfig returns the union data inside the OperationDefinition_Config as a QueryParamExtractorConfig
+func (t OperationDefinition_Config) AsQueryParamExtractorConfig() (QueryParamExtractorConfig, error) {
+	var body QueryParamExtractorConfig
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromQueryParamExtractorConfig overwrites any union data inside the OperationDefinition_Config as the provided QueryParamExtractorConfig
+func (t *OperationDefinition_Config) FromQueryParamExtractorConfig(v QueryParamExtractorConfig) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeQueryParamExtractorConfig performs a merge with any union data inside the OperationDefinition_Config, using the provided QueryParamExtractorConfig
+func (t *OperationDefinition_Config) MergeQueryParamExtractorConfig(v QueryParamExtractorConfig) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -7528,9 +7704,207 @@ type ClientInterface interface {
 	// Corresponds with POST /init (the `InitUser` operationId).
 	InitUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListOrganizationInvitations List Pending Organization Invitations
+	//
+	// Lists the pending invitations of the current organization: invited, not
+	// accepted, not expired. An expired or accepted invitation is not listed.
+	// The invitation token is never part of a response.
+	//
+	// Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+	ListOrganizationInvitations(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateOrganizationInvitationWithBody Invite A Member
+	//
+	// Invites an email address to the current organization as an admin and
+	// emails the invitation link. The role is always admin: the caller cannot
+	// choose it. The organization's members plus its pending invitations must
+	// stay within the licensed `max_members`, counting the new invitation.
+	//
+	// The invitation link is sent by email only. The invitation token is never
+	// part of a response.
+	//
+	// Error codes:
+	// - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+	//   fill the licensed `max_members`. Delete an invitation or raise the plan.
+	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+	//   invitation. Resend or delete it.
+	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+	//   invitation exists and no seat is held. Retry.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+	CreateOrganizationInvitationWithBody(ctx context.Context, params *CreateOrganizationInvitationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateOrganizationInvitation Invite A Member
+	//
+	// Invites an email address to the current organization as an admin and
+	// emails the invitation link. The role is always admin: the caller cannot
+	// choose it. The organization's members plus its pending invitations must
+	// stay within the licensed `max_members`, counting the new invitation.
+	//
+	// The invitation link is sent by email only. The invitation token is never
+	// part of a response.
+	//
+	// Error codes:
+	// - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+	//   fill the licensed `max_members`. Delete an invitation or raise the plan.
+	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+	//   invitation. Resend or delete it.
+	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+	//   invitation exists and no seat is held. Retry.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+	CreateOrganizationInvitation(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AcceptOrganizationInvitationWithBody Accept An Invitation
+	//
+	// Accepts the invitation behind a token for the signed-in user, who
+	// becomes a member of the organization with the invited role. The request
+	// carries no `X-Organization-ID`: the caller is not a member yet.
+	//
+	// The checks run in this order. The Product User of the caller must exist.
+	// The invitation must exist. The caller must not be a member of the
+	// organization already. The invitation must be pending. The verified
+	// primary email address of the caller must equal the invited address,
+	// ignoring case. One more member must fit within the licensed
+	// `max_members`. Pending invitations are seat reservations and do not
+	// count at accept, so only a join that overflows the license is refused.
+	//
+	// A new user gets a personal organization when the Clerk sync completes.
+	// Call accept after `GET /me` reports `READY`, or the personal
+	// organization is never created.
+	//
+	// Error codes:
+	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+	//   yet. Retry shortly.
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+	//   resend it.
+	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+	//   someone else.
+	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+	//   of the caller is not the invited address. The error metadata
+	//   `invited_email` carries the invited address.
+	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+	//   organization already, and the invitation stays as it is. The error
+	//   metadata `organization_id` and `organization_name` identify the
+	//   organization so the caller can open it.
+	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+	//   `max_members`. An admin frees a seat. The error metadata `limit`
+	//   carries the licensed number.
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+	AcceptOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AcceptOrganizationInvitation Accept An Invitation
+	//
+	// Accepts the invitation behind a token for the signed-in user, who
+	// becomes a member of the organization with the invited role. The request
+	// carries no `X-Organization-ID`: the caller is not a member yet.
+	//
+	// The checks run in this order. The Product User of the caller must exist.
+	// The invitation must exist. The caller must not be a member of the
+	// organization already. The invitation must be pending. The verified
+	// primary email address of the caller must equal the invited address,
+	// ignoring case. One more member must fit within the licensed
+	// `max_members`. Pending invitations are seat reservations and do not
+	// count at accept, so only a join that overflows the license is refused.
+	//
+	// A new user gets a personal organization when the Clerk sync completes.
+	// Call accept after `GET /me` reports `READY`, or the personal
+	// organization is never created.
+	//
+	// Error codes:
+	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+	//   yet. Retry shortly.
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+	//   resend it.
+	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+	//   someone else.
+	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+	//   of the caller is not the invited address. The error metadata
+	//   `invited_email` carries the invited address.
+	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+	//   organization already, and the invitation stays as it is. The error
+	//   metadata `organization_id` and `organization_name` identify the
+	//   organization so the caller can open it.
+	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+	//   `max_members`. An admin frees a seat. The error metadata `limit`
+	//   carries the licensed number.
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+	AcceptOrganizationInvitation(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LookupOrganizationInvitationWithBody Look Up An Invitation By Its Token
+	//
+	// Shows the invitation behind a token, as the invited person may see it:
+	// the organization name, the invited email address, the expiry and the
+	// status. It never returns the token.
+	//
+	// The caller is a signed-in user who is not a member yet, so the request
+	// carries no `X-Organization-ID`. An expired or accepted invitation is
+	// found too: read `status`.
+	//
+	// Error codes:
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+	LookupOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LookupOrganizationInvitation Look Up An Invitation By Its Token
+	//
+	// Shows the invitation behind a token, as the invited person may see it:
+	// the organization name, the invited email address, the expiry and the
+	// status. It never returns the token.
+	//
+	// The caller is a signed-in user who is not a member yet, so the request
+	// carries no `X-Organization-ID`. An expired or accepted invitation is
+	// found too: read `status`.
+	//
+	// Error codes:
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+	LookupOrganizationInvitation(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteOrganizationInvitation Delete An Invitation
+	//
+	// Deletes an invitation of the current organization. Its link stops
+	// working and its seat is free again. An invitation of another
+	// organization answers 404.
+	//
+	// Corresponds with DELETE /invitations/{invitationId} (the `DeleteOrganizationInvitation` operationId).
+	DeleteOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *DeleteOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResendOrganizationInvitation Resend An Invitation
+	//
+	// Replaces the link of a pending invitation, extends its expiry, and
+	// emails the new link. The old link stops working. An expired or accepted
+	// invitation answers 409. If the email cannot be sent the invitation stays
+	// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+	//
+	// Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
+	ResendOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetMe Get current user and organization context
 	//
-	// Returns the authenticated user profile and resolved organization context.
+	// Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
 	//
 	// Corresponds with GET /me (the `GetMe` operationId).
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9834,9 +10208,297 @@ func (c *Client) InitUser(ctx context.Context, reqEditors ...RequestEditorFn) (*
 	return c.Client.Do(req)
 }
 
+// ListOrganizationInvitations List Pending Organization Invitations
+//
+// Lists the pending invitations of the current organization: invited, not
+// accepted, not expired. An expired or accepted invitation is not listed.
+// The invitation token is never part of a response.
+//
+// Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+func (c *Client) ListOrganizationInvitations(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOrganizationInvitationsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateOrganizationInvitationWithBody Invite A Member
+//
+// Invites an email address to the current organization as an admin and
+// emails the invitation link. The role is always admin: the caller cannot
+// choose it. The organization's members plus its pending invitations must
+// stay within the licensed `max_members`, counting the new invitation.
+//
+// The invitation link is sent by email only. The invitation token is never
+// part of a response.
+//
+// Error codes:
+//   - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+//     fill the licensed `max_members`. Delete an invitation or raise the plan.
+//   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+//     invitation. Resend or delete it.
+//   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+//     invitation exists and no seat is held. Retry.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+func (c *Client) CreateOrganizationInvitationWithBody(ctx context.Context, params *CreateOrganizationInvitationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateOrganizationInvitationRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateOrganizationInvitation Invite A Member
+//
+// Invites an email address to the current organization as an admin and
+// emails the invitation link. The role is always admin: the caller cannot
+// choose it. The organization's members plus its pending invitations must
+// stay within the licensed `max_members`, counting the new invitation.
+//
+// The invitation link is sent by email only. The invitation token is never
+// part of a response.
+//
+// Error codes:
+//   - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+//     fill the licensed `max_members`. Delete an invitation or raise the plan.
+//   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+//     invitation. Resend or delete it.
+//   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+//     invitation exists and no seat is held. Retry.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+func (c *Client) CreateOrganizationInvitation(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateOrganizationInvitationRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AcceptOrganizationInvitationWithBody Accept An Invitation
+//
+// Accepts the invitation behind a token for the signed-in user, who
+// becomes a member of the organization with the invited role. The request
+// carries no `X-Organization-ID`: the caller is not a member yet.
+//
+// The checks run in this order. The Product User of the caller must exist.
+// The invitation must exist. The caller must not be a member of the
+// organization already. The invitation must be pending. The verified
+// primary email address of the caller must equal the invited address,
+// ignoring case. One more member must fit within the licensed
+// `max_members`. Pending invitations are seat reservations and do not
+// count at accept, so only a join that overflows the license is refused.
+//
+// A new user gets a personal organization when the Clerk sync completes.
+// Call accept after `GET /me` reports `READY`, or the personal
+// organization is never created.
+//
+// Error codes:
+//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+//     yet. Retry shortly.
+//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+//     resend it.
+//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+//     someone else.
+//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+//     of the caller is not the invited address. The error metadata
+//     `invited_email` carries the invited address.
+//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+//     organization already, and the invitation stays as it is. The error
+//     metadata `organization_id` and `organization_name` identify the
+//     organization so the caller can open it.
+//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+//     `max_members`. An admin frees a seat. The error metadata `limit`
+//     carries the licensed number.
+//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+func (c *Client) AcceptOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcceptOrganizationInvitationRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AcceptOrganizationInvitation Accept An Invitation
+//
+// Accepts the invitation behind a token for the signed-in user, who
+// becomes a member of the organization with the invited role. The request
+// carries no `X-Organization-ID`: the caller is not a member yet.
+//
+// The checks run in this order. The Product User of the caller must exist.
+// The invitation must exist. The caller must not be a member of the
+// organization already. The invitation must be pending. The verified
+// primary email address of the caller must equal the invited address,
+// ignoring case. One more member must fit within the licensed
+// `max_members`. Pending invitations are seat reservations and do not
+// count at accept, so only a join that overflows the license is refused.
+//
+// A new user gets a personal organization when the Clerk sync completes.
+// Call accept after `GET /me` reports `READY`, or the personal
+// organization is never created.
+//
+// Error codes:
+//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+//     yet. Retry shortly.
+//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+//     resend it.
+//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+//     someone else.
+//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+//     of the caller is not the invited address. The error metadata
+//     `invited_email` carries the invited address.
+//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+//     organization already, and the invitation stays as it is. The error
+//     metadata `organization_id` and `organization_name` identify the
+//     organization so the caller can open it.
+//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+//     `max_members`. An admin frees a seat. The error metadata `limit`
+//     carries the licensed number.
+//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+func (c *Client) AcceptOrganizationInvitation(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcceptOrganizationInvitationRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// LookupOrganizationInvitationWithBody Look Up An Invitation By Its Token
+//
+// Shows the invitation behind a token, as the invited person may see it:
+// the organization name, the invited email address, the expiry and the
+// status. It never returns the token.
+//
+// The caller is a signed-in user who is not a member yet, so the request
+// carries no `X-Organization-ID`. An expired or accepted invitation is
+// found too: read `status`.
+//
+// Error codes:
+// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+func (c *Client) LookupOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLookupOrganizationInvitationRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// LookupOrganizationInvitation Look Up An Invitation By Its Token
+//
+// Shows the invitation behind a token, as the invited person may see it:
+// the organization name, the invited email address, the expiry and the
+// status. It never returns the token.
+//
+// The caller is a signed-in user who is not a member yet, so the request
+// carries no `X-Organization-ID`. An expired or accepted invitation is
+// found too: read `status`.
+//
+// Error codes:
+// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+func (c *Client) LookupOrganizationInvitation(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLookupOrganizationInvitationRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteOrganizationInvitation Delete An Invitation
+//
+// Deletes an invitation of the current organization. Its link stops
+// working and its seat is free again. An invitation of another
+// organization answers 404.
+//
+// Corresponds with DELETE /invitations/{invitationId} (the `DeleteOrganizationInvitation` operationId).
+func (c *Client) DeleteOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *DeleteOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteOrganizationInvitationRequest(c.Server, invitationId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ResendOrganizationInvitation Resend An Invitation
+//
+// Replaces the link of a pending invitation, extends its expiry, and
+// emails the new link. The old link stops working. An expired or accepted
+// invitation answers 409. If the email cannot be sent the invitation stays
+// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+//
+// Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
+func (c *Client) ResendOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResendOrganizationInvitationRequest(c.Server, invitationId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetMe Get current user and organization context
 //
-// Returns the authenticated user profile and resolved organization context.
+// Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
 //
 // Corresponds with GET /me (the `GetMe` operationId).
 func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -15168,6 +15830,304 @@ func NewInitUserRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewListOrganizationInvitationsRequest constructs an http.Request for the ListOrganizationInvitations method
+func NewListOrganizationInvitationsRequest(server string, params *ListOrganizationInvitationsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateOrganizationInvitationRequest calls the generic CreateOrganizationInvitation builder with application/json body
+func NewCreateOrganizationInvitationRequest(server string, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateOrganizationInvitationRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateOrganizationInvitationRequestWithBody constructs an http.Request for the CreateOrganizationInvitation method, with any body, and a specified content type
+func NewCreateOrganizationInvitationRequestWithBody(server string, params *CreateOrganizationInvitationParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewAcceptOrganizationInvitationRequest calls the generic AcceptOrganizationInvitation builder with application/json body
+func NewAcceptOrganizationInvitationRequest(server string, body AcceptOrganizationInvitationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAcceptOrganizationInvitationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewAcceptOrganizationInvitationRequestWithBody constructs an http.Request for the AcceptOrganizationInvitation method, with any body, and a specified content type
+func NewAcceptOrganizationInvitationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/accept")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewLookupOrganizationInvitationRequest calls the generic LookupOrganizationInvitation builder with application/json body
+func NewLookupOrganizationInvitationRequest(server string, body LookupOrganizationInvitationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewLookupOrganizationInvitationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewLookupOrganizationInvitationRequestWithBody constructs an http.Request for the LookupOrganizationInvitation method, with any body, and a specified content type
+func NewLookupOrganizationInvitationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/lookup")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteOrganizationInvitationRequest constructs an http.Request for the DeleteOrganizationInvitation method
+func NewDeleteOrganizationInvitationRequest(server string, invitationId InvitationId, params *DeleteOrganizationInvitationParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "invitationId", invitationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewResendOrganizationInvitationRequest constructs an http.Request for the ResendOrganizationInvitation method
+func NewResendOrganizationInvitationRequest(server string, invitationId InvitationId, params *ResendOrganizationInvitationParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "invitationId", invitationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/%s/resend", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetMeRequest constructs an http.Request for the GetMe method
 func NewGetMeRequest(server string) (*http.Request, error) {
 	var err error
@@ -18046,9 +19006,213 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /init (the `InitUser` operationId).
 	InitUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*InitUserResponse, error)
 
+	// ListOrganizationInvitationsWithResponse List Pending Organization Invitations
+	//
+	// Lists the pending invitations of the current organization: invited, not
+	// accepted, not expired. An expired or accepted invitation is not listed.
+	// The invitation token is never part of a response.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+	ListOrganizationInvitationsWithResponse(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*ListOrganizationInvitationsResponse, error)
+
+	// CreateOrganizationInvitationWithBodyWithResponse Invite A Member
+	//
+	// Invites an email address to the current organization as an admin and
+	// emails the invitation link. The role is always admin: the caller cannot
+	// choose it. The organization's members plus its pending invitations must
+	// stay within the licensed `max_members`, counting the new invitation.
+	//
+	// The invitation link is sent by email only. The invitation token is never
+	// part of a response.
+	//
+	// Error codes:
+	// - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+	//   fill the licensed `max_members`. Delete an invitation or raise the plan.
+	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+	//   invitation. Resend or delete it.
+	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+	//   invitation exists and no seat is held. Retry.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+	CreateOrganizationInvitationWithBodyWithResponse(ctx context.Context, params *CreateOrganizationInvitationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrganizationInvitationResponse, error)
+
+	// CreateOrganizationInvitationWithResponse Invite A Member
+	//
+	// Invites an email address to the current organization as an admin and
+	// emails the invitation link. The role is always admin: the caller cannot
+	// choose it. The organization's members plus its pending invitations must
+	// stay within the licensed `max_members`, counting the new invitation.
+	//
+	// The invitation link is sent by email only. The invitation token is never
+	// part of a response.
+	//
+	// Error codes:
+	// - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+	//   fill the licensed `max_members`. Delete an invitation or raise the plan.
+	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+	//   invitation. Resend or delete it.
+	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+	//   invitation exists and no seat is held. Retry.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+	CreateOrganizationInvitationWithResponse(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrganizationInvitationResponse, error)
+
+	// AcceptOrganizationInvitationWithBodyWithResponse Accept An Invitation
+	//
+	// Accepts the invitation behind a token for the signed-in user, who
+	// becomes a member of the organization with the invited role. The request
+	// carries no `X-Organization-ID`: the caller is not a member yet.
+	//
+	// The checks run in this order. The Product User of the caller must exist.
+	// The invitation must exist. The caller must not be a member of the
+	// organization already. The invitation must be pending. The verified
+	// primary email address of the caller must equal the invited address,
+	// ignoring case. One more member must fit within the licensed
+	// `max_members`. Pending invitations are seat reservations and do not
+	// count at accept, so only a join that overflows the license is refused.
+	//
+	// A new user gets a personal organization when the Clerk sync completes.
+	// Call accept after `GET /me` reports `READY`, or the personal
+	// organization is never created.
+	//
+	// Error codes:
+	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+	//   yet. Retry shortly.
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+	//   resend it.
+	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+	//   someone else.
+	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+	//   of the caller is not the invited address. The error metadata
+	//   `invited_email` carries the invited address.
+	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+	//   organization already, and the invitation stays as it is. The error
+	//   metadata `organization_id` and `organization_name` identify the
+	//   organization so the caller can open it.
+	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+	//   `max_members`. An admin frees a seat. The error metadata `limit`
+	//   carries the licensed number.
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+	AcceptOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error)
+
+	// AcceptOrganizationInvitationWithResponse Accept An Invitation
+	//
+	// Accepts the invitation behind a token for the signed-in user, who
+	// becomes a member of the organization with the invited role. The request
+	// carries no `X-Organization-ID`: the caller is not a member yet.
+	//
+	// The checks run in this order. The Product User of the caller must exist.
+	// The invitation must exist. The caller must not be a member of the
+	// organization already. The invitation must be pending. The verified
+	// primary email address of the caller must equal the invited address,
+	// ignoring case. One more member must fit within the licensed
+	// `max_members`. Pending invitations are seat reservations and do not
+	// count at accept, so only a join that overflows the license is refused.
+	//
+	// A new user gets a personal organization when the Clerk sync completes.
+	// Call accept after `GET /me` reports `READY`, or the personal
+	// organization is never created.
+	//
+	// Error codes:
+	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+	//   yet. Retry shortly.
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+	//   resend it.
+	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+	//   someone else.
+	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+	//   of the caller is not the invited address. The error metadata
+	//   `invited_email` carries the invited address.
+	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+	//   organization already, and the invitation stays as it is. The error
+	//   metadata `organization_id` and `organization_name` identify the
+	//   organization so the caller can open it.
+	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+	//   `max_members`. An admin frees a seat. The error metadata `limit`
+	//   carries the licensed number.
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+	AcceptOrganizationInvitationWithResponse(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error)
+
+	// LookupOrganizationInvitationWithBodyWithResponse Look Up An Invitation By Its Token
+	//
+	// Shows the invitation behind a token, as the invited person may see it:
+	// the organization name, the invited email address, the expiry and the
+	// status. It never returns the token.
+	//
+	// The caller is a signed-in user who is not a member yet, so the request
+	// carries no `X-Organization-ID`. An expired or accepted invitation is
+	// found too: read `status`.
+	//
+	// Error codes:
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+	LookupOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error)
+
+	// LookupOrganizationInvitationWithResponse Look Up An Invitation By Its Token
+	//
+	// Shows the invitation behind a token, as the invited person may see it:
+	// the organization name, the invited email address, the expiry and the
+	// status. It never returns the token.
+	//
+	// The caller is a signed-in user who is not a member yet, so the request
+	// carries no `X-Organization-ID`. An expired or accepted invitation is
+	// found too: read `status`.
+	//
+	// Error codes:
+	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+	LookupOrganizationInvitationWithResponse(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error)
+
+	// DeleteOrganizationInvitationWithResponse Delete An Invitation
+	//
+	// Deletes an invitation of the current organization. Its link stops
+	// working and its seat is free again. An invitation of another
+	// organization answers 404.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /invitations/{invitationId} (the `DeleteOrganizationInvitation` operationId).
+	DeleteOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, params *DeleteOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationInvitationResponse, error)
+
+	// ResendOrganizationInvitationWithResponse Resend An Invitation
+	//
+	// Replaces the link of a pending invitation, extends its expiry, and
+	// emails the new link. The old link stops working. An expired or accepted
+	// invitation answers 409. If the email cannot be sent the invitation stays
+	// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
+	ResendOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*ResendOrganizationInvitationResponse, error)
+
 	// GetMeWithResponse Get current user and organization context
 	//
-	// Returns the authenticated user profile and resolved organization context.
+	// Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -23066,6 +24230,420 @@ func (r InitUserResponse) ContentType() string {
 	return ""
 }
 
+type ListOrganizationInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OrganizationInvitationListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListOrganizationInvitationsResponse) GetJSON200() *OrganizationInvitationListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListOrganizationInvitationsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListOrganizationInvitationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListOrganizationInvitationsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListOrganizationInvitationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOrganizationInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOrganizationInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListOrganizationInvitationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *OrganizationInvitation
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateOrganizationInvitationResponse) GetJSON201() *OrganizationInvitation {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateOrganizationInvitationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateOrganizationInvitationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateOrganizationInvitationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateOrganizationInvitationResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateOrganizationInvitationResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateOrganizationInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateOrganizationInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AcceptOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AcceptedInvitationResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON200() *AcceptedInvitationResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r AcceptOrganizationInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AcceptOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AcceptOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AcceptOrganizationInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type LookupOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InvitationLookupResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r LookupOrganizationInvitationResponse) GetJSON200() *InvitationLookupResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r LookupOrganizationInvitationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r LookupOrganizationInvitationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r LookupOrganizationInvitationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r LookupOrganizationInvitationResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r LookupOrganizationInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r LookupOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r LookupOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r LookupOrganizationInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteOrganizationInvitationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteOrganizationInvitationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteOrganizationInvitationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteOrganizationInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteOrganizationInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ResendOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OrganizationInvitation
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ResendOrganizationInvitationResponse) GetJSON200() *OrganizationInvitation {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ResendOrganizationInvitationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ResendOrganizationInvitationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ResendOrganizationInvitationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ResendOrganizationInvitationResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ResendOrganizationInvitationResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ResendOrganizationInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ResendOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResendOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ResendOrganizationInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetMeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -26828,9 +28406,267 @@ func (c *ClientWithResponses) InitUserWithResponse(ctx context.Context, reqEdito
 	return ParseInitUserResponse(rsp)
 }
 
+// ListOrganizationInvitationsWithResponse List Pending Organization Invitations
+//
+// Lists the pending invitations of the current organization: invited, not
+// accepted, not expired. An expired or accepted invitation is not listed.
+// The invitation token is never part of a response.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+func (c *ClientWithResponses) ListOrganizationInvitationsWithResponse(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*ListOrganizationInvitationsResponse, error) {
+	rsp, err := c.ListOrganizationInvitations(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOrganizationInvitationsResponse(rsp)
+}
+
+// CreateOrganizationInvitationWithBodyWithResponse Invite A Member
+//
+// Invites an email address to the current organization as an admin and
+// emails the invitation link. The role is always admin: the caller cannot
+// choose it. The organization's members plus its pending invitations must
+// stay within the licensed `max_members`, counting the new invitation.
+//
+// The invitation link is sent by email only. The invitation token is never
+// part of a response.
+//
+// Error codes:
+//   - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+//     fill the licensed `max_members`. Delete an invitation or raise the plan.
+//   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+//     invitation. Resend or delete it.
+//   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+//     invitation exists and no seat is held. Retry.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+func (c *ClientWithResponses) CreateOrganizationInvitationWithBodyWithResponse(ctx context.Context, params *CreateOrganizationInvitationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrganizationInvitationResponse, error) {
+	rsp, err := c.CreateOrganizationInvitationWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOrganizationInvitationResponse(rsp)
+}
+
+// CreateOrganizationInvitationWithResponse Invite A Member
+//
+// Invites an email address to the current organization as an admin and
+// emails the invitation link. The role is always admin: the caller cannot
+// choose it. The organization's members plus its pending invitations must
+// stay within the licensed `max_members`, counting the new invitation.
+//
+// The invitation link is sent by email only. The invitation token is never
+// part of a response.
+//
+// Error codes:
+//   - `SEAT_LIMIT_REACHED` (409): members plus pending invitations already
+//     fill the licensed `max_members`. Delete an invitation or raise the plan.
+//   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
+//     invitation. Resend or delete it.
+//   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
+//     invitation exists and no seat is held. Retry.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
+func (c *ClientWithResponses) CreateOrganizationInvitationWithResponse(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrganizationInvitationResponse, error) {
+	rsp, err := c.CreateOrganizationInvitation(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOrganizationInvitationResponse(rsp)
+}
+
+// AcceptOrganizationInvitationWithBodyWithResponse Accept An Invitation
+//
+// Accepts the invitation behind a token for the signed-in user, who
+// becomes a member of the organization with the invited role. The request
+// carries no `X-Organization-ID`: the caller is not a member yet.
+//
+// The checks run in this order. The Product User of the caller must exist.
+// The invitation must exist. The caller must not be a member of the
+// organization already. The invitation must be pending. The verified
+// primary email address of the caller must equal the invited address,
+// ignoring case. One more member must fit within the licensed
+// `max_members`. Pending invitations are seat reservations and do not
+// count at accept, so only a join that overflows the license is refused.
+//
+// A new user gets a personal organization when the Clerk sync completes.
+// Call accept after `GET /me` reports `READY`, or the personal
+// organization is never created.
+//
+// Error codes:
+//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+//     yet. Retry shortly.
+//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+//     resend it.
+//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+//     someone else.
+//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+//     of the caller is not the invited address. The error metadata
+//     `invited_email` carries the invited address.
+//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+//     organization already, and the invitation stays as it is. The error
+//     metadata `organization_id` and `organization_name` identify the
+//     organization so the caller can open it.
+//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+//     `max_members`. An admin frees a seat. The error metadata `limit`
+//     carries the licensed number.
+//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+func (c *ClientWithResponses) AcceptOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error) {
+	rsp, err := c.AcceptOrganizationInvitationWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAcceptOrganizationInvitationResponse(rsp)
+}
+
+// AcceptOrganizationInvitationWithResponse Accept An Invitation
+//
+// Accepts the invitation behind a token for the signed-in user, who
+// becomes a member of the organization with the invited role. The request
+// carries no `X-Organization-ID`: the caller is not a member yet.
+//
+// The checks run in this order. The Product User of the caller must exist.
+// The invitation must exist. The caller must not be a member of the
+// organization already. The invitation must be pending. The verified
+// primary email address of the caller must equal the invited address,
+// ignoring case. One more member must fit within the licensed
+// `max_members`. Pending invitations are seat reservations and do not
+// count at accept, so only a join that overflows the license is refused.
+//
+// A new user gets a personal organization when the Clerk sync completes.
+// Call accept after `GET /me` reports `READY`, or the personal
+// organization is never created.
+//
+// Error codes:
+//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+//     yet. Retry shortly.
+//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+//     resend it.
+//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
+//     someone else.
+//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
+//     of the caller is not the invited address. The error metadata
+//     `invited_email` carries the invited address.
+//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+//     organization already, and the invitation stays as it is. The error
+//     metadata `organization_id` and `organization_name` identify the
+//     organization so the caller can open it.
+//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+//     `max_members`. An admin frees a seat. The error metadata `limit`
+//     carries the licensed number.
+//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
+func (c *ClientWithResponses) AcceptOrganizationInvitationWithResponse(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error) {
+	rsp, err := c.AcceptOrganizationInvitation(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAcceptOrganizationInvitationResponse(rsp)
+}
+
+// LookupOrganizationInvitationWithBodyWithResponse Look Up An Invitation By Its Token
+//
+// Shows the invitation behind a token, as the invited person may see it:
+// the organization name, the invited email address, the expiry and the
+// status. It never returns the token.
+//
+// The caller is a signed-in user who is not a member yet, so the request
+// carries no `X-Organization-ID`. An expired or accepted invitation is
+// found too: read `status`.
+//
+// Error codes:
+// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+func (c *ClientWithResponses) LookupOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error) {
+	rsp, err := c.LookupOrganizationInvitationWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLookupOrganizationInvitationResponse(rsp)
+}
+
+// LookupOrganizationInvitationWithResponse Look Up An Invitation By Its Token
+//
+// Shows the invitation behind a token, as the invited person may see it:
+// the organization name, the invited email address, the expiry and the
+// status. It never returns the token.
+//
+// The caller is a signed-in user who is not a member yet, so the request
+// carries no `X-Organization-ID`. An expired or accepted invitation is
+// found too: read `status`.
+//
+// Error codes:
+// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
+func (c *ClientWithResponses) LookupOrganizationInvitationWithResponse(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error) {
+	rsp, err := c.LookupOrganizationInvitation(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLookupOrganizationInvitationResponse(rsp)
+}
+
+// DeleteOrganizationInvitationWithResponse Delete An Invitation
+//
+// Deletes an invitation of the current organization. Its link stops
+// working and its seat is free again. An invitation of another
+// organization answers 404.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /invitations/{invitationId} (the `DeleteOrganizationInvitation` operationId).
+func (c *ClientWithResponses) DeleteOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, params *DeleteOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationInvitationResponse, error) {
+	rsp, err := c.DeleteOrganizationInvitation(ctx, invitationId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteOrganizationInvitationResponse(rsp)
+}
+
+// ResendOrganizationInvitationWithResponse Resend An Invitation
+//
+// Replaces the link of a pending invitation, extends its expiry, and
+// emails the new link. The old link stops working. An expired or accepted
+// invitation answers 409. If the email cannot be sent the invitation stays
+// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
+func (c *ClientWithResponses) ResendOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*ResendOrganizationInvitationResponse, error) {
+	rsp, err := c.ResendOrganizationInvitation(ctx, invitationId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResendOrganizationInvitationResponse(rsp)
+}
+
 // GetMeWithResponse Get current user and organization context
 //
-// Returns the authenticated user profile and resolved organization context.
+// Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -31072,6 +32908,333 @@ func ParseInitUserResponse(rsp *http.Response) (*InitUserResponse, error) {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListOrganizationInvitationsResponse parses an HTTP response from a ListOrganizationInvitationsWithResponse call
+func ParseListOrganizationInvitationsResponse(rsp *http.Response) (*ListOrganizationInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOrganizationInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationInvitationListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateOrganizationInvitationResponse parses an HTTP response from a CreateOrganizationInvitationWithResponse call
+func ParseCreateOrganizationInvitationResponse(rsp *http.Response) (*CreateOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest OrganizationInvitation
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAcceptOrganizationInvitationResponse parses an HTTP response from a AcceptOrganizationInvitationWithResponse call
+func ParseAcceptOrganizationInvitationResponse(rsp *http.Response) (*AcceptOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AcceptOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AcceptedInvitationResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseLookupOrganizationInvitationResponse parses an HTTP response from a LookupOrganizationInvitationWithResponse call
+func ParseLookupOrganizationInvitationResponse(rsp *http.Response) (*LookupOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &LookupOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InvitationLookupResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteOrganizationInvitationResponse parses an HTTP response from a DeleteOrganizationInvitationWithResponse call
+func ParseDeleteOrganizationInvitationResponse(rsp *http.Response) (*DeleteOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResendOrganizationInvitationResponse parses an HTTP response from a ResendOrganizationInvitationWithResponse call
+func ParseResendOrganizationInvitationResponse(rsp *http.Response) (*ResendOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResendOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationInvitation
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError

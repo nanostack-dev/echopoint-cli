@@ -6,8 +6,8 @@ import (
 
 const (
 	tEquals     = "equals"
-	tStatusCode = "statusCode"
-	tJSONPath   = "jsonPath"
+	tStatusCode = "status_code"
+	tJSONPath   = "json_path"
 )
 
 // runnerResultWith builds a payload mirroring the runner result shape

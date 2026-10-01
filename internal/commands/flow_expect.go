@@ -19,15 +19,15 @@ const (
 )
 
 var assertionOperators = []string{
-	"equals", "notEquals", "contains", "notContains", "greaterThan", "lessThan",
-	"greaterThanOrEqual", "lessThanOrEqual", "empty", "notEmpty", "startsWith", "endsWith", "regex",
+	"equals", "not_equals", "contains", "not_contains", "greater_than", "less_than",
+	"greater_than_or_equal", "less_than_or_equal", "empty", "not_empty", "starts_with", "ends_with", "regex",
 }
 
-var valuelessOperators = []string{"empty", "notEmpty"}
+var valuelessOperators = []string{"empty", "not_empty"}
 
 // parseMatch reads one check of an expected event, written as
 // "<target> <operator> [value]". The target is a JSONPath ($.type), a header
-// (header:webhook-signature) or the whole body (body). The value is the rest of
+// (header:webhook-signature), a query param (query:q) or the whole body (body). The value is the rest of
 // the line, so it may hold spaces and {{node.output}} templates.
 func parseMatch(match string) (api.CompositeAssertion, error) {
 	parts := strings.SplitN(strings.TrimSpace(match), " ", 3)
@@ -53,11 +53,14 @@ func parseMatch(match string) (api.CompositeAssertion, error) {
 	case strings.HasPrefix(target, "header:") && len(target) > len("header:"):
 		assertion.ExtractorType = api.ExtractorTypeHeader
 		assertion.ExtractorData["header_name"] = strings.TrimPrefix(target, "header:")
+	case strings.HasPrefix(target, "query:") && len(target) > len("query:"):
+		assertion.ExtractorType = api.ExtractorTypeQueryParam
+		assertion.ExtractorData["param_name"] = strings.TrimPrefix(target, "query:")
 	case target == string(api.ExtractorTypeBody):
 		assertion.ExtractorType = api.ExtractorTypeBody
 	default:
 		return api.CompositeAssertion{}, fmt.Errorf(
-			"--match %q: target must be a JSONPath ($.type), header:<name> or body", match)
+			"--match %q: target must be a JSONPath ($.type), header:<name>, query:<name> or body", match)
 	}
 
 	hasValue := len(parts) == 3
@@ -183,8 +186,9 @@ func newFlowNodeExpectAddCmd(state *AppState) *cobra.Command {
 
 Each --match is one check, written "<target> <operator> [value]":
   $.data.invitation_id equals {{invite-member.id}}   JSONPath into the request body
-  header:webhook-signature startsWith v1,            a request header
-  body notContains anchor_inv_                       the whole body
+  header:webhook-signature starts_with v1,            a request header
+  query:q equals x                                    a query param of the request
+  body not_contains anchor_inv_                       the whole body
 
 Count (default: at least once):
   --once        exactly one event

@@ -16,10 +16,10 @@ output must be listed in its "outputs" to be referenceable. Bare {{name}} (no
 dot) is an environment/initial input. A node named in an assert "value" or a
 url/body/header is checked too.
 
-Asserts: {"status":200} is shorthand for statusCode==200. Otherwise use
+Asserts: {"status":200} is shorthand for status_code==200. Otherwise use
 {"path":"$.x","op":"equals","value":"y"} — op defaults to equals and supports
-notEquals, contains, notContains, empty, notEmpty, greaterThan, lessThan,
-startsWith, endsWith, regex (empty/notEmpty need no value).
+not_equals, contains, not_contains, empty, not_empty, greater_than, less_than,
+starts_with, ends_with, regex (empty/not_empty need no value).
 
 Nodes: kind "request" (default) needs method+url; kind "module" runs a sub-flow
 and needs flow_id, with "outputs" mapping a local name to "childNodeId.childKey".
@@ -38,7 +38,7 @@ Worked example — create a flow that calls an API and asserts the result:
      "asserts": [{"status": 201}, {"path": "$.name", "value": "w1"}]},
     {"id": "get", "method": "GET", "url": "{{baseUrl}}/v1/widgets/{{create.widgetId}}",
      "headers": {"Authorization": "Bearer {{token}}"},
-     "asserts": [{"status": 200}, {"path": "$.id", "op": "notEmpty"}]},
+     "asserts": [{"status": 200}, {"path": "$.id", "op": "not_empty"}]},
     {"id": "cleanup", "method": "DELETE", "url": "{{baseUrl}}/v1/widgets/{{create.widgetId}}",
      "headers": {"Authorization": "Bearer {{token}}"},
      "run_when": "always", "asserts": [{"status": 204}]}
@@ -77,7 +77,7 @@ var buildFlowInputSchema = []byte(`{
           "outputs": {
             "type": "object",
             "additionalProperties": {"type": "string"},
-            "description": "request: outputName -> jsonPath (e.g. {\"id\":\"$.id\"}). module: localName -> childNodeId.childKey."
+            "description": "request: outputName -> json_path (e.g. {\"id\":\"$.id\"}). module: localName -> childNodeId.childKey."
           },
           "asserts": {
             "type": "array",
@@ -86,7 +86,7 @@ var buildFlowInputSchema = []byte(`{
               "type": "object",
               "properties": {
                 "status": {"type": "integer", "description": "Shorthand: assert HTTP status equals this."},
-                "path": {"type": "string", "description": "jsonPath to extract from the body."},
+                "path": {"type": "string", "description": "json_path to extract from the body."},
                 "op": {"type": "string", "description": "Operator; defaults equals."},
                 "value": {"type": "string", "description": "Expected value for operators that need one."}
               }
