@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -58,27 +59,17 @@ func makeHandler(cli *client.Client, td toolDef) mcpsdk.ToolHandler {
 			}
 		}
 
-		path := td.PathTemplate
-		query := url.Values{}
-		body := map[string]any{}
-		for k, v := range args {
-			switch td.Locations[k] {
-			case locPath:
-				path = strings.ReplaceAll(path, "{"+k+"}", url.PathEscape(fmt.Sprint(v)))
-			case locQuery:
-				query.Set(k, fmt.Sprint(v))
-			default: // locBody or any unmapped argument
-				body[k] = v
-			}
+		path, query, body, err := splitArguments(td, args)
+		if err != nil {
+			return errResult(err.Error()), nil
 		}
 
 		var bodyBytes []byte
 		if len(body) > 0 {
-			b, err := json.Marshal(body)
+			bodyBytes, err = json.Marshal(body)
 			if err != nil {
 				return errResult(fmt.Sprintf("encode body: %v", err)), nil
 			}
-			bodyBytes = b
 		}
 
 		status, respBody, err := cli.Do(ctx, td.Method, path, query, bodyBytes)
@@ -94,6 +85,37 @@ func makeHandler(cli *client.Client, td toolDef) mcpsdk.ToolHandler {
 			Content: []mcpsdk.Content{&mcpsdk.TextContent{Text: text}},
 		}, nil
 	}
+}
+
+// splitArguments un-merges the flat argument object into the request path,
+// query, and body. A path parameter the caller omitted is an error naming it,
+// never a literal `{name}` sent to the API.
+func splitArguments(td toolDef, args map[string]any) (string, url.Values, map[string]any, error) {
+	path := td.PathTemplate
+	query := url.Values{}
+	body := map[string]any{}
+	for k, v := range args {
+		switch td.Locations[k] {
+		case locPath:
+			path = strings.ReplaceAll(path, "{"+k+"}", url.PathEscape(fmt.Sprint(v)))
+		case locQuery:
+			query.Set(k, fmt.Sprint(v))
+		default: // locBody or any unmapped argument
+			body[k] = v
+		}
+	}
+
+	var missing []string
+	for name, loc := range td.Locations {
+		if _, given := args[name]; loc == locPath && !given {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return "", nil, nil, fmt.Errorf("%s: missing required path parameter %s", td.Name, strings.Join(missing, ", "))
+	}
+	return path, query, body, nil
 }
 
 func errResult(msg string) *mcpsdk.CallToolResult {
