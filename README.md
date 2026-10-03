@@ -417,6 +417,7 @@ golangci-lint run
 See the [docs/](./docs/) directory for detailed documentation:
 
 - [Flow Management](./docs/flows.md) - Comprehensive guide to managing flows
+- [OpenAPI specs](./docs/specs.md) - Validate, format, and diff OpenAPI documents
 
 ## License
 

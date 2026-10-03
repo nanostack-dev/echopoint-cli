@@ -49,6 +49,11 @@ func TestRequiresToken(t *testing.T) {
 		{"flows run", []string{"flows", "run"}, true},
 		{"flows create", []string{"flows", "create"}, true},
 		{"flows list", []string{"flows", "list"}, true},
+
+		// Standalone spec commands work on local files with no account.
+		{"spec validate", []string{"spec", "validate"}, false},
+		{"spec fmt", []string{"spec", "fmt"}, false},
+		{"spec diff", []string{"spec", "diff"}, false},
 	}
 
 	for _, tc := range cases {
