@@ -9,3 +9,6 @@ dist/
 
 # Agent worktrees, created by git worktree add
 worktrees/
+
+# Local UI previews and PR screenshots
+.ui-craft/
