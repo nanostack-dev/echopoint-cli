@@ -138,6 +138,7 @@ func NewRootCmd() *cobra.Command {
 		newConfigCmd(state),
 		newProfileCmd(state),
 		newMcpCmd(state),
+		newSpecCmd(state),
 		newVersionCmd(),
 		newUpdateCmd(),
 	)
@@ -149,6 +150,7 @@ func NewRootCmd() *cobra.Command {
 // PersistentPreRunE. Auth, profile, config, version, update, and mcp commands
 // manage their own state and must run without valid credentials — mcp in
 // particular resolves auth itself (and may trigger browser sign-in) at launch.
+// A command annotated offline works on local files only.
 //
 // The auth/profile/config groups match anywhere in the parent chain so their
 // subcommands (e.g. "auth login") also skip token resolution. The top-level
@@ -157,6 +159,9 @@ func NewRootCmd() *cobra.Command {
 // "flows update") would wrongly skip token resolution and then fail its own
 // requireToken check, making it impossible to authenticate.
 func requiresToken(cmd *cobra.Command) bool {
+	if cmd.Annotations[offlineAnnotation] == "true" {
+		return false
+	}
 	for c := cmd; c != nil; c = c.Parent() {
 		switch c.Name() {
 		case authCommandName, profileCommandName, configCommandName:

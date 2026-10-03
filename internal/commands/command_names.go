@@ -11,6 +11,7 @@ const (
 	listVerb           = "list"
 	mcpCommandName     = "mcp"
 	profileCommandName = "profile"
+	specCommandName    = "spec"
 	updateCommandName  = "update"
 	versionCommandName = "version"
 )
