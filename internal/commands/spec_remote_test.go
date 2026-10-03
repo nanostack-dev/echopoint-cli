@@ -300,3 +300,14 @@ func writeFile(t *testing.T, path, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestSpecRemoteRefusalsPrintNoUsage(t *testing.T) {
+	fake, server := newSpecServer(t)
+	fake.responses["GET /specs/pets-api/document"] = pulledDocument(canonicalSpecFixture)
+
+	_, stderr, err := runRemoteSpec(t, server.URL, "check", "--spec", "pets-api", writeSpec(t, specFixture))
+
+	if exitCode(err) != 1 || strings.Contains(stderr, "Usage:") || strings.Contains(stderr, "Error:") {
+		t.Errorf("exit %d, stderr %q", exitCode(err), stderr)
+	}
+}
