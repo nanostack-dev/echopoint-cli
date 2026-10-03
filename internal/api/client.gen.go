@@ -412,27 +412,6 @@ func (e HttpMethod) Valid() bool {
 	}
 }
 
-// Defines values for InvitationLookupStatus.
-const (
-	InvitationLookupStatusAccepted InvitationLookupStatus = "accepted"
-	InvitationLookupStatusExpired  InvitationLookupStatus = "expired"
-	InvitationLookupStatusPending  InvitationLookupStatus = "pending"
-)
-
-// Valid indicates whether the value is a known member of the InvitationLookupStatus enum.
-func (e InvitationLookupStatus) Valid() bool {
-	switch e {
-	case InvitationLookupStatusAccepted:
-		return true
-	case InvitationLookupStatusExpired:
-		return true
-	case InvitationLookupStatusPending:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for LaunchFlowRequestEphemeralJobVersion.
 const (
 	N1 LaunchFlowRequestEphemeralJobVersion = 1
@@ -1069,6 +1048,72 @@ func (e SortDirection) Valid() bool {
 	}
 }
 
+// Defines values for SpecActorType.
+const (
+	SpecActorTypeApiKey SpecActorType = "api_key"
+	SpecActorTypeMember SpecActorType = "member"
+)
+
+// Valid indicates whether the value is a known member of the SpecActorType enum.
+func (e SpecActorType) Valid() bool {
+	switch e {
+	case SpecActorTypeApiKey:
+		return true
+	case SpecActorTypeMember:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpecBump.
+const (
+	Initial SpecBump = "initial"
+	Major   SpecBump = "major"
+	Minor   SpecBump = "minor"
+	Patch   SpecBump = "patch"
+)
+
+// Valid indicates whether the value is a known member of the SpecBump enum.
+func (e SpecBump) Valid() bool {
+	switch e {
+	case Initial:
+		return true
+	case Major:
+		return true
+	case Minor:
+		return true
+	case Patch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpecChangeSeverity.
+const (
+	Additive SpecChangeSeverity = "additive"
+	Breaking SpecChangeSeverity = "breaking"
+	Edit     SpecChangeSeverity = "edit"
+	Risky    SpecChangeSeverity = "risky"
+)
+
+// Valid indicates whether the value is a known member of the SpecChangeSeverity enum.
+func (e SpecChangeSeverity) Valid() bool {
+	switch e {
+	case Additive:
+		return true
+	case Breaking:
+		return true
+	case Edit:
+		return true
+	case Risky:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SseFlowNodeType.
 const (
 	Sse SseFlowNodeType = "sse"
@@ -1537,7 +1582,7 @@ type BulkMoveFlowsRequest struct {
 	// FlowIds Explicit set of flows to move. Mutually exclusive with filter; an empty list is rejected.
 	FlowIds *[]openapi_types.UUID `json:"flow_ids,omitempty"`
 
-	// FolderId Destination folder for every moved flow, or null for Uncategorized.
+	// FolderId Destination folder for every moved flow, or null for Uncategorized. A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
 	FolderId *openapi_types.UUID `json:"folder_id"`
 }
 
@@ -1896,7 +1941,7 @@ type CreateFlowFolderRequest struct {
 	// Examples: Payments
 	Name string `json:"name"`
 
-	// ParentId Parent folder, or null for a root folder.
+	// ParentId Parent folder, or null for a root folder. A parent unknown to the organization yields 400 INVALID_FOLDER_ID; a parent at depth 10 (a root folder is depth 0) yields 409 FLOW_FOLDER_DEPTH_EXCEEDED.
 	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
@@ -1911,7 +1956,7 @@ type CreateFlowRequest struct {
 	Description    *string        `json:"description,omitempty"`
 	FlowDefinition FlowDefinition `json:"flow_definition"`
 
-	// FolderId Folder to create the flow in. Omit or send null to leave it uncategorized. A folder unknown to the organization yields 404.
+	// FolderId Folder to create the flow in. Omit or send null to leave it uncategorized. A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
 	FolderId *openapi_types.UUID `json:"folder_id,omitempty"`
 
 	// Metadata Frontend-specific metadata including UI layout information and execution defaults.
@@ -2026,6 +2071,18 @@ type CreateRequestRequest struct {
 	//
 	// Examples: {{baseUrl}}/users/123
 	Url string `json:"url"`
+}
+
+// CreateSpecRequest defines model for CreateSpecRequest.
+type CreateSpecRequest struct {
+	// Document The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
+	// 15 MB. It must be self-contained: no external `$ref`.
+	Document string `json:"document"`
+
+	// Slug Lowercase letters, digits, and single hyphens; unique in the organization.
+	//
+	// Examples: echopoint-api
+	Slug string `json:"slug"`
 }
 
 // CreateWebhookRequest defines model for CreateWebhookRequest.
@@ -2424,7 +2481,7 @@ type FlowEdge struct {
 	// Examples: e-success
 	Id string `json:"id"`
 
-	// Source ID of the source node
+	// Source ID of the source node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE.
 	//
 	// Examples: req-1
 	Source string `json:"source"`
@@ -2434,7 +2491,7 @@ type FlowEdge struct {
 	// Examples: right
 	SourceHandle *string `json:"source_handle,omitempty"`
 
-	// Target ID of the target node
+	// Target ID of the target node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE.
 	//
 	// Examples: req-success
 	Target string `json:"target"`
@@ -2791,7 +2848,7 @@ type FlowSearchItem struct {
 
 // FlowSearchRequest defines model for FlowSearchRequest.
 type FlowSearchRequest struct {
-	// FolderId Scope results to this folder and all of its descendants. Omit to search every folder. Ignored when uncategorized is true. A folder unknown to the organization yields 404.
+	// FolderId Scope results to this folder and all of its descendants. Omit to search every folder. Ignored when uncategorized is true. A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
 	FolderId *openapi_types.UUID `json:"folder_id,omitempty"`
 
 	// FullTextSearch Full-text search term to match against searchable fields.
@@ -2932,30 +2989,6 @@ type InlineFlowDefinition struct {
 	Nodes []FlowNode  `json:"nodes"`
 }
 
-// InvitationLookupResponse An invitation as the invited person sees it. The invitation token is never part of it.
-type InvitationLookupResponse struct {
-	// Email The invited email address.
-	Email openapi_types.Email `json:"email"`
-
-	// ExpiresAt When the invitation stops being acceptable.
-	ExpiresAt time.Time `json:"expires_at"`
-
-	// OrganizationName The name of the organization the invitation is for.
-	OrganizationName string `json:"organization_name"`
-
-	// Status The state of the invitation. `expired` is derived on read: a pending invitation past its expiry.
-	Status InvitationLookupStatus `json:"status"`
-}
-
-// InvitationLookupStatus The state of the invitation. `expired` is derived on read: a pending invitation past its expiry.
-type InvitationLookupStatus string
-
-// InvitationTokenRequest The invitation token from the link in the invitation email.
-type InvitationTokenRequest struct {
-	// Token The invitation token. It is never logged and never returned.
-	Token string `json:"token"`
-}
-
 // JSONPathExtractorConfig defines model for JSONPathExtractorConfig.
 type JSONPathExtractorConfig struct {
 	// DefaultValue Default value if path not found
@@ -3006,6 +3039,72 @@ type LaunchFlowRequest struct {
 
 // LaunchFlowRequestEphemeralJobVersion Required when runner_type is ephemeral. Prevents older clients from executing masked launch data.
 type LaunchFlowRequestEphemeralJobVersion int
+
+// LicenseGauge A count the license caps. A create past `limit` is refused, except
+// Cloud jobs, which wait in the queue.
+type LicenseGauge struct {
+	Limit int64 `json:"limit"`
+	Used  int64 `json:"used"`
+}
+
+// LicenseMemberUsage Seats in use. An invitation is refused when `members` plus
+// `pending_invitations` would pass `limit`.
+type LicenseMemberUsage struct {
+	Limit              int64 `json:"limit"`
+	Members            int64 `json:"members"`
+	PendingInvitations int64 `json:"pending_invitations"`
+}
+
+// LicenseRules License limits that shape a single run or schedule rather than a count.
+type LicenseRules struct {
+	// MaxCloudExecutionDurationSeconds A Cloud run is stopped at this wall-clock time.
+	MaxCloudExecutionDurationSeconds int64 `json:"max_cloud_execution_duration_seconds"`
+
+	// MaxFlowsPerScheduledRun A tag suite matching more flows runs the first ones only.
+	MaxFlowsPerScheduledRun int64 `json:"max_flows_per_scheduled_run"`
+
+	// MinScheduledRunIntervalSeconds A schedule that would run more often is rejected on save.
+	MinScheduledRunIntervalSeconds int64 `json:"min_scheduled_run_interval_seconds"`
+}
+
+// LicenseUsage Every license limit of the organization next to its current usage.
+type LicenseUsage struct {
+	// ActiveCloudJobs A count the license caps. A create past `limit` is refused, except
+	// Cloud jobs, which wait in the queue.
+	ActiveCloudJobs LicenseGauge `json:"active_cloud_jobs"`
+
+	// ExecutionsLast24Hours Executions launched in the 24 hours before `generated_at`, every
+	// trigger and runner counted. A launch is refused once `used` reaches
+	// `limit`. The window rolls: a launch stops counting 24 hours after it
+	// started.
+	ExecutionsLast24Hours RollingExecutionUsage `json:"executions_last_24_hours"`
+
+	// ExecutionsThisMonth Executions launched since the first of the month, UTC. Reported to the
+	// license for tracking only: no launch is refused on it.
+	ExecutionsThisMonth MonthlyExecutionUsage `json:"executions_this_month"`
+
+	// Flows A count the license caps. A create past `limit` is refused, except
+	// Cloud jobs, which wait in the queue.
+	Flows LicenseGauge `json:"flows"`
+
+	// GeneratedAt The instant every window in this response ends at.
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// Members Seats in use. An invitation is refused when `members` plus
+	// `pending_invitations` would pass `limit`.
+	Members LicenseMemberUsage `json:"members"`
+
+	// Rules License limits that shape a single run or schedule rather than a count.
+	Rules LicenseRules `json:"rules"`
+
+	// Schedules A count the license caps. A create past `limit` is refused, except
+	// Cloud jobs, which wait in the queue.
+	Schedules LicenseGauge `json:"schedules"`
+
+	// Webhooks A count the license caps. A create past `limit` is refused, except
+	// Cloud jobs, which wait in the queue.
+	Webhooks LicenseGauge `json:"webhooks"`
+}
 
 // LiveRunner defines model for LiveRunner.
 type LiveRunner struct {
@@ -3187,7 +3286,19 @@ type ModuleNodeData struct {
 	OutputBindings *map[string]string `json:"output_bindings,omitempty"`
 }
 
-// MoveFlowFolderRequest Sets the folder's parent. parent_id is always present; send null to move the folder to the root (top level). Returns 400 when the move would form a cycle (the folder into itself or a descendant) or nest deeper than the folder depth limit, and 409 when another flow-tree mutation is in flight (the move serializes on the per-organization flow-tree lock).
+// MonthlyExecutionUsage Executions launched since the first of the month, UTC. Reported to the
+// license for tracking only: no launch is refused on it.
+type MonthlyExecutionUsage struct {
+	// Daily Launches per UTC day from `since` through today, oldest first.
+	Daily []int64 `json:"daily"`
+	Limit int64   `json:"limit"`
+
+	// Since Midnight UTC on the first day of the month.
+	Since time.Time `json:"since"`
+	Used  int64     `json:"used"`
+}
+
+// MoveFlowFolderRequest Sets the folder's parent. parent_id is always present; send null to move the folder to the root (top level). A parent unknown to the organization yields 400 INVALID_FOLDER_ID. The current tree refuses the move with 409: FLOW_FOLDER_CYCLE when the folder would move into itself or a descendant, FLOW_FOLDER_DEPTH_EXCEEDED when a folder of its subtree would sit deeper than depth 10 (a root folder is depth 0), and FLOW_TREE_CONFLICT when another flow-tree mutation is in flight (the move serializes on the per-organization flow-tree lock; retry it).
 type MoveFlowFolderRequest struct {
 	// ParentId New parent folder, or null to move the folder to the root.
 	ParentId *openapi_types.UUID `json:"parent_id"`
@@ -3300,7 +3411,7 @@ type OpenAPIGroupingStrategy string
 
 // OpenAPIImportOptions defines model for OpenAPIImportOptions.
 type OpenAPIImportOptions struct {
-	// BaseUrlVariableName Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
+	// BaseUrlVariableName Variable name to use for rewritten base URLs when enabled. Empty or omitted means baseUrl. Follows the variable key rule: a letter or underscore, then letters, digits, underscores, or hyphens.
 	//
 	// Examples: baseUrl
 	BaseUrlVariableName *string `json:"base_url_variable_name,omitempty"`
@@ -3531,14 +3642,14 @@ type OperationType string
 // OperatorType Operator to apply in assertions
 type OperatorType string
 
-// OrganizationInvitation A pending invitation to the current organization. The invitation token is never part of it.
+// OrganizationInvitation A pending invitation to the current organization.
 type OrganizationInvitation struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	// Email The invited email address. It never changes.
 	Email openapi_types.Email `json:"email"`
 
-	// ExpiresAt When the invitation link stops working.
+	// ExpiresAt When the invitation stops being acceptable.
 	ExpiresAt time.Time `json:"expires_at"`
 
 	// Id Unique identifier of the invitation.
@@ -3705,6 +3816,14 @@ type PollNodeData struct {
 	TimeoutMs *int `json:"timeout_ms,omitempty"`
 }
 
+// PushSpecVersionRequest defines model for PushSpecVersionRequest.
+type PushSpecVersionRequest struct {
+	// Document The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
+	// 15 MB. It must be self-contained: no external `$ref`. Its
+	// `info.version` is ignored: EchoPoint computes the version.
+	Document string `json:"document"`
+}
+
 // QueryParamExtractorConfig Reads one query parameter of the request a webhook_wait node received.
 // A parameter present with no value (`?q=`) gives an empty string; a missing parameter fails the assertion.
 type QueryParamExtractorConfig struct {
@@ -3712,6 +3831,27 @@ type QueryParamExtractorConfig struct {
 	//
 	// Examples: q
 	ParamName string `json:"param_name"`
+}
+
+// ReceivedInvitation A pending invitation addressed to one of the verified email addresses of the signed-in person.
+type ReceivedInvitation struct {
+	// Email The invited email address, one of the caller's verified addresses.
+	Email openapi_types.Email `json:"email"`
+
+	// ExpiresAt When the invitation stops being acceptable.
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Id Unique identifier of the invitation. Accept it with this id.
+	Id             string `json:"id"`
+	OrganizationId string `json:"organization_id"`
+
+	// OrganizationName The name of the organization the invitation is for.
+	OrganizationName string `json:"organization_name"`
+}
+
+// ReceivedInvitationListResponse defines model for ReceivedInvitationListResponse.
+type ReceivedInvitationListResponse struct {
+	Items []ReceivedInvitation `json:"items"`
 }
 
 // ReferencedFlow defines model for ReferencedFlow.
@@ -3761,6 +3901,7 @@ type RequestFlowNodeType string
 type RequestNodeData struct {
 	// Body Request body (can be any JSON structure). Supports variable substitution.
 	// Any string values within the body can contain template variables.
+	// A string body is sent as-is; any other value is serialized to JSON.
 	//
 	//
 	// Examples: {"email":"{{userEmail}}","name":"{{userName}}"}
@@ -3768,6 +3909,11 @@ type RequestNodeData struct {
 
 	// Headers HTTP headers. Supports the same variable substitution as URL.
 	// Headers can reference both initial inputs and previous node outputs.
+	//
+	// Content-Type of a request with a body:
+	// - A Content-Type set here wins; the header name is matched case-insensitively.
+	// - Without one, a JSON body is sent as application/json and a non-JSON string body is sent with no Content-Type.
+	// - An empty Content-Type value sends no Content-Type header.
 	//
 	//
 	// Examples: {"Authorization":"Bearer {{auth.token}}","Content-Type":"application/json"}
@@ -3964,6 +4110,20 @@ type ResourceSearchScope struct {
 
 // ResourceSearchType Concrete resource type represented by a search result item.
 type ResourceSearchType string
+
+// RollingExecutionUsage Executions launched in the 24 hours before `generated_at`, every
+// trigger and runner counted. A launch is refused once `used` reaches
+// `limit`. The window rolls: a launch stops counting 24 hours after it
+// started.
+type RollingExecutionUsage struct {
+	// Hourly Launches per hour, oldest first. `hourly[i]` counts launches from
+	// `window_start` plus `i` hours to `window_start` plus `i + 1`
+	// hours, so `hourly[0]` leave the window within the next hour.
+	Hourly      []int64   `json:"hourly"`
+	Limit       int64     `json:"limit"`
+	Used        int64     `json:"used"`
+	WindowStart time.Time `json:"window_start"`
+}
 
 // RunOpenAPISyncNowRequest defines model for RunOpenAPISyncNowRequest.
 type RunOpenAPISyncNowRequest struct {
@@ -4265,6 +4425,182 @@ type SetVariableRequest struct {
 // SortDirection defines model for SortDirection.
 type SortDirection string
 
+// Spec One API's OpenAPI document as EchoPoint keeps it.
+type Spec struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// CreatedBy The member or API key that did something.
+	CreatedBy SpecActor          `json:"created_by"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Live A Live version of a spec, without its document and its changes.
+	Live SpecVersionSummary `json:"live"`
+
+	// Slug Identifies the spec within the organization, in URLs and in the CLI's `--spec`.
+	//
+	// Examples: echopoint-api
+	Slug string `json:"slug"`
+
+	// Title The Live version's `info.title`.
+	Title     string    `json:"title"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SpecActor The member or API key that did something.
+type SpecActor struct {
+	// Id The member's user ID, or the API key's ID.
+	Id string `json:"id"`
+
+	// Type Who did something. `member` is a person of the organization; `api_key` is an organization API key.
+	Type SpecActorType `json:"type"`
+}
+
+// SpecActorType Who did something. `member` is a person of the organization; `api_key` is an organization API key.
+type SpecActorType string
+
+// SpecBump How far a Live version moved from the one before it. `initial` is a spec's
+// first Live version. `major`: a change breaks clients or may break them.
+// `minor`: a new operation, schema, optional field, or enum value, or a looser
+// limit. `patch`: descriptions, examples, extensions, or other edits.
+type SpecBump string
+
+// SpecChange One difference between a Live version and the one before it.
+type SpecChange struct {
+	// Id The kind of change, such as `endpoint-added` (an oasdiff rule id) or `schema-added`.
+	//
+	// Examples: api-removed-without-deprecation
+	Id string `json:"id"`
+
+	// Method HTTP method of the operation the change is in, when it is in one.
+	//
+	// Examples: POST
+	Method *string `json:"method,omitempty"`
+
+	// Path Path of the operation the change is in, when it is in one.
+	//
+	// Examples: /pets
+	Path *string `json:"path,omitempty"`
+
+	// Pointer JSON pointer of the operation or component the change is in. Absent when it concerns the whole document.
+	//
+	// Examples: /paths/~1pets/post
+	Pointer *string `json:"pointer,omitempty"`
+
+	// Severity What a change means for clients: `breaking` breaks them, `risky` may break
+	// them and needs a look, `additive` adds to the API or loosens it, `edit`
+	// changes what clients do not depend on.
+	Severity SpecChangeSeverity `json:"severity"`
+
+	// Text The change in English.
+	Text string `json:"text"`
+}
+
+// SpecChangeCounts How many changes of each severity a Live version made.
+type SpecChangeCounts struct {
+	Additive int32 `json:"additive"`
+	Breaking int32 `json:"breaking"`
+	Edit     int32 `json:"edit"`
+	Risky    int32 `json:"risky"`
+}
+
+// SpecChangeSeverity What a change means for clients: `breaking` breaks them, `risky` may break
+// them and needs a look, `additive` adds to the API or loosens it, `edit`
+// changes what clients do not depend on.
+type SpecChangeSeverity string
+
+// SpecDocument A Live version's document in the canonical YAML layout, as `spec pull` writes it.
+type SpecDocument struct {
+	// Document The canonical YAML, byte for byte.
+	Document      string `json:"document"`
+	LayoutVersion int32  `json:"layout_version"`
+	Sha256        string `json:"sha256"`
+
+	// SnapshotId Opaque identifier of exactly this document. A later push can name it
+	// as the snapshot it started from.
+	//
+	//
+	// Examples: live:0199a5f2-6b1e-7c3d-9a10-3f1b2c4d5e6f
+	SnapshotId string `json:"snapshot_id"`
+
+	// Version Examples: 1.4.0
+	Version string `json:"version"`
+}
+
+// SpecListResponse defines model for SpecListResponse.
+type SpecListResponse struct {
+	Count int    `json:"count"`
+	Items []Spec `json:"items"`
+	Total int64  `json:"total"`
+}
+
+// SpecVersion A Live version of a spec with what changed from the version before it.
+type SpecVersion struct {
+	// Bump How far a Live version moved from the one before it. `initial` is a spec's
+	// first Live version. `major`: a change breaks clients or may break them.
+	// `minor`: a new operation, schema, optional field, or enum value, or a looser
+	// limit. `patch`: descriptions, examples, extensions, or other edits.
+	Bump SpecBump `json:"bump"`
+
+	// ChangeCounts How many changes of each severity a Live version made.
+	ChangeCounts SpecChangeCounts `json:"change_counts"`
+
+	// Changes What changed from the previous Live version. Empty for the first version.
+	Changes   []SpecChange `json:"changes"`
+	CreatedAt time.Time    `json:"created_at"`
+
+	// CreatedBy The member or API key that did something.
+	CreatedBy      SpecActor          `json:"created_by"`
+	Id             openapi_types.UUID `json:"id"`
+	LayoutVersion  int32              `json:"layout_version"`
+	OpenapiVersion string             `json:"openapi_version"`
+	Sha256         string             `json:"sha256"`
+
+	// Version Examples: 1.4.0
+	Version string `json:"version"`
+}
+
+// SpecVersionListResponse defines model for SpecVersionListResponse.
+type SpecVersionListResponse struct {
+	Count int `json:"count"`
+
+	// Items Live versions, newest first.
+	Items []SpecVersionSummary `json:"items"`
+	Total int64                `json:"total"`
+}
+
+// SpecVersionSummary A Live version of a spec, without its document and its changes.
+type SpecVersionSummary struct {
+	// Bump How far a Live version moved from the one before it. `initial` is a spec's
+	// first Live version. `major`: a change breaks clients or may break them.
+	// `minor`: a new operation, schema, optional field, or enum value, or a looser
+	// limit. `patch`: descriptions, examples, extensions, or other edits.
+	Bump SpecBump `json:"bump"`
+
+	// ChangeCounts How many changes of each severity a Live version made.
+	ChangeCounts SpecChangeCounts `json:"change_counts"`
+	CreatedAt    time.Time        `json:"created_at"`
+
+	// CreatedBy The member or API key that did something.
+	CreatedBy SpecActor          `json:"created_by"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// LayoutVersion The canonical YAML layout the document is stored in. `spec check` compares with this layout.
+	LayoutVersion int32 `json:"layout_version"`
+
+	// OpenapiVersion The document's `openapi` field.
+	//
+	// Examples: 3.1.0
+	OpenapiVersion string `json:"openapi_version"`
+
+	// Sha256 Hex SHA-256 of the canonical YAML.
+	Sha256 string `json:"sha256"`
+
+	// Version The semantic version EchoPoint computed. It is also the document's `info.version`.
+	//
+	// Examples: 1.4.0
+	Version string `json:"version"`
+}
+
 // SseFlowNode defines model for SseFlowNode.
 type SseFlowNode struct {
 	// Assertions Validation assertions for the node
@@ -4364,7 +4700,7 @@ type UpdateFlowFolderRequest struct {
 	// Name New folder name.
 	Name *string `json:"name,omitempty"`
 
-	// ParentId New parent folder to nest this folder under.
+	// ParentId New parent folder to nest this folder under. Answers the same errors as the parent_id of MoveFlowFolderRequest.
 	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
@@ -4480,7 +4816,7 @@ type UpdateRequestRequest struct {
 
 // UpsertOpenAPISyncConfigRequest defines model for UpsertOpenAPISyncConfigRequest.
 type UpsertOpenAPISyncConfigRequest struct {
-	// BaseUrlVariableName Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
+	// BaseUrlVariableName Variable name to use for rewritten base URLs when enabled. Empty or omitted means baseUrl. Follows the variable key rule: a letter or underscore, then letters, digits, underscores, or hyphens.
 	//
 	// Examples: baseUrl
 	BaseUrlVariableName *string                 `json:"base_url_variable_name,omitempty"`
@@ -4668,7 +5004,7 @@ type WebhookRequestResponse struct {
 	// Examples: {"event": "push", "repository": {"name": "test"}}
 	Body *string `json:"body,omitempty"`
 
-	// ContentType Content-Type header value.
+	// ContentType Value of the request's Content-Type header, the same value as in `headers` (header names match case-insensitively). Absent when the request carried no Content-Type, or an empty one.
 	//
 	// Examples: application/json
 	ContentType *string `json:"content_type,omitempty"`
@@ -4701,7 +5037,7 @@ type WebhookRequestResponse struct {
 	// ReceivedAt Timestamp when the request was received.
 	ReceivedAt time.Time `json:"received_at"`
 
-	// UserAgent User-Agent header value.
+	// UserAgent Value of the request's User-Agent header, the same value as in `headers` (header names match case-insensitively). Absent when the request carried no User-Agent, or an empty one.
 	//
 	// Examples: GitHub-Hookshot/abc123
 	UserAgent *string `json:"user_agent,omitempty"`
@@ -4861,6 +5197,9 @@ type RequiredOrganizationIDHeader = string
 // RunnerJobIDParameter defines model for RunnerJobIDParameter.
 type RunnerJobIDParameter = openapi_types.UUID
 
+// SpecSlugParameter Examples: echopoint-api
+type SpecSlugParameter = string
+
 // VariableKey defines model for VariableKey.
 type VariableKey = string
 
@@ -4881,6 +5220,9 @@ type InternalServerError = ApiErrorResponse
 
 // NotFound defines model for NotFound.
 type NotFound = ApiErrorResponse
+
+// TooManyRequests defines model for TooManyRequests.
+type TooManyRequests = ApiErrorResponse
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ApiErrorResponse
@@ -5458,6 +5800,12 @@ type ResendOrganizationInvitationParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// GetLicenseUsageParams defines parameters for GetLicenseUsage.
+type GetLicenseUsageParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListOrganizationMembersParams defines parameters for ListOrganizationMembers.
 type ListOrganizationMembersParams struct {
 	// Limit Maximum number of items per page.
@@ -5574,6 +5922,63 @@ type CompleteEphemeralExecutionParams struct {
 
 // ListLiveRunnersParams defines parameters for ListLiveRunners.
 type ListLiveRunnersParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListSpecsParams defines parameters for ListSpecs.
+type ListSpecsParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip.
+	Offset OffsetParameter `form:"offset" json:"offset"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// CreateSpecParams defines parameters for CreateSpec.
+type CreateSpecParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetSpecParams defines parameters for GetSpec.
+type GetSpecParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PullSpecParams defines parameters for PullSpec.
+type PullSpecParams struct {
+	// Version A Live version's semantic version. Absent means the current Live version.
+	Version *string `form:"version,omitempty" json:"version,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListSpecVersionsParams defines parameters for ListSpecVersions.
+type ListSpecVersionsParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip.
+	Offset OffsetParameter `form:"offset" json:"offset"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PushSpecVersionParams defines parameters for PushSpecVersion.
+type PushSpecVersionParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetSpecVersionParams defines parameters for GetSpecVersion.
+type GetSpecVersionParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -5727,12 +6132,6 @@ type SetFlowVariableJSONRequestBody = SetVariableRequest
 // CreateOrganizationInvitationJSONRequestBody defines body for CreateOrganizationInvitation for application/json ContentType.
 type CreateOrganizationInvitationJSONRequestBody = CreateOrganizationInvitationRequest
 
-// AcceptOrganizationInvitationJSONRequestBody defines body for AcceptOrganizationInvitation for application/json ContentType.
-type AcceptOrganizationInvitationJSONRequestBody = InvitationTokenRequest
-
-// LookupOrganizationInvitationJSONRequestBody defines body for LookupOrganizationInvitation for application/json ContentType.
-type LookupOrganizationInvitationJSONRequestBody = InvitationTokenRequest
-
 // SearchOpenAPISyncConfigsJSONRequestBody defines body for SearchOpenAPISyncConfigs for application/json ContentType.
 type SearchOpenAPISyncConfigsJSONRequestBody = OpenAPISyncConfigSearchRequest
 
@@ -5765,6 +6164,12 @@ type CompleteRunnerJobJSONRequestBody = RunnerJobCompletionRequest
 
 // SendRunnerJobEventsJSONRequestBody defines body for SendRunnerJobEvents for application/json ContentType.
 type SendRunnerJobEventsJSONRequestBody = RunnerJobEventsRequest
+
+// CreateSpecJSONRequestBody defines body for CreateSpec for application/json ContentType.
+type CreateSpecJSONRequestBody = CreateSpecRequest
+
+// PushSpecVersionJSONRequestBody defines body for PushSpecVersion for application/json ContentType.
+type PushSpecVersionJSONRequestBody = PushSpecVersionRequest
 
 // CreateWebhookJSONRequestBody defines body for CreateWebhook for application/json ContentType.
 type CreateWebhookJSONRequestBody = CreateWebhookRequest
@@ -7477,7 +7882,7 @@ type ClientInterface interface {
 
 	// MoveFlowFolderWithBody Move Flow Folder
 	//
-	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -7486,7 +7891,7 @@ type ClientInterface interface {
 
 	// MoveFlowFolder Move Flow Folder
 	//
-	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -7612,6 +8017,11 @@ type ClientInterface interface {
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
 	//
+	// Each organization may launch at most its license's `max_executions_per_day`
+	// executions in any 24 hours, counting every trigger and runner. A launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+	// earlier launch does not count.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -7623,6 +8033,11 @@ type ClientInterface interface {
 	// Real-time updates can be consumed separately from the execution stream endpoint.
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
+	//
+	// Each organization may launch at most its license's `max_executions_per_day`
+	// executions in any 24 hours, counting every trigger and runner. A launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+	// earlier launch does not count.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -7761,128 +8176,6 @@ type ClientInterface interface {
 	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
 	CreateOrganizationInvitation(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// AcceptOrganizationInvitationWithBody Accept An Invitation
-	//
-	// Accepts the invitation behind a token for the signed-in user, who
-	// becomes a member of the organization with the invited role. The request
-	// carries no `X-Organization-ID`: the caller is not a member yet.
-	//
-	// The checks run in this order. The Product User of the caller must exist.
-	// The invitation must exist. The caller must not be a member of the
-	// organization already. The invitation must be pending. The verified
-	// primary email address of the caller must equal the invited address,
-	// ignoring case. One more member must fit within the licensed
-	// `max_members`. Pending invitations are seat reservations and do not
-	// count at accept, so only a join that overflows the license is refused.
-	//
-	// A new user gets a personal organization when the Clerk sync completes.
-	// Call accept after `GET /me` reports `READY`, or the personal
-	// organization is never created.
-	//
-	// Error codes:
-	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-	//   yet. Retry shortly.
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-	//   resend it.
-	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-	//   someone else.
-	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-	//   of the caller is not the invited address. The error metadata
-	//   `invited_email` carries the invited address.
-	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-	//   organization already, and the invitation stays as it is. The error
-	//   metadata `organization_id` and `organization_name` identify the
-	//   organization so the caller can open it.
-	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-	//   `max_members`. An admin frees a seat. The error metadata `limit`
-	//   carries the licensed number.
-	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-	AcceptOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// AcceptOrganizationInvitation Accept An Invitation
-	//
-	// Accepts the invitation behind a token for the signed-in user, who
-	// becomes a member of the organization with the invited role. The request
-	// carries no `X-Organization-ID`: the caller is not a member yet.
-	//
-	// The checks run in this order. The Product User of the caller must exist.
-	// The invitation must exist. The caller must not be a member of the
-	// organization already. The invitation must be pending. The verified
-	// primary email address of the caller must equal the invited address,
-	// ignoring case. One more member must fit within the licensed
-	// `max_members`. Pending invitations are seat reservations and do not
-	// count at accept, so only a join that overflows the license is refused.
-	//
-	// A new user gets a personal organization when the Clerk sync completes.
-	// Call accept after `GET /me` reports `READY`, or the personal
-	// organization is never created.
-	//
-	// Error codes:
-	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-	//   yet. Retry shortly.
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-	//   resend it.
-	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-	//   someone else.
-	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-	//   of the caller is not the invited address. The error metadata
-	//   `invited_email` carries the invited address.
-	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-	//   organization already, and the invitation stays as it is. The error
-	//   metadata `organization_id` and `organization_name` identify the
-	//   organization so the caller can open it.
-	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-	//   `max_members`. An admin frees a seat. The error metadata `limit`
-	//   carries the licensed number.
-	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-	AcceptOrganizationInvitation(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// LookupOrganizationInvitationWithBody Look Up An Invitation By Its Token
-	//
-	// Shows the invitation behind a token, as the invited person may see it:
-	// the organization name, the invited email address, the expiry and the
-	// status. It never returns the token.
-	//
-	// The caller is a signed-in user who is not a member yet, so the request
-	// carries no `X-Organization-ID`. An expired or accepted invitation is
-	// found too: read `status`.
-	//
-	// Error codes:
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-	LookupOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// LookupOrganizationInvitation Look Up An Invitation By Its Token
-	//
-	// Shows the invitation behind a token, as the invited person may see it:
-	// the organization name, the invited email address, the expiry and the
-	// status. It never returns the token.
-	//
-	// The caller is a signed-in user who is not a member yet, so the request
-	// carries no `X-Organization-ID`. An expired or accepted invitation is
-	// found too: read `status`.
-	//
-	// Error codes:
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-	LookupOrganizationInvitation(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteOrganizationInvitation Delete An Invitation
 	//
 	// Deletes an invitation of the current organization. Its link stops
@@ -7892,15 +8185,70 @@ type ClientInterface interface {
 	// Corresponds with DELETE /invitations/{invitationId} (the `DeleteOrganizationInvitation` operationId).
 	DeleteOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *DeleteOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// AcceptOrganizationInvitation Accept An Invitation
+	//
+	// Accepts one of the invitations `GET /me/invitations` lists, for the
+	// signed-in user, who becomes a member of the organization with the
+	// invited role. The request carries no `X-Organization-ID`: the caller is
+	// not a member yet.
+	//
+	// The checks run in this order. The Product User of the caller must exist.
+	// The invitation must be addressed to one of the verified email addresses
+	// of the caller, ignoring case: any other invitation answers
+	// `INVITATION_NOT_FOUND`, so a caller learns nothing about invitations
+	// sent to someone else. The caller must not be a member of the
+	// organization already. The invitation must be pending. One more member
+	// must fit within the licensed `max_members`. Pending invitations are seat
+	// reservations and do not count at accept, so only a join that overflows
+	// the license is refused.
+	//
+	// A new user gets a personal organization when the Clerk sync completes.
+	// Call accept after `GET /me` reports `READY`, or the personal
+	// organization is never created.
+	//
+	// Error codes:
+	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+	//   yet. Retry shortly.
+	// - `INVITATION_NOT_FOUND` (404): no invitation with this id is addressed
+	//   to a verified email address of the caller.
+	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+	//   resend it.
+	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted
+	//   already.
+	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+	//   organization already, and the invitation stays as it is. The error
+	//   metadata `organization_id` and `organization_name` identify the
+	//   organization so the caller can open it.
+	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+	//   `max_members`. An admin frees a seat. The error metadata `limit`
+	//   carries the licensed number.
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Corresponds with POST /invitations/{invitationId}/accept (the `AcceptOrganizationInvitation` operationId).
+	AcceptOrganizationInvitation(ctx context.Context, invitationId InvitationId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ResendOrganizationInvitation Resend An Invitation
 	//
-	// Replaces the link of a pending invitation, extends its expiry, and
-	// emails the new link. The old link stops working. An expired or accepted
-	// invitation answers 409. If the email cannot be sent the invitation stays
+	// Sets the expiry of a pending invitation to 7 days from now and emails
+	// the invited person again. An expired or accepted invitation answers 409.
+	// If the email cannot be sent the invitation stays, with its new expiry,
 	// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
 	//
 	// Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
 	ResendOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetLicenseUsage Get License Usage
+	//
+	// Returns every limit of the organization's license next to the
+	// organization's current use of it. The limits come from the
+	// organization's Anchor license; Echopoint counts the usage when the
+	// request is served, so it is never stale.
+	//
+	// Error codes:
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Corresponds with GET /license/usage (the `GetLicenseUsage` operationId).
+	GetLicenseUsage(ctx context.Context, params *GetLicenseUsageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetMe Get current user and organization context
 	//
@@ -7908,6 +8256,22 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /me (the `GetMe` operationId).
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListMyInvitations List My Invitations
+	//
+	// Lists the pending invitations addressed to any verified email address
+	// of the signed-in user, across every organization, newest first. The app
+	// calls it after sign-up and sign-in to offer the invitations waiting for
+	// the person, who accepts one with
+	// `POST /invitations/{invitationId}/accept`. The request carries no
+	// `X-Organization-ID`: the caller need not belong to the organizations.
+	//
+	// An email address the sign-in provider has not verified never matches,
+	// so nobody sees an invitation by adding someone else's address to their
+	// account. A user with no verified address gets an empty list.
+	//
+	// Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+	ListMyInvitations(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListOrganizationMembers List Organization Members
 	//
@@ -8242,6 +8606,117 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /runners (the `ListLiveRunners` operationId).
 	ListLiveRunners(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListSpecs List Specs
+	//
+	// Lists the organization's specs with their Live version, by slug.
+	//
+	// Corresponds with GET /specs (the `ListSpecs` operationId).
+	ListSpecs(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSpecWithBody Create Spec
+	//
+	// Creates a spec from an OpenAPI document, which becomes its first Live
+	// version. The version is the document's `info.version` when it is a
+	// semantic version, else `1.0.0`. The document is stored in the canonical
+	// YAML layout.
+	//
+	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+	// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /specs (the `CreateSpec` operationId).
+	CreateSpecWithBody(ctx context.Context, params *CreateSpecParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSpec Create Spec
+	//
+	// Creates a spec from an OpenAPI document, which becomes its first Live
+	// version. The version is the document's `info.version` when it is a
+	// semantic version, else `1.0.0`. The document is stored in the canonical
+	// YAML layout.
+	//
+	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+	// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /specs (the `CreateSpec` operationId).
+	CreateSpec(ctx context.Context, params *CreateSpecParams, body CreateSpecJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSpec Get Spec
+	//
+	// Retrieves a spec and its Live version.
+	//
+	// Corresponds with GET /specs/{slug} (the `GetSpec` operationId).
+	GetSpec(ctx context.Context, slug SpecSlugParameter, params *GetSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PullSpec Pull Spec
+	//
+	// Returns a Live version's document in the canonical YAML layout, with the
+	// snapshot ID that names it. Without `version`, returns the current Live
+	// version. `echopoint spec pull` writes `document` as is.
+	//
+	// Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
+	PullSpec(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListSpecVersions List Spec Versions
+	//
+	// Lists a spec's Live versions, newest first. The first item is the current Live version.
+	//
+	// Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+	ListSpecVersions(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PushSpecVersionWithBody Push Spec Version
+	//
+	// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+	// compares it with the current Live version, computes the version from the
+	// changes (breaking → major, additions → minor, other edits → patch), writes
+	// that version into `info.version`, and stores the canonical YAML.
+	//
+	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// run; it is never reported as "no breaking changes"),
+	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+	// `SPEC_DOCUMENT_INVALID` (400).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+	PushSpecVersionWithBody(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PushSpecVersion Push Spec Version
+	//
+	// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+	// compares it with the current Live version, computes the version from the
+	// changes (breaking → major, additions → minor, other edits → patch), writes
+	// that version into `info.version`, and stores the canonical YAML.
+	//
+	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// run; it is never reported as "no breaking changes"),
+	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+	// `SPEC_DOCUMENT_INVALID` (400).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+	PushSpecVersion(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSpecVersion Get Spec Version
+	//
+	// Retrieves one Live version with what changed from the version before it.
+	//
+	// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
+	GetSpecVersion(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReceiveWebhookDeleteWithBody Receive Webhook via DELETE
 	//
@@ -9701,7 +10176,7 @@ func (c *Client) UpdateFlowFolder(ctx context.Context, folderId openapi_types.UU
 
 // MoveFlowFolderWithBody Move Flow Folder
 //
-// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 //
 // Takes any type of body and a specified content type.
 //
@@ -9720,7 +10195,7 @@ func (c *Client) MoveFlowFolderWithBody(ctx context.Context, folderId openapi_ty
 
 // MoveFlowFolder Move Flow Folder
 //
-// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -9996,6 +10471,11 @@ func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
 //
+// Each organization may launch at most its license's `max_executions_per_day`
+// executions in any 24 hours, counting every trigger and runner. A launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+// earlier launch does not count.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -10017,6 +10497,11 @@ func (c *Client) LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 // Real-time updates can be consumed separately from the execution stream endpoint.
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
+//
+// Each organization may launch at most its license's `max_executions_per_day`
+// executions in any 24 hours, counting every trigger and runner. A launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+// earlier launch does not count.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -10295,168 +10780,6 @@ func (c *Client) CreateOrganizationInvitation(ctx context.Context, params *Creat
 	return c.Client.Do(req)
 }
 
-// AcceptOrganizationInvitationWithBody Accept An Invitation
-//
-// Accepts the invitation behind a token for the signed-in user, who
-// becomes a member of the organization with the invited role. The request
-// carries no `X-Organization-ID`: the caller is not a member yet.
-//
-// The checks run in this order. The Product User of the caller must exist.
-// The invitation must exist. The caller must not be a member of the
-// organization already. The invitation must be pending. The verified
-// primary email address of the caller must equal the invited address,
-// ignoring case. One more member must fit within the licensed
-// `max_members`. Pending invitations are seat reservations and do not
-// count at accept, so only a join that overflows the license is refused.
-//
-// A new user gets a personal organization when the Clerk sync completes.
-// Call accept after `GET /me` reports `READY`, or the personal
-// organization is never created.
-//
-// Error codes:
-//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-//     yet. Retry shortly.
-//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-//     resend it.
-//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-//     someone else.
-//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-//     of the caller is not the invited address. The error metadata
-//     `invited_email` carries the invited address.
-//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-//     organization already, and the invitation stays as it is. The error
-//     metadata `organization_id` and `organization_name` identify the
-//     organization so the caller can open it.
-//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-//     `max_members`. An admin frees a seat. The error metadata `limit`
-//     carries the licensed number.
-//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-func (c *Client) AcceptOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewAcceptOrganizationInvitationRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// AcceptOrganizationInvitation Accept An Invitation
-//
-// Accepts the invitation behind a token for the signed-in user, who
-// becomes a member of the organization with the invited role. The request
-// carries no `X-Organization-ID`: the caller is not a member yet.
-//
-// The checks run in this order. The Product User of the caller must exist.
-// The invitation must exist. The caller must not be a member of the
-// organization already. The invitation must be pending. The verified
-// primary email address of the caller must equal the invited address,
-// ignoring case. One more member must fit within the licensed
-// `max_members`. Pending invitations are seat reservations and do not
-// count at accept, so only a join that overflows the license is refused.
-//
-// A new user gets a personal organization when the Clerk sync completes.
-// Call accept after `GET /me` reports `READY`, or the personal
-// organization is never created.
-//
-// Error codes:
-//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-//     yet. Retry shortly.
-//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-//     resend it.
-//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-//     someone else.
-//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-//     of the caller is not the invited address. The error metadata
-//     `invited_email` carries the invited address.
-//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-//     organization already, and the invitation stays as it is. The error
-//     metadata `organization_id` and `organization_name` identify the
-//     organization so the caller can open it.
-//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-//     `max_members`. An admin frees a seat. The error metadata `limit`
-//     carries the licensed number.
-//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-func (c *Client) AcceptOrganizationInvitation(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewAcceptOrganizationInvitationRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// LookupOrganizationInvitationWithBody Look Up An Invitation By Its Token
-//
-// Shows the invitation behind a token, as the invited person may see it:
-// the organization name, the invited email address, the expiry and the
-// status. It never returns the token.
-//
-// The caller is a signed-in user who is not a member yet, so the request
-// carries no `X-Organization-ID`. An expired or accepted invitation is
-// found too: read `status`.
-//
-// Error codes:
-// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-func (c *Client) LookupOrganizationInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewLookupOrganizationInvitationRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// LookupOrganizationInvitation Look Up An Invitation By Its Token
-//
-// Shows the invitation behind a token, as the invited person may see it:
-// the organization name, the invited email address, the expiry and the
-// status. It never returns the token.
-//
-// The caller is a signed-in user who is not a member yet, so the request
-// carries no `X-Organization-ID`. An expired or accepted invitation is
-// found too: read `status`.
-//
-// Error codes:
-// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-func (c *Client) LookupOrganizationInvitation(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewLookupOrganizationInvitationRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // DeleteOrganizationInvitation Delete An Invitation
 //
 // Deletes an invitation of the current organization. Its link stops
@@ -10476,16 +10799,91 @@ func (c *Client) DeleteOrganizationInvitation(ctx context.Context, invitationId 
 	return c.Client.Do(req)
 }
 
+// AcceptOrganizationInvitation Accept An Invitation
+//
+// Accepts one of the invitations `GET /me/invitations` lists, for the
+// signed-in user, who becomes a member of the organization with the
+// invited role. The request carries no `X-Organization-ID`: the caller is
+// not a member yet.
+//
+// The checks run in this order. The Product User of the caller must exist.
+// The invitation must be addressed to one of the verified email addresses
+// of the caller, ignoring case: any other invitation answers
+// `INVITATION_NOT_FOUND`, so a caller learns nothing about invitations
+// sent to someone else. The caller must not be a member of the
+// organization already. The invitation must be pending. One more member
+// must fit within the licensed `max_members`. Pending invitations are seat
+// reservations and do not count at accept, so only a join that overflows
+// the license is refused.
+//
+// A new user gets a personal organization when the Clerk sync completes.
+// Call accept after `GET /me` reports `READY`, or the personal
+// organization is never created.
+//
+// Error codes:
+//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+//     yet. Retry shortly.
+//   - `INVITATION_NOT_FOUND` (404): no invitation with this id is addressed
+//     to a verified email address of the caller.
+//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+//     resend it.
+//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted
+//     already.
+//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+//     organization already, and the invitation stays as it is. The error
+//     metadata `organization_id` and `organization_name` identify the
+//     organization so the caller can open it.
+//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+//     `max_members`. An admin frees a seat. The error metadata `limit`
+//     carries the licensed number.
+//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Corresponds with POST /invitations/{invitationId}/accept (the `AcceptOrganizationInvitation` operationId).
+func (c *Client) AcceptOrganizationInvitation(ctx context.Context, invitationId InvitationId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcceptOrganizationInvitationRequest(c.Server, invitationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ResendOrganizationInvitation Resend An Invitation
 //
-// Replaces the link of a pending invitation, extends its expiry, and
-// emails the new link. The old link stops working. An expired or accepted
-// invitation answers 409. If the email cannot be sent the invitation stays
+// Sets the expiry of a pending invitation to 7 days from now and emails
+// the invited person again. An expired or accepted invitation answers 409.
+// If the email cannot be sent the invitation stays, with its new expiry,
 // and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
 //
 // Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
 func (c *Client) ResendOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewResendOrganizationInvitationRequest(c.Server, invitationId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetLicenseUsage Get License Usage
+//
+// Returns every limit of the organization's license next to the
+// organization's current use of it. The limits come from the
+// organization's Anchor license; Echopoint counts the usage when the
+// request is served, so it is never stale.
+//
+// Error codes:
+// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Corresponds with GET /license/usage (the `GetLicenseUsage` operationId).
+func (c *Client) GetLicenseUsage(ctx context.Context, params *GetLicenseUsageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetLicenseUsageRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10503,6 +10901,32 @@ func (c *Client) ResendOrganizationInvitation(ctx context.Context, invitationId 
 // Corresponds with GET /me (the `GetMe` operationId).
 func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMeRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListMyInvitations List My Invitations
+//
+// Lists the pending invitations addressed to any verified email address
+// of the signed-in user, across every organization, newest first. The app
+// calls it after sign-up and sign-in to offer the invitations waiting for
+// the person, who accepts one with
+// `POST /invitations/{invitationId}/accept`. The request carries no
+// `X-Organization-ID`: the caller need not belong to the organizations.
+//
+// An email address the sign-in provider has not verified never matches,
+// so nobody sees an invitation by adding someone else's address to their
+// account. A user with no verified address gets an empty list.
+//
+// Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+func (c *Client) ListMyInvitations(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListMyInvitationsRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -11187,6 +11611,207 @@ func (c *Client) ListRunnerJobWebhookRequests(ctx context.Context, jobId RunnerJ
 // Corresponds with GET /runners (the `ListLiveRunners` operationId).
 func (c *Client) ListLiveRunners(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListLiveRunnersRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListSpecs List Specs
+//
+// Lists the organization's specs with their Live version, by slug.
+//
+// Corresponds with GET /specs (the `ListSpecs` operationId).
+func (c *Client) ListSpecs(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListSpecsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSpecWithBody Create Spec
+//
+// Creates a spec from an OpenAPI document, which becomes its first Live
+// version. The version is the document's `info.version` when it is a
+// semantic version, else `1.0.0`. The document is stored in the canonical
+// YAML layout.
+//
+// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /specs (the `CreateSpec` operationId).
+func (c *Client) CreateSpecWithBody(ctx context.Context, params *CreateSpecParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSpecRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSpec Create Spec
+//
+// Creates a spec from an OpenAPI document, which becomes its first Live
+// version. The version is the document's `info.version` when it is a
+// semantic version, else `1.0.0`. The document is stored in the canonical
+// YAML layout.
+//
+// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /specs (the `CreateSpec` operationId).
+func (c *Client) CreateSpec(ctx context.Context, params *CreateSpecParams, body CreateSpecJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSpecRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSpec Get Spec
+//
+// Retrieves a spec and its Live version.
+//
+// Corresponds with GET /specs/{slug} (the `GetSpec` operationId).
+func (c *Client) GetSpec(ctx context.Context, slug SpecSlugParameter, params *GetSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSpecRequest(c.Server, slug, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PullSpec Pull Spec
+//
+// Returns a Live version's document in the canonical YAML layout, with the
+// snapshot ID that names it. Without `version`, returns the current Live
+// version. `echopoint spec pull` writes `document` as is.
+//
+// Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
+func (c *Client) PullSpec(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPullSpecRequest(c.Server, slug, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListSpecVersions List Spec Versions
+//
+// Lists a spec's Live versions, newest first. The first item is the current Live version.
+//
+// Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+func (c *Client) ListSpecVersions(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListSpecVersionsRequest(c.Server, slug, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PushSpecVersionWithBody Push Spec Version
+//
+// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+// compares it with the current Live version, computes the version from the
+// changes (breaking → major, additions → minor, other edits → patch), writes
+// that version into `info.version`, and stores the canonical YAML.
+//
+// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// run; it is never reported as "no breaking changes"),
+// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+// `SPEC_DOCUMENT_INVALID` (400).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+func (c *Client) PushSpecVersionWithBody(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPushSpecVersionRequestWithBody(c.Server, slug, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PushSpecVersion Push Spec Version
+//
+// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+// compares it with the current Live version, computes the version from the
+// changes (breaking → major, additions → minor, other edits → patch), writes
+// that version into `info.version`, and stores the canonical YAML.
+//
+// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// run; it is never reported as "no breaking changes"),
+// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+// `SPEC_DOCUMENT_INVALID` (400).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+func (c *Client) PushSpecVersion(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPushSpecVersionRequest(c.Server, slug, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSpecVersion Get Spec Version
+//
+// Retrieves one Live version with what changed from the version before it.
+//
+// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
+func (c *Client) GetSpecVersion(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSpecVersionRequest(c.Server, slug, version, params)
 	if err != nil {
 		return nil, err
 	}
@@ -15954,86 +16579,6 @@ func NewCreateOrganizationInvitationRequestWithBody(server string, params *Creat
 	return req, nil
 }
 
-// NewAcceptOrganizationInvitationRequest calls the generic AcceptOrganizationInvitation builder with application/json body
-func NewAcceptOrganizationInvitationRequest(server string, body AcceptOrganizationInvitationJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewAcceptOrganizationInvitationRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewAcceptOrganizationInvitationRequestWithBody constructs an http.Request for the AcceptOrganizationInvitation method, with any body, and a specified content type
-func NewAcceptOrganizationInvitationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/invitations/accept")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewLookupOrganizationInvitationRequest calls the generic LookupOrganizationInvitation builder with application/json body
-func NewLookupOrganizationInvitationRequest(server string, body LookupOrganizationInvitationJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewLookupOrganizationInvitationRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewLookupOrganizationInvitationRequestWithBody constructs an http.Request for the LookupOrganizationInvitation method, with any body, and a specified content type
-func NewLookupOrganizationInvitationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/invitations/lookup")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewDeleteOrganizationInvitationRequest constructs an http.Request for the DeleteOrganizationInvitation method
 func NewDeleteOrganizationInvitationRequest(server string, invitationId InvitationId, params *DeleteOrganizationInvitationParams) (*http.Request, error) {
 	var err error
@@ -16076,6 +16621,40 @@ func NewDeleteOrganizationInvitationRequest(server string, invitationId Invitati
 
 		req.Header.Set("X-Organization-ID", headerParam0)
 
+	}
+
+	return req, nil
+}
+
+// NewAcceptOrganizationInvitationRequest constructs an http.Request for the AcceptOrganizationInvitation method
+func NewAcceptOrganizationInvitationRequest(server string, invitationId InvitationId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "invitationId", invitationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/%s/accept", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
 	}
 
 	return req, nil
@@ -16128,6 +16707,46 @@ func NewResendOrganizationInvitationRequest(server string, invitationId Invitati
 	return req, nil
 }
 
+// NewGetLicenseUsageRequest constructs an http.Request for the GetLicenseUsage method
+func NewGetLicenseUsageRequest(server string, params *GetLicenseUsageParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/license/usage")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetMeRequest constructs an http.Request for the GetMe method
 func NewGetMeRequest(server string) (*http.Request, error) {
 	var err error
@@ -16138,6 +16757,33 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/me")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListMyInvitationsRequest constructs an http.Request for the ListMyInvitations method
+func NewListMyInvitationsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/me/invitations")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -17307,6 +17953,443 @@ func NewListLiveRunnersRequest(server string, params *ListLiveRunnersParams) (*h
 	}
 
 	operationPath := fmt.Sprintf("/runners")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListSpecsRequest constructs an http.Request for the ListSpecs method
+func NewListSpecsRequest(server string, params *ListSpecsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateSpecRequest calls the generic CreateSpec builder with application/json body
+func NewCreateSpecRequest(server string, params *CreateSpecParams, body CreateSpecJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSpecRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateSpecRequestWithBody constructs an http.Request for the CreateSpec method, with any body, and a specified content type
+func NewCreateSpecRequestWithBody(server string, params *CreateSpecParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetSpecRequest constructs an http.Request for the GetSpec method
+func NewGetSpecRequest(server string, slug SpecSlugParameter, params *GetSpecParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPullSpecRequest constructs an http.Request for the PullSpec method
+func NewPullSpecRequest(server string, slug SpecSlugParameter, params *PullSpecParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s/document", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Version != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "version", *params.Version, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListSpecVersionsRequest constructs an http.Request for the ListSpecVersions method
+func NewListSpecVersionsRequest(server string, slug SpecSlugParameter, params *ListSpecVersionsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s/versions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPushSpecVersionRequest calls the generic PushSpecVersion builder with application/json body
+func NewPushSpecVersionRequest(server string, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPushSpecVersionRequestWithBody(server, slug, params, "application/json", bodyReader)
+}
+
+// NewPushSpecVersionRequestWithBody constructs an http.Request for the PushSpecVersion method, with any body, and a specified content type
+func NewPushSpecVersionRequestWithBody(server string, slug SpecSlugParameter, params *PushSpecVersionParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s/versions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetSpecVersionRequest constructs an http.Request for the GetSpecVersion method
+func NewGetSpecVersionRequest(server string, slug SpecSlugParameter, version string, params *GetSpecVersionParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "version", version, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s/versions/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -18743,7 +19826,7 @@ type ClientWithResponsesInterface interface {
 
 	// MoveFlowFolderWithBodyWithResponse Move Flow Folder
 	//
-	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -18752,7 +19835,7 @@ type ClientWithResponsesInterface interface {
 
 	// MoveFlowFolderWithResponse Move Flow Folder
 	//
-	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+	// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -18898,6 +19981,11 @@ type ClientWithResponsesInterface interface {
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
 	//
+	// Each organization may launch at most its license's `max_executions_per_day`
+	// executions in any 24 hours, counting every trigger and runner. A launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+	// earlier launch does not count.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -18909,6 +19997,11 @@ type ClientWithResponsesInterface interface {
 	// Real-time updates can be consumed separately from the execution stream endpoint.
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
+	//
+	// Each organization may launch at most its license's `max_executions_per_day`
+	// executions in any 24 hours, counting every trigger and runner. A launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+	// earlier launch does not count.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -19065,128 +20158,6 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
 	CreateOrganizationInvitationWithResponse(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrganizationInvitationResponse, error)
 
-	// AcceptOrganizationInvitationWithBodyWithResponse Accept An Invitation
-	//
-	// Accepts the invitation behind a token for the signed-in user, who
-	// becomes a member of the organization with the invited role. The request
-	// carries no `X-Organization-ID`: the caller is not a member yet.
-	//
-	// The checks run in this order. The Product User of the caller must exist.
-	// The invitation must exist. The caller must not be a member of the
-	// organization already. The invitation must be pending. The verified
-	// primary email address of the caller must equal the invited address,
-	// ignoring case. One more member must fit within the licensed
-	// `max_members`. Pending invitations are seat reservations and do not
-	// count at accept, so only a join that overflows the license is refused.
-	//
-	// A new user gets a personal organization when the Clerk sync completes.
-	// Call accept after `GET /me` reports `READY`, or the personal
-	// organization is never created.
-	//
-	// Error codes:
-	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-	//   yet. Retry shortly.
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-	//   resend it.
-	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-	//   someone else.
-	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-	//   of the caller is not the invited address. The error metadata
-	//   `invited_email` carries the invited address.
-	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-	//   organization already, and the invitation stays as it is. The error
-	//   metadata `organization_id` and `organization_name` identify the
-	//   organization so the caller can open it.
-	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-	//   `max_members`. An admin frees a seat. The error metadata `limit`
-	//   carries the licensed number.
-	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-	AcceptOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error)
-
-	// AcceptOrganizationInvitationWithResponse Accept An Invitation
-	//
-	// Accepts the invitation behind a token for the signed-in user, who
-	// becomes a member of the organization with the invited role. The request
-	// carries no `X-Organization-ID`: the caller is not a member yet.
-	//
-	// The checks run in this order. The Product User of the caller must exist.
-	// The invitation must exist. The caller must not be a member of the
-	// organization already. The invitation must be pending. The verified
-	// primary email address of the caller must equal the invited address,
-	// ignoring case. One more member must fit within the licensed
-	// `max_members`. Pending invitations are seat reservations and do not
-	// count at accept, so only a join that overflows the license is refused.
-	//
-	// A new user gets a personal organization when the Clerk sync completes.
-	// Call accept after `GET /me` reports `READY`, or the personal
-	// organization is never created.
-	//
-	// Error codes:
-	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-	//   yet. Retry shortly.
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-	//   resend it.
-	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-	//   someone else.
-	// - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-	//   of the caller is not the invited address. The error metadata
-	//   `invited_email` carries the invited address.
-	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-	//   organization already, and the invitation stays as it is. The error
-	//   metadata `organization_id` and `organization_name` identify the
-	//   organization so the caller can open it.
-	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-	//   `max_members`. An admin frees a seat. The error metadata `limit`
-	//   carries the licensed number.
-	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-	AcceptOrganizationInvitationWithResponse(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error)
-
-	// LookupOrganizationInvitationWithBodyWithResponse Look Up An Invitation By Its Token
-	//
-	// Shows the invitation behind a token, as the invited person may see it:
-	// the organization name, the invited email address, the expiry and the
-	// status. It never returns the token.
-	//
-	// The caller is a signed-in user who is not a member yet, so the request
-	// carries no `X-Organization-ID`. An expired or accepted invitation is
-	// found too: read `status`.
-	//
-	// Error codes:
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-	LookupOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error)
-
-	// LookupOrganizationInvitationWithResponse Look Up An Invitation By Its Token
-	//
-	// Shows the invitation behind a token, as the invited person may see it:
-	// the organization name, the invited email address, the expiry and the
-	// status. It never returns the token.
-	//
-	// The caller is a signed-in user who is not a member yet, so the request
-	// carries no `X-Organization-ID`. An expired or accepted invitation is
-	// found too: read `status`.
-	//
-	// Error codes:
-	// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-	LookupOrganizationInvitationWithResponse(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error)
-
 	// DeleteOrganizationInvitationWithResponse Delete An Invitation
 	//
 	// Deletes an invitation of the current organization. Its link stops
@@ -19198,17 +20169,76 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with DELETE /invitations/{invitationId} (the `DeleteOrganizationInvitation` operationId).
 	DeleteOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, params *DeleteOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*DeleteOrganizationInvitationResponse, error)
 
+	// AcceptOrganizationInvitationWithResponse Accept An Invitation
+	//
+	// Accepts one of the invitations `GET /me/invitations` lists, for the
+	// signed-in user, who becomes a member of the organization with the
+	// invited role. The request carries no `X-Organization-ID`: the caller is
+	// not a member yet.
+	//
+	// The checks run in this order. The Product User of the caller must exist.
+	// The invitation must be addressed to one of the verified email addresses
+	// of the caller, ignoring case: any other invitation answers
+	// `INVITATION_NOT_FOUND`, so a caller learns nothing about invitations
+	// sent to someone else. The caller must not be a member of the
+	// organization already. The invitation must be pending. One more member
+	// must fit within the licensed `max_members`. Pending invitations are seat
+	// reservations and do not count at accept, so only a join that overflows
+	// the license is refused.
+	//
+	// A new user gets a personal organization when the Clerk sync completes.
+	// Call accept after `GET /me` reports `READY`, or the personal
+	// organization is never created.
+	//
+	// Error codes:
+	// - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+	//   yet. Retry shortly.
+	// - `INVITATION_NOT_FOUND` (404): no invitation with this id is addressed
+	//   to a verified email address of the caller.
+	// - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+	//   resend it.
+	// - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted
+	//   already.
+	// - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+	//   organization already, and the invitation stays as it is. The error
+	//   metadata `organization_id` and `organization_name` identify the
+	//   organization so the caller can open it.
+	// - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+	//   `max_members`. An admin frees a seat. The error metadata `limit`
+	//   carries the licensed number.
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/{invitationId}/accept (the `AcceptOrganizationInvitation` operationId).
+	AcceptOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error)
+
 	// ResendOrganizationInvitationWithResponse Resend An Invitation
 	//
-	// Replaces the link of a pending invitation, extends its expiry, and
-	// emails the new link. The old link stops working. An expired or accepted
-	// invitation answers 409. If the email cannot be sent the invitation stays
+	// Sets the expiry of a pending invitation to 7 days from now and emails
+	// the invited person again. An expired or accepted invitation answers 409.
+	// If the email cannot be sent the invitation stays, with its new expiry,
 	// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
 	ResendOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*ResendOrganizationInvitationResponse, error)
+
+	// GetLicenseUsageWithResponse Get License Usage
+	//
+	// Returns every limit of the organization's license next to the
+	// organization's current use of it. The limits come from the
+	// organization's Anchor license; Echopoint counts the usage when the
+	// request is served, so it is never stale.
+	//
+	// Error codes:
+	// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /license/usage (the `GetLicenseUsage` operationId).
+	GetLicenseUsageWithResponse(ctx context.Context, params *GetLicenseUsageParams, reqEditors ...RequestEditorFn) (*GetLicenseUsageResponse, error)
 
 	// GetMeWithResponse Get current user and organization context
 	//
@@ -19218,6 +20248,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /me (the `GetMe` operationId).
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
+
+	// ListMyInvitationsWithResponse List My Invitations
+	//
+	// Lists the pending invitations addressed to any verified email address
+	// of the signed-in user, across every organization, newest first. The app
+	// calls it after sign-up and sign-in to offer the invitations waiting for
+	// the person, who accepts one with
+	// `POST /invitations/{invitationId}/accept`. The request carries no
+	// `X-Organization-ID`: the caller need not belong to the organizations.
+	//
+	// An email address the sign-in provider has not verified never matches,
+	// so nobody sees an invitation by adding someone else's address to their
+	// account. A user with no verified address gets an empty list.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+	ListMyInvitationsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyInvitationsResponse, error)
 
 	// ListOrganizationMembersWithResponse List Organization Members
 	//
@@ -19578,6 +20626,127 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /runners (the `ListLiveRunners` operationId).
 	ListLiveRunnersWithResponse(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*ListLiveRunnersResponse, error)
+
+	// ListSpecsWithResponse List Specs
+	//
+	// Lists the organization's specs with their Live version, by slug.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /specs (the `ListSpecs` operationId).
+	ListSpecsWithResponse(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*ListSpecsResponse, error)
+
+	// CreateSpecWithBodyWithResponse Create Spec
+	//
+	// Creates a spec from an OpenAPI document, which becomes its first Live
+	// version. The version is the document's `info.version` when it is a
+	// semantic version, else `1.0.0`. The document is stored in the canonical
+	// YAML layout.
+	//
+	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+	// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs (the `CreateSpec` operationId).
+	CreateSpecWithBodyWithResponse(ctx context.Context, params *CreateSpecParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSpecResponse, error)
+
+	// CreateSpecWithResponse Create Spec
+	//
+	// Creates a spec from an OpenAPI document, which becomes its first Live
+	// version. The version is the document's `info.version` when it is a
+	// semantic version, else `1.0.0`. The document is stored in the canonical
+	// YAML layout.
+	//
+	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+	// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs (the `CreateSpec` operationId).
+	CreateSpecWithResponse(ctx context.Context, params *CreateSpecParams, body CreateSpecJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSpecResponse, error)
+
+	// GetSpecWithResponse Get Spec
+	//
+	// Retrieves a spec and its Live version.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /specs/{slug} (the `GetSpec` operationId).
+	GetSpecWithResponse(ctx context.Context, slug SpecSlugParameter, params *GetSpecParams, reqEditors ...RequestEditorFn) (*GetSpecResponse, error)
+
+	// PullSpecWithResponse Pull Spec
+	//
+	// Returns a Live version's document in the canonical YAML layout, with the
+	// snapshot ID that names it. Without `version`, returns the current Live
+	// version. `echopoint spec pull` writes `document` as is.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
+	PullSpecWithResponse(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*PullSpecResponse, error)
+
+	// ListSpecVersionsWithResponse List Spec Versions
+	//
+	// Lists a spec's Live versions, newest first. The first item is the current Live version.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+	ListSpecVersionsWithResponse(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*ListSpecVersionsResponse, error)
+
+	// PushSpecVersionWithBodyWithResponse Push Spec Version
+	//
+	// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+	// compares it with the current Live version, computes the version from the
+	// changes (breaking → major, additions → minor, other edits → patch), writes
+	// that version into `info.version`, and stores the canonical YAML.
+	//
+	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// run; it is never reported as "no breaking changes"),
+	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+	// `SPEC_DOCUMENT_INVALID` (400).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+	PushSpecVersionWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PushSpecVersionResponse, error)
+
+	// PushSpecVersionWithResponse Push Spec Version
+	//
+	// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+	// compares it with the current Live version, computes the version from the
+	// changes (breaking → major, additions → minor, other edits → patch), writes
+	// that version into `info.version`, and stores the canonical YAML.
+	//
+	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// run; it is never reported as "no breaking changes"),
+	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+	// `SPEC_DOCUMENT_INVALID` (400).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+	PushSpecVersionWithResponse(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*PushSpecVersionResponse, error)
+
+	// GetSpecVersionWithResponse Get Spec Version
+	//
+	// Retrieves one Live version with what changed from the version before it.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
+	GetSpecVersionWithResponse(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*GetSpecVersionResponse, error)
 
 	// ReceiveWebhookDeleteWithBodyWithResponse Receive Webhook via DELETE
 	//
@@ -23660,6 +24829,8 @@ type LaunchFlowResponse struct {
 	JSON404 *NotFound
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ApiErrorResponse
 }
@@ -23692,6 +24863,11 @@ func (r LaunchFlowResponse) GetJSON404() *NotFound {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r LaunchFlowResponse) GetJSON409() *Conflict {
 	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r LaunchFlowResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -24368,151 +25544,6 @@ func (r CreateOrganizationInvitationResponse) ContentType() string {
 	return ""
 }
 
-type AcceptOrganizationInvitationResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *AcceptedInvitationResponse
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r AcceptOrganizationInvitationResponse) GetJSON200() *AcceptedInvitationResponse {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r AcceptOrganizationInvitationResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r AcceptOrganizationInvitationResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r AcceptOrganizationInvitationResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r AcceptOrganizationInvitationResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r AcceptOrganizationInvitationResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r AcceptOrganizationInvitationResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r AcceptOrganizationInvitationResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r AcceptOrganizationInvitationResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r AcceptOrganizationInvitationResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type LookupOrganizationInvitationResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *InvitationLookupResponse
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r LookupOrganizationInvitationResponse) GetJSON200() *InvitationLookupResponse {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r LookupOrganizationInvitationResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r LookupOrganizationInvitationResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r LookupOrganizationInvitationResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r LookupOrganizationInvitationResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r LookupOrganizationInvitationResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r LookupOrganizationInvitationResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r LookupOrganizationInvitationResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r LookupOrganizationInvitationResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 type DeleteOrganizationInvitationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -24562,6 +25593,75 @@ func (r DeleteOrganizationInvitationResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r DeleteOrganizationInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AcceptOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AcceptedInvitationResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON200() *AcceptedInvitationResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r AcceptOrganizationInvitationResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r AcceptOrganizationInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AcceptOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AcceptOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AcceptOrganizationInvitationResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -24644,6 +25744,68 @@ func (r ResendOrganizationInvitationResponse) ContentType() string {
 	return ""
 }
 
+type GetLicenseUsageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *LicenseUsage
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetLicenseUsageResponse) GetJSON200() *LicenseUsage {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetLicenseUsageResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetLicenseUsageResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetLicenseUsageResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetLicenseUsageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetLicenseUsageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetLicenseUsageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetLicenseUsageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetMeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -24700,6 +25862,61 @@ func (r GetMeResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetMeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListMyInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ReceivedInvitationListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListMyInvitationsResponse) GetJSON200() *ReceivedInvitationListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListMyInvitationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListMyInvitationsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListMyInvitationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListMyInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListMyInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListMyInvitationsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -26146,6 +27363,468 @@ func (r ListLiveRunnersResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListLiveRunnersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListSpecsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListSpecsResponse) GetJSON200() *SpecListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListSpecsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListSpecsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListSpecsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListSpecsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListSpecsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListSpecsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListSpecsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateSpecResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *Spec
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateSpecResponse) GetJSON201() *Spec {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateSpecResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateSpecResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateSpecResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateSpecResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateSpecResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateSpecResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateSpecResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateSpecResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSpecResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Spec
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSpecResponse) GetJSON200() *Spec {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetSpecResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetSpecResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetSpecResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSpecResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSpecResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSpecResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSpecResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PullSpecResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecDocument
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PullSpecResponse) GetJSON200() *SpecDocument {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PullSpecResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PullSpecResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PullSpecResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r PullSpecResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PullSpecResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PullSpecResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PullSpecResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListSpecVersionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecVersionListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListSpecVersionsResponse) GetJSON200() *SpecVersionListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListSpecVersionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListSpecVersionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListSpecVersionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListSpecVersionsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r ListSpecVersionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListSpecVersionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListSpecVersionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListSpecVersionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PushSpecVersionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *SpecVersion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PushSpecVersionResponse) GetJSON201() *SpecVersion {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PushSpecVersionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PushSpecVersionResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PushSpecVersionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PushSpecVersionResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PushSpecVersionResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r PushSpecVersionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PushSpecVersionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PushSpecVersionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PushSpecVersionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSpecVersionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecVersion
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSpecVersionResponse) GetJSON200() *SpecVersion {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetSpecVersionResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetSpecVersionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetSpecVersionResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSpecVersionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSpecVersionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSpecVersionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSpecVersionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -27975,7 +29654,7 @@ func (c *ClientWithResponses) UpdateFlowFolderWithResponse(ctx context.Context, 
 
 // MoveFlowFolderWithBodyWithResponse Move Flow Folder
 //
-// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -27990,7 +29669,7 @@ func (c *ClientWithResponses) MoveFlowFolderWithBodyWithResponse(ctx context.Con
 
 // MoveFlowFolderWithResponse Move Flow Folder
 //
-// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Rejects moves that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
+// Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -28226,6 +29905,11 @@ func (c *ClientWithResponses) ExportFlowWithResponse(ctx context.Context, id ope
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
 //
+// Each organization may launch at most its license's `max_executions_per_day`
+// executions in any 24 hours, counting every trigger and runner. A launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+// earlier launch does not count.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -28243,6 +29927,11 @@ func (c *ClientWithResponses) LaunchFlowWithBodyWithResponse(ctx context.Context
 // Real-time updates can be consumed separately from the execution stream endpoint.
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
+//
+// Each organization may launch at most its license's `max_executions_per_day`
+// executions in any 24 hours, counting every trigger and runner. A launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+// earlier launch does not count.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -28483,152 +30172,6 @@ func (c *ClientWithResponses) CreateOrganizationInvitationWithResponse(ctx conte
 	return ParseCreateOrganizationInvitationResponse(rsp)
 }
 
-// AcceptOrganizationInvitationWithBodyWithResponse Accept An Invitation
-//
-// Accepts the invitation behind a token for the signed-in user, who
-// becomes a member of the organization with the invited role. The request
-// carries no `X-Organization-ID`: the caller is not a member yet.
-//
-// The checks run in this order. The Product User of the caller must exist.
-// The invitation must exist. The caller must not be a member of the
-// organization already. The invitation must be pending. The verified
-// primary email address of the caller must equal the invited address,
-// ignoring case. One more member must fit within the licensed
-// `max_members`. Pending invitations are seat reservations and do not
-// count at accept, so only a join that overflows the license is refused.
-//
-// A new user gets a personal organization when the Clerk sync completes.
-// Call accept after `GET /me` reports `READY`, or the personal
-// organization is never created.
-//
-// Error codes:
-//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-//     yet. Retry shortly.
-//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-//     resend it.
-//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-//     someone else.
-//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-//     of the caller is not the invited address. The error metadata
-//     `invited_email` carries the invited address.
-//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-//     organization already, and the invitation stays as it is. The error
-//     metadata `organization_id` and `organization_name` identify the
-//     organization so the caller can open it.
-//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-//     `max_members`. An admin frees a seat. The error metadata `limit`
-//     carries the licensed number.
-//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-func (c *ClientWithResponses) AcceptOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error) {
-	rsp, err := c.AcceptOrganizationInvitationWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseAcceptOrganizationInvitationResponse(rsp)
-}
-
-// AcceptOrganizationInvitationWithResponse Accept An Invitation
-//
-// Accepts the invitation behind a token for the signed-in user, who
-// becomes a member of the organization with the invited role. The request
-// carries no `X-Organization-ID`: the caller is not a member yet.
-//
-// The checks run in this order. The Product User of the caller must exist.
-// The invitation must exist. The caller must not be a member of the
-// organization already. The invitation must be pending. The verified
-// primary email address of the caller must equal the invited address,
-// ignoring case. One more member must fit within the licensed
-// `max_members`. Pending invitations are seat reservations and do not
-// count at accept, so only a join that overflows the license is refused.
-//
-// A new user gets a personal organization when the Clerk sync completes.
-// Call accept after `GET /me` reports `READY`, or the personal
-// organization is never created.
-//
-// Error codes:
-//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
-//     yet. Retry shortly.
-//   - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
-//     resend it.
-//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-//     someone else.
-//   - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-//     of the caller is not the invited address. The error metadata
-//     `invited_email` carries the invited address.
-//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
-//     organization already, and the invitation stays as it is. The error
-//     metadata `organization_id` and `organization_name` identify the
-//     organization so the caller can open it.
-//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
-//     `max_members`. An admin frees a seat. The error metadata `limit`
-//     carries the licensed number.
-//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /invitations/accept (the `AcceptOrganizationInvitation` operationId).
-func (c *ClientWithResponses) AcceptOrganizationInvitationWithResponse(ctx context.Context, body AcceptOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error) {
-	rsp, err := c.AcceptOrganizationInvitation(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseAcceptOrganizationInvitationResponse(rsp)
-}
-
-// LookupOrganizationInvitationWithBodyWithResponse Look Up An Invitation By Its Token
-//
-// Shows the invitation behind a token, as the invited person may see it:
-// the organization name, the invited email address, the expiry and the
-// status. It never returns the token.
-//
-// The caller is a signed-in user who is not a member yet, so the request
-// carries no `X-Organization-ID`. An expired or accepted invitation is
-// found too: read `status`.
-//
-// Error codes:
-// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-func (c *ClientWithResponses) LookupOrganizationInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error) {
-	rsp, err := c.LookupOrganizationInvitationWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseLookupOrganizationInvitationResponse(rsp)
-}
-
-// LookupOrganizationInvitationWithResponse Look Up An Invitation By Its Token
-//
-// Shows the invitation behind a token, as the invited person may see it:
-// the organization name, the invited email address, the expiry and the
-// status. It never returns the token.
-//
-// The caller is a signed-in user who is not a member yet, so the request
-// carries no `X-Organization-ID`. An expired or accepted invitation is
-// found too: read `status`.
-//
-// Error codes:
-// - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /invitations/lookup (the `LookupOrganizationInvitation` operationId).
-func (c *ClientWithResponses) LookupOrganizationInvitationWithResponse(ctx context.Context, body LookupOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*LookupOrganizationInvitationResponse, error) {
-	rsp, err := c.LookupOrganizationInvitation(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseLookupOrganizationInvitationResponse(rsp)
-}
-
 // DeleteOrganizationInvitationWithResponse Delete An Invitation
 //
 // Deletes an invitation of the current organization. Its link stops
@@ -28646,11 +30189,61 @@ func (c *ClientWithResponses) DeleteOrganizationInvitationWithResponse(ctx conte
 	return ParseDeleteOrganizationInvitationResponse(rsp)
 }
 
+// AcceptOrganizationInvitationWithResponse Accept An Invitation
+//
+// Accepts one of the invitations `GET /me/invitations` lists, for the
+// signed-in user, who becomes a member of the organization with the
+// invited role. The request carries no `X-Organization-ID`: the caller is
+// not a member yet.
+//
+// The checks run in this order. The Product User of the caller must exist.
+// The invitation must be addressed to one of the verified email addresses
+// of the caller, ignoring case: any other invitation answers
+// `INVITATION_NOT_FOUND`, so a caller learns nothing about invitations
+// sent to someone else. The caller must not be a member of the
+// organization already. The invitation must be pending. One more member
+// must fit within the licensed `max_members`. Pending invitations are seat
+// reservations and do not count at accept, so only a join that overflows
+// the license is refused.
+//
+// A new user gets a personal organization when the Clerk sync completes.
+// Call accept after `GET /me` reports `READY`, or the personal
+// organization is never created.
+//
+// Error codes:
+//   - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
+//     yet. Retry shortly.
+//   - `INVITATION_NOT_FOUND` (404): no invitation with this id is addressed
+//     to a verified email address of the caller.
+//   - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
+//     resend it.
+//   - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted
+//     already.
+//   - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
+//     organization already, and the invitation stays as it is. The error
+//     metadata `organization_id` and `organization_name` identify the
+//     organization so the caller can open it.
+//   - `SEAT_LIMIT_REACHED` (409): the members already fill the licensed
+//     `max_members`. An admin frees a seat. The error metadata `limit`
+//     carries the licensed number.
+//   - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/{invitationId}/accept (the `AcceptOrganizationInvitation` operationId).
+func (c *ClientWithResponses) AcceptOrganizationInvitationWithResponse(ctx context.Context, invitationId InvitationId, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error) {
+	rsp, err := c.AcceptOrganizationInvitation(ctx, invitationId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAcceptOrganizationInvitationResponse(rsp)
+}
+
 // ResendOrganizationInvitationWithResponse Resend An Invitation
 //
-// Replaces the link of a pending invitation, extends its expiry, and
-// emails the new link. The old link stops working. An expired or accepted
-// invitation answers 409. If the email cannot be sent the invitation stays
+// Sets the expiry of a pending invitation to 7 days from now and emails
+// the invited person again. An expired or accepted invitation answers 409.
+// If the email cannot be sent the invitation stays, with its new expiry,
 // and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
 //
 // Returns a wrapper object for the known response body format(s).
@@ -28662,6 +30255,27 @@ func (c *ClientWithResponses) ResendOrganizationInvitationWithResponse(ctx conte
 		return nil, err
 	}
 	return ParseResendOrganizationInvitationResponse(rsp)
+}
+
+// GetLicenseUsageWithResponse Get License Usage
+//
+// Returns every limit of the organization's license next to the
+// organization's current use of it. The limits come from the
+// organization's Anchor license; Echopoint counts the usage when the
+// request is served, so it is never stale.
+//
+// Error codes:
+// - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /license/usage (the `GetLicenseUsage` operationId).
+func (c *ClientWithResponses) GetLicenseUsageWithResponse(ctx context.Context, params *GetLicenseUsageParams, reqEditors ...RequestEditorFn) (*GetLicenseUsageResponse, error) {
+	rsp, err := c.GetLicenseUsage(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetLicenseUsageResponse(rsp)
 }
 
 // GetMeWithResponse Get current user and organization context
@@ -28677,6 +30291,30 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 		return nil, err
 	}
 	return ParseGetMeResponse(rsp)
+}
+
+// ListMyInvitationsWithResponse List My Invitations
+//
+// Lists the pending invitations addressed to any verified email address
+// of the signed-in user, across every organization, newest first. The app
+// calls it after sign-up and sign-in to offer the invitations waiting for
+// the person, who accepts one with
+// `POST /invitations/{invitationId}/accept`. The request carries no
+// `X-Organization-ID`: the caller need not belong to the organizations.
+//
+// An email address the sign-in provider has not verified never matches,
+// so nobody sees an invitation by adding someone else's address to their
+// account. A user with no verified address gets an empty list.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+func (c *ClientWithResponses) ListMyInvitationsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyInvitationsResponse, error) {
+	rsp, err := c.ListMyInvitations(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListMyInvitationsResponse(rsp)
 }
 
 // ListOrganizationMembersWithResponse List Organization Members
@@ -29247,6 +30885,181 @@ func (c *ClientWithResponses) ListLiveRunnersWithResponse(ctx context.Context, p
 		return nil, err
 	}
 	return ParseListLiveRunnersResponse(rsp)
+}
+
+// ListSpecsWithResponse List Specs
+//
+// Lists the organization's specs with their Live version, by slug.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /specs (the `ListSpecs` operationId).
+func (c *ClientWithResponses) ListSpecsWithResponse(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*ListSpecsResponse, error) {
+	rsp, err := c.ListSpecs(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListSpecsResponse(rsp)
+}
+
+// CreateSpecWithBodyWithResponse Create Spec
+//
+// Creates a spec from an OpenAPI document, which becomes its first Live
+// version. The version is the document's `info.version` when it is a
+// semantic version, else `1.0.0`. The document is stored in the canonical
+// YAML layout.
+//
+// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs (the `CreateSpec` operationId).
+func (c *ClientWithResponses) CreateSpecWithBodyWithResponse(ctx context.Context, params *CreateSpecParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSpecResponse, error) {
+	rsp, err := c.CreateSpecWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSpecResponse(rsp)
+}
+
+// CreateSpecWithResponse Create Spec
+//
+// Creates a spec from an OpenAPI document, which becomes its first Live
+// version. The version is the document's `info.version` when it is a
+// semantic version, else `1.0.0`. The document is stored in the canonical
+// YAML layout.
+//
+// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+// `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs (the `CreateSpec` operationId).
+func (c *ClientWithResponses) CreateSpecWithResponse(ctx context.Context, params *CreateSpecParams, body CreateSpecJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSpecResponse, error) {
+	rsp, err := c.CreateSpec(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSpecResponse(rsp)
+}
+
+// GetSpecWithResponse Get Spec
+//
+// Retrieves a spec and its Live version.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /specs/{slug} (the `GetSpec` operationId).
+func (c *ClientWithResponses) GetSpecWithResponse(ctx context.Context, slug SpecSlugParameter, params *GetSpecParams, reqEditors ...RequestEditorFn) (*GetSpecResponse, error) {
+	rsp, err := c.GetSpec(ctx, slug, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSpecResponse(rsp)
+}
+
+// PullSpecWithResponse Pull Spec
+//
+// Returns a Live version's document in the canonical YAML layout, with the
+// snapshot ID that names it. Without `version`, returns the current Live
+// version. `echopoint spec pull` writes `document` as is.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
+func (c *ClientWithResponses) PullSpecWithResponse(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*PullSpecResponse, error) {
+	rsp, err := c.PullSpec(ctx, slug, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePullSpecResponse(rsp)
+}
+
+// ListSpecVersionsWithResponse List Spec Versions
+//
+// Lists a spec's Live versions, newest first. The first item is the current Live version.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+func (c *ClientWithResponses) ListSpecVersionsWithResponse(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*ListSpecVersionsResponse, error) {
+	rsp, err := c.ListSpecVersions(ctx, slug, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListSpecVersionsResponse(rsp)
+}
+
+// PushSpecVersionWithBodyWithResponse Push Spec Version
+//
+// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+// compares it with the current Live version, computes the version from the
+// changes (breaking → major, additions → minor, other edits → patch), writes
+// that version into `info.version`, and stores the canonical YAML.
+//
+// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// run; it is never reported as "no breaking changes"),
+// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+// `SPEC_DOCUMENT_INVALID` (400).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+func (c *ClientWithResponses) PushSpecVersionWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PushSpecVersionResponse, error) {
+	rsp, err := c.PushSpecVersionWithBody(ctx, slug, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePushSpecVersionResponse(rsp)
+}
+
+// PushSpecVersionWithResponse Push Spec Version
+//
+// Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+// compares it with the current Live version, computes the version from the
+// changes (breaking → major, additions → minor, other edits → patch), writes
+// that version into `info.version`, and stores the canonical YAML.
+//
+// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// run; it is never reported as "no breaking changes"),
+// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+// `SPEC_DOCUMENT_INVALID` (400).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
+func (c *ClientWithResponses) PushSpecVersionWithResponse(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*PushSpecVersionResponse, error) {
+	rsp, err := c.PushSpecVersion(ctx, slug, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePushSpecVersionResponse(rsp)
+}
+
+// GetSpecVersionWithResponse Get Spec Version
+//
+// Retrieves one Live version with what changed from the version before it.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
+func (c *ClientWithResponses) GetSpecVersionWithResponse(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*GetSpecVersionResponse, error) {
+	rsp, err := c.GetSpecVersion(ctx, slug, version, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSpecVersionResponse(rsp)
 }
 
 // ReceiveWebhookDeleteWithBodyWithResponse Receive Webhook via DELETE
@@ -32536,6 +34349,13 @@ func ParseLaunchFlowResponse(rsp *http.Response) (*LaunchFlowResponse, error) {
 		}
 		response.JSON409 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ApiErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -33029,121 +34849,6 @@ func ParseCreateOrganizationInvitationResponse(rsp *http.Response) (*CreateOrgan
 	return response, nil
 }
 
-// ParseAcceptOrganizationInvitationResponse parses an HTTP response from a AcceptOrganizationInvitationWithResponse call
-func ParseAcceptOrganizationInvitationResponse(rsp *http.Response) (*AcceptOrganizationInvitationResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &AcceptOrganizationInvitationResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest AcceptedInvitationResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseLookupOrganizationInvitationResponse parses an HTTP response from a LookupOrganizationInvitationWithResponse call
-func ParseLookupOrganizationInvitationResponse(rsp *http.Response) (*LookupOrganizationInvitationResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &LookupOrganizationInvitationResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest InvitationLookupResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseDeleteOrganizationInvitationResponse parses an HTTP response from a DeleteOrganizationInvitationWithResponse call
 func ParseDeleteOrganizationInvitationResponse(rsp *http.Response) (*DeleteOrganizationInvitationResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -33181,6 +34886,60 @@ func ParseDeleteOrganizationInvitationResponse(rsp *http.Response) (*DeleteOrgan
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAcceptOrganizationInvitationResponse parses an HTTP response from a AcceptOrganizationInvitationWithResponse call
+func ParseAcceptOrganizationInvitationResponse(rsp *http.Response) (*AcceptOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AcceptOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AcceptedInvitationResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 
@@ -33248,6 +35007,53 @@ func ParseResendOrganizationInvitationResponse(rsp *http.Response) (*ResendOrgan
 	return response, nil
 }
 
+// ParseGetLicenseUsageResponse parses an HTTP response from a GetLicenseUsageWithResponse call
+func ParseGetLicenseUsageResponse(rsp *http.Response) (*GetLicenseUsageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetLicenseUsageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest LicenseUsage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetMeResponse parses an HTTP response from a GetMeWithResponse call
 func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -33282,6 +35088,46 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListMyInvitationsResponse parses an HTTP response from a ListMyInvitationsWithResponse call
+func ParseListMyInvitationsResponse(rsp *http.Response) (*ListMyInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListMyInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ReceivedInvitationListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
@@ -34393,6 +36239,363 @@ func ParseListLiveRunnersResponse(rsp *http.Response) (*ListLiveRunnersResponse,
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListSpecsResponse parses an HTTP response from a ListSpecsWithResponse call
+func ParseListSpecsResponse(rsp *http.Response) (*ListSpecsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListSpecsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateSpecResponse parses an HTTP response from a CreateSpecWithResponse call
+func ParseCreateSpecResponse(rsp *http.Response) (*CreateSpecResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateSpecResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest Spec
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSpecResponse parses an HTTP response from a GetSpecWithResponse call
+func ParseGetSpecResponse(rsp *http.Response) (*GetSpecResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSpecResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Spec
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePullSpecResponse parses an HTTP response from a PullSpecWithResponse call
+func ParsePullSpecResponse(rsp *http.Response) (*PullSpecResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PullSpecResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecDocument
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListSpecVersionsResponse parses an HTTP response from a ListSpecVersionsWithResponse call
+func ParseListSpecVersionsResponse(rsp *http.Response) (*ListSpecVersionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListSpecVersionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecVersionListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePushSpecVersionResponse parses an HTTP response from a PushSpecVersionWithResponse call
+func ParsePushSpecVersionResponse(rsp *http.Response) (*PushSpecVersionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PushSpecVersionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SpecVersion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSpecVersionResponse parses an HTTP response from a GetSpecVersionWithResponse call
+func ParseGetSpecVersionResponse(rsp *http.Response) (*GetSpecVersionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSpecVersionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecVersion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

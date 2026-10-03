@@ -28,12 +28,17 @@ func newSpecCmd(state *AppState) *cobra.Command {
 		Short: "Validate, format, and diff OpenAPI specs",
 		Long: `Work with OpenAPI 3.0 and 3.1 documents.
 
-validate, fmt, and diff work on local files and need no account.`,
+validate, fmt, and diff work on local files and need no account. list, push,
+pull, and check work with the specs EchoPoint keeps.`,
 	}
 	cmd.AddCommand(
 		newSpecValidateCmd(state),
 		newSpecFmtCmd(),
 		newSpecDiffCmd(state),
+		newSpecListCmd(state),
+		newSpecPushCmd(state),
+		newSpecPullCmd(state),
+		newSpecCheckCmd(state),
 	)
 	return cmd
 }

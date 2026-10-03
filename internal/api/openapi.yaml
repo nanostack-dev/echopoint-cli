@@ -37,6 +37,10 @@ tags:
     description: Organization members.
   - name: Invitations
     description: Invitations of people to the current organization.
+  - name: License
+    description: The organization's license limits and its usage of them.
+  - name: Specs
+    description: OpenAPI specs EchoPoint keeps, their Live versions, and their history.
 # servers removed to avoid host-header validation warnings under oapi validator
 components:
   securitySchemes:
@@ -60,7 +64,10 @@ components:
       name: key
       in: path
       required: true
-      description: The variable name.
+      description: >-
+        The variable name: a letter or underscore, then letters, digits,
+        underscores, or hyphens. A name that breaks the pattern answers 400
+        BAD_REQUEST.
       schema:
         type: string
         maxLength: 255
@@ -69,7 +76,10 @@ components:
       name: environment
       in: path
       required: true
-      description: Named environment overlay, such as dev or prd.
+      description: >-
+        Named environment overlay, such as dev or prd: a letter or digit, then
+        letters, digits, underscores, or hyphens. A name that breaks the pattern
+        answers 400 BAD_REQUEST.
       schema:
         type: string
         maxLength: 255
@@ -114,6 +124,14 @@ components:
         minLength: 1
         pattern: ".*\\S.*"
         examples: ["org_abc123"]
+    SpecSlugParameter:
+      name: slug
+      in: path
+      required: true
+      description: The spec's slug, unique in the organization.
+      schema:
+        type: string
+        examples: [echopoint-api]
     WebhookIdParameter:
       name: id
       in: path
@@ -1052,11 +1070,17 @@ components:
           examples: ['{"event": "push", "repository": {"name": "test"}}']
         content_type:
           type: [string, "null"]
-          description: Content-Type header value.
+          description: >-
+            Value of the request's Content-Type header, the same value as in
+            `headers` (header names match case-insensitively). Absent when the
+            request carried no Content-Type, or an empty one.
           examples: ["application/json"]
         user_agent:
           type: [string, "null"]
-          description: User-Agent header value.
+          description: >-
+            Value of the request's User-Agent header, the same value as in
+            `headers` (header names match case-insensitively). Absent when the
+            request carried no User-Agent, or an empty one.
           examples: ["GitHub-Hookshot/abc123"]
         ip_address:
           type: string
@@ -1475,6 +1499,11 @@ components:
           description: |
             HTTP headers. Supports the same variable substitution as URL.
             Headers can reference both initial inputs and previous node outputs.
+
+            Content-Type of a request with a body:
+            - A Content-Type set here wins; the header name is matched case-insensitively.
+            - Without one, a JSON body is sent as application/json and a non-JSON string body is sent with no Content-Type.
+            - An empty Content-Type value sends no Content-Type header.
           examples: [{"Content-Type": "application/json", "Authorization": "Bearer {{auth.token}}"}]
         query_params:
           type: object
@@ -1486,6 +1515,7 @@ components:
           description: |
             Request body (can be any JSON structure). Supports variable substitution.
             Any string values within the body can contain template variables.
+            A string body is sent as-is; any other value is serialized to JSON.
           examples: [{"name": "{{userName}}", "email": "{{userEmail}}"}]
         timeout:
           type: integer
@@ -1760,11 +1790,17 @@ components:
           examples: ["e-success"]
         source:
           type: string
-          description: ID of the source node
+          description: >-
+            ID of the source node. It must name a node of the same definition;
+            a create or update whose edge names an unknown node returns 400
+            UNKNOWN_EDGE_NODE.
           examples: ["req-1"]
         target:
           type: string
-          description: ID of the target node
+          description: >-
+            ID of the target node. It must name a node of the same definition;
+            a create or update whose edge names an unknown node returns 400
+            UNKNOWN_EDGE_NODE.
           examples: ["req-success"]
         source_handle:
           type: string
@@ -2084,7 +2120,8 @@ components:
           format: uuid
           description: >-
             Folder to create the flow in. Omit or send null to leave it
-            uncategorized. A folder unknown to the organization yields 404.
+            uncategorized. A folder unknown to the organization yields 400
+            INVALID_FOLDER_ID.
       required:
         - name
         - flow_definition
@@ -2181,7 +2218,10 @@ components:
         parent_id:
           type: [string, "null"]
           format: uuid
-          description: Parent folder, or null for a root folder.
+          description: >-
+            Parent folder, or null for a root folder. A parent unknown to the
+            organization yields 400 INVALID_FOLDER_ID; a parent at depth 10 (a
+            root folder is depth 0) yields 409 FLOW_FOLDER_DEPTH_EXCEEDED.
       required:
         - name
 
@@ -2201,16 +2241,22 @@ components:
         parent_id:
           type: string
           format: uuid
-          description: New parent folder to nest this folder under.
+          description: >-
+            New parent folder to nest this folder under. Answers the same
+            errors as the parent_id of MoveFlowFolderRequest.
 
     MoveFlowFolderRequest:
       type: object
       description: >-
         Sets the folder's parent. parent_id is always present; send null to move
-        the folder to the root (top level). Returns 400 when the move would form
-        a cycle (the folder into itself or a descendant) or nest deeper than the
-        folder depth limit, and 409 when another flow-tree mutation is in flight
-        (the move serializes on the per-organization flow-tree lock).
+        the folder to the root (top level). A parent unknown to the organization
+        yields 400 INVALID_FOLDER_ID. The current tree refuses the move with 409:
+        FLOW_FOLDER_CYCLE when the folder would move into itself or a
+        descendant, FLOW_FOLDER_DEPTH_EXCEEDED when a folder of its subtree
+        would sit deeper than depth 10 (a root folder is depth 0), and
+        FLOW_TREE_CONFLICT when
+        another flow-tree mutation is in flight (the move serializes on the
+        per-organization flow-tree lock; retry it).
       properties:
         parent_id:
           type: [string, "null"]
@@ -2252,7 +2298,9 @@ components:
         folder_id:
           type: [string, "null"]
           format: uuid
-          description: Destination folder for every moved flow, or null for Uncategorized.
+          description: >-
+            Destination folder for every moved flow, or null for Uncategorized.
+            A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
         flow_ids:
           type: array
           items:
@@ -2334,7 +2382,7 @@ components:
               description: >-
                 Scope results to this folder and all of its descendants. Omit to
                 search every folder. Ignored when uncategorized is true. A
-                folder unknown to the organization yields 404.
+                folder unknown to the organization yields 400 INVALID_FOLDER_ID.
             uncategorized:
               type: boolean
               default: false
@@ -3354,6 +3402,155 @@ components:
       enum: [1h, 24h, 7d]
       default: 24h
       description: Lookback window for runs and failed counts. Running and pending are current.
+    LicenseUsage:
+      type: object
+      description: Every license limit of the organization next to its current usage.
+      required:
+        - generated_at
+        - executions_last_24_hours
+        - executions_this_month
+        - flows
+        - schedules
+        - webhooks
+        - members
+        - active_cloud_jobs
+        - rules
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+          description: The instant every window in this response ends at.
+        executions_last_24_hours:
+          $ref: "#/components/schemas/RollingExecutionUsage"
+        executions_this_month:
+          $ref: "#/components/schemas/MonthlyExecutionUsage"
+        flows:
+          $ref: "#/components/schemas/LicenseGauge"
+        schedules:
+          $ref: "#/components/schemas/LicenseGauge"
+        webhooks:
+          $ref: "#/components/schemas/LicenseGauge"
+        members:
+          $ref: "#/components/schemas/LicenseMemberUsage"
+        active_cloud_jobs:
+          $ref: "#/components/schemas/LicenseGauge"
+        rules:
+          $ref: "#/components/schemas/LicenseRules"
+    LicenseGauge:
+      type: object
+      description: |
+        A count the license caps. A create past `limit` is refused, except
+        Cloud jobs, which wait in the queue.
+      required: [used, limit]
+      properties:
+        used:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+          format: int64
+          minimum: 1
+    LicenseMemberUsage:
+      type: object
+      description: |
+        Seats in use. An invitation is refused when `members` plus
+        `pending_invitations` would pass `limit`.
+      required: [members, pending_invitations, limit]
+      properties:
+        members:
+          type: integer
+          format: int64
+          minimum: 0
+        pending_invitations:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+          format: int64
+          minimum: 1
+    RollingExecutionUsage:
+      type: object
+      description: |
+        Executions launched in the 24 hours before `generated_at`, every
+        trigger and runner counted. A launch is refused once `used` reaches
+        `limit`. The window rolls: a launch stops counting 24 hours after it
+        started.
+      required: [used, limit, window_start, hourly]
+      properties:
+        used:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+          format: int64
+          minimum: 1
+        window_start:
+          type: string
+          format: date-time
+        hourly:
+          type: array
+          minItems: 24
+          maxItems: 24
+          description: |
+            Launches per hour, oldest first. `hourly[i]` counts launches from
+            `window_start` plus `i` hours to `window_start` plus `i + 1`
+            hours, so `hourly[0]` leave the window within the next hour.
+          items:
+            type: integer
+            format: int64
+            minimum: 0
+    MonthlyExecutionUsage:
+      type: object
+      description: |
+        Executions launched since the first of the month, UTC. Reported to the
+        license for tracking only: no launch is refused on it.
+      required: [used, limit, since, daily]
+      properties:
+        used:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+          format: int64
+          minimum: 1
+        since:
+          type: string
+          format: date-time
+          description: Midnight UTC on the first day of the month.
+        daily:
+          type: array
+          description: Launches per UTC day from `since` through today, oldest first.
+          items:
+            type: integer
+            format: int64
+            minimum: 0
+    LicenseRules:
+      type: object
+      description: License limits that shape a single run or schedule rather than a count.
+      required:
+        - min_scheduled_run_interval_seconds
+        - max_cloud_execution_duration_seconds
+        - max_flows_per_scheduled_run
+      properties:
+        min_scheduled_run_interval_seconds:
+          type: integer
+          format: int64
+          minimum: 1
+          description: A schedule that would run more often is rejected on save.
+        max_cloud_execution_duration_seconds:
+          type: integer
+          format: int64
+          minimum: 1
+          description: A Cloud run is stopped at this wall-clock time.
+        max_flows_per_scheduled_run:
+          type: integer
+          format: int64
+          minimum: 1
+          description: A tag suite matching more flows runs the first ones only.
     ExecutionSummary:
       type: object
       properties:
@@ -3979,7 +4176,12 @@ components:
           default: false
         base_url_variable_name:
           type: string
-          description: Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
+          maxLength: 255
+          pattern: "^([A-Za-z_][A-Za-z0-9_-]*)?$"
+          description: >-
+            Variable name to use for rewritten base URLs when enabled. Empty or
+            omitted means baseUrl. Follows the variable key rule: a letter or
+            underscore, then letters, digits, underscores, or hyphens.
           examples: ["baseUrl"]
 
     OpenAPIImportResult:
@@ -4033,7 +4235,12 @@ components:
           default: false
         base_url_variable_name:
           type: string
-          description: Variable name to use for rewritten base URLs when enabled. Defaults to baseUrl.
+          maxLength: 255
+          pattern: "^([A-Za-z_][A-Za-z0-9_-]*)?$"
+          description: >-
+            Variable name to use for rewritten base URLs when enabled. Empty or
+            omitted means baseUrl. Follows the variable key rule: a letter or
+            underscore, then letters, digits, underscores, or hyphens.
           examples: ["baseUrl"]
       required:
         - source_url
@@ -4736,9 +4943,7 @@ components:
 
     OrganizationInvitation:
       type: object
-      description: >-
-        A pending invitation to the current organization. The invitation token is
-        never part of it.
+      description: A pending invitation to the current organization.
       properties:
         id:
           type: string
@@ -4750,7 +4955,7 @@ components:
         expires_at:
           type: string
           format: date-time
-          description: When the invitation link stops working.
+          description: When the invitation stops being acceptable.
         created_at:
           type: string
           format: date-time
@@ -4788,49 +4993,44 @@ components:
       required:
         - email
 
-    InvitationTokenRequest:
+    ReceivedInvitation:
       type: object
-      description: The invitation token from the link in the invitation email.
+      description: >-
+        A pending invitation addressed to one of the verified email addresses of
+        the signed-in person.
       properties:
-        token:
+        id:
           type: string
-          minLength: 1
-          maxLength: 512
-          description: The invitation token. It is never logged and never returned.
-      required:
-        - token
-
-    InvitationLookupStatus:
-      type: string
-      description: >-
-        The state of the invitation. `expired` is derived on read: a pending
-        invitation past its expiry.
-      enum: [ pending, expired, accepted ]
-
-    InvitationLookupResponse:
-      type: object
-      description: >-
-        An invitation as the invited person sees it. The invitation token is
-        never part of it.
-      properties:
+          description: Unique identifier of the invitation. Accept it with this id.
+        organization_id:
+          type: string
         organization_name:
           type: string
           description: The name of the organization the invitation is for.
         email:
           type: string
           format: email
-          description: The invited email address.
+          description: The invited email address, one of the caller's verified addresses.
         expires_at:
           type: string
           format: date-time
           description: When the invitation stops being acceptable.
-        status:
-          $ref: "#/components/schemas/InvitationLookupStatus"
       required:
+        - id
+        - organization_id
         - organization_name
         - email
         - expires_at
-        - status
+
+    ReceivedInvitationListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReceivedInvitation"
+      required:
+        - items
 
     AcceptedInvitationResponse:
       type: object
@@ -5193,9 +5393,249 @@ components:
         - matched_flow_count
         - flows
 
+    SpecActorType:
+      type: string
+      description: Who did something. `member` is a person of the organization; `api_key` is an organization API key.
+      enum: [member, api_key]
+    SpecActor:
+      type: object
+      description: The member or API key that did something.
+      properties:
+        type:
+          $ref: "#/components/schemas/SpecActorType"
+        id:
+          type: string
+          description: The member's user ID, or the API key's ID.
+      required: [type, id]
+    SpecBump:
+      type: string
+      description: |
+        How far a Live version moved from the one before it. `initial` is a spec's
+        first Live version. `major`: a change breaks clients or may break them.
+        `minor`: a new operation, schema, optional field, or enum value, or a looser
+        limit. `patch`: descriptions, examples, extensions, or other edits.
+      enum: [initial, major, minor, patch]
+    SpecChangeSeverity:
+      type: string
+      description: |
+        What a change means for clients: `breaking` breaks them, `risky` may break
+        them and needs a look, `additive` adds to the API or loosens it, `edit`
+        changes what clients do not depend on.
+      enum: [breaking, risky, additive, edit]
+    SpecChange:
+      type: object
+      description: One difference between a Live version and the one before it.
+      properties:
+        id:
+          type: string
+          description: The kind of change, such as `endpoint-added` (an oasdiff rule id) or `schema-added`.
+          examples: [api-removed-without-deprecation]
+        severity:
+          $ref: "#/components/schemas/SpecChangeSeverity"
+        method:
+          type: string
+          description: HTTP method of the operation the change is in, when it is in one.
+          examples: [POST]
+        path:
+          type: string
+          description: Path of the operation the change is in, when it is in one.
+          examples: [/pets]
+        pointer:
+          type: string
+          description: JSON pointer of the operation or component the change is in. Absent when it concerns the whole document.
+          examples: [/paths/~1pets/post]
+        text:
+          type: string
+          description: The change in English.
+      required: [id, severity, text]
+    SpecChangeCounts:
+      type: object
+      description: How many changes of each severity a Live version made.
+      properties:
+        breaking:
+          type: integer
+          format: int32
+        risky:
+          type: integer
+          format: int32
+        additive:
+          type: integer
+          format: int32
+        edit:
+          type: integer
+          format: int32
+      required: [breaking, risky, additive, edit]
+    SpecVersionSummary:
+      type: object
+      description: A Live version of a spec, without its document and its changes.
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: string
+          description: The semantic version EchoPoint computed. It is also the document's `info.version`.
+          examples: [1.4.0]
+        bump:
+          $ref: "#/components/schemas/SpecBump"
+        openapi_version:
+          type: string
+          description: The document's `openapi` field.
+          examples: [3.1.0]
+        layout_version:
+          type: integer
+          format: int32
+          description: The canonical YAML layout the document is stored in. `spec check` compares with this layout.
+        sha256:
+          type: string
+          description: Hex SHA-256 of the canonical YAML.
+        change_counts:
+          $ref: "#/components/schemas/SpecChangeCounts"
+        created_by:
+          $ref: "#/components/schemas/SpecActor"
+        created_at:
+          type: string
+          format: date-time
+      required: [id, version, bump, openapi_version, layout_version, sha256, change_counts, created_by, created_at]
+    SpecVersion:
+      type: object
+      description: A Live version of a spec with what changed from the version before it.
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: string
+          examples: [1.4.0]
+        bump:
+          $ref: "#/components/schemas/SpecBump"
+        openapi_version:
+          type: string
+        layout_version:
+          type: integer
+          format: int32
+        sha256:
+          type: string
+        change_counts:
+          $ref: "#/components/schemas/SpecChangeCounts"
+        changes:
+          type: array
+          description: What changed from the previous Live version. Empty for the first version.
+          items:
+            $ref: "#/components/schemas/SpecChange"
+        created_by:
+          $ref: "#/components/schemas/SpecActor"
+        created_at:
+          type: string
+          format: date-time
+      required: [id, version, bump, openapi_version, layout_version, sha256, change_counts, changes, created_by, created_at]
+    Spec:
+      type: object
+      description: One API's OpenAPI document as EchoPoint keeps it.
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          description: Identifies the spec within the organization, in URLs and in the CLI's `--spec`.
+          examples: [echopoint-api]
+        title:
+          type: string
+          description: The Live version's `info.title`.
+        live:
+          $ref: "#/components/schemas/SpecVersionSummary"
+        created_by:
+          $ref: "#/components/schemas/SpecActor"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, slug, title, live, created_by, created_at, updated_at]
+    SpecListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Spec"
+        count:
+          type: integer
+        total:
+          type: integer
+          format: int64
+      required: [items, count, total]
+    SpecVersionListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          description: Live versions, newest first.
+          items:
+            $ref: "#/components/schemas/SpecVersionSummary"
+        count:
+          type: integer
+        total:
+          type: integer
+          format: int64
+      required: [items, count, total]
+    SpecDocument:
+      type: object
+      description: A Live version's document in the canonical YAML layout, as `spec pull` writes it.
+      properties:
+        snapshot_id:
+          type: string
+          description: |
+            Opaque identifier of exactly this document. A later push can name it
+            as the snapshot it started from.
+          examples: [live:0199a5f2-6b1e-7c3d-9a10-3f1b2c4d5e6f]
+        version:
+          type: string
+          examples: [1.4.0]
+        layout_version:
+          type: integer
+          format: int32
+        sha256:
+          type: string
+        document:
+          type: string
+          description: The canonical YAML, byte for byte.
+      required: [snapshot_id, version, layout_version, sha256, document]
+    CreateSpecRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: Lowercase letters, digits, and single hyphens; unique in the organization.
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+          maxLength: 64
+          examples: [echopoint-api]
+        document:
+          type: string
+          description: |
+            The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
+            15 MB. It must be self-contained: no external `$ref`.
+      required: [slug, document]
+    PushSpecVersionRequest:
+      type: object
+      properties:
+        document:
+          type: string
+          description: |
+            The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
+            15 MB. It must be self-contained: no external `$ref`. Its
+            `info.version` is ignored: EchoPoint computes the version.
+      required: [document]
   requestBodies:
     WebhookAnyPayload:
-      description: Webhook payload in various formats.
+      description: >-
+        Webhook payload in any format. The body is stored byte for byte and is
+        never parsed, so any media type is accepted, including none: a request
+        without a Content-Type header, or with a body that does not match its
+        declared Content-Type, is still received. Only the first 1 MiB of a
+        body is stored.
       required: false
       content:
         "*/*":
@@ -5677,6 +6117,11 @@ paths:
         Real-time updates can be consumed separately from the execution stream endpoint.
         Specify a version_id in the request body to run a specific published version;
         omit it to run the current (mutable) flow definition.
+
+        Each organization may launch at most its license's `max_executions_per_day`
+        executions in any 24 hours, counting every trigger and runner. A launch past
+        it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
+        earlier launch does not count.
       tags:
         - Flows
       security:
@@ -5726,6 +6171,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
         "500":
           description: Flow execution failed to start
           content:
@@ -6357,9 +6804,9 @@ paths:
       description: >-
         Moves a folder under a different parent, or to the root when parent_id is
         null. This is the single endpoint for reparenting a folder and the only
-        one that can move a folder back to the root. Rejects moves that would
-        form a cycle (a folder into itself or a descendant) or exceed the depth
-        limit, and serializes on the per-organization flow-tree lock.
+        one that can move a folder back to the root. Answers 409 for a move that
+        would form a cycle (a folder into itself or a descendant) or exceed the
+        depth limit, and serializes on the per-organization flow-tree lock.
       operationId: moveFlowFolder
       x-ai-tool: true
       x-ai-description: "Move a folder under another folder, or to the root (send parent_id null)."
@@ -6567,6 +7014,36 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /me/invitations:
+    get:
+      summary: List My Invitations
+      description: |
+        Lists the pending invitations addressed to any verified email address
+        of the signed-in user, across every organization, newest first. The app
+        calls it after sign-up and sign-in to offer the invitations waiting for
+        the person, who accepts one with
+        `POST /invitations/{invitationId}/accept`. The request carries no
+        `X-Organization-ID`: the caller need not belong to the organizations.
+
+        An email address the sign-in provider has not verified never matches,
+        so nobody sees an invitation by adding someone else's address to their
+        account. A user with no verified address gets an empty list.
+      operationId: listMyInvitations
+      x-ai-danger: "Invitee flow - requires a human session of the invited person."
+      tags: [Invitations]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: The pending invitations of the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceivedInvitationListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
   /organization/variables:
@@ -8071,6 +8548,39 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /license/usage:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get License Usage
+      description: |
+        Returns every limit of the organization's license next to the
+        organization's current use of it. The limits come from the
+        organization's Anchor license; Echopoint counts the usage when the
+        request is served, so it is never stale.
+
+        Error codes:
+        - `LICENSE_UNAVAILABLE` (500): the license cannot be read. Retry.
+      operationId: getLicenseUsage
+      x-ai-tool: true
+      tags: [License]
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      responses:
+        "200":
+          description: License usage retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseUsage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /executions:
     parameters:
       - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
@@ -8528,9 +9038,9 @@ paths:
     post:
       summary: Resend An Invitation
       description: |
-        Replaces the link of a pending invitation, extends its expiry, and
-        emails the new link. The old link stops working. An expired or accepted
-        invitation answers 409. If the email cannot be sent the invitation stays
+        Sets the expiry of a pending invitation to 7 days from now and emails
+        the invited person again. An expired or accepted invitation answers 409.
+        If the email cannot be sent the invitation stays, with its new expiry,
         and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
       operationId: resendOrganizationInvitation
       x-ai-danger: "Membership change - requires a human session."
@@ -8539,7 +9049,7 @@ paths:
         - BearerAuth: [invitations:create]
       responses:
         "200":
-          description: Invitation link replaced and emailed.
+          description: Invitation renewed and emailed.
           content:
             application/json:
               schema:
@@ -8554,61 +9064,26 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
-  /invitations/lookup:
-    post:
-      summary: Look Up An Invitation By Its Token
-      description: |
-        Shows the invitation behind a token, as the invited person may see it:
-        the organization name, the invited email address, the expiry and the
-        status. It never returns the token.
-
-        The caller is a signed-in user who is not a member yet, so the request
-        carries no `X-Organization-ID`. An expired or accepted invitation is
-        found too: read `status`.
-
-        Error codes:
-        - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
-      operationId: lookupOrganizationInvitation
-      x-ai-danger: "Invitee flow - requires a human session of the invited person."
-      tags: [Invitations]
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InvitationTokenRequest"
-      responses:
-        "200":
-          description: Invitation found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InvitationLookupResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-  /invitations/accept:
+  /invitations/{invitationId}/accept:
+    parameters:
+      - $ref: "#/components/parameters/InvitationId"
     post:
       summary: Accept An Invitation
       description: |
-        Accepts the invitation behind a token for the signed-in user, who
-        becomes a member of the organization with the invited role. The request
-        carries no `X-Organization-ID`: the caller is not a member yet.
+        Accepts one of the invitations `GET /me/invitations` lists, for the
+        signed-in user, who becomes a member of the organization with the
+        invited role. The request carries no `X-Organization-ID`: the caller is
+        not a member yet.
 
         The checks run in this order. The Product User of the caller must exist.
-        The invitation must exist. The caller must not be a member of the
-        organization already. The invitation must be pending. The verified
-        primary email address of the caller must equal the invited address,
-        ignoring case. One more member must fit within the licensed
-        `max_members`. Pending invitations are seat reservations and do not
-        count at accept, so only a join that overflows the license is refused.
+        The invitation must be addressed to one of the verified email addresses
+        of the caller, ignoring case: any other invitation answers
+        `INVITATION_NOT_FOUND`, so a caller learns nothing about invitations
+        sent to someone else. The caller must not be a member of the
+        organization already. The invitation must be pending. One more member
+        must fit within the licensed `max_members`. Pending invitations are seat
+        reservations and do not count at accept, so only a join that overflows
+        the license is refused.
 
         A new user gets a personal organization when the Clerk sync completes.
         Call accept after `GET /me` reports `READY`, or the personal
@@ -8617,14 +9092,12 @@ paths:
         Error codes:
         - `ORGANIZATION_CONTEXT_NOT_READY` (409): the Product User is not synced
           yet. Retry shortly.
-        - `INVITATION_NOT_FOUND` (404): no invitation matches the token.
+        - `INVITATION_NOT_FOUND` (404): no invitation with this id is addressed
+          to a verified email address of the caller.
         - `INVITATION_EXPIRED` (409): the invitation is expired. Ask an admin to
           resend it.
-        - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted by
-          someone else.
-        - `INVITATION_EMAIL_MISMATCH` (409): the verified primary email address
-          of the caller is not the invited address. The error metadata
-          `invited_email` carries the invited address.
+        - `INVITATION_ALREADY_ACCEPTED` (409): the invitation is accepted
+          already.
         - `INVITATION_ALREADY_MEMBER` (409): the caller is a member of the
           organization already, and the invitation stays as it is. The error
           metadata `organization_id` and `organization_name` identify the
@@ -8638,12 +9111,6 @@ paths:
       tags: [Invitations]
       security:
         - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InvitationTokenRequest"
       responses:
         "200":
           description: Invitation accepted.
@@ -8651,8 +9118,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AcceptedInvitationResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -9022,3 +9487,241 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /specs:
+    parameters:
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Specs
+      description: Lists the organization's specs with their Live version, by slug.
+      operationId: listSpecs
+      x-ai-tool: true
+      tags: [Specs]
+      security:
+        - BearerAuth: [specs:read]
+        - ApiKeys: [specs:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Specs retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpecListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create Spec
+      description: |
+        Creates a spec from an OpenAPI document, which becomes its first Live
+        version. The version is the document's `info.version` when it is a
+        semantic version, else `1.0.0`. The document is stored in the canonical
+        YAML layout.
+
+        Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+        15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
+        Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
+        `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
+        `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
+      operationId: createSpec
+      x-ai-tool: true
+      tags: [Specs]
+      security:
+        - BearerAuth: [specs:write]
+        - ApiKeys: [specs:write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSpecRequest"
+      responses:
+        "201":
+          description: Spec created with its first Live version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spec"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /specs/{slug}:
+    parameters:
+      - $ref: "#/components/parameters/SpecSlugParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Spec
+      description: Retrieves a spec and its Live version.
+      operationId: getSpec
+      x-ai-tool: true
+      tags: [Specs]
+      security:
+        - BearerAuth: [specs:read]
+        - ApiKeys: [specs:read]
+      responses:
+        "200":
+          description: Spec retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spec"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /specs/{slug}/versions:
+    parameters:
+      - $ref: "#/components/parameters/SpecSlugParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: List Spec Versions
+      description: Lists a spec's Live versions, newest first. The first item is the current Live version.
+      operationId: listSpecVersions
+      x-ai-tool: true
+      tags: [Specs]
+      security:
+        - BearerAuth: [specs:read]
+        - ApiKeys: [specs:read]
+      parameters:
+        - $ref: "#/components/parameters/LimitParameter"
+        - $ref: "#/components/parameters/OffsetParameter"
+      responses:
+        "200":
+          description: Live versions retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpecVersionListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Push Spec Version
+      description: |
+        Publishes an OpenAPI document as the spec's next Live version. EchoPoint
+        compares it with the current Live version, computes the version from the
+        changes (breaking → major, additions → minor, other edits → patch), writes
+        that version into `info.version`, and stores the canonical YAML.
+
+        Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
+        `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+        run; it is never reported as "no breaking changes"),
+        `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
+        `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
+        `SPEC_DOCUMENT_INVALID` (400).
+      operationId: pushSpecVersion
+      x-ai-tool: true
+      tags: [Specs]
+      security:
+        - BearerAuth: [specs:write]
+        - ApiKeys: [specs:write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSpecVersionRequest"
+      responses:
+        "201":
+          description: Live version created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpecVersion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /specs/{slug}/versions/{version}:
+    parameters:
+      - $ref: "#/components/parameters/SpecSlugParameter"
+      - name: version
+        in: path
+        required: true
+        description: The Live version's semantic version.
+        schema:
+          type: string
+          examples: [1.4.0]
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Get Spec Version
+      description: Retrieves one Live version with what changed from the version before it.
+      operationId: getSpecVersion
+      x-ai-tool: true
+      tags: [Specs]
+      security:
+        - BearerAuth: [specs:read]
+        - ApiKeys: [specs:read]
+      responses:
+        "200":
+          description: Live version retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpecVersion"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /specs/{slug}/document:
+    parameters:
+      - $ref: "#/components/parameters/SpecSlugParameter"
+      - $ref: "#/components/parameters/RequiredOrganizationIDHeader"
+    get:
+      summary: Pull Spec
+      description: |
+        Returns a Live version's document in the canonical YAML layout, with the
+        snapshot ID that names it. Without `version`, returns the current Live
+        version. `echopoint spec pull` writes `document` as is.
+      operationId: pullSpec
+      x-ai-tool: true
+      tags: [Specs]
+      security:
+        - BearerAuth: [specs:read]
+        - ApiKeys: [specs:read]
+      parameters:
+        - name: version
+          in: query
+          required: false
+          description: A Live version's semantic version. Absent means the current Live version.
+          schema:
+            type: string
+            examples: [1.4.0]
+      responses:
+        "200":
+          description: Document retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpecDocument"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"

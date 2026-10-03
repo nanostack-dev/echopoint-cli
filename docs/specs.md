@@ -1,6 +1,33 @@
 # OpenAPI specs
 
-`echopoint spec` works with OpenAPI 3.0 and 3.1 documents. `validate`, `fmt`, and `diff` run on local files and need no account.
+`echopoint spec` works with OpenAPI 3.0 and 3.1 documents. `validate`, `fmt`, and `diff` run on local files and need no account. `list`, `push`, `pull`, and `check` work with the specs EchoPoint keeps (API › Specs).
+
+## Specs in EchoPoint
+
+EchoPoint is the source of truth for a spec: every push becomes a Live version with a computed version number and a history, and the repository holds a pulled copy.
+
+```bash
+echopoint spec push --new --spec pets-api openapi.yaml   # create the spec; its first Live version
+echopoint spec push --spec pets-api openapi.yaml         # publish the next Live version
+echopoint spec push --bundle --spec pets-api openapi.yaml  # inline external $ref first
+echopoint spec list
+echopoint spec pull --spec pets-api openapi.yaml         # write Live, byte for byte
+echopoint spec pull --spec pets-api --version 1.2.0 old.yaml
+echopoint spec check --spec pets-api openapi.yaml        # exit 1 when the file differs from Live
+```
+
+`push` needs `specs:write`; `list`, `pull`, and `check` need `specs:read`, so a CI API key with `specs:read` can run `check`. Pushing a document identical to Live, `info.version` aside, is refused: there is nothing to publish.
+
+In CI, fail the build when the repository copy drifts from Live:
+
+```yaml
+- run: echopoint spec check --spec pets-api openapi.yaml
+  env:
+    ECHOPOINT_API_KEY: ${{ secrets.ECHOPOINT_API_KEY }}
+    ECHOPOINT_ORGANIZATION_ID: ${{ secrets.ECHOPOINT_ORGANIZATION_ID }}
+```
+
+## Local files
 
 ```bash
 echopoint spec validate openapi.yaml          # exits 1 on any problem
