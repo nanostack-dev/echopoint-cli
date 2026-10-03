@@ -25,9 +25,11 @@ const (
 
 func newSpecListCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   listVerb,
-		Short: "List the organization's specs and their Live versions",
-		Args:  cobra.NoArgs,
+		Use:           listVerb,
+		Short:         "List the organization's specs and their Live versions",
+		Args:          cobra.NoArgs,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -76,7 +78,9 @@ additions -> minor, other edits -> patch), and keeps the history.
 --new creates the spec with this document as its first Live version.
 --bundle inlines external $ref (other files, URLs) before pushing; without it, a
 document with an external $ref is refused.`,
-		Args: cobra.ExactArgs(1),
+		Args:          cobra.ExactArgs(1),
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -192,7 +196,9 @@ func newSpecPullCmd(state *AppState) *cobra.Command {
 		Long: `Write a spec's Live version to a local file, byte for byte as EchoPoint keeps
 it. The file is generated: edit the spec in EchoPoint, or push a change, and pull
 again. --version pulls an earlier Live version.`,
-		Args: cobra.ExactArgs(1),
+		Args:          cobra.ExactArgs(1),
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -237,7 +243,9 @@ func newSpecCheckCmd(state *AppState) *cobra.Command {
 		Long: `Compare a local file byte for byte with the spec's Live version, in the
 canonical layout EchoPoint stored it in. Exits non-zero on any difference, so CI
 fails when the repository copy drifts from Live. Fix it with 'echopoint spec pull'.`,
-		Args: cobra.ExactArgs(1),
+		Args:          cobra.ExactArgs(1),
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
