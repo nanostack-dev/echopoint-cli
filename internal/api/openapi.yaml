@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 1.2.0
+  version: 1.2.1
 paths:
   /webhooks:
     parameters:
@@ -10607,7 +10607,7 @@ components:
           type: string
           maxLength: 100
         slug:
-          description: Complete immutable public address, including the server-generated suffix. Use this value for public reads and subsequent saves.
+          description: Complete immutable public address. New pages include a server-generated suffix; existing addresses are preserved. Use this value for public reads and subsequent saves.
           type: string
           maxLength: 61
         draft_version:

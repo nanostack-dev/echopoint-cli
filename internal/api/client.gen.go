@@ -4927,7 +4927,7 @@ type StatusPageEditor struct {
 	Published             bool             `json:"published"`
 	PublishedDraftVersion int64            `json:"published_draft_version"`
 
-	// Slug Complete immutable public address, including the server-generated suffix. Use this value for public reads and subsequent saves.
+	// Slug Complete immutable public address. New pages include a server-generated suffix; existing addresses are preserved. Use this value for public reads and subsequent saves.
 	Slug      string    `json:"slug"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

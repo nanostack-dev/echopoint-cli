@@ -42,7 +42,7 @@ For an existing page, a complete editable request can be constructed without dro
 echopoint --profile prod status-pages get | jq '{expected_draft_version: .draft_version, slug, config, binding} | with_entries(select(.value != null))' > page.json
 ```
 
-The unique-address migration changes old plain links. Read `get` after deployment to discover the new address; the old name is not an alias.
+Existing addresses remain unchanged. This change adds suffixes only when creating new pages; it never renames a saved page.
 
 For measured status, add a `binding` using the discovered values:
 
