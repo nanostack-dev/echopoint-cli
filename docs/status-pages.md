@@ -100,3 +100,22 @@ for these actions; this change does not widen the MCP exposure policy.
 The command family accompanies Echopoint API PR #475 and frontend PR #476.
 It first ships in the CLI release cut after this feature is merged; earlier
 releases, including v1.11.1, do not contain it.
+
+## Permanent organization address
+
+`get`, `save`, `publish` and `unpublish` return `public_url`, the authoritative
+link for the selected environment. Anchor organizations also return
+`organization_key`, a fixed 40-character lowercase hex encoding of the
+organization's KSUID bytes. Renaming or republishing never changes this key.
+
+```bash
+echopoint --profile prod --organization-id "$ORG_ID" status-pages get > saved-page.json
+jq -r .public_url saved-page.json
+echopoint --profile prod status-pages public \
+  --organization-key "$(jq -r .organization_key saved-page.json)"
+```
+
+The public command sends no stored credentials or organization headers. The new
+organization-key endpoint remains excluded from MCP, like the legacy public
+read. Existing slug reads and update payloads are unchanged; keep the complete
+returned `slug` when saving. No DNS or Wrangler change is required per customer.

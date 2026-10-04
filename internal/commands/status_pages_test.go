@@ -256,3 +256,38 @@ func TestStatusPageSavesKeepServerAssignedAddress(t *testing.T) {
 		t.Fatal("accepted an overlong creation prefix")
 	}
 }
+
+func TestStatusPageOrganizationReadOmitsCredentials(t *testing.T) {
+	key := "1639692deec6cb9d45b6406990560aa4c7878a06"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/public/status-pages/organizations/"+key {
+			t.Errorf("wrong path: %s", r.URL.Path)
+		}
+		for _, header := range []string{"Authorization", "X-Api-Key", "X-Organization-ID"} {
+			if r.Header.Get(header) != "" {
+				t.Errorf("leaked %s", header)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"brand_name":"Echopoint"}`)
+	}))
+	defer server.Close()
+	state := makeState(t, "stored-key", "stored-token", server.URL)
+	cmd := newStatusPagesCmd(state)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{"public", "--organization-key", key})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Echopoint") {
+		t.Fatalf("missing structured result: %s", stdout.String())
+	}
+	for _, args := range [][]string{{"public"}, {"public", "slug", "--organization-key", key}, {"public", "--organization-key", "../bad"}} {
+		rejected := newStatusPagesCmd(state)
+		rejected.SetArgs(args)
+		if err := rejected.Execute(); err == nil {
+			t.Fatalf("accepted invalid arguments %v", args)
+		}
+	}
+}
