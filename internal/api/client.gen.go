@@ -4920,12 +4920,18 @@ type StatusPageEditor struct {
 	Binding *StatusPageBinding `json:"binding,omitempty"`
 
 	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
-	Config                StatusPageConfig `json:"config"`
-	DraftVersion          int64            `json:"draft_version"`
-	Id                    string           `json:"id"`
-	IntentVersion         int64            `json:"intent_version"`
-	Published             bool             `json:"published"`
-	PublishedDraftVersion int64            `json:"published_draft_version"`
+	Config        StatusPageConfig `json:"config"`
+	DraftVersion  int64            `json:"draft_version"`
+	Id            string           `json:"id"`
+	IntentVersion int64            `json:"intent_version"`
+
+	// OrganizationKey Permanent DNS-safe lowercase hex encoding of the Anchor organization KSUID bytes. Absent for legacy organizations without an Anchor KSUID.
+	OrganizationKey *string `json:"organization_key,omitempty"`
+
+	// PublicUrl Authoritative public URL for this environment. Stable organization hostname when configured, otherwise the application status path. Present even while unpublished.
+	PublicUrl             string `json:"public_url"`
+	Published             bool   `json:"published"`
+	PublishedDraftVersion int64  `json:"published_draft_version"`
 
 	// Slug Complete immutable public address. New pages include a server-generated suffix; existing addresses are preserved. Use this value for public reads and subsequent saves.
 	Slug      string    `json:"slug"`
@@ -8768,6 +8774,11 @@ type ClientInterface interface {
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetPublicStatusPageByOrganization Read a published status page by permanent organization key
+	//
+	// Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
+	GetPublicStatusPageByOrganization(ctx context.Context, organizationKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetPublicStatusPage Read a published status page
 	//
 	// Corresponds with GET /public/status-pages/{slug} (the `GetPublicStatusPage` operationId).
@@ -11659,6 +11670,21 @@ func (c *Client) SetOrganizationVariable(ctx context.Context, key VariableKey, p
 // Corresponds with GET /permissions (the `ListPermissions` operationId).
 func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListPermissionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetPublicStatusPageByOrganization Read a published status page by permanent organization key
+//
+// Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
+func (c *Client) GetPublicStatusPageByOrganization(ctx context.Context, organizationKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPublicStatusPageByOrganizationRequest(c.Server, organizationKey)
 	if err != nil {
 		return nil, err
 	}
@@ -18082,6 +18108,40 @@ func NewListPermissionsRequest(server string, params *ListPermissionsParams) (*h
 	return req, nil
 }
 
+// NewGetPublicStatusPageByOrganizationRequest constructs an http.Request for the GetPublicStatusPageByOrganization method
+func NewGetPublicStatusPageByOrganizationRequest(server string, organizationKey string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "organization_key", organizationKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/public/status-pages/organizations/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetPublicStatusPageRequest constructs an http.Request for the GetPublicStatusPage method
 func NewGetPublicStatusPageRequest(server string, slug string) (*http.Request, error) {
 	var err error
@@ -21289,6 +21349,13 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissionsWithResponse(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*ListPermissionsResponse, error)
+
+	// GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
+	GetPublicStatusPageByOrganizationWithResponse(ctx context.Context, organizationKey string, reqEditors ...RequestEditorFn) (*GetPublicStatusPageByOrganizationResponse, error)
 
 	// GetPublicStatusPageWithResponse Read a published status page
 	//
@@ -27579,6 +27646,97 @@ func (r ListPermissionsResponse) ContentType() string {
 	return ""
 }
 
+// GetPublicStatusPageByOrganizationResponse200Headers the declared response headers of an HTTP 200 response for GetPublicStatusPageByOrganization
+type GetPublicStatusPageByOrganizationResponse200Headers struct {
+	CacheControl *string
+	XRobotsTag   *string
+}
+
+type GetPublicStatusPageByOrganizationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *PublicStatusView
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *GetPublicStatusPageByOrganizationResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetPublicStatusPageByOrganizationResponse) GetJSON200() *PublicStatusView {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetPublicStatusPageByOrganizationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetPublicStatusPageByOrganizationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetPublicStatusPageByOrganizationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetPublicStatusPageByOrganizationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetPublicStatusPageByOrganizationResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetPublicStatusPageByOrganizationResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetPublicStatusPageByOrganizationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPublicStatusPageByOrganizationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPublicStatusPageByOrganizationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPublicStatusPageByOrganizationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetPublicStatusPageResponse200Headers the declared response headers of an HTTP 200 response for GetPublicStatusPage
 type GetPublicStatusPageResponse200Headers struct {
 	CacheControl *string
@@ -32050,6 +32208,19 @@ func (c *ClientWithResponses) ListPermissionsWithResponse(ctx context.Context, p
 		return nil, err
 	}
 	return ParseListPermissionsResponse(rsp)
+}
+
+// GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
+func (c *ClientWithResponses) GetPublicStatusPageByOrganizationWithResponse(ctx context.Context, organizationKey string, reqEditors ...RequestEditorFn) (*GetPublicStatusPageByOrganizationResponse, error) {
+	rsp, err := c.GetPublicStatusPageByOrganization(ctx, organizationKey, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPublicStatusPageByOrganizationResponse(rsp)
 }
 
 // GetPublicStatusPageWithResponse Read a published status page
@@ -37252,6 +37423,94 @@ func ParseListPermissionsResponse(rsp *http.Response) (*ListPermissionsResponse,
 		}
 		response.JSON500 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseGetPublicStatusPageByOrganizationResponse parses an HTTP response from a GetPublicStatusPageByOrganizationWithResponse call
+func ParseGetPublicStatusPageByOrganizationResponse(rsp *http.Response) (*GetPublicStatusPageByOrganizationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPublicStatusPageByOrganizationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PublicStatusView
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers GetPublicStatusPageByOrganizationResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		if values := rsp.Header.Values("X-Robots-Tag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Robots-Tag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRobotsTag = &value
+		}
+		response.Headers200 = &headers
 	}
 
 	return response, nil

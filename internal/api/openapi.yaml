@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 1.2.1
+  version: 1.3.0
 paths:
   /webhooks:
     parameters:
@@ -4566,6 +4566,47 @@ paths:
         - Status pages
       summary: Read a published status page
       operationId: getPublicStatusPage
+      responses:
+        "200":
+          description: Success
+          headers:
+            X-Robots-Tag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStatusView'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security: []
+      x-ai-danger: Anonymous public projection; visitor data endpoint, not a workspace tool.
+  /public/status-pages/organizations/{organization_key}:
+    parameters:
+      - name: organization_key
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+    get:
+      tags:
+        - Status pages
+      summary: Read a published status page by permanent organization key
+      operationId: getPublicStatusPageByOrganization
       responses:
         "200":
           description: Success
@@ -10596,6 +10637,7 @@ components:
       required:
         - id
         - slug
+        - public_url
         - draft_version
         - intent_version
         - published_draft_version
@@ -10610,6 +10652,17 @@ components:
           description: Complete immutable public address. New pages include a server-generated suffix; existing addresses are preserved. Use this value for public reads and subsequent saves.
           type: string
           maxLength: 61
+        public_url:
+          description: Authoritative public URL for this environment. Stable organization hostname when configured, otherwise the application status path. Present even while unpublished.
+          type: string
+          format: uri
+          maxLength: 2048
+        organization_key:
+          description: Permanent DNS-safe lowercase hex encoding of the Anchor organization KSUID bytes. Absent for legacy organizations without an Anchor KSUID.
+          type: string
+          minLength: 40
+          maxLength: 40
+          pattern: ^[0-9a-f]{40}$
         draft_version:
           type: integer
           format: int64
