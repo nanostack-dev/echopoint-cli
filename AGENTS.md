@@ -7,6 +7,13 @@ Go `echopoint` CLI (`cmd/echopoint`) for the Echopoint API, plus the composite G
 - `echopoint mcp` is a stdio MCP server (`internal/commands/mcp.go`, `internal/mcp`); every operation with `x-ai-tool: true` in the spec becomes a tool, `x-ai-danger` excludes one. See `docs/mcp.md`.
 - The Action downloads the CLI release (`cli-version` input, default `latest`) and runs flows through it.
 
+## Milestone Coverage
+
+- Ship CLI capabilities in the same milestone as the corresponding Echopoint API/UI changes. Agents must be able to configure and manage the whole project end to end through supported commands, without UI-only steps or direct database edits. Missing CLI coverage blocks milestone completion.
+- Cover discovery/read, create/update, validation, applicable lifecycle actions such as publish/unpublish/delete, and verification of the resulting state. Support noninteractive flags or input files, structured output, explicit organization/environment selection where applicable and useful errors; preserve API authentication, tenant scope and permissions.
+- Refresh the embedded OpenAPI contract and generated client, implement the commands, and update MCP exposure/catalog, help/docs and tests together. Generated client methods alone are not user-facing CLI capability; MCP tools must retain the existing exposure rules.
+- Validate a reproducible end-to-end configuration workflow through the CLI and test exposed MCP operations. Link the companion API/UI PRs and include the CLI release/version in milestone rollout evidence; use a release-triggering commit for behavior changes as described below. Report any coverage gap before declaring the milestone complete.
+
 ## OpenAPI Sync
 
 - `internal/api/openapi.yaml` is echopoint's contract with `x-go-type` and `x-go-type-import` stripped; it also feeds the MCP catalog via `internal/api/spec.go`.
