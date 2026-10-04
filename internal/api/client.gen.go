@@ -414,13 +414,13 @@ func (e HttpMethod) Valid() bool {
 
 // Defines values for LaunchFlowRequestEphemeralJobVersion.
 const (
-	N1 LaunchFlowRequestEphemeralJobVersion = 1
+	LaunchFlowRequestEphemeralJobVersionN1 LaunchFlowRequestEphemeralJobVersion = 1
 )
 
 // Valid indicates whether the value is a known member of the LaunchFlowRequestEphemeralJobVersion enum.
 func (e LaunchFlowRequestEphemeralJobVersion) Valid() bool {
 	switch e {
-	case N1:
+	case LaunchFlowRequestEphemeralJobVersionN1:
 		return true
 	default:
 		return false
@@ -837,22 +837,22 @@ func (e ResourceSearchContextLevel) Valid() bool {
 
 // Defines values for ResourceSearchDomain.
 const (
-	Collections       ResourceSearchDomain = "collections"
-	Flows             ResourceSearchDomain = "flows"
-	OpenapiOperations ResourceSearchDomain = "openapi_operations"
-	Requests          ResourceSearchDomain = "requests"
+	ResourceSearchDomainCollections       ResourceSearchDomain = "collections"
+	ResourceSearchDomainFlows             ResourceSearchDomain = "flows"
+	ResourceSearchDomainOpenapiOperations ResourceSearchDomain = "openapi_operations"
+	ResourceSearchDomainRequests          ResourceSearchDomain = "requests"
 )
 
 // Valid indicates whether the value is a known member of the ResourceSearchDomain enum.
 func (e ResourceSearchDomain) Valid() bool {
 	switch e {
-	case Collections:
+	case ResourceSearchDomainCollections:
 		return true
-	case Flows:
+	case ResourceSearchDomainFlows:
 		return true
-	case OpenapiOperations:
+	case ResourceSearchDomainOpenapiOperations:
 		return true
-	case Requests:
+	case ResourceSearchDomainRequests:
 		return true
 	default:
 		return false
@@ -1123,6 +1123,144 @@ const (
 func (e SseFlowNodeType) Valid() bool {
 	switch e {
 	case Sse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusPageConfigVersion.
+const (
+	StatusPageConfigVersionN1 StatusPageConfigVersion = 1
+)
+
+// Valid indicates whether the value is a known member of the StatusPageConfigVersion enum.
+func (e StatusPageConfigVersion) Valid() bool {
+	switch e {
+	case StatusPageConfigVersionN1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusPageHealthState.
+const (
+	StatusPageHealthStateNotMonitored StatusPageHealthState = "not_monitored"
+	StatusPageHealthStateOperational  StatusPageHealthState = "operational"
+	StatusPageHealthStateOutage       StatusPageHealthState = "outage"
+	StatusPageHealthStateUnknown      StatusPageHealthState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the StatusPageHealthState enum.
+func (e StatusPageHealthState) Valid() bool {
+	switch e {
+	case StatusPageHealthStateNotMonitored:
+		return true
+	case StatusPageHealthStateOperational:
+		return true
+	case StatusPageHealthStateOutage:
+		return true
+	case StatusPageHealthStateUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusPagePalette.
+const (
+	StatusPaletteCustom    StatusPagePalette = "custom"
+	StatusPaletteOcean     StatusPagePalette = "ocean"
+	StatusPaletteSignature StatusPagePalette = "signature"
+	StatusPaletteViolet    StatusPagePalette = "violet"
+)
+
+// Valid indicates whether the value is a known member of the StatusPagePalette enum.
+func (e StatusPagePalette) Valid() bool {
+	switch e {
+	case StatusPaletteCustom:
+		return true
+	case StatusPaletteOcean:
+		return true
+	case StatusPaletteSignature:
+		return true
+	case StatusPaletteViolet:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusPageRegionLocation.
+const (
+	Fra StatusPageRegionLocation = "fra"
+	Gru StatusPageRegionLocation = "gru"
+	Iad StatusPageRegionLocation = "iad"
+	Sin StatusPageRegionLocation = "sin"
+	Syd StatusPageRegionLocation = "syd"
+	Yul StatusPageRegionLocation = "yul"
+)
+
+// Valid indicates whether the value is a known member of the StatusPageRegionLocation enum.
+func (e StatusPageRegionLocation) Valid() bool {
+	switch e {
+	case Fra:
+		return true
+	case Gru:
+		return true
+	case Iad:
+		return true
+	case Sin:
+		return true
+	case Syd:
+		return true
+	case Yul:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusPageServiceTemplate.
+const (
+	StatusPageServiceTemplateApi       StatusPageServiceTemplate = "api"
+	StatusPageServiceTemplateDashboard StatusPageServiceTemplate = "dashboard"
+	StatusPageServiceTemplateFlows     StatusPageServiceTemplate = "flows"
+	StatusPageServiceTemplateWebhooks  StatusPageServiceTemplate = "webhooks"
+)
+
+// Valid indicates whether the value is a known member of the StatusPageServiceTemplate enum.
+func (e StatusPageServiceTemplate) Valid() bool {
+	switch e {
+	case StatusPageServiceTemplateApi:
+		return true
+	case StatusPageServiceTemplateDashboard:
+		return true
+	case StatusPageServiceTemplateFlows:
+		return true
+	case StatusPageServiceTemplateWebhooks:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusPageTheme.
+const (
+	Ledger StatusPageTheme = "ledger"
+	Orbit  StatusPageTheme = "orbit"
+	Signal StatusPageTheme = "signal"
+)
+
+// Valid indicates whether the value is a known member of the StatusPageTheme enum.
+func (e StatusPageTheme) Valid() bool {
+	switch e {
+	case Ledger:
+		return true
+	case Orbit:
+		return true
+	case Signal:
 		return true
 	default:
 		return false
@@ -3816,6 +3954,35 @@ type PollNodeData struct {
 	TimeoutMs *int `json:"timeout_ms,omitempty"`
 }
 
+// PublicStatusService defines model for PublicStatusService.
+type PublicStatusService struct {
+	Detail string           `json:"detail"`
+	Health StatusPageHealth `json:"health"`
+	Id     string           `json:"id"`
+	Name   string           `json:"name"`
+}
+
+// PublicStatusView defines model for PublicStatusView.
+type PublicStatusView struct {
+	BrandName   string                `json:"brand_name"`
+	Colors      *StatusPageColors     `json:"colors"`
+	Description string                `json:"description"`
+	Headline    string                `json:"headline"`
+	Health      StatusPageHealth      `json:"health"`
+	Logo        *string               `json:"logo"`
+	Motion      bool                  `json:"motion"`
+	Palette     StatusPagePalette     `json:"palette"`
+	PublishedAt time.Time             `json:"published_at"`
+	Services    []PublicStatusService `json:"services"`
+	Theme       StatusPageTheme       `json:"theme"`
+}
+
+// PublishStatusPageRequest defines model for PublishStatusPageRequest.
+type PublishStatusPageRequest struct {
+	ExpectedDraftVersion  int64 `json:"expected_draft_version"`
+	ExpectedIntentVersion int64 `json:"expected_intent_version"`
+}
+
 // PushSpecVersionRequest defines model for PushSpecVersionRequest.
 type PushSpecVersionRequest struct {
 	// Document The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
@@ -4298,6 +4465,16 @@ type RunnerJobTerminalStatus string
 // customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
 type RunnerType string
 
+// SaveStatusPageRequest defines model for SaveStatusPageRequest.
+type SaveStatusPageRequest struct {
+	Binding *StatusPageBinding `json:"binding,omitempty"`
+
+	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
+	Config               StatusPageConfig `json:"config"`
+	ExpectedDraftVersion int64            `json:"expected_draft_version"`
+	Slug                 string           `json:"slug"`
+}
+
 // ScheduleLaunchFailure A flow that could not be launched when a schedule run fired (flow deleted between
 // resolve and launch, validation failed, ...). Counts as a failure in the run's
 // derived status.
@@ -4669,6 +4846,128 @@ type SseNodeData struct {
 // StatusCodeExtractorConfig Status code extractor requires no configuration
 type StatusCodeExtractorConfig = map[string]interface{}
 
+// StatusPageBinding defines model for StatusPageBinding.
+type StatusPageBinding struct {
+	Check          StatusPageCheck    `json:"check"`
+	EnvironmentKey string             `json:"environment_key"`
+	FlowId         openapi_types.UUID `json:"flow_id"`
+	ScheduleId     openapi_types.UUID `json:"schedule_id"`
+	ServiceId      string             `json:"service_id"`
+	VersionId      openapi_types.UUID `json:"version_id"`
+}
+
+// StatusPageBindingOptions defines model for StatusPageBindingOptions.
+type StatusPageBindingOptions struct {
+	Checks         []StatusPageCheckOption `json:"checks"`
+	CronExpression string                  `json:"cron_expression"`
+	EnvironmentKey string                  `json:"environment_key"`
+	Timezone       string                  `json:"timezone"`
+	VersionId      openapi_types.UUID      `json:"version_id"`
+}
+
+// StatusPageCheck defines model for StatusPageCheck.
+type StatusPageCheck struct {
+	AssertionIndex int    `json:"assertion_index"`
+	NodeId         string `json:"node_id"`
+}
+
+// StatusPageCheckOption defines model for StatusPageCheckOption.
+type StatusPageCheckOption struct {
+	Check StatusPageCheck `json:"check"`
+	Label string          `json:"label"`
+}
+
+// StatusPageColors defines model for StatusPageColors.
+type StatusPageColors struct {
+	Accent     string `json:"accent"`
+	Background string `json:"background"`
+	Text       string `json:"text"`
+}
+
+// StatusPageConfig Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
+type StatusPageConfig struct {
+	BrandName    string `json:"brandName"`
+	CustomColors struct {
+		Ledger *StatusPageColors `json:"ledger"`
+		Orbit  *StatusPageColors `json:"orbit"`
+		Signal *StatusPageColors `json:"signal"`
+	} `json:"customColors"`
+	Description string `json:"description"`
+	Headlines   struct {
+		Ledger string `json:"ledger"`
+		Orbit  string `json:"orbit"`
+		Signal string `json:"signal"`
+	} `json:"headlines"`
+	Logo          *string                 `json:"logo"`
+	Motion        bool                    `json:"motion"`
+	Palette       StatusPagePalette       `json:"palette"`
+	Regions       []StatusPageRegion      `json:"regions"`
+	Services      []StatusPageService     `json:"services"`
+	ShowHistory   bool                    `json:"showHistory"`
+	ShowRegions   bool                    `json:"showRegions"`
+	ShowSubscribe bool                    `json:"showSubscribe"`
+	Theme         StatusPageTheme         `json:"theme"`
+	Version       StatusPageConfigVersion `json:"version"`
+}
+
+// StatusPageConfigVersion defines model for StatusPageConfig.Version.
+type StatusPageConfigVersion int
+
+// StatusPageEditor defines model for StatusPageEditor.
+type StatusPageEditor struct {
+	Binding *StatusPageBinding `json:"binding,omitempty"`
+
+	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
+	Config                StatusPageConfig `json:"config"`
+	DraftVersion          int64            `json:"draft_version"`
+	Id                    string           `json:"id"`
+	IntentVersion         int64            `json:"intent_version"`
+	Published             bool             `json:"published"`
+	PublishedDraftVersion int64            `json:"published_draft_version"`
+	Slug                  string           `json:"slug"`
+	UpdatedAt             time.Time        `json:"updated_at"`
+}
+
+// StatusPageHealth defines model for StatusPageHealth.
+type StatusPageHealth struct {
+	CheckedAt *time.Time            `json:"checked_at,omitempty"`
+	ExpiresAt *time.Time            `json:"expires_at,omitempty"`
+	Reason    string                `json:"reason"`
+	State     StatusPageHealthState `json:"state"`
+}
+
+// StatusPageHealthState defines model for StatusPageHealthState.
+type StatusPageHealthState string
+
+// StatusPagePalette defines model for StatusPagePalette.
+type StatusPagePalette string
+
+// StatusPageRegion defines model for StatusPageRegion.
+type StatusPageRegion struct {
+	Enabled  bool                     `json:"enabled"`
+	Id       string                   `json:"id"`
+	Location StatusPageRegionLocation `json:"location"`
+	Name     string                   `json:"name"`
+}
+
+// StatusPageRegionLocation defines model for StatusPageRegion.Location.
+type StatusPageRegionLocation string
+
+// StatusPageService defines model for StatusPageService.
+type StatusPageService struct {
+	Detail   string                    `json:"detail"`
+	Enabled  bool                      `json:"enabled"`
+	Id       string                    `json:"id"`
+	Name     string                    `json:"name"`
+	Template StatusPageServiceTemplate `json:"template"`
+}
+
+// StatusPageServiceTemplate defines model for StatusPageService.Template.
+type StatusPageServiceTemplate string
+
+// StatusPageTheme defines model for StatusPageTheme.
+type StatusPageTheme string
+
 // TagMatchMode Whether any or all of the provided tags must match.
 type TagMatchMode string
 
@@ -4683,6 +4982,11 @@ type TriggerMetadata struct {
 // schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
 // by this value.
 type TriggerType string
+
+// UnpublishStatusPageRequest defines model for UnpublishStatusPageRequest.
+type UnpublishStatusPageRequest struct {
+	ExpectedIntentVersion int64 `json:"expected_intent_version"`
+}
 
 // UpdateCollectionRequest defines model for UpdateCollectionRequest.
 type UpdateCollectionRequest struct {
@@ -5983,6 +6287,39 @@ type GetSpecVersionParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// GetStatusPageBindingOptionsParams defines parameters for GetStatusPageBindingOptions.
+type GetStatusPageBindingOptionsParams struct {
+	ScheduleId openapi_types.UUID `form:"schedule_id" json:"schedule_id"`
+	FlowId     openapi_types.UUID `form:"flow_id" json:"flow_id"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetStatusPageParams defines parameters for GetStatusPage.
+type GetStatusPageParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SaveStatusPageParams defines parameters for SaveStatusPage.
+type SaveStatusPageParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PublishStatusPageParams defines parameters for PublishStatusPage.
+type PublishStatusPageParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// UnpublishStatusPageParams defines parameters for UnpublishStatusPage.
+type UnpublishStatusPageParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListWebhooksParams defines parameters for ListWebhooks.
 type ListWebhooksParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -6170,6 +6507,15 @@ type CreateSpecJSONRequestBody = CreateSpecRequest
 
 // PushSpecVersionJSONRequestBody defines body for PushSpecVersion for application/json ContentType.
 type PushSpecVersionJSONRequestBody = PushSpecVersionRequest
+
+// SaveStatusPageJSONRequestBody defines body for SaveStatusPage for application/json ContentType.
+type SaveStatusPageJSONRequestBody = SaveStatusPageRequest
+
+// PublishStatusPageJSONRequestBody defines body for PublishStatusPage for application/json ContentType.
+type PublishStatusPageJSONRequestBody = PublishStatusPageRequest
+
+// UnpublishStatusPageJSONRequestBody defines body for UnpublishStatusPage for application/json ContentType.
+type UnpublishStatusPageJSONRequestBody = UnpublishStatusPageRequest
 
 // CreateWebhookJSONRequestBody defines body for CreateWebhook for application/json ContentType.
 type CreateWebhookJSONRequestBody = CreateWebhookRequest
@@ -8418,6 +8764,11 @@ type ClientInterface interface {
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetPublicStatusPage Read a published status page
+	//
+	// Corresponds with GET /public/status-pages/{slug} (the `GetPublicStatusPage` operationId).
+	GetPublicStatusPage(ctx context.Context, slug string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SearchResourcesWithBody Search Resources
 	//
 	// Cross-domain resource discovery across persisted flow-relevant resources.
@@ -8717,6 +9068,58 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
 	GetSpecVersion(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetStatusPageBindingOptions List publishable monitor checks
+	//
+	// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
+	GetStatusPageBindingOptions(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetStatusPage Read the shared status page draft
+	//
+	// Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
+	GetStatusPage(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SaveStatusPageWithBody Save a private status page draft
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+	SaveStatusPageWithBody(ctx context.Context, params *SaveStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SaveStatusPage Save a private status page draft
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+	SaveStatusPage(ctx context.Context, params *SaveStatusPageParams, body SaveStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PublishStatusPageWithBody Publish a saved status page
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+	PublishStatusPageWithBody(ctx context.Context, params *PublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PublishStatusPage Publish a saved status page
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+	PublishStatusPage(ctx context.Context, params *PublishStatusPageParams, body PublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UnpublishStatusPageWithBody Withdraw a public status page
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+	UnpublishStatusPageWithBody(ctx context.Context, params *UnpublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UnpublishStatusPage Withdraw a public status page
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+	UnpublishStatusPage(ctx context.Context, params *UnpublishStatusPageParams, body UnpublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReceiveWebhookDeleteWithBody Receive Webhook via DELETE
 	//
@@ -11262,6 +11665,21 @@ func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsPar
 	return c.Client.Do(req)
 }
 
+// GetPublicStatusPage Read a published status page
+//
+// Corresponds with GET /public/status-pages/{slug} (the `GetPublicStatusPage` operationId).
+func (c *Client) GetPublicStatusPage(ctx context.Context, slug string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPublicStatusPageRequest(c.Server, slug)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // SearchResourcesWithBody Search Resources
 //
 // Cross-domain resource discovery across persisted flow-relevant resources.
@@ -11812,6 +12230,138 @@ func (c *Client) PushSpecVersion(ctx context.Context, slug SpecSlugParameter, pa
 // Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
 func (c *Client) GetSpecVersion(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSpecVersionRequest(c.Server, slug, version, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetStatusPageBindingOptions List publishable monitor checks
+//
+// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
+func (c *Client) GetStatusPageBindingOptions(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetStatusPageBindingOptionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetStatusPage Read the shared status page draft
+//
+// Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
+func (c *Client) GetStatusPage(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetStatusPageRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SaveStatusPageWithBody Save a private status page draft
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+func (c *Client) SaveStatusPageWithBody(ctx context.Context, params *SaveStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSaveStatusPageRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SaveStatusPage Save a private status page draft
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+func (c *Client) SaveStatusPage(ctx context.Context, params *SaveStatusPageParams, body SaveStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSaveStatusPageRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PublishStatusPageWithBody Publish a saved status page
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+func (c *Client) PublishStatusPageWithBody(ctx context.Context, params *PublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPublishStatusPageRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PublishStatusPage Publish a saved status page
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+func (c *Client) PublishStatusPage(ctx context.Context, params *PublishStatusPageParams, body PublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPublishStatusPageRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UnpublishStatusPageWithBody Withdraw a public status page
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+func (c *Client) UnpublishStatusPageWithBody(ctx context.Context, params *UnpublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnpublishStatusPageRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UnpublishStatusPage Withdraw a public status page
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+func (c *Client) UnpublishStatusPage(ctx context.Context, params *UnpublishStatusPageParams, body UnpublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnpublishStatusPageRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -17528,6 +18078,40 @@ func NewListPermissionsRequest(server string, params *ListPermissionsParams) (*h
 	return req, nil
 }
 
+// NewGetPublicStatusPageRequest constructs an http.Request for the GetPublicStatusPage method
+func NewGetPublicStatusPageRequest(server string, slug string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/public/status-pages/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewSearchResourcesRequest calls the generic SearchResources builder with application/json body
 func NewSearchResourcesRequest(server string, params *SearchResourcesParams, body SearchResourcesJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -18403,6 +18987,276 @@ func NewGetSpecVersionRequest(server string, slug SpecSlugParameter, version str
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetStatusPageBindingOptionsRequest constructs an http.Request for the GetStatusPageBindingOptions method
+func NewGetStatusPageBindingOptionsRequest(server string, params *GetStatusPageBindingOptionsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/status-pages/binding-options")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "schedule_id", params.ScheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_id", params.FlowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetStatusPageRequest constructs an http.Request for the GetStatusPage method
+func NewGetStatusPageRequest(server string, params *GetStatusPageParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/status-pages/current")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSaveStatusPageRequest calls the generic SaveStatusPage builder with application/json body
+func NewSaveStatusPageRequest(server string, params *SaveStatusPageParams, body SaveStatusPageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSaveStatusPageRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSaveStatusPageRequestWithBody constructs an http.Request for the SaveStatusPage method, with any body, and a specified content type
+func NewSaveStatusPageRequestWithBody(server string, params *SaveStatusPageParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/status-pages/current")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPublishStatusPageRequest calls the generic PublishStatusPage builder with application/json body
+func NewPublishStatusPageRequest(server string, params *PublishStatusPageParams, body PublishStatusPageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPublishStatusPageRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewPublishStatusPageRequestWithBody constructs an http.Request for the PublishStatusPage method, with any body, and a specified content type
+func NewPublishStatusPageRequestWithBody(server string, params *PublishStatusPageParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/status-pages/current/publish")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUnpublishStatusPageRequest calls the generic UnpublishStatusPage builder with application/json body
+func NewUnpublishStatusPageRequest(server string, params *UnpublishStatusPageParams, body UnpublishStatusPageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUnpublishStatusPageRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewUnpublishStatusPageRequestWithBody constructs an http.Request for the UnpublishStatusPage method, with any body, and a specified content type
+func NewUnpublishStatusPageRequestWithBody(server string, params *UnpublishStatusPageParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/status-pages/current/unpublish")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -20432,6 +21286,13 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissionsWithResponse(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*ListPermissionsResponse, error)
 
+	// GetPublicStatusPageWithResponse Read a published status page
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /public/status-pages/{slug} (the `GetPublicStatusPage` operationId).
+	GetPublicStatusPageWithResponse(ctx context.Context, slug string, reqEditors ...RequestEditorFn) (*GetPublicStatusPageResponse, error)
+
 	// SearchResourcesWithBodyWithResponse Search Resources
 	//
 	// Cross-domain resource discovery across persisted flow-relevant resources.
@@ -20747,6 +21608,62 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
 	GetSpecVersionWithResponse(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*GetSpecVersionResponse, error)
+
+	// GetStatusPageBindingOptionsWithResponse List publishable monitor checks
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
+	GetStatusPageBindingOptionsWithResponse(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*GetStatusPageBindingOptionsResponse, error)
+
+	// GetStatusPageWithResponse Read the shared status page draft
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
+	GetStatusPageWithResponse(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*GetStatusPageResponse, error)
+
+	// SaveStatusPageWithBodyWithResponse Save a private status page draft
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+	SaveStatusPageWithBodyWithResponse(ctx context.Context, params *SaveStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveStatusPageResponse, error)
+
+	// SaveStatusPageWithResponse Save a private status page draft
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+	SaveStatusPageWithResponse(ctx context.Context, params *SaveStatusPageParams, body SaveStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveStatusPageResponse, error)
+
+	// PublishStatusPageWithBodyWithResponse Publish a saved status page
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+	PublishStatusPageWithBodyWithResponse(ctx context.Context, params *PublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PublishStatusPageResponse, error)
+
+	// PublishStatusPageWithResponse Publish a saved status page
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+	PublishStatusPageWithResponse(ctx context.Context, params *PublishStatusPageParams, body PublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*PublishStatusPageResponse, error)
+
+	// UnpublishStatusPageWithBodyWithResponse Withdraw a public status page
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+	UnpublishStatusPageWithBodyWithResponse(ctx context.Context, params *UnpublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnpublishStatusPageResponse, error)
+
+	// UnpublishStatusPageWithResponse Withdraw a public status page
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+	UnpublishStatusPageWithResponse(ctx context.Context, params *UnpublishStatusPageParams, body UnpublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*UnpublishStatusPageResponse, error)
 
 	// ReceiveWebhookDeleteWithBodyWithResponse Receive Webhook via DELETE
 	//
@@ -26658,6 +27575,96 @@ func (r ListPermissionsResponse) ContentType() string {
 	return ""
 }
 
+// GetPublicStatusPageResponse200Headers the declared response headers of an HTTP 200 response for GetPublicStatusPage
+type GetPublicStatusPageResponse200Headers struct {
+	CacheControl *string
+}
+
+type GetPublicStatusPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *PublicStatusView
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *GetPublicStatusPageResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetPublicStatusPageResponse) GetJSON200() *PublicStatusView {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetPublicStatusPageResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetPublicStatusPageResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetPublicStatusPageResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetPublicStatusPageResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetPublicStatusPageResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetPublicStatusPageResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetPublicStatusPageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPublicStatusPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPublicStatusPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPublicStatusPageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type SearchResourcesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -27825,6 +28832,456 @@ func (r GetSpecVersionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetSpecVersionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetStatusPageBindingOptionsResponse200Headers the declared response headers of an HTTP 200 response for GetStatusPageBindingOptions
+type GetStatusPageBindingOptionsResponse200Headers struct {
+	CacheControl *string
+}
+
+type GetStatusPageBindingOptionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *StatusPageBindingOptions
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *GetStatusPageBindingOptionsResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetStatusPageBindingOptionsResponse) GetJSON200() *StatusPageBindingOptions {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetStatusPageBindingOptionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetStatusPageBindingOptionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetStatusPageBindingOptionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetStatusPageBindingOptionsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetStatusPageBindingOptionsResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetStatusPageBindingOptionsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetStatusPageBindingOptionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetStatusPageBindingOptionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetStatusPageBindingOptionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetStatusPageBindingOptionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetStatusPageResponse200Headers the declared response headers of an HTTP 200 response for GetStatusPage
+type GetStatusPageResponse200Headers struct {
+	CacheControl *string
+}
+
+type GetStatusPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *StatusPageEditor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *GetStatusPageResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetStatusPageResponse) GetJSON200() *StatusPageEditor {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetStatusPageResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetStatusPageResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetStatusPageResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetStatusPageResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetStatusPageResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetStatusPageResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetStatusPageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetStatusPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetStatusPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetStatusPageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// SaveStatusPageResponse200Headers the declared response headers of an HTTP 200 response for SaveStatusPage
+type SaveStatusPageResponse200Headers struct {
+	CacheControl *string
+}
+
+type SaveStatusPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *StatusPageEditor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *SaveStatusPageResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SaveStatusPageResponse) GetJSON200() *StatusPageEditor {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SaveStatusPageResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SaveStatusPageResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SaveStatusPageResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SaveStatusPageResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r SaveStatusPageResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SaveStatusPageResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r SaveStatusPageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SaveStatusPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SaveStatusPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SaveStatusPageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// PublishStatusPageResponse200Headers the declared response headers of an HTTP 200 response for PublishStatusPage
+type PublishStatusPageResponse200Headers struct {
+	CacheControl *string
+}
+
+type PublishStatusPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *StatusPageEditor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *PublishStatusPageResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PublishStatusPageResponse) GetJSON200() *StatusPageEditor {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PublishStatusPageResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PublishStatusPageResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PublishStatusPageResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PublishStatusPageResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PublishStatusPageResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r PublishStatusPageResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r PublishStatusPageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PublishStatusPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PublishStatusPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PublishStatusPageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// UnpublishStatusPageResponse200Headers the declared response headers of an HTTP 200 response for UnpublishStatusPage
+type UnpublishStatusPageResponse200Headers struct {
+	CacheControl *string
+}
+
+type UnpublishStatusPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *StatusPageEditor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *UnpublishStatusPageResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UnpublishStatusPageResponse) GetJSON200() *StatusPageEditor {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UnpublishStatusPageResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UnpublishStatusPageResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UnpublishStatusPageResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UnpublishStatusPageResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UnpublishStatusPageResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UnpublishStatusPageResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UnpublishStatusPageResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UnpublishStatusPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UnpublishStatusPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UnpublishStatusPageResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -30590,6 +32047,19 @@ func (c *ClientWithResponses) ListPermissionsWithResponse(ctx context.Context, p
 	return ParseListPermissionsResponse(rsp)
 }
 
+// GetPublicStatusPageWithResponse Read a published status page
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /public/status-pages/{slug} (the `GetPublicStatusPage` operationId).
+func (c *ClientWithResponses) GetPublicStatusPageWithResponse(ctx context.Context, slug string, reqEditors ...RequestEditorFn) (*GetPublicStatusPageResponse, error) {
+	rsp, err := c.GetPublicStatusPage(ctx, slug, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPublicStatusPageResponse(rsp)
+}
+
 // SearchResourcesWithBodyWithResponse Search Resources
 //
 // Cross-domain resource discovery across persisted flow-relevant resources.
@@ -31060,6 +32530,110 @@ func (c *ClientWithResponses) GetSpecVersionWithResponse(ctx context.Context, sl
 		return nil, err
 	}
 	return ParseGetSpecVersionResponse(rsp)
+}
+
+// GetStatusPageBindingOptionsWithResponse List publishable monitor checks
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
+func (c *ClientWithResponses) GetStatusPageBindingOptionsWithResponse(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*GetStatusPageBindingOptionsResponse, error) {
+	rsp, err := c.GetStatusPageBindingOptions(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetStatusPageBindingOptionsResponse(rsp)
+}
+
+// GetStatusPageWithResponse Read the shared status page draft
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
+func (c *ClientWithResponses) GetStatusPageWithResponse(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*GetStatusPageResponse, error) {
+	rsp, err := c.GetStatusPage(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetStatusPageResponse(rsp)
+}
+
+// SaveStatusPageWithBodyWithResponse Save a private status page draft
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+func (c *ClientWithResponses) SaveStatusPageWithBodyWithResponse(ctx context.Context, params *SaveStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveStatusPageResponse, error) {
+	rsp, err := c.SaveStatusPageWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSaveStatusPageResponse(rsp)
+}
+
+// SaveStatusPageWithResponse Save a private status page draft
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
+func (c *ClientWithResponses) SaveStatusPageWithResponse(ctx context.Context, params *SaveStatusPageParams, body SaveStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveStatusPageResponse, error) {
+	rsp, err := c.SaveStatusPage(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSaveStatusPageResponse(rsp)
+}
+
+// PublishStatusPageWithBodyWithResponse Publish a saved status page
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+func (c *ClientWithResponses) PublishStatusPageWithBodyWithResponse(ctx context.Context, params *PublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PublishStatusPageResponse, error) {
+	rsp, err := c.PublishStatusPageWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePublishStatusPageResponse(rsp)
+}
+
+// PublishStatusPageWithResponse Publish a saved status page
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
+func (c *ClientWithResponses) PublishStatusPageWithResponse(ctx context.Context, params *PublishStatusPageParams, body PublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*PublishStatusPageResponse, error) {
+	rsp, err := c.PublishStatusPage(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePublishStatusPageResponse(rsp)
+}
+
+// UnpublishStatusPageWithBodyWithResponse Withdraw a public status page
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+func (c *ClientWithResponses) UnpublishStatusPageWithBodyWithResponse(ctx context.Context, params *UnpublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnpublishStatusPageResponse, error) {
+	rsp, err := c.UnpublishStatusPageWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnpublishStatusPageResponse(rsp)
+}
+
+// UnpublishStatusPageWithResponse Withdraw a public status page
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
+func (c *ClientWithResponses) UnpublishStatusPageWithResponse(ctx context.Context, params *UnpublishStatusPageParams, body UnpublishStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*UnpublishStatusPageResponse, error) {
+	rsp, err := c.UnpublishStatusPage(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnpublishStatusPageResponse(rsp)
 }
 
 // ReceiveWebhookDeleteWithBodyWithResponse Receive Webhook via DELETE
@@ -35678,6 +37252,87 @@ func ParseListPermissionsResponse(rsp *http.Response) (*ListPermissionsResponse,
 	return response, nil
 }
 
+// ParseGetPublicStatusPageResponse parses an HTTP response from a GetPublicStatusPageWithResponse call
+func ParseGetPublicStatusPageResponse(rsp *http.Response) (*GetPublicStatusPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPublicStatusPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PublicStatusView
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers GetPublicStatusPageResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		response.Headers200 = &headers
+	}
+
+	return response, nil
+}
+
 // ParseSearchResourcesResponse parses an HTTP response from a SearchResourcesWithResponse call
 func ParseSearchResourcesResponse(rsp *http.Response) (*SearchResourcesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -36597,6 +38252,411 @@ func ParseGetSpecVersionResponse(rsp *http.Response) (*GetSpecVersionResponse, e
 		}
 		response.JSON404 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseGetStatusPageBindingOptionsResponse parses an HTTP response from a GetStatusPageBindingOptionsWithResponse call
+func ParseGetStatusPageBindingOptionsResponse(rsp *http.Response) (*GetStatusPageBindingOptionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetStatusPageBindingOptionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest StatusPageBindingOptions
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers GetStatusPageBindingOptionsResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		response.Headers200 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseGetStatusPageResponse parses an HTTP response from a GetStatusPageWithResponse call
+func ParseGetStatusPageResponse(rsp *http.Response) (*GetStatusPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetStatusPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest StatusPageEditor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers GetStatusPageResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		response.Headers200 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseSaveStatusPageResponse parses an HTTP response from a SaveStatusPageWithResponse call
+func ParseSaveStatusPageResponse(rsp *http.Response) (*SaveStatusPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SaveStatusPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest StatusPageEditor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers SaveStatusPageResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		response.Headers200 = &headers
+	}
+
+	return response, nil
+}
+
+// ParsePublishStatusPageResponse parses an HTTP response from a PublishStatusPageWithResponse call
+func ParsePublishStatusPageResponse(rsp *http.Response) (*PublishStatusPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PublishStatusPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest StatusPageEditor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers PublishStatusPageResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		response.Headers200 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseUnpublishStatusPageResponse parses an HTTP response from a UnpublishStatusPageWithResponse call
+func ParseUnpublishStatusPageResponse(rsp *http.Response) (*UnpublishStatusPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UnpublishStatusPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest StatusPageEditor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers UnpublishStatusPageResponse200Headers
+		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.CacheControl = &value
+		}
+		response.Headers200 = &headers
 	}
 
 	return response, nil

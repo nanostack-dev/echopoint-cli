@@ -1,0 +1,43 @@
+{
+  "expected_draft_version": 0,
+  "slug": "example",
+  "config": {
+    "version": 1,
+    "theme": "orbit",
+    "brandName": "Example",
+    "description": "Measured service availability.",
+    "headlines": {
+      "orbit": "Your next idea.\nAlready in flow.",
+      "ledger": "Reliability,\non the record.",
+      "signal": "Ready for\nwhat\u2019s next."
+    },
+    "logo": null,
+    "palette": "signature",
+    "customColors": {
+      "orbit": null,
+      "ledger": null,
+      "signal": null
+    },
+    "showRegions": false,
+    "showHistory": false,
+    "showSubscribe": false,
+    "motion": true,
+    "regions": [
+      {
+        "id": "fra",
+        "location": "fra",
+        "name": "Europe",
+        "enabled": true
+      }
+    ],
+    "services": [
+      {
+        "id": "api",
+        "template": "api",
+        "name": "Production API",
+        "detail": "API health endpoint \u00b7 checked every 15 minutes",
+        "enabled": true
+      }
+    ]
+  }
+}

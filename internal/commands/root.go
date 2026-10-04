@@ -139,6 +139,7 @@ func NewRootCmd() *cobra.Command {
 		newProfileCmd(state),
 		newMcpCmd(state),
 		newSpecCmd(state),
+		newStatusPagesCmd(state),
 		newVersionCmd(),
 		newUpdateCmd(),
 	)
@@ -159,7 +160,8 @@ func NewRootCmd() *cobra.Command {
 // "flows update") would wrongly skip token resolution and then fail its own
 // requireToken check, making it impossible to authenticate.
 func requiresToken(cmd *cobra.Command) bool {
-	if cmd.Annotations[offlineAnnotation] == "true" {
+	if cmd.Annotations[offlineAnnotation] == annotationEnabled ||
+		cmd.Annotations[anonymousAnnotation] == annotationEnabled {
 		return false
 	}
 	for c := cmd; c != nil; c = c.Parent() {

@@ -70,6 +70,7 @@ latest release.
 - Browser-based OAuth authentication via Clerk
 - Manage flows with granular node, edge, and assertion control
 - Organize flows into folders, and bulk-move them by id, search, or tag
+- Configure and publish [public status pages](docs/status-pages.md), including anonymous verification
 - Manage collections with OpenAPI import support
 - Environment variable management for flows
 - Flow reuse via module nodes (run a flow inside another flow)

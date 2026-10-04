@@ -23,7 +23,7 @@ func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
 	want := []string{
 		"list_flows", "get_flow", "search_flows", "launch_flow", "create_flow",
 		"delete_flow", "list_collections", "get_collection", "list_webhooks",
-		"get_current_api_key",
+		"get_current_api_key", "get_status_page", "save_status_page", "get_status_page_binding_options",
 	}
 	for _, n := range want {
 		if _, ok := byName[n]; !ok {
@@ -35,6 +35,7 @@ func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
 	for _, n := range []string{
 		"get_me", "create_api_key", "delete_api_key", "next_runner_job",
 		"stream_execution", "receive_webhook_post",
+		"publish_status_page", "unpublish_status_page", "get_public_status_page",
 	} {
 		if _, ok := byName[n]; ok {
 			t.Errorf("danger-excluded operation %q must not be a tool", n)

@@ -92,3 +92,11 @@ set:
 
 The tool set tracks the contract: annotate an operation `x-ai-tool` (and resync)
 to expose it.
+
+## Status pages
+
+`get_status_page`, `save_status_page` and `get_status_page_binding_options`
+manage the private draft and discover monitor checks. Publication and withdrawal
+remain excluded by the API contract; use the explicit
+[`status-pages` CLI commands](status-pages.md) for those actions and anonymous
+public verification.
