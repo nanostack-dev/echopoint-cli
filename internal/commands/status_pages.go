@@ -108,8 +108,13 @@ func readStatusPageRequest(cmd *cobra.Command, path string) (api.SaveStatusPageR
 	if err := spec.Components.Schemas["SaveStatusPageRequest"].Value.VisitJSON(value); err != nil {
 		return request, fmt.Errorf("invalid status page request: %w", err)
 	}
-	err = json.Unmarshal(data, &request)
-	return request, err
+	if err := json.Unmarshal(data, &request); err != nil {
+		return request, err
+	}
+	if request.ExpectedDraftVersion == 0 && len(request.Slug) > 48 {
+		return request, fmt.Errorf("new page address prefix must be at most 48 characters")
+	}
+	return request, nil
 }
 
 func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
@@ -117,7 +122,13 @@ func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
 	if validateOnly {
 		verb, short = "validate <file|->", "Validate draft JSON offline against the API contract"
 	}
-	cmd := &cobra.Command{Use: verb, Short: short, Args: cobra.ExactArgs(1), SilenceUsage: true, SilenceErrors: true,
+	cmd := &cobra.Command{
+		Use:           verb,
+		Short:         short,
+		Long:          short + ". For a new page, slug is a 3-48 character prefix; the server adds a unique suffix. For edits and public reads, use the complete slug returned by save/get.",
+		Args:          cobra.ExactArgs(1),
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			request, err := readStatusPageRequest(cmd, args[0])
 			if err != nil {
@@ -138,7 +149,8 @@ func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
 				return err
 			}
 			return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
-		}}
+		},
+	}
 	if validateOnly {
 		cmd.Annotations = offline()
 	}

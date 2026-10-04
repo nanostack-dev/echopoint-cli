@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"echopoint-cli/internal/api"
 	"echopoint-cli/internal/output"
 )
 
@@ -108,7 +109,7 @@ func TestStatusPagePublicNeverSendsStoredCredentials(t *testing.T) {
 				t.Errorf("public request leaked %s", name)
 			}
 		}
-		if r.URL.Path != "/public/status-pages/example" {
+		if r.URL.Path != "/public/status-pages/example-a1b2c3d4e5f6" {
 			t.Errorf("path = %s", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -121,7 +122,7 @@ func TestStatusPagePublicNeverSendsStoredCredentials(t *testing.T) {
 		cmd := newStatusPagesCmd(state)
 		var stdout bytes.Buffer
 		cmd.SetOut(&stdout)
-		cmd.SetArgs([]string{"public", "example"})
+		cmd.SetArgs([]string{"public", "example-a1b2c3d4e5f6"})
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
@@ -186,5 +187,72 @@ func TestStatusPageConflictRemainsAnError(t *testing.T) {
 	err := cmd.Execute()
 	if err == nil || !strings.Contains(err.Error(), "Reload the draft") || requests != 1 {
 		t.Fatalf("conflict was not preserved: requests=%d, error=%v", requests, err)
+	}
+}
+
+func TestStatusPageSavesKeepServerAssignedAddress(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/status-page.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var input api.SaveStatusPageRequest
+	if err := json.Unmarshal(fixture, &input); err != nil {
+		t.Fatal(err)
+	}
+	prefix := strings.Repeat("a", 48)
+	slug := prefix + "-a1b2c3d4e5f6"
+	input.Slug = prefix
+	var requests int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request api.SaveStatusPageRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		wantSlug := prefix
+		if requests > 0 {
+			wantSlug = slug
+		}
+		if request.Slug != wantSlug || request.ExpectedDraftVersion != requests {
+			t.Errorf("unexpected save: slug=%s version=%d", request.Slug, request.ExpectedDraftVersion)
+		}
+		requests++
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(api.StatusPageEditor{Slug: slug, DraftVersion: requests, Config: request.Config})
+	}))
+	defer server.Close()
+	state := makeState(t, "test-key", "", server.URL)
+	for range 2 {
+		data, err := json.Marshal(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cmd := newStatusPagesCmd(state)
+		var stdout bytes.Buffer
+		cmd.SetOut(&stdout)
+		cmd.SetIn(bytes.NewReader(data))
+		cmd.SetArgs([]string{"save", "-"})
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		var saved api.StatusPageEditor
+		if err := json.Unmarshal(stdout.Bytes(), &saved); err != nil {
+			t.Fatal(err)
+		}
+		if saved.Slug != slug {
+			t.Fatalf("lost canonical address: %s", saved.Slug)
+		}
+		input.Slug, input.ExpectedDraftVersion = saved.Slug, saved.DraftVersion
+	}
+	input.ExpectedDraftVersion = 0
+	data, err := json.Marshal(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := newStatusPagesCmd(&AppState{})
+	cmd.SetOut(io.Discard)
+	cmd.SetIn(bytes.NewReader(data))
+	cmd.SetArgs([]string{"validate", "-"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("accepted an overlong creation prefix")
 	}
 }

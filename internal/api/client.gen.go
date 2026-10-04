@@ -4472,7 +4472,9 @@ type SaveStatusPageRequest struct {
 	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
 	Config               StatusPageConfig `json:"config"`
 	ExpectedDraftVersion int64            `json:"expected_draft_version"`
-	Slug                 string           `json:"slug"`
+
+	// Slug On creation, a 3-48 character name prefix; the server appends a random suffix. On update, send the complete immutable slug returned by save/get.
+	Slug string `json:"slug"`
 }
 
 // ScheduleLaunchFailure A flow that could not be launched when a schedule run fired (flow deleted between
@@ -4924,8 +4926,10 @@ type StatusPageEditor struct {
 	IntentVersion         int64            `json:"intent_version"`
 	Published             bool             `json:"published"`
 	PublishedDraftVersion int64            `json:"published_draft_version"`
-	Slug                  string           `json:"slug"`
-	UpdatedAt             time.Time        `json:"updated_at"`
+
+	// Slug Complete immutable public address, including the server-generated suffix. Use this value for public reads and subsequent saves.
+	Slug      string    `json:"slug"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // StatusPageHealth defines model for StatusPageHealth.
@@ -27578,6 +27582,7 @@ func (r ListPermissionsResponse) ContentType() string {
 // GetPublicStatusPageResponse200Headers the declared response headers of an HTTP 200 response for GetPublicStatusPage
 type GetPublicStatusPageResponse200Headers struct {
 	CacheControl *string
+	XRobotsTag   *string
 }
 
 type GetPublicStatusPageResponse struct {
@@ -37326,6 +37331,13 @@ func ParseGetPublicStatusPageResponse(rsp *http.Response) (*GetPublicStatusPageR
 				return nil, err
 			}
 			headers.CacheControl = &value
+		}
+		if values := rsp.Header.Values("X-Robots-Tag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Robots-Tag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRobotsTag = &value
 		}
 		response.Headers200 = &headers
 	}

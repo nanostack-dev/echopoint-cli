@@ -19,14 +19,14 @@ echopoint --profile prod status-pages binding-options \
 echopoint status-pages validate page.json
 
 # Save the private draft; '-' reads JSON from stdin.
-echopoint --profile prod status-pages save page.json
+echopoint --profile prod status-pages save page.json > saved-page.json
 
 # Use the draft_version and intent_version returned by save/get.
 echopoint --profile prod status-pages publish \
   --expected-draft-version 1 --expected-intent-version 0
 
 # Verify exactly what an anonymous visitor can read.
-echopoint --profile prod status-pages public my-service
+echopoint --profile prod status-pages public "$(jq -r .slug saved-page.json)"
 ```
 
 [Complete example input](../internal/commands/testdata/status-page.json) includes
@@ -34,7 +34,15 @@ all design fields for Orbit, Ledger and Signal. For a new page,
 `expected_draft_version` is `0`. For edits, read the current draft and construct
 `{expected_draft_version, slug, config, binding}` from its current versions and
 configuration. Keep any existing binding unless intentionally removing it. The
-slug is immutable after the first save; saving does not change the published page.
+server appends a random 12-character suffix on creation: an input such as `example` becomes `example-a1b2c3d4e5f6`. The prefix accepts 3–48 characters and may be shared by other organizations. The returned full slug (up to 61 characters) is immutable: use it for later saves and public reads; never reconstruct it from the company name. Saving does not change the published page.
+
+For an existing page, a complete editable request can be constructed without dropping the assigned address:
+
+```bash
+echopoint --profile prod status-pages get | jq '{expected_draft_version: .draft_version, slug, config, binding} | with_entries(select(.value != null))' > page.json
+```
+
+The unique-address migration changes old plain links. Read `get` after deployment to discover the new address; the old name is not an alias.
 
 For measured status, add a `binding` using the discovered values:
 
@@ -56,7 +64,7 @@ versions are discoverable through the CLI's MCP tools (`list_flow_schedules`,
 `list_flows`, `publish_flow`, `create_flow_schedule`).
 
 Offline validation checks the OpenAPI schema. The server additionally validates
-service/region uniqueness, visible services, logo policy, reserved slugs, binding
+service/region uniqueness, visible services, logo policy, address immutability, binding
 ownership and current monitor selection. Version conflicts are returned without
 retrying: read the draft again and reconcile changes before another write.
 
@@ -79,6 +87,8 @@ exists in milestone 1.
 Health needs two consecutive scheduled measurements. Manual launches do not
 establish public health. The minimum monitor interval is 15 minutes. Missing,
 stale or inconclusive evidence stays Unknown; publishing never fabricates uptime.
+
+The public HTML and JSON responses request exclusion from search engines with `X-Robots-Tag: noindex, nofollow`. They remain anonymously accessible. Customer CNAME domains require verified hostname routing and TLS; this milestone does not provide custom-domain commands.
 
 ## MCP exposure
 

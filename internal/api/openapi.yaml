@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 1.1.0
+  version: 1.2.0
 paths:
   /webhooks:
     parameters:
@@ -4560,7 +4560,7 @@ paths:
         required: true
         schema:
           type: string
-          maxLength: 48
+          maxLength: 61
     get:
       tags:
         - Status pages
@@ -4570,6 +4570,9 @@ paths:
         "200":
           description: Success
           headers:
+            X-Robots-Tag:
+              schema:
+                type: string
             Cache-Control:
               schema:
                 type: string
@@ -10553,9 +10556,10 @@ components:
           format: int64
           minimum: 0
         slug:
+          description: On creation, a 3-48 character name prefix; the server appends a random suffix. On update, send the complete immutable slug returned by save/get.
           type: string
           minLength: 3
-          maxLength: 48
+          maxLength: 61
           pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
         config:
           $ref: '#/components/schemas/StatusPageConfig'
@@ -10603,8 +10607,9 @@ components:
           type: string
           maxLength: 100
         slug:
+          description: Complete immutable public address, including the server-generated suffix. Use this value for public reads and subsequent saves.
           type: string
-          maxLength: 100
+          maxLength: 61
         draft_version:
           type: integer
           format: int64
