@@ -19,7 +19,7 @@ import (
 const offlineAnnotation = "echopoint/offline"
 
 func offline() map[string]string {
-	return map[string]string{offlineAnnotation: "true"}
+	return map[string]string{offlineAnnotation: annotationEnabled}
 }
 
 func newSpecCmd(state *AppState) *cobra.Command {

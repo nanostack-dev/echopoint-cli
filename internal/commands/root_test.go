@@ -50,6 +50,14 @@ func TestRequiresToken(t *testing.T) {
 		{"flows create", []string{"flows", "create"}, true},
 		{"flows list", []string{"flows", "list"}, true},
 
+		{"status-pages get", []string{"status-pages", "get"}, true},
+		{"status-pages save", []string{"status-pages", "save"}, true},
+		{"status-pages publish", []string{"status-pages", "publish"}, true},
+		{"status-pages unpublish", []string{"status-pages", "unpublish"}, true},
+		{"status-pages binding-options", []string{"status-pages", "binding-options"}, true},
+		{"status-pages public", []string{"status-pages", "public"}, false},
+		{"status-pages validate", []string{"status-pages", "validate"}, false},
+
 		// Standalone spec commands work on local files with no account.
 		{"spec validate", []string{"spec", "validate"}, false},
 		{"spec fmt", []string{"spec", "fmt"}, false},
