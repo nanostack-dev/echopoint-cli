@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -255,19 +256,32 @@ func newStatusPageBindingCmd(state *AppState) *cobra.Command {
 }
 
 func newStatusPagePublicCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
-		Use:   "public <slug>",
-		Short: "Read the published projection anonymously, without credentials or organization headers",
-		Args: cobra.ExactArgs(
-			1,
-		),
+	var key string
+	cmd := &cobra.Command{
+		Use:           "public [slug]",
+		Short:         "Read a published page anonymously by legacy slug or permanent organization key",
+		Long:          "Read public status without credentials or organization headers. Use the organization_key returned by status-pages get/save with --organization-key, or provide an existing slug.",
+		Args:          cobra.MaximumNArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Annotations:   map[string]string{anonymousAnnotation: annotationEnabled},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if (key == "" && len(args) != 1) || (key != "" && len(args) != 0) {
+				return fmt.Errorf("provide either a slug or --organization-key")
+			}
+			if key != "" && !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(key) {
+				return fmt.Errorf("organization key must contain 40 lowercase hexadecimal characters")
+			}
 			anonymous, err := client.New(state.Client.BaseURL(), "", "", 30*time.Second)
 			if err != nil {
 				return err
+			}
+			if key != "" {
+				resp, err := anonymous.API().GetPublicStatusPageByOrganizationWithResponse(cmd.Context(), key)
+				if err != nil {
+					return err
+				}
+				return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
 			}
 			resp, err := anonymous.API().GetPublicStatusPageWithResponse(cmd.Context(), args[0])
 			if err != nil {
@@ -276,4 +290,6 @@ func newStatusPagePublicCmd(state *AppState) *cobra.Command {
 			return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
 		},
 	}
+	cmd.Flags().StringVar(&key, "organization-key", "", "Permanent organization key returned by get/save")
+	return cmd
 }
