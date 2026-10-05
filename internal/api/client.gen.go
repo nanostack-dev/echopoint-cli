@@ -1114,6 +1114,177 @@ func (e SpecChangeSeverity) Valid() bool {
 	}
 }
 
+// Defines values for SpecCommandIn.
+const (
+	SpecCommandInCookie SpecCommandIn = "cookie"
+	SpecCommandInHeader SpecCommandIn = "header"
+	SpecCommandInPath   SpecCommandIn = "path"
+	SpecCommandInQuery  SpecCommandIn = "query"
+)
+
+// Valid indicates whether the value is a known member of the SpecCommandIn enum.
+func (e SpecCommandIn) Valid() bool {
+	switch e {
+	case SpecCommandInCookie:
+		return true
+	case SpecCommandInHeader:
+		return true
+	case SpecCommandInPath:
+		return true
+	case SpecCommandInQuery:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpecCommandType.
+const (
+	SpecCommandTypeArray   SpecCommandType = "array"
+	SpecCommandTypeBoolean SpecCommandType = "boolean"
+	SpecCommandTypeInteger SpecCommandType = "integer"
+	SpecCommandTypeNumber  SpecCommandType = "number"
+	SpecCommandTypeObject  SpecCommandType = "object"
+	SpecCommandTypeString  SpecCommandType = "string"
+)
+
+// Valid indicates whether the value is a known member of the SpecCommandType enum.
+func (e SpecCommandType) Valid() bool {
+	switch e {
+	case SpecCommandTypeArray:
+		return true
+	case SpecCommandTypeBoolean:
+		return true
+	case SpecCommandTypeInteger:
+		return true
+	case SpecCommandTypeNumber:
+		return true
+	case SpecCommandTypeObject:
+		return true
+	case SpecCommandTypeString:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpecCommandKind.
+const (
+	AddOperation         SpecCommandKind = "add_operation"
+	AddParameter         SpecCommandKind = "add_parameter"
+	AddProperty          SpecCommandKind = "add_property"
+	AddResponse          SpecCommandKind = "add_response"
+	AddSchema            SpecCommandKind = "add_schema"
+	RemoveOperation      SpecCommandKind = "remove_operation"
+	RemoveParameter      SpecCommandKind = "remove_parameter"
+	RemoveProperty       SpecCommandKind = "remove_property"
+	RemoveResponse       SpecCommandKind = "remove_response"
+	RemoveSchema         SpecCommandKind = "remove_schema"
+	RenamePath           SpecCommandKind = "rename_path"
+	RenameProperty       SpecCommandKind = "rename_property"
+	SetEnum              SpecCommandKind = "set_enum"
+	SetMethod            SpecCommandKind = "set_method"
+	SetParameterField    SpecCommandKind = "set_parameter_field"
+	SetParameterRequired SpecCommandKind = "set_parameter_required"
+	SetParameterType     SpecCommandKind = "set_parameter_type"
+	SetRef               SpecCommandKind = "set_ref"
+	SetRequired          SpecCommandKind = "set_required"
+	SetResponse          SpecCommandKind = "set_response"
+	SetTags              SpecCommandKind = "set_tags"
+	SetText              SpecCommandKind = "set_text"
+	SetType              SpecCommandKind = "set_type"
+)
+
+// Valid indicates whether the value is a known member of the SpecCommandKind enum.
+func (e SpecCommandKind) Valid() bool {
+	switch e {
+	case AddOperation:
+		return true
+	case AddParameter:
+		return true
+	case AddProperty:
+		return true
+	case AddResponse:
+		return true
+	case AddSchema:
+		return true
+	case RemoveOperation:
+		return true
+	case RemoveParameter:
+		return true
+	case RemoveProperty:
+		return true
+	case RemoveResponse:
+		return true
+	case RemoveSchema:
+		return true
+	case RenamePath:
+		return true
+	case RenameProperty:
+		return true
+	case SetEnum:
+		return true
+	case SetMethod:
+		return true
+	case SetParameterField:
+		return true
+	case SetParameterRequired:
+		return true
+	case SetParameterType:
+		return true
+	case SetRef:
+		return true
+	case SetRequired:
+		return true
+	case SetResponse:
+		return true
+	case SetTags:
+		return true
+	case SetText:
+		return true
+	case SetType:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpecLintRule.
+const (
+	ErrorShape               SpecLintRule = "error-shape"
+	MissingDescription       SpecLintRule = "missing-description"
+	MissingExtension         SpecLintRule = "missing-extension"
+	MissingSecurity          SpecLintRule = "missing-security"
+	MissingStandardResponses SpecLintRule = "missing-standard-responses"
+	OperationIdCasing        SpecLintRule = "operation-id-casing"
+	PathParameters           SpecLintRule = "path-parameters"
+	PropertyCasing           SpecLintRule = "property-casing"
+)
+
+// Valid indicates whether the value is a known member of the SpecLintRule enum.
+func (e SpecLintRule) Valid() bool {
+	switch e {
+	case ErrorShape:
+		return true
+	case MissingDescription:
+		return true
+	case MissingExtension:
+		return true
+	case MissingSecurity:
+		return true
+	case MissingStandardResponses:
+		return true
+	case OperationIdCasing:
+		return true
+	case PathParameters:
+		return true
+	case PropertyCasing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SseFlowNodeType.
 const (
 	Sse SseFlowNodeType = "sse"
@@ -1547,6 +1718,15 @@ type ApiKeySearchRequest struct {
 
 // ApiKeySortField Field to sort API key search results by.
 type ApiKeySortField string
+
+// ApplySpecCommandsRequest defines model for ApplySpecCommandsRequest.
+type ApplySpecCommandsRequest struct {
+	// CommandId Identifies this request. A client generates it and sends the same value when it retries.
+	CommandId openapi_types.UUID `json:"command_id"`
+
+	// Commands The commands, applied in order. All apply or none does.
+	Commands []SpecCommand `json:"commands"`
+}
 
 // AssertFlowNode defines model for AssertFlowNode.
 type AssertFlowNode struct {
@@ -4687,6 +4867,78 @@ type SpecChangeCounts struct {
 // changes what clients do not depend on.
 type SpecChangeSeverity string
 
+// SpecCommand One edit of a spec's document. Which fields a command reads depends on its `kind`.
+type SpecCommand struct {
+	Description *string        `json:"description,omitempty"`
+	Field       *string        `json:"field,omitempty"`
+	Format      *string        `json:"format,omitempty"`
+	In          *SpecCommandIn `json:"in,omitempty"`
+
+	// Kind What a command changes. `pointer` (an RFC 6901 JSON pointer, such as
+	// `/paths/~1pets/get` or `/components/schemas/Pet/properties/name`) names
+	// the node, except for `add_operation` and `add_schema`.
+	//
+	// - `set_text`: `field` (`summary`, `description`, `operation_id` on an operation; `description` elsewhere) to `value`; an empty description deletes it.
+	// - `rename_path`: the path item to `path`. `set_method`: the operation to `method`.
+	// - `add_operation`: `path`, `method`, optional `operation_id`, `summary`, `description`, `tags`, and `status` of its first response (default 200). Declares the path's `{params}`.
+	// - `remove_operation`, `set_tags` (`tags`; empty deletes).
+	// - `add_parameter` (on an operation or path item): `name`, `in`, `type`, `format`, `nullable`, `required`, `description`. `set_parameter_field` (`field` `name`, `in`, or `description` to `value`), `set_parameter_required`, `set_parameter_type`, `remove_parameter`.
+	// - `add_schema` (`name`, `type`, `description`), `remove_schema` (refused while a `$ref` uses it).
+	// - `add_property` (`name`, `type`, `format`, `nullable`, `required`), `rename_property` (`name`), `set_type` (`type`, `format`, `nullable`), `set_ref` (`schema`), `set_required` (`required`), `set_enum` (`values`; empty deletes), `remove_property`.
+	// - `add_response` (on an operation: `status`, `description`, `schema` or `type`), `set_response`, `remove_response`.
+	Kind SpecCommandKind `json:"kind"`
+
+	// Method Lowercase HTTP method.
+	//
+	// Examples: post
+	Method      *string `json:"method,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Nullable    *bool   `json:"nullable,omitempty"`
+	OperationId *string `json:"operation_id,omitempty"`
+
+	// Path Examples: /pets/{petId}
+	Path *string `json:"path,omitempty"`
+
+	// Pointer JSON pointer of the node the command changes.
+	//
+	// Examples: /components/schemas/Pet/properties/name
+	Pointer  *string `json:"pointer,omitempty"`
+	Required *bool   `json:"required,omitempty"`
+
+	// Schema Name of a schema in `components.schemas`, for a `$ref`.
+	Schema *string `json:"schema,omitempty"`
+
+	// Status A response status code, a range such as `4XX`, or `default`.
+	//
+	// Examples: 201
+	Status  *string          `json:"status,omitempty"`
+	Summary *string          `json:"summary,omitempty"`
+	Tags    *[]string        `json:"tags,omitempty"`
+	Type    *SpecCommandType `json:"type,omitempty"`
+	Value   *string          `json:"value,omitempty"`
+	Values  *[]string        `json:"values,omitempty"`
+}
+
+// SpecCommandIn defines model for SpecCommand.In.
+type SpecCommandIn string
+
+// SpecCommandType defines model for SpecCommand.Type.
+type SpecCommandType string
+
+// SpecCommandKind What a command changes. `pointer` (an RFC 6901 JSON pointer, such as
+// `/paths/~1pets/get` or `/components/schemas/Pet/properties/name`) names
+// the node, except for `add_operation` and `add_schema`.
+//
+// - `set_text`: `field` (`summary`, `description`, `operation_id` on an operation; `description` elsewhere) to `value`; an empty description deletes it.
+// - `rename_path`: the path item to `path`. `set_method`: the operation to `method`.
+// - `add_operation`: `path`, `method`, optional `operation_id`, `summary`, `description`, `tags`, and `status` of its first response (default 200). Declares the path's `{params}`.
+// - `remove_operation`, `set_tags` (`tags`; empty deletes).
+// - `add_parameter` (on an operation or path item): `name`, `in`, `type`, `format`, `nullable`, `required`, `description`. `set_parameter_field` (`field` `name`, `in`, or `description` to `value`), `set_parameter_required`, `set_parameter_type`, `remove_parameter`.
+// - `add_schema` (`name`, `type`, `description`), `remove_schema` (refused while a `$ref` uses it).
+// - `add_property` (`name`, `type`, `format`, `nullable`, `required`), `rename_property` (`name`), `set_type` (`type`, `format`, `nullable`), `set_ref` (`schema`), `set_required` (`required`), `set_enum` (`values`; empty deletes), `remove_property`.
+// - `add_response` (on an operation: `status`, `description`, `schema` or `type`), `set_response`, `remove_response`.
+type SpecCommandKind string
+
 // SpecDocument A Live version's document in the canonical YAML layout, as `spec pull` writes it.
 type SpecDocument struct {
 	// Document The canonical YAML, byte for byte.
@@ -4704,6 +4956,46 @@ type SpecDocument struct {
 	// Version Examples: 1.4.0
 	Version string `json:"version"`
 }
+
+// SpecFinding A place where a document departs from its own conventions. The CLI's `spec lint` and the editor report the same findings.
+type SpecFinding struct {
+	// Convention The convention the node departs from, with how widely the document follows it.
+	//
+	// Examples: camelCase (94% of 212 properties)
+	Convention string `json:"convention"`
+
+	// Evidence Examples of nodes that follow the convention.
+	Evidence string `json:"evidence"`
+
+	// Introduced True when the previous Live version did not have this finding. Always true for a spec's first version.
+	Introduced bool `json:"introduced"`
+
+	// Message The finding in English.
+	Message string `json:"message"`
+
+	// Pointer JSON pointer of the node the finding is about.
+	//
+	// Examples: /components/schemas/Pet/properties/pet_name
+	Pointer string `json:"pointer"`
+
+	// Rule The convention a finding is about. `property-casing` and
+	// `operation-id-casing`: a name breaks the casing most names use.
+	// `missing-standard-responses`, `error-shape`, `missing-extension`,
+	// `missing-security`: an operation lacks what most operations declare.
+	// `missing-description`: an operation or property has no description where
+	// most do. `path-parameters`: a `{param}` in a path is not declared, or a
+	// declared path parameter is not in the path.
+	Rule SpecLintRule `json:"rule"`
+}
+
+// SpecLintRule The convention a finding is about. `property-casing` and
+// `operation-id-casing`: a name breaks the casing most names use.
+// `missing-standard-responses`, `error-shape`, `missing-extension`,
+// `missing-security`: an operation lacks what most operations declare.
+// `missing-description`: an operation or property has no description where
+// most do. `path-parameters`: a `{param}` in a path is not declared, or a
+// declared path parameter is not in the path.
+type SpecLintRule string
 
 // SpecListResponse defines model for SpecListResponse.
 type SpecListResponse struct {
@@ -4728,7 +5020,13 @@ type SpecVersion struct {
 	CreatedAt time.Time    `json:"created_at"`
 
 	// CreatedBy The member or API key that did something.
-	CreatedBy      SpecActor          `json:"created_by"`
+	CreatedBy SpecActor `json:"created_by"`
+
+	// Findings Where the document departs from its own conventions: the casing most
+	// properties or operation IDs use, the responses, error shape,
+	// extensions, and security most operations declare, descriptions, and
+	// declared path parameters. Ordered by pointer.
+	Findings       []SpecFinding      `json:"findings"`
 	Id             openapi_types.UUID `json:"id"`
 	LayoutVersion  int32              `json:"layout_version"`
 	OpenapiVersion string             `json:"openapi_version"`
@@ -4760,8 +5058,11 @@ type SpecVersionSummary struct {
 	CreatedAt    time.Time        `json:"created_at"`
 
 	// CreatedBy The member or API key that did something.
-	CreatedBy SpecActor          `json:"created_by"`
-	Id        openapi_types.UUID `json:"id"`
+	CreatedBy SpecActor `json:"created_by"`
+
+	// FindingCount How many convention findings the version's document has. Absent on versions published before findings were stored.
+	FindingCount *int32             `json:"finding_count,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
 
 	// LayoutVersion The canonical YAML layout the document is stored in. `spec check` compares with this layout.
 	LayoutVersion int32 `json:"layout_version"`
@@ -6264,6 +6565,12 @@ type GetSpecParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ApplySpecCommandsParams defines parameters for ApplySpecCommands.
+type ApplySpecCommandsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // PullSpecParams defines parameters for PullSpec.
 type PullSpecParams struct {
 	// Version A Live version's semantic version. Absent means the current Live version.
@@ -6514,6 +6821,9 @@ type SendRunnerJobEventsJSONRequestBody = RunnerJobEventsRequest
 
 // CreateSpecJSONRequestBody defines body for CreateSpec for application/json ContentType.
 type CreateSpecJSONRequestBody = CreateSpecRequest
+
+// ApplySpecCommandsJSONRequestBody defines body for ApplySpecCommands for application/json ContentType.
+type ApplySpecCommandsJSONRequestBody = ApplySpecCommandsRequest
 
 // PushSpecVersionJSONRequestBody defines body for PushSpecVersion for application/json ContentType.
 type PushSpecVersionJSONRequestBody = PushSpecVersionRequest
@@ -9022,6 +9332,52 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /specs/{slug} (the `GetSpec` operationId).
 	GetSpec(ctx context.Context, slug SpecSlugParameter, params *GetSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ApplySpecCommandsWithBody Apply Spec Commands
+	//
+	// Applies edit commands to the spec's Live version and publishes the result
+	// as the next Live version, with the version computed from the changes, as
+	// a push does. The commands apply in order and all or nothing. The CLI's
+	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// and the docs editor send them.
+	//
+	// `command_id` makes a retry safe: a request whose `command_id` already
+	// produced a version returns that version with status 200 and applies
+	// nothing, whatever its commands.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+	// document), and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+	ApplySpecCommandsWithBody(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ApplySpecCommands Apply Spec Commands
+	//
+	// Applies edit commands to the spec's Live version and publishes the result
+	// as the next Live version, with the version computed from the changes, as
+	// a push does. The commands apply in order and all or nothing. The CLI's
+	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// and the docs editor send them.
+	//
+	// `command_id` makes a retry safe: a request whose `command_id` already
+	// produced a version returns that version with status 200 and applies
+	// nothing, whatever its commands.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+	// document), and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+	ApplySpecCommands(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PullSpec Pull Spec
 	//
@@ -12149,6 +12505,72 @@ func (c *Client) CreateSpec(ctx context.Context, params *CreateSpecParams, body 
 // Corresponds with GET /specs/{slug} (the `GetSpec` operationId).
 func (c *Client) GetSpec(ctx context.Context, slug SpecSlugParameter, params *GetSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSpecRequest(c.Server, slug, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ApplySpecCommandsWithBody Apply Spec Commands
+//
+// Applies edit commands to the spec's Live version and publishes the result
+// as the next Live version, with the version computed from the changes, as
+// a push does. The commands apply in order and all or nothing. The CLI's
+// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// and the docs editor send them.
+//
+// `command_id` makes a retry safe: a request whose `command_id` already
+// produced a version returns that version with status 200 and applies
+// nothing, whatever its commands.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+// document), and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+func (c *Client) ApplySpecCommandsWithBody(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApplySpecCommandsRequestWithBody(c.Server, slug, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ApplySpecCommands Apply Spec Commands
+//
+// Applies edit commands to the spec's Live version and publishes the result
+// as the next Live version, with the version computed from the changes, as
+// a push does. The commands apply in order and all or nothing. The CLI's
+// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// and the docs editor send them.
+//
+// `command_id` makes a retry safe: a request whose `command_id` already
+// produced a version returns that version with status 200 and applies
+// nothing, whatever its commands.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+// document), and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+func (c *Client) ApplySpecCommands(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApplySpecCommandsRequest(c.Server, slug, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -18802,6 +19224,66 @@ func NewGetSpecRequest(server string, slug SpecSlugParameter, params *GetSpecPar
 	return req, nil
 }
 
+// NewApplySpecCommandsRequest calls the generic ApplySpecCommands builder with application/json body
+func NewApplySpecCommandsRequest(server string, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewApplySpecCommandsRequestWithBody(server, slug, params, "application/json", bodyReader)
+}
+
+// NewApplySpecCommandsRequestWithBody constructs an http.Request for the ApplySpecCommands method, with any body, and a specified content type
+func NewApplySpecCommandsRequestWithBody(server string, slug SpecSlugParameter, params *ApplySpecCommandsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s/commands", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewPullSpecRequest constructs an http.Request for the PullSpec method
 func NewPullSpecRequest(server string, slug SpecSlugParameter, params *PullSpecParams) (*http.Request, error) {
 	var err error
@@ -21612,6 +22094,52 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /specs/{slug} (the `GetSpec` operationId).
 	GetSpecWithResponse(ctx context.Context, slug SpecSlugParameter, params *GetSpecParams, reqEditors ...RequestEditorFn) (*GetSpecResponse, error)
+
+	// ApplySpecCommandsWithBodyWithResponse Apply Spec Commands
+	//
+	// Applies edit commands to the spec's Live version and publishes the result
+	// as the next Live version, with the version computed from the changes, as
+	// a push does. The commands apply in order and all or nothing. The CLI's
+	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// and the docs editor send them.
+	//
+	// `command_id` makes a retry safe: a request whose `command_id` already
+	// produced a version returns that version with status 200 and applies
+	// nothing, whatever its commands.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+	// document), and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+	ApplySpecCommandsWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApplySpecCommandsResponse, error)
+
+	// ApplySpecCommandsWithResponse Apply Spec Commands
+	//
+	// Applies edit commands to the spec's Live version and publishes the result
+	// as the next Live version, with the version computed from the changes, as
+	// a push does. The commands apply in order and all or nothing. The CLI's
+	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// and the docs editor send them.
+	//
+	// `command_id` makes a retry safe: a request whose `command_id` already
+	// produced a version returns that version with status 200 and applies
+	// nothing, whatever its commands.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+	// document), and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+	ApplySpecCommandsWithResponse(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*ApplySpecCommandsResponse, error)
 
 	// PullSpecWithResponse Pull Spec
 	//
@@ -28732,6 +29260,89 @@ func (r GetSpecResponse) ContentType() string {
 	return ""
 }
 
+type ApplySpecCommandsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecVersion
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *SpecVersion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ApplySpecCommandsResponse) GetJSON200() *SpecVersion {
+	return r.JSON200
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r ApplySpecCommandsResponse) GetJSON201() *SpecVersion {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ApplySpecCommandsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ApplySpecCommandsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ApplySpecCommandsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ApplySpecCommandsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ApplySpecCommandsResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r ApplySpecCommandsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ApplySpecCommandsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ApplySpecCommandsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ApplySpecCommandsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type PullSpecResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -32609,6 +33220,64 @@ func (c *ClientWithResponses) GetSpecWithResponse(ctx context.Context, slug Spec
 		return nil, err
 	}
 	return ParseGetSpecResponse(rsp)
+}
+
+// ApplySpecCommandsWithBodyWithResponse Apply Spec Commands
+//
+// Applies edit commands to the spec's Live version and publishes the result
+// as the next Live version, with the version computed from the changes, as
+// a push does. The commands apply in order and all or nothing. The CLI's
+// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// and the docs editor send them.
+//
+// `command_id` makes a retry safe: a request whose `command_id` already
+// produced a version returns that version with status 200 and applies
+// nothing, whatever its commands.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+// document), and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+func (c *ClientWithResponses) ApplySpecCommandsWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApplySpecCommandsResponse, error) {
+	rsp, err := c.ApplySpecCommandsWithBody(ctx, slug, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApplySpecCommandsResponse(rsp)
+}
+
+// ApplySpecCommandsWithResponse Apply Spec Commands
+//
+// Applies edit commands to the spec's Live version and publishes the result
+// as the next Live version, with the version computed from the changes, as
+// a push does. The commands apply in order and all or nothing. The CLI's
+// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// and the docs editor send them.
+//
+// `command_id` makes a retry safe: a request whose `command_id` already
+// produced a version returns that version with status 200 and applies
+// nothing, whatever its commands.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+// document), and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
+func (c *ClientWithResponses) ApplySpecCommandsWithResponse(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*ApplySpecCommandsResponse, error) {
+	rsp, err := c.ApplySpecCommands(ctx, slug, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApplySpecCommandsResponse(rsp)
 }
 
 // PullSpecWithResponse Pull Spec
@@ -38313,6 +38982,74 @@ func ParseGetSpecResponse(rsp *http.Response) (*GetSpecResponse, error) {
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseApplySpecCommandsResponse parses an HTTP response from a ApplySpecCommandsWithResponse call
+func ParseApplySpecCommandsResponse(rsp *http.Response) (*ApplySpecCommandsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ApplySpecCommandsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecVersion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SpecVersion
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 

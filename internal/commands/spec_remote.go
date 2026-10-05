@@ -163,7 +163,11 @@ func pushSpecVersion(w io.Writer, state *AppState, slug, document string) error 
 	case output.FormatTable:
 	}
 	fmt.Fprintf(w, "✓ Published %s %s (%s)\n\n", slug, pushed.Version, pushed.Bump)
-	return printSpecDiff(w, output.FormatTable, specDiffOfVersion(pushed))
+	if err = printSpecDiff(w, output.FormatTable, specDiffOfVersion(pushed)); err != nil {
+		return err
+	}
+	printNewFindings(w, pushed.Findings)
+	return nil
 }
 
 func specDiffOfVersion(version *api.SpecVersion) specDiff {

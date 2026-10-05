@@ -12,9 +12,9 @@ const (
 	argsMethodPathName   = 3 // METHOD, path and a name or status
 	argsSchemaProperty   = 2 // schema and property
 	editInDescription    = "Where the parameter is: query, path, header, or cookie"
-	editHelpFileFlag     = "Every edit command takes --file, and edits that file in place. "
-	editHelpComments     = "Comments, key order, and untouched lines stay as they were. "
-	editHelpDryRun       = "--dry-run prints the edited document instead of writing it. "
+	editHelpFileFlag     = "Every edit command takes --file, and edits that file in place; or --spec <slug> --live, and publishes the edit as the next Live version of the spec in EchoPoint (needs specs:write). "
+	editHelpComments     = "In a file, comments, key order, and untouched lines stay as they were. "
+	editHelpDryRun       = "--dry-run prints the edited document and writes or publishes nothing. --command-id pins the UUID that makes a retry of --spec safe. "
 	editHelpOutputFormat = "-o json or -o yaml prints {file, commands, changed}, the commands being the edits applied."
 )
 
