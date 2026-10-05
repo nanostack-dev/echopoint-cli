@@ -33,17 +33,26 @@ func offlineUnless(flag string) map[string]string {
 func newSpecCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   specCommandName,
-		Short: "Validate, format, and diff OpenAPI specs",
+		Short: "Validate, format, diff, lint, and edit OpenAPI specs",
 		Long: `Work with OpenAPI 3.0 and 3.1 documents.
 
-validate, fmt, diff, and lint work on local files and need no account. list,
-push, pull, and check work with the specs EchoPoint keeps.`,
+validate, fmt, diff, and lint work on local files and need no account. So do
+the edit commands, which change a local file in place and keep its comments:
+route, method, schema, property, param, and response, each with add, update,
+and remove (method has update only). list, push, pull, and check work with the
+specs EchoPoint keeps.`,
 	}
 	cmd.AddCommand(
 		newSpecValidateCmd(state),
 		newSpecFmtCmd(),
 		newSpecDiffCmd(state),
 		newSpecLintCmd(state),
+		newSpecRouteCmd(state),
+		newSpecMethodCmd(state),
+		newSpecSchemaCmd(state),
+		newSpecPropertyCmd(state),
+		newSpecParamCmd(state),
+		newSpecResponseCmd(state),
 		newSpecListCmd(state),
 		newSpecPushCmd(state),
 		newSpecPullCmd(state),

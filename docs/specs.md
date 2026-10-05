@@ -1,6 +1,6 @@
 # OpenAPI specs
 
-`echopoint spec` works with OpenAPI 3.0 and 3.1 documents. `validate`, `fmt`, `diff`, and `lint` run on local files and need no account. `list`, `push`, `pull`, and `check` work with the specs EchoPoint keeps (API › Specs).
+`echopoint spec` works with OpenAPI 3.0 and 3.1 documents. `validate`, `fmt`, `diff`, `lint`, and the edit commands (`route`, `method`, `schema`, `property`, `param`, `response`) run on local files and need no account. `list`, `push`, `pull`, and `check` work with the specs EchoPoint keeps (API › Specs).
 
 ## Specs in EchoPoint
 
@@ -37,6 +37,87 @@ echopoint spec fmt --check openapi.yaml       # exit 1 when not in the canonical
 echopoint spec diff old.yaml new.yaml         # changes by consequence, and the version bump
 echopoint spec diff old.yaml new.yaml -o json
 ```
+
+## Editing
+
+The edit commands change a local OpenAPI file one step at a time, so an agent or a script can build a spec without rewriting the whole document. Each command takes `--file` and edits that file in place.
+
+An edit rewrites only the lines of the nodes it changes. Comments, key order, blank lines, and quoting everywhere else stay byte for byte as they were, in YAML. A JSON file is written again as JSON with the indentation it had. The file is replaced atomically and keeps its mode. A refused command (adding an operation that exists, removing a schema that is still referenced) prints `✗ <reason>`, exits 1, and leaves the file as it was.
+
+```bash
+echopoint spec schema add Pet --file openapi.yaml          # ✓ Added schema Pet to openapi.yaml
+echopoint spec route add POST /pets --file openapi.yaml --status 201 --operation-id createPet
+echopoint spec route add get /pets/{petId} --file openapi.yaml      # METHOD is case-insensitive
+```
+
+Every edit command also takes:
+
+| Flag | Does |
+| --- | --- |
+| `--file <path>` | The document to edit. Required for now. |
+| `--dry-run` | Print the edited document to stdout and write nothing. Not combined with `-o json` or `-o yaml`. |
+| `-o json`, `-o yaml` | Print `{file, commands, changed}` instead of the summary line. `commands` are the edits applied, in the form EchoPoint's editor sends. |
+
+An update with no flag to change anything is an error that names the flags it accepts.
+
+### Routes and methods
+
+```bash
+echopoint spec route add POST /pets --file openapi.yaml --status 201 --tag pets --summary "Create a pet"
+echopoint spec route update GET /pets --file openapi.yaml --summary "List pets" --tag pets,store
+echopoint spec route update GET /pets --file openapi.yaml --clear-tags
+echopoint spec route update GET /pets --file openapi.yaml --path /animals   # renames the whole path item
+echopoint spec route update GET /pets --file openapi.yaml --method head
+echopoint spec method update PUT /pets/{petId} --file openapi.yaml --to PATCH
+echopoint spec route remove DELETE /pets/{petId} --file openapi.yaml
+```
+
+`route add` creates the path when it is new, gives the operation a response for `--status` (200 by default), and declares a `{param}` of the path that is not declared yet as a required string path parameter. `route update --path` renames the whole path item: every method on the path moves, not only the one named. An empty `--summary`, `--description`, or `--operation-id` removes the field. `method update --to` is the same as `route update --method`.
+
+### Schemas and properties
+
+```bash
+echopoint spec schema add Pet --file openapi.yaml --description "A pet in the store."
+echopoint spec schema update Pet --file openapi.yaml --description "A pet."
+echopoint spec schema remove Pet --file openapi.yaml       # refused while a $ref points at it
+
+echopoint spec property add Pet name --file openapi.yaml --required --description "Its name."
+echopoint spec property add Pet status --file openapi.yaml --enum available,sold
+echopoint spec property add Pet owner --file openapi.yaml --ref Owner
+echopoint spec property add Pet address.city --file openapi.yaml        # a nested property, with dots
+echopoint spec property update Pet name --file openapi.yaml --name title --required=false
+echopoint spec property update Pet age --file openapi.yaml --type integer --format int32 --nullable
+echopoint spec property update Pet status --file openapi.yaml --clear-enum
+echopoint spec property remove Pet address.city --file openapi.yaml
+```
+
+A schema is object-typed and a property is string-typed unless `--type` says otherwise. `--ref` points a property at a schema of `components/schemas` and cannot be combined with `--type`, `--format`, `--nullable`, or `--enum`. `--format` and `--nullable` are part of the type: on an update, pass `--type` with them, and `--type` resets the ones you leave out. A property name that holds a dot cannot be addressed this way.
+
+### Parameters
+
+```bash
+echopoint spec param add GET /pets limit --file openapi.yaml --in query --type integer --required
+echopoint spec param update GET /pets limit --file openapi.yaml --in query --description "Page size" --required=false
+echopoint spec param update GET /pets limit --file openapi.yaml --in query --name max --new-in header
+echopoint spec param remove GET /pets limit --file openapi.yaml --in query
+```
+
+A parameter is found by its name and where it is (`--in query|path|header|cookie`), never by its position, so `limit` in the query and `limit` in a header are two parameters. A parameter that the path item declares for every method is found too. `--in` names where the parameter is now; `--new-in` moves it. A path parameter stays required.
+
+### Responses
+
+```bash
+echopoint spec response add GET /pets/{petId} 404 --file openapi.yaml --schema Error
+echopoint spec response add GET /pets 200 --file openapi.yaml --type string --description "A list."
+echopoint spec response update GET /pets 200 --file openapi.yaml --schema PetList
+echopoint spec response remove GET /pets 404 --file openapi.yaml
+```
+
+The status is a code (`404`), a range (`4XX`), or `default`. `--schema` gives the `application/json` body a `$ref` to a schema of `components/schemas`; `--type` gives it an inline type. Without `--description`, a new response gets the standard reason of its status.
+
+### Editing a spec in EchoPoint
+
+Editing the Live version of a spec in EchoPoint with `--spec <slug> --live` instead of `--file` is coming. It sends the same commands to EchoPoint instead of changing a file.
 
 ## Conventions
 
