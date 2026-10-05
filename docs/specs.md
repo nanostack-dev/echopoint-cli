@@ -1,6 +1,6 @@
 # OpenAPI specs
 
-`echopoint spec` works with OpenAPI 3.0 and 3.1 documents. `validate`, `fmt`, and `diff` run on local files and need no account. `list`, `push`, `pull`, and `check` work with the specs EchoPoint keeps (API › Specs).
+`echopoint spec` works with OpenAPI 3.0 and 3.1 documents. `validate`, `fmt`, `diff`, and `lint` run on local files and need no account. `list`, `push`, `pull`, and `check` work with the specs EchoPoint keeps (API › Specs).
 
 ## Specs in EchoPoint
 
@@ -37,6 +37,31 @@ echopoint spec fmt --check openapi.yaml       # exit 1 when not in the canonical
 echopoint spec diff old.yaml new.yaml         # changes by consequence, and the version bump
 echopoint spec diff old.yaml new.yaml -o json
 ```
+
+## Conventions
+
+`lint` reports where a document departs from the conventions the rest of it follows. EchoPoint stores the same findings with every Live version and shows them in the docs.
+
+```bash
+echopoint spec lint openapi.yaml                       # every finding
+echopoint spec lint --base main.yaml openapi.yaml      # only what openapi.yaml adds
+echopoint spec lint --spec pets-api openapi.yaml       # only what it adds to Live (needs specs:read)
+echopoint spec lint --fail-on-findings openapi.yaml    # exit 1 on a finding
+echopoint spec lint openapi.yaml -o json
+```
+
+| Rule | Reports |
+| --- | --- |
+| `property-casing` | A property or query parameter name in another casing than 80% of the multi-word property names |
+| `operation-id-casing` | An operation ID in another casing than 80% of them |
+| `missing-standard-responses` | An operation without a response status most operations of its tag declare |
+| `error-shape` | An error response whose schema differs from the one most error responses use |
+| `missing-description` | An operation or property without a description where most have one |
+| `missing-extension` | An operation without an `x-` extension most operations of its tag set |
+| `missing-security` | An operation without `security` where most declare it |
+| `path-parameters` | A `{param}` in a path that is not declared, or a declared path parameter missing from the path |
+
+Lint exits 0 even with findings: a convention is the document's own habit, not a rule. Add `--fail-on-findings` to enforce it, usually with `--base` or `--spec` so only new departures fail the build.
 
 ## What is refused
 
