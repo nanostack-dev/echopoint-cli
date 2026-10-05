@@ -164,6 +164,9 @@ func requiresToken(cmd *cobra.Command) bool {
 		cmd.Annotations[anonymousAnnotation] == annotationEnabled {
 		return false
 	}
+	if flag := cmd.Annotations[offlineUnlessAnnotation]; flag != "" && !cmd.Flags().Changed(flag) {
+		return false
+	}
 	for c := cmd; c != nil; c = c.Parent() {
 		switch c.Name() {
 		case authCommandName, profileCommandName, configCommandName:

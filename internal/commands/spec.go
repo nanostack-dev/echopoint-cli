@@ -22,19 +22,28 @@ func offline() map[string]string {
 	return map[string]string{offlineAnnotation: annotationEnabled}
 }
 
+// offlineUnlessAnnotation names a flag that turns a local-file command into
+// one that works with EchoPoint and so needs credentials.
+const offlineUnlessAnnotation = "echopoint/offline-unless-flag"
+
+func offlineUnless(flag string) map[string]string {
+	return map[string]string{offlineUnlessAnnotation: flag}
+}
+
 func newSpecCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   specCommandName,
 		Short: "Validate, format, and diff OpenAPI specs",
 		Long: `Work with OpenAPI 3.0 and 3.1 documents.
 
-validate, fmt, and diff work on local files and need no account. list, push,
-pull, and check work with the specs EchoPoint keeps.`,
+validate, fmt, diff, and lint work on local files and need no account. list,
+push, pull, and check work with the specs EchoPoint keeps.`,
 	}
 	cmd.AddCommand(
 		newSpecValidateCmd(state),
 		newSpecFmtCmd(),
 		newSpecDiffCmd(state),
+		newSpecLintCmd(state),
 		newSpecListCmd(state),
 		newSpecPushCmd(state),
 		newSpecPullCmd(state),
