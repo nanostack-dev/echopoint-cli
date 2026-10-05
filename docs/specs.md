@@ -54,9 +54,10 @@ Every edit command also takes:
 
 | Flag | Does |
 | --- | --- |
-| `--file <path>` | The document to edit. Required for now. |
+| `--file <path>` | The local document to edit. Give `--file` or `--spec`, not both. |
+| `--spec <slug>` `--live` | Edit the Live version of a spec in EchoPoint instead (see below). |
 | `--dry-run` | Print the edited document to stdout and write nothing. Not combined with `-o json` or `-o yaml`. |
-| `-o json`, `-o yaml` | Print `{file, commands, changed}` instead of the summary line. `commands` are the edits applied, in the form EchoPoint's editor sends. |
+| `-o json`, `-o yaml` | With `--file`, print `{file, commands, changed}` instead of the summary line. `commands` are the edits applied, in the form EchoPoint's editor sends. With `--spec`, print the published version plus `replayed`. |
 
 An update with no flag to change anything is an error that names the flags it accepts.
 
@@ -117,7 +118,31 @@ The status is a code (`404`), a range (`4XX`), or `default`. `--schema` gives th
 
 ### Editing a spec in EchoPoint
 
-Editing the Live version of a spec in EchoPoint with `--spec <slug> --live` instead of `--file` is coming. It sends the same commands to EchoPoint instead of changing a file.
+`--spec <slug> --live` replaces `--file` and sends the same commands to EchoPoint, which applies them to the Live version and publishes the result as a new version.
+
+```sh
+echopoint spec route add POST /pets --spec pets-api --live --status 201
+echopoint spec param update GET /pets limit --in query --spec pets-api --live --description "Page size"
+# ✓ Published pets-api 1.5.0 (minor): Added POST /pets
+```
+
+- `--live` is required with `--spec`. Without it the command stops with `drafts are not available yet: pass --live to write the Live version`.
+- `--file` and `--spec` cannot be combined.
+- All the commands of one invocation travel in a single request, and EchoPoint applies them all or none. A refusal prints `✗ <the API's message>` and exits 1.
+- Findings the edit introduced are listed under `New findings`, with the rule, the pointer and the message. `echopoint spec push` lists them too.
+- Parameter commands find the parameter in the Live version the CLI pulls first, so the position it targets is the one Live had at that moment.
+- `--dry-run` applies the commands to the pulled Live version, prints the edited document and sends nothing.
+- It needs the `specs:write` permission. Publishing with nothing changed is refused by EchoPoint (nothing to publish).
+
+#### Retries and command IDs
+
+Every request carries a `command_id` (a UUID v4 generated per run). After a network error the CLI retries once with the same ID, and EchoPoint applies a given ID at most once: a repeat answers `✓ Already applied: pets-api 1.5.0` and changes nothing. `-o json` and `-o yaml` show it as `replayed: true`.
+
+Pin the ID with `--command-id <uuid>` when a script reruns a step and must not apply it twice:
+
+```sh
+echopoint spec schema add Pet --spec pets-api --live --command-id 5b2a1c0e-8f0d-4c1b-9d57-3a7f2e6c9b10
+```
 
 ## Conventions
 
