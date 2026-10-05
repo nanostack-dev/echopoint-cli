@@ -138,6 +138,8 @@ echopoint spec param update GET /pets limit --in query --spec pets-api --live --
 
 Every request carries a `command_id` (a UUID v4 generated per run). After a network error the CLI retries once with the same ID, and EchoPoint applies a given ID at most once: a repeat answers `✓ Already applied: pets-api 1.5.0` and changes nothing. `-o json` and `-o yaml` show it as `replayed: true`.
 
+The request also names the Live version the CLI pulled (`base_version`). When someone published another version in between, EchoPoint refuses with `SPEC_LIVE_MOVED` and applies nothing: run the command again, and it is written against the new Live version.
+
 Pin the ID with `--command-id <uuid>` when a script reruns a step and must not apply it twice:
 
 ```sh

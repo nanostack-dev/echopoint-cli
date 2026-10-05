@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 1.5.0
+  version: 1.6.0
 paths:
   /webhooks:
     parameters:
@@ -4321,6 +4321,8 @@ paths:
         Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
         document; `metadata.index` names it and `metadata.reason` says why),
         `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+        `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+        `metadata.live_version` names it),
         `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
         document), and `SPEC_COMPARISON_FAILED` (400).
       operationId: applySpecCommands
@@ -10471,6 +10473,16 @@ components:
           description: Identifies this request. A client generates it and sends the same value when it retries.
           type: string
           format: uuid
+        base_version:
+          description: |
+            The Live version the commands were written against, such as the
+            version a client pulled to find a parameter's index. When Live is no
+            longer that version, the request is refused with `SPEC_LIVE_MOVED`
+            and nothing is applied. A retry of an applied `command_id` still
+            replays.
+          type: string
+          examples:
+            - 1.4.0
         commands:
           description: The commands, applied in order. All apply or none does.
           type: array

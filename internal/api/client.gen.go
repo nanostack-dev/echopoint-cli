@@ -1721,6 +1721,16 @@ type ApiKeySortField string
 
 // ApplySpecCommandsRequest defines model for ApplySpecCommandsRequest.
 type ApplySpecCommandsRequest struct {
+	// BaseVersion The Live version the commands were written against, such as the
+	// version a client pulled to find a parameter's index. When Live is no
+	// longer that version, the request is refused with `SPEC_LIVE_MOVED`
+	// and nothing is applied. A retry of an applied `command_id` still
+	// replays.
+	//
+	//
+	// Examples: 1.4.0
+	BaseVersion *string `json:"base_version,omitempty"`
+
 	// CommandId Identifies this request. A client generates it and sends the same value when it retries.
 	CommandId openapi_types.UUID `json:"command_id"`
 
@@ -9348,6 +9358,8 @@ type ClientInterface interface {
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 	// document), and `SPEC_COMPARISON_FAILED` (400).
 	//
@@ -9371,6 +9383,8 @@ type ClientInterface interface {
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 	// document), and `SPEC_COMPARISON_FAILED` (400).
 	//
@@ -12530,6 +12544,8 @@ func (c *Client) GetSpec(ctx context.Context, slug SpecSlugParameter, params *Ge
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 // document), and `SPEC_COMPARISON_FAILED` (400).
 //
@@ -12563,6 +12579,8 @@ func (c *Client) ApplySpecCommandsWithBody(ctx context.Context, slug SpecSlugPar
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 // document), and `SPEC_COMPARISON_FAILED` (400).
 //
@@ -22110,6 +22128,8 @@ type ClientWithResponsesInterface interface {
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 	// document), and `SPEC_COMPARISON_FAILED` (400).
 	//
@@ -22133,6 +22153,8 @@ type ClientWithResponsesInterface interface {
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 	// document), and `SPEC_COMPARISON_FAILED` (400).
 	//
@@ -33237,6 +33259,8 @@ func (c *ClientWithResponses) GetSpecWithResponse(ctx context.Context, slug Spec
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 // document), and `SPEC_COMPARISON_FAILED` (400).
 //
@@ -33266,6 +33290,8 @@ func (c *ClientWithResponses) ApplySpecCommandsWithBodyWithResponse(ctx context.
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
 // document), and `SPEC_COMPARISON_FAILED` (400).
 //

@@ -58,10 +58,15 @@ func (t *specLiveTarget) Apply(commands []apispec.Command, dryRun bool) (specEdi
 	if dryRun {
 		return t.applyLocally(commands)
 	}
-	body, err := json.Marshal(struct {
-		CommandID uuid.UUID         `json:"command_id"`
-		Commands  []apispec.Command `json:"commands"`
-	}{t.commandID, commands})
+	request := struct {
+		CommandID   uuid.UUID         `json:"command_id"`
+		BaseVersion string            `json:"base_version,omitempty"`
+		Commands    []apispec.Command `json:"commands"`
+	}{CommandID: t.commandID, Commands: commands}
+	if t.pulled != nil {
+		request.BaseVersion = t.pulled.Version
+	}
+	body, err := json.Marshal(request)
 	if err != nil {
 		return specEditOutcome{}, err
 	}

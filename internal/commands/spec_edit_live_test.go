@@ -20,8 +20,9 @@ import (
 const commandsRoute = "POST /specs/pets-api/commands"
 
 type commandsBody struct {
-	CommandID string            `json:"command_id"`
-	Commands  []apispec.Command `json:"commands"`
+	CommandID   string            `json:"command_id"`
+	Commands    []apispec.Command `json:"commands"`
+	BaseVersion string            `json:"base_version"`
 }
 
 func publishedVersion(version string, findings ...api.SpecFinding) api.SpecVersion {
@@ -108,8 +109,12 @@ func TestSpecEditLiveFindsAParameterInTheLiveDocument(t *testing.T) {
 		Kind: apispec.CommandSetParameterField, Pointer: "/paths/~1pets~1{id}/get/parameters/1",
 		Field: "description", Value: "Cap",
 	}}
-	if got := sentCommands(t, fake).Commands; !reflect.DeepEqual(got, want) {
-		t.Errorf("commands = %+v, want %+v", got, want)
+	sent := sentCommands(t, fake)
+	if !reflect.DeepEqual(sent.Commands, want) {
+		t.Errorf("commands = %+v, want %+v", sent.Commands, want)
+	}
+	if sent.BaseVersion != "1.4.0" {
+		t.Errorf("base_version = %q, want the pulled Live version 1.4.0", sent.BaseVersion)
 	}
 }
 
