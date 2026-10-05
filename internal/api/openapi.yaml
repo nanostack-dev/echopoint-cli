@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 1.3.0
+  version: 1.6.0
 paths:
   /webhooks:
     parameters:
@@ -4298,6 +4298,68 @@ paths:
             - specs:read
         - ApiKeys:
             - specs:read
+      x-ai-tool: true
+  /specs/{slug}/commands:
+    parameters:
+      - $ref: '#/components/parameters/SpecSlugParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Specs
+      summary: Apply Spec Commands
+      description: |
+        Applies edit commands to the spec's Live version and publishes the result
+        as the next Live version, with the version computed from the changes, as
+        a push does. The commands apply in order and all or nothing. The CLI's
+        `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+        and the docs editor send them.
+
+        `command_id` makes a retry safe: a request whose `command_id` already
+        produced a version returns that version with status 200 and applies
+        nothing, whatever its commands.
+
+        Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+        document; `metadata.index` names it and `metadata.reason` says why),
+        `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+        `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+        `metadata.live_version` names it),
+        `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
+        document), and `SPEC_COMPARISON_FAILED` (400).
+      operationId: applySpecCommands
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplySpecCommandsRequest'
+        required: true
+      responses:
+        "200":
+          description: The command ID was already applied; the version it produced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersion'
+        "201":
+          description: Live version created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersion'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - specs:write
+        - ApiKeys:
+            - specs:write
       x-ai-tool: true
   /specs/{slug}/document:
     parameters:
@@ -10175,6 +10237,10 @@ components:
           type: string
         change_counts:
           $ref: '#/components/schemas/SpecChangeCounts'
+        finding_count:
+          description: How many convention findings the version's document has. Absent on versions published before findings were stored.
+          type: integer
+          format: int32
         created_by:
           $ref: '#/components/schemas/SpecActor'
         created_at:
@@ -10192,6 +10258,7 @@ components:
         - sha256
         - change_counts
         - changes
+        - findings
         - created_by
         - created_at
       properties:
@@ -10218,11 +10285,71 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SpecChange'
+        findings:
+          description: |
+            Where the document departs from its own conventions: the casing most
+            properties or operation IDs use, the responses, error shape,
+            extensions, and security most operations declare, descriptions, and
+            declared path parameters. Ordered by pointer.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecFinding'
         created_by:
           $ref: '#/components/schemas/SpecActor'
         created_at:
           type: string
           format: date-time
+    SpecLintRule:
+      description: |
+        The convention a finding is about. `property-casing` and
+        `operation-id-casing`: a name breaks the casing most names use.
+        `missing-standard-responses`, `error-shape`, `missing-extension`,
+        `missing-security`: an operation lacks what most operations declare.
+        `missing-description`: an operation or property has no description where
+        most do. `path-parameters`: a `{param}` in a path is not declared, or a
+        declared path parameter is not in the path.
+      type: string
+      enum:
+        - property-casing
+        - operation-id-casing
+        - missing-standard-responses
+        - error-shape
+        - missing-description
+        - missing-extension
+        - missing-security
+        - path-parameters
+    SpecFinding:
+      description: A place where a document departs from its own conventions. The CLI's `spec lint` and the editor report the same findings.
+      type: object
+      required:
+        - rule
+        - pointer
+        - message
+        - convention
+        - evidence
+        - introduced
+      properties:
+        rule:
+          $ref: '#/components/schemas/SpecLintRule'
+        pointer:
+          description: JSON pointer of the node the finding is about.
+          type: string
+          examples:
+            - /components/schemas/Pet/properties/pet_name
+        message:
+          description: The finding in English.
+          type: string
+        convention:
+          description: The convention the node departs from, with how widely the document follows it.
+          type: string
+          examples:
+            - camelCase (94% of 212 properties)
+        evidence:
+          description: Examples of nodes that follow the convention.
+          type: string
+        introduced:
+          description: True when the previous Live version did not have this finding. Always true for a spec's first version.
+          type: boolean
     Spec:
       description: One API's OpenAPI document as EchoPoint keeps it.
       type: object
@@ -10335,6 +10462,144 @@ components:
           description: |
             The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
             15 MB. It must be self-contained: no external `$ref`.
+          type: string
+    ApplySpecCommandsRequest:
+      type: object
+      required:
+        - command_id
+        - commands
+      properties:
+        command_id:
+          description: Identifies this request. A client generates it and sends the same value when it retries.
+          type: string
+          format: uuid
+        base_version:
+          description: |
+            The Live version the commands were written against, such as the
+            version a client pulled to find a parameter's index. When Live is no
+            longer that version, the request is refused with `SPEC_LIVE_MOVED`
+            and nothing is applied. A retry of an applied `command_id` still
+            replays.
+          type: string
+          examples:
+            - 1.4.0
+        commands:
+          description: The commands, applied in order. All apply or none does.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecCommand'
+          minItems: 1
+          maxItems: 100
+    SpecCommandKind:
+      description: |
+        What a command changes. `pointer` (an RFC 6901 JSON pointer, such as
+        `/paths/~1pets/get` or `/components/schemas/Pet/properties/name`) names
+        the node, except for `add_operation` and `add_schema`.
+
+        - `set_text`: `field` (`summary`, `description`, `operation_id` on an operation; `description` elsewhere) to `value`; an empty description deletes it.
+        - `rename_path`: the path item to `path`. `set_method`: the operation to `method`.
+        - `add_operation`: `path`, `method`, optional `operation_id`, `summary`, `description`, `tags`, and `status` of its first response (default 200). Declares the path's `{params}`.
+        - `remove_operation`, `set_tags` (`tags`; empty deletes).
+        - `add_parameter` (on an operation or path item): `name`, `in`, `type`, `format`, `nullable`, `required`, `description`. `set_parameter_field` (`field` `name`, `in`, or `description` to `value`), `set_parameter_required`, `set_parameter_type`, `remove_parameter`.
+        - `add_schema` (`name`, `type`, `description`), `remove_schema` (refused while a `$ref` uses it).
+        - `add_property` (`name`, `type`, `format`, `nullable`, `required`), `rename_property` (`name`), `set_type` (`type`, `format`, `nullable`), `set_ref` (`schema`), `set_required` (`required`), `set_enum` (`values`; empty deletes), `remove_property`.
+        - `add_response` (on an operation: `status`, `description`, `schema` or `type`), `set_response`, `remove_response`.
+      type: string
+      enum:
+        - set_text
+        - rename_path
+        - set_method
+        - set_parameter_field
+        - set_parameter_required
+        - set_parameter_type
+        - add_parameter
+        - remove_parameter
+        - rename_property
+        - set_type
+        - set_ref
+        - set_required
+        - set_enum
+        - add_property
+        - remove_property
+        - add_operation
+        - remove_operation
+        - set_tags
+        - add_schema
+        - remove_schema
+        - add_response
+        - set_response
+        - remove_response
+    SpecCommand:
+      description: One edit of a spec's document. Which fields a command reads depends on its `kind`.
+      type: object
+      required:
+        - kind
+      properties:
+        kind:
+          $ref: '#/components/schemas/SpecCommandKind'
+        pointer:
+          description: JSON pointer of the node the command changes.
+          type: string
+          examples:
+            - /components/schemas/Pet/properties/name
+        field:
+          type: string
+        value:
+          type: string
+        path:
+          type: string
+          examples:
+            - /pets/{petId}
+        method:
+          description: Lowercase HTTP method.
+          type: string
+          examples:
+            - post
+        name:
+          type: string
+        in:
+          type: string
+          enum:
+            - query
+            - path
+            - header
+            - cookie
+        type:
+          type: string
+          enum:
+            - string
+            - integer
+            - number
+            - boolean
+            - array
+            - object
+        format:
+          type: string
+        nullable:
+          type: boolean
+        required:
+          type: boolean
+        values:
+          type: array
+          items:
+            type: string
+        schema:
+          description: Name of a schema in `components.schemas`, for a `$ref`.
+          type: string
+        description:
+          type: string
+        status:
+          description: A response status code, a range such as `4XX`, or `default`.
+          type: string
+          examples:
+            - "201"
+        tags:
+          type: array
+          items:
+            type: string
+        operation_id:
+          type: string
+        summary:
           type: string
     PushSpecVersionRequest:
       type: object
