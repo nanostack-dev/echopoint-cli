@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 2.0.0
+  version: 3.0.0
 paths:
   /webhooks:
     parameters:
@@ -345,6 +345,10 @@ paths:
                 $ref: '#/components/schemas/RequestVolumesResponse'
         "400":
           $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
       security:
@@ -391,6 +395,10 @@ paths:
                 $ref: '#/components/schemas/MethodDistributionResponse'
         "400":
           $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
       security:
@@ -3273,6 +3281,8 @@ paths:
                 $ref: '#/components/schemas/WebhookRequestListResponse'
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
       security:
         - JobToken: []
       x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
@@ -3820,6 +3830,7 @@ paths:
       tags:
         - Schedules
       summary: Get Flow Schedule
+      description: 'Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.'
       operationId: getFlowSchedule
       responses:
         "200":
@@ -3844,6 +3855,7 @@ paths:
       tags:
         - Schedules
       summary: Update Flow Schedule
+      description: Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
       operationId: updateFlowSchedule
       requestBody:
         content:
@@ -4410,6 +4422,7 @@ paths:
       tags:
         - Status pages
       summary: Read the shared status page draft
+      description: 'Returns the organization''s status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.'
       operationId: getStatusPage
       responses:
         "200":
@@ -4444,6 +4457,7 @@ paths:
       tags:
         - Status pages
       summary: Save a private status page draft
+      description: Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
       operationId: saveStatusPage
       requestBody:
         content:
@@ -4487,6 +4501,7 @@ paths:
       tags:
         - Status pages
       summary: Publish a saved status page
+      description: Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
       operationId: publishStatusPage
       requestBody:
         content:
@@ -4530,6 +4545,7 @@ paths:
       tags:
         - Status pages
       summary: Withdraw a public status page
+      description: Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
       operationId: unpublishStatusPage
       requestBody:
         content:
@@ -4573,6 +4589,7 @@ paths:
       tags:
         - Status pages
       summary: List publishable monitor checks
+      description: Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
       operationId: getStatusPageBindingOptions
       parameters:
         - name: schedule_id
@@ -4628,6 +4645,7 @@ paths:
       tags:
         - Status pages
       summary: Read a published status page
+      description: Anonymous read of a published status page by its slug. Returns 404 when no published page has this slug.
       operationId: getPublicStatusPage
       responses:
         "200":
@@ -4669,6 +4687,7 @@ paths:
       tags:
         - Status pages
       summary: Read a published status page by permanent organization key
+      description: Anonymous read of an organization's published status page by its permanent organization key. Returns 404 when the organization has no published page.
       operationId: getPublicStatusPageByOrganization
       responses:
         "200":
@@ -5317,37 +5336,37 @@ components:
       description: A single resource_search_documents row that drifted from its canonical source.
       type: object
       required:
-        - organizationId
+        - organization_id
         - domain
-        - resourceType
-        - resourceId
+        - resource_type
+        - resource_id
       properties:
-        organizationId:
+        organization_id:
           type: string
         domain:
           type: string
-        resourceType:
+        resource_type:
           type: string
-        resourceId:
+        resource_id:
           type: string
     ResourceSearchOrgResyncReport:
       description: Per-organization summary of what the resync corrected.
       type: object
       required:
-        - organizationId
-        - addedCount
-        - removedCount
+        - organization_id
+        - added_count
+        - removed_count
         - added
         - removed
-        - sampleTruncated
+        - sample_truncated
       properties:
-        organizationId:
+        organization_id:
           type: string
-        addedCount:
+        added_count:
           description: Total canonical rows that were missing and inserted back for this org.
           type: integer
           format: int64
-        removedCount:
+        removed_count:
           description: Total stale rows that were present but unexpected and deleted for this org.
           type: integer
           format: int64
@@ -5361,29 +5380,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ResourceSearchDriftDocument'
-        sampleTruncated:
+        sample_truncated:
           description: True when addedCount+removedCount exceeds the returned sample size.
           type: boolean
     ResourceSearchResyncReport:
       description: Result of an admin resync — what drifted and was corrected, grouped by organization.
       type: object
       required:
-        - totalAdded
-        - totalRemoved
-        - organizationCount
-        - sampleLimitPerDirection
+        - total_added
+        - total_removed
+        - organization_count
+        - sample_limit_per_direction
         - organizations
       properties:
-        totalAdded:
+        total_added:
           type: integer
           format: int64
-        totalRemoved:
+        total_removed:
           type: integer
           format: int64
-        organizationCount:
+        organization_count:
           description: Number of organizations that had drift corrected.
           type: integer
-        sampleLimitPerDirection:
+        sample_limit_per_direction:
           description: Max added/removed rows returned per org per direction.
           type: integer
         organizations:
@@ -5788,9 +5807,9 @@ components:
         - $ref: '#/components/schemas/FlowDefinition'
         - type: object
           required:
-            - initialInputs
+            - initial_inputs
           properties:
-            initialInputs:
+            initial_inputs:
               description: Initial input variables for the flow (from its variable set)
               type: object
               additionalProperties: true
@@ -10734,15 +10753,15 @@ components:
       required:
         - version
         - theme
-        - brandName
+        - brand_name
         - description
         - headlines
         - logo
         - palette
-        - customColors
-        - showRegions
-        - showHistory
-        - showSubscribe
+        - custom_colors
+        - show_regions
+        - show_history
+        - show_subscribe
         - motion
         - regions
         - services
@@ -10753,7 +10772,7 @@ components:
             - 1
         theme:
           $ref: '#/components/schemas/StatusPageTheme'
-        brandName:
+        brand_name:
           type: string
           maxLength: 48
         description:
@@ -10783,7 +10802,7 @@ components:
             - type: "null"
         palette:
           $ref: '#/components/schemas/StatusPagePalette'
-        customColors:
+        custom_colors:
           type: object
           required:
             - orbit
@@ -10803,11 +10822,11 @@ components:
                 - $ref: '#/components/schemas/StatusPageColors'
                 - type: "null"
           additionalProperties: false
-        showRegions:
+        show_regions:
           type: boolean
-        showHistory:
+        show_history:
           type: boolean
-        showSubscribe:
+        show_subscribe:
           type: boolean
         motion:
           type: boolean

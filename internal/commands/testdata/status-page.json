@@ -4,7 +4,7 @@
   "config": {
     "version": 1,
     "theme": "orbit",
-    "brandName": "Example",
+    "brand_name": "Example",
     "description": "Measured service availability.",
     "headlines": {
       "orbit": "Your next idea.\nAlready in flow.",
@@ -13,14 +13,14 @@
     },
     "logo": null,
     "palette": "signature",
-    "customColors": {
+    "custom_colors": {
       "orbit": null,
       "ledger": null,
       "signal": null
     },
-    "showRegions": false,
-    "showHistory": false,
-    "showSubscribe": false,
+    "show_regions": false,
+    "show_history": false,
+    "show_subscribe": false,
     "motion": true,
     "regions": [
       {
