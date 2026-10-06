@@ -64,20 +64,28 @@ func echopointBinary(t *testing.T) string {
 }
 
 // runCLI runs the built binary with the environment of the test and no stdin, and
-// reports what it wrote to stdout and stderr and its exit code.
+// reports what it wrote to stdout and stderr, without the runner's log lines, and
+// its exit code.
 func runCLI(t *testing.T, args ...string) (string, string, int) {
+	t.Helper()
+	stdout, stderr, code := runCLIWithLogs(t, args...)
+	return stdout, withoutLibraryLogs(stderr), code
+}
+
+// runCLIWithLogs is runCLI keeping every line the binary wrote to stderr.
+func runCLIWithLogs(t *testing.T, args ...string) (string, string, int) {
 	t.Helper()
 	cmd := exec.CommandContext(t.Context(), echopointBinary(t), args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
 	if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
-		return stdout.String(), withoutLibraryLogs(stderr.String()), exitError.ExitCode()
+		return stdout.String(), stderr.String(), exitError.ExitCode()
 	}
 	if err != nil {
 		t.Fatalf("run %v: %v", args, err)
 	}
-	return stdout.String(), withoutLibraryLogs(stderr.String()), 0
+	return stdout.String(), stderr.String(), 0
 }
 
 // withoutLibraryLogs drops the JSON log lines the embedded runner writes to stderr.
