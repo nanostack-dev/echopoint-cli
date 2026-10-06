@@ -1,6 +1,6 @@
 # CLI Variable Management
 
-`org env` and `flows env` manage the variables a flow execution reads.
+`org env` and `flow env` manage the variables a flow execution reads.
 
 ## Layers
 
@@ -32,20 +32,30 @@ value is withheld rather than unset.
 ## Command surface
 
 ```
-echopoint org env get [-e <name>] [--show-values]
+echopoint org env view [-e <name>] [--show-values]
 echopoint org env set --var K=V [-e <name>] [--secret]
 echopoint org env unset KEY [KEY...] [-e <name>]
-echopoint org env import --file <env.json|.env> [-e <name>] [--secret]
-echopoint org env delete                        # delete the whole variable set
+echopoint org env import -f <env.json|.env> [-e <name>] [--secret]
+echopoint org env delete                        # delete the whole variable set (asks first)
 
 echopoint org env environments list
 echopoint org env environments create <name>
-echopoint org env environments delete <name>    # drops the overlay and its variables
+echopoint org env environments delete <name>    # drops the overlay and its variables (asks first)
 
-echopoint flows env get|set|unset|delete <flow-id>
+echopoint flow env view|set|unset|delete <flow-id>   # delete asks first
+echopoint flow env set <flow-id> -f <env.json|.env> [--var K=V] [--secret]
 ```
 
 `-o json|yaml` works on every read.
+
+A file is always given with `-f/--file`; a file typed as an argument fails with
+`pass the file with -f`.
+
+Deleting a whole resource asks; editing part of one does not. `flow env delete`, `org env delete` and `org env environments delete` delete a whole variable set or environment, so they ask; `unset` removes single variables and does not. On a terminal
+they ask `Delete <thing>? [y/N]` on stderr, and anything but `y` or `yes` cancels
+with exit code 2. Without a terminal they refuse unless `--yes` (`-y`) is given:
+`pass --yes to delete the organization variable set without a prompt`. Environment
+names complete with Tab for `-e` and for `environments delete`.
 
 ## One write per variable
 

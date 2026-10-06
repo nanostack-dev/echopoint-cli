@@ -8,18 +8,18 @@ import (
 )
 
 const (
-	argsMethodPath       = 2 // METHOD and path
-	argsMethodPathName   = 3 // METHOD, path and a name or status
-	argsSchemaProperty   = 2 // schema and property
+	argsMethodPath       = 3 // spec slug, METHOD and path
+	argsMethodPathName   = 4 // spec slug, METHOD, path and a parameter name or status
+	argsSchema           = 2 // spec slug and schema
+	argsSchemaProperty   = 3 // spec slug, schema and property
 	editInDescription    = "Where the parameter is: query, path, header, or cookie"
-	editHelpFileFlag     = "Every edit command takes --file, and edits that file in place; or --spec <slug> --live, and publishes the edit as the next Live version of the spec in EchoPoint (needs specs:write). "
-	editHelpComments     = "In a file, comments, key order, and untouched lines stay as they were. "
-	editHelpDryRun       = "--dry-run prints the edited document and writes or publishes nothing. --command-id pins the UUID that makes a retry of --spec safe. "
-	editHelpOutputFormat = "-o json or -o yaml prints {file, commands, changed}, the commands being the edits applied."
+	editHelpLive         = "Every edit command takes the spec's slug and --live: it applies the edit to the Live version in EchoPoint and publishes the result as the next Live version (needs specs:write). "
+	editHelpDryRun       = "--dry-run prints the edited document and publishes nothing. --command-id pins the UUID that makes a retry safe. "
+	editHelpOutputFormat = "-o json or -o yaml prints the published version and whether it was replayed."
 )
 
 func editLong(text string) string {
-	return text + "\n\n" + editHelpFileFlag + editHelpComments + editHelpDryRun + editHelpOutputFormat
+	return text + "\n\n" + editHelpLive + editHelpDryRun + editHelpOutputFormat
 }
 
 func operationLabel(method, path string) string {
@@ -33,20 +33,20 @@ func newSpecEditGroup(use, short, long string, children ...*cobra.Command) *cobr
 }
 
 func newSpecRouteCmd(state *AppState) *cobra.Command {
-	return newSpecEditGroup("route", "Add, update, or remove an operation of a local OpenAPI file",
+	return newSpecEditGroup("route", "Add, update, or remove an operation of a spec in EchoPoint",
 		"A route is one operation: a METHOD on a path.",
 		newSpecRouteAddCmd(state), newSpecRouteUpdateCmd(state), newSpecRouteRemoveCmd(state))
 }
 
 func newSpecRouteAddCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add <METHOD> <path>",
+		Use:   "add <slug> <METHOD> <path>",
 		Short: "Add an operation",
 		Long: editLong(`Add an operation to a path, creating the path when it is new. The operation gets
 a response for --status (default 200). A {param} in the path that the path item
 does not declare is declared as a required string path parameter.`),
-		Example: `  echopoint spec route add POST /pets --file openapi.yaml --status 201 --operation-id createPet`,
-		Args:    cobra.ExactArgs(argsMethodPath),
+		Example: `  echopoint spec route add pets-api POST /pets --status 201 --operation-id createPet --live`,
+		Args:    specArgs(argsMethodPath),
 	}
 	cmd.Flags().String("operation-id", "", "operationId of the operation")
 	cmd.Flags().String("summary", "", "Summary of the operation")
@@ -64,15 +64,15 @@ does not declare is declared as a required string path parameter.`),
 
 func newSpecRouteUpdateCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update <METHOD> <path>",
+		Use:   "update <slug> <METHOD> <path>",
 		Short: "Change the text, tags, path, or method of an operation",
 		Long: editLong(`Change an operation. An empty --summary, --description, or --operation-id
 removes the field. --clear-tags removes the tags.
 
 --path renames the whole path item: every method on the path moves to the new
 path, not only <METHOD>. --method changes the method of this operation alone.`),
-		Example: `  echopoint spec route update GET /pets --file openapi.yaml --summary "List pets" --tag pets`,
-		Args:    cobra.ExactArgs(argsMethodPath),
+		Example: `  echopoint spec route update pets-api GET /pets --summary "List pets" --tag pets --live`,
+		Args:    specArgs(argsMethodPath),
 	}
 	cmd.Flags().String("path", "", "New path for the whole path item (every method on it moves)")
 	cmd.Flags().String("method", "", "New method for this operation")
@@ -94,11 +94,11 @@ path, not only <METHOD>. --method changes the method of this operation alone.`),
 
 func newSpecRouteRemoveCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "remove <METHOD> <path>",
+		Use:     "remove <slug> <METHOD> <path>",
 		Short:   "Remove an operation",
 		Long:    editLong("Remove an operation. The path goes with it when it has no other operation."),
-		Example: `  echopoint spec route remove DELETE /pets/{petId} --file openapi.yaml`,
-		Args:    cobra.ExactArgs(argsMethodPath),
+		Example: `  echopoint spec route remove pets-api DELETE /pets/{petId} --live`,
+		Args:    specArgs(argsMethodPath),
 	}
 	return newSpecEditCmd(state, cmd, func(_ flagReader, args []string, _ []byte) (specEdit, error) {
 		commands, err := buildRouteRemove(args[0], args[1])
@@ -108,11 +108,11 @@ func newSpecRouteRemoveCmd(state *AppState) *cobra.Command {
 
 func newSpecMethodCmd(state *AppState) *cobra.Command {
 	update := &cobra.Command{
-		Use:     "update <METHOD> <path> --to <METHOD>",
+		Use:     "update <slug> <METHOD> <path> --to <METHOD>",
 		Short:   "Change the method of an operation",
 		Long:    editLong("Change the method of an operation. It is the same as 'route update --method'."),
-		Example: `  echopoint spec method update PUT /pets/{petId} --file openapi.yaml --to PATCH`,
-		Args:    cobra.ExactArgs(argsMethodPath),
+		Example: `  echopoint spec method update pets-api PUT /pets/{petId} --to PATCH --live`,
+		Args:    specArgs(argsMethodPath),
 	}
 	update.Flags().String("to", "", "The new method")
 	_ = update.MarkFlagRequired("to")
@@ -120,23 +120,23 @@ func newSpecMethodCmd(state *AppState) *cobra.Command {
 		commands, err := buildMethodUpdate(args[0], args[1], flags.str("to"))
 		return specEdit{specEditUpdate, operationLabel(args[0], args[1]), commands}, err
 	})
-	return newSpecEditGroup("method", "Change the method of an operation in a local OpenAPI file",
+	return newSpecEditGroup("method", "Change the method of an operation of a spec in EchoPoint",
 		"A method change keeps the operation and gives it another HTTP method.", update)
 }
 
 func newSpecSchemaCmd(state *AppState) *cobra.Command {
-	return newSpecEditGroup("schema", "Add, update, or remove a schema of a local OpenAPI file",
+	return newSpecEditGroup("schema", "Add, update, or remove a schema of a spec in EchoPoint",
 		"A schema is an entry of components/schemas.",
 		newSpecSchemaAddCmd(state), newSpecSchemaUpdateCmd(state), newSpecSchemaRemoveCmd(state))
 }
 
 func newSpecSchemaAddCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "add <Name>",
+		Use:     "add <slug> <schema>",
 		Short:   "Add a schema",
 		Long:    editLong("Add a schema to components/schemas. Its type is object unless --type says otherwise."),
-		Example: `  echopoint spec schema add Pet --file openapi.yaml --description "A pet in the store."`,
-		Args:    cobra.ExactArgs(1),
+		Example: `  echopoint spec schema add pets-api Pet --description "A pet in the store." --live`,
+		Args:    specArgs(argsSchema),
 	}
 	cmd.Flags().String("type", "", "Type of the schema (default object)")
 	cmd.Flags().String("description", "", "Description of the schema")
@@ -150,12 +150,12 @@ func newSpecSchemaAddCmd(state *AppState) *cobra.Command {
 
 func newSpecSchemaUpdateCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update <Name>",
+		Use:   "update <slug> <schema>",
 		Short: "Change the description or type of a schema",
 		Long: editLong(`Change a schema. An empty --description removes it. --type replaces the type and
 resets the format and nullable of the schema.`),
-		Example: `  echopoint spec schema update Pet --file openapi.yaml --description "A pet."`,
-		Args:    cobra.ExactArgs(1),
+		Example: `  echopoint spec schema update pets-api Pet --description "A pet." --live`,
+		Args:    specArgs(argsSchema),
 	}
 	cmd.Flags().String("description", "", "New description")
 	cmd.Flags().String("type", "", "New type")
@@ -169,12 +169,12 @@ resets the format and nullable of the schema.`),
 
 func newSpecSchemaRemoveCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "remove <Name>",
+		Use:   "remove <slug> <schema>",
 		Short: "Remove a schema",
 		Long: editLong(`Remove a schema from components/schemas. A schema that is still referenced is
 refused, and the refusal names where it is referenced.`),
-		Example: `  echopoint spec schema remove Pet --file openapi.yaml`,
-		Args:    cobra.ExactArgs(1),
+		Example: `  echopoint spec schema remove pets-api Pet --live`,
+		Args:    specArgs(argsSchema),
 	}
 	return newSpecEditCmd(state, cmd, func(_ flagReader, args []string, _ []byte) (specEdit, error) {
 		return specEdit{specEditRemove, "schema " + args[0], buildSchemaRemove(args[0])}, nil
@@ -182,7 +182,7 @@ refused, and the refusal names where it is referenced.`),
 }
 
 func newSpecPropertyCmd(state *AppState) *cobra.Command {
-	return newSpecEditGroup("property", "Add, update, or remove a property of a schema in a local OpenAPI file",
+	return newSpecEditGroup("property", "Add, update, or remove a property of a schema of a spec in EchoPoint",
 		`A property is an entry of a schema's properties. Name a nested property with
 dots: 'Pet address.city' is the city property of the address property of Pet.`,
 		newSpecPropertyAddCmd(state), newSpecPropertyUpdateCmd(state), newSpecPropertyRemoveCmd(state))
@@ -190,15 +190,15 @@ dots: 'Pet address.city' is the city property of the address property of Pet.`,
 
 func newSpecPropertyAddCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add <Schema> <name>",
+		Use:   "add <slug> <schema> <property>",
 		Short: "Add a property",
 		Long: editLong(`Add a property to a schema. Its type is string unless --type or --ref says
 otherwise. --ref points the property at another schema of components/schemas
 and cannot be combined with --type, --format, --nullable, or --enum.`),
-		Example: `  echopoint spec property add Pet name --file openapi.yaml --required --description "Name."
-  echopoint spec property add Pet address.city --file openapi.yaml
-  echopoint spec property add Pet status --file openapi.yaml --enum available,sold`,
-		Args: cobra.ExactArgs(argsSchemaProperty),
+		Example: `  echopoint spec property add pets-api Pet name --required --description "Name." --live
+  echopoint spec property add pets-api Pet address.city --live
+  echopoint spec property add pets-api Pet status --enum available,sold --live`,
+		Args: specArgs(argsSchemaProperty),
 	}
 	cmd.Flags().String("type", "", "Type of the property (default string)")
 	cmd.Flags().String("format", "", "Format of the property")
@@ -219,7 +219,7 @@ and cannot be combined with --type, --format, --nullable, or --enum.`),
 
 func newSpecPropertyUpdateCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update <Schema> <name>",
+		Use:   "update <slug> <schema> <property>",
 		Short: "Change a property",
 		Long: editLong(`Change a property. --format and --nullable are part of the type: pass --type with
 them, and --type resets the ones you leave out. An empty --description removes
@@ -227,9 +227,9 @@ it. --required=false takes the property off the required list. --enum replaces
 the allowed values, --clear-enum removes them. --ref replaces the property with
 a reference to another schema and cannot be combined with --type, --format,
 --nullable, --enum, or --clear-enum.`),
-		Example: `  echopoint spec property update Pet name --file openapi.yaml --name title --required=false
-  echopoint spec property update Pet address.city --file openapi.yaml --type string --format city`,
-		Args: cobra.ExactArgs(argsSchemaProperty),
+		Example: `  echopoint spec property update pets-api Pet name --name title --required=false --live
+  echopoint spec property update pets-api Pet address.city --type string --format city --live`,
+		Args: specArgs(argsSchemaProperty),
 	}
 	cmd.Flags().String("name", "", "New name of the property (the property alone, no dots)")
 	cmd.Flags().String("type", "", "New type")
@@ -253,11 +253,11 @@ a reference to another schema and cannot be combined with --type, --format,
 
 func newSpecPropertyRemoveCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "remove <Schema> <name>",
+		Use:     "remove <slug> <schema> <property>",
 		Short:   "Remove a property",
 		Long:    editLong("Remove a property from a schema, and from its required list."),
-		Example: `  echopoint spec property remove Pet address.city --file openapi.yaml`,
-		Args:    cobra.ExactArgs(argsSchemaProperty),
+		Example: `  echopoint spec property remove pets-api Pet address.city --live`,
+		Args:    specArgs(argsSchemaProperty),
 	}
 	return newSpecEditCmd(state, cmd, func(_ flagReader, args []string, _ []byte) (specEdit, error) {
 		commands, err := buildPropertyRemove(args[0], args[1])
@@ -270,7 +270,7 @@ func parameterLabel(name, in, method, path string) string {
 }
 
 func newSpecParamCmd(state *AppState) *cobra.Command {
-	return newSpecEditGroup("param", "Add, update, or remove a parameter of an operation in a local OpenAPI file",
+	return newSpecEditGroup("param", "Add, update, or remove a parameter of an operation of a spec in EchoPoint",
 		`A parameter is found by its name and where it is (--in), never by its position
 in the list. A parameter the path item declares for every method is found too.`,
 		newSpecParamAddCmd(state), newSpecParamUpdateCmd(state), newSpecParamRemoveCmd(state))
@@ -278,12 +278,12 @@ in the list. A parameter the path item declares for every method is found too.`,
 
 func newSpecParamAddCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add <METHOD> <path> <name> --in <location>",
+		Use:   "add <slug> <METHOD> <path> <param> --in <location>",
 		Short: "Add a parameter",
 		Long: editLong(`Add a parameter to an operation. Its type is string unless --type says otherwise.
 A path parameter is always required.`),
-		Example: `  echopoint spec param add GET /pets limit --file openapi.yaml --in query --type integer`,
-		Args:    cobra.ExactArgs(argsMethodPathName),
+		Example: `  echopoint spec param add pets-api GET /pets limit --in query --type integer --live`,
+		Args:    specArgs(argsMethodPathName),
 	}
 	cmd.Flags().String("in", "", editInDescription)
 	cmd.Flags().String("type", "", "Type of the parameter (default string)")
@@ -301,13 +301,13 @@ A path parameter is always required.`),
 
 func newSpecParamUpdateCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update <METHOD> <path> <name> --in <location>",
+		Use:   "update <slug> <METHOD> <path> <param> --in <location>",
 		Short: "Change a parameter",
 		Long: editLong(`Change a parameter. --in names where the parameter is now; --new-in moves it,
 --name renames it. --format is part of the type: pass --type with it. A path
 parameter stays required. An empty --description removes it.`),
-		Example: `  echopoint spec param update GET /pets limit --file openapi.yaml --in query --required=true --type integer`,
-		Args:    cobra.ExactArgs(argsMethodPathName),
+		Example: `  echopoint spec param update pets-api GET /pets limit --in query --required=true --type integer --live`,
+		Args:    specArgs(argsMethodPathName),
 	}
 	cmd.Flags().String("in", "", "Where the parameter is now: query, path, header, or cookie")
 	cmd.Flags().String("name", "", "New name of the parameter")
@@ -328,11 +328,11 @@ parameter stays required. An empty --description removes it.`),
 
 func newSpecParamRemoveCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "remove <METHOD> <path> <name> --in <location>",
+		Use:     "remove <slug> <METHOD> <path> <param> --in <location>",
 		Short:   "Remove a parameter",
 		Long:    editLong("Remove a parameter from an operation, or from its path item."),
-		Example: `  echopoint spec param remove GET /pets limit --file openapi.yaml --in query`,
-		Args:    cobra.ExactArgs(argsMethodPathName),
+		Example: `  echopoint spec param remove pets-api GET /pets limit --in query --live`,
+		Args:    specArgs(argsMethodPathName),
 	}
 	cmd.Flags().String("in", "", editInDescription)
 	return newSpecEditCmd(state, cmd, func(flags flagReader, args []string, document []byte) (specEdit, error) {
@@ -346,20 +346,20 @@ func responseLabel(status, method, path string) string {
 }
 
 func newSpecResponseCmd(state *AppState) *cobra.Command {
-	return newSpecEditGroup("response", "Add, update, or remove a response of an operation in a local OpenAPI file",
+	return newSpecEditGroup("response", "Add, update, or remove a response of an operation of a spec in EchoPoint",
 		`A response is found by its status: a code such as 200, a range such as 4XX, or default.`,
 		newSpecResponseAddCmd(state), newSpecResponseUpdateCmd(state), newSpecResponseRemoveCmd(state))
 }
 
 func newSpecResponseAddCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add <METHOD> <path> <status>",
+		Use:   "add <slug> <METHOD> <path> <status>",
 		Short: "Add a response",
 		Long: editLong(`Add a response to an operation. Without --description it gets the standard
 reason of the status. --schema gives the application/json body a $ref to a
 schema of components/schemas; --type gives it an inline type.`),
-		Example: `  echopoint spec response add GET /pets/{petId} 404 --file openapi.yaml --schema Error`,
-		Args:    cobra.ExactArgs(argsMethodPathName),
+		Example: `  echopoint spec response add pets-api GET /pets/{petId} 404 --schema Error --live`,
+		Args:    specArgs(argsMethodPathName),
 	}
 	cmd.Flags().String("description", "", "Description of the response")
 	cmd.Flags().String("schema", "", "Schema of components/schemas for the JSON body")
@@ -375,12 +375,12 @@ schema of components/schemas; --type gives it an inline type.`),
 
 func newSpecResponseUpdateCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update <METHOD> <path> <status>",
+		Use:   "update <slug> <METHOD> <path> <status>",
 		Short: "Change a response",
 		Long: editLong(`Change a response: its description, or its application/json body with --schema
 or --type. A response description cannot be empty.`),
-		Example: `  echopoint spec response update GET /pets 200 --file openapi.yaml --schema PetList`,
-		Args:    cobra.ExactArgs(argsMethodPathName),
+		Example: `  echopoint spec response update pets-api GET /pets 200 --schema PetList --live`,
+		Args:    specArgs(argsMethodPathName),
 	}
 	cmd.Flags().String("description", "", "New description")
 	cmd.Flags().String("schema", "", "Schema of components/schemas for the JSON body")
@@ -396,11 +396,11 @@ or --type. A response description cannot be empty.`),
 
 func newSpecResponseRemoveCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "remove <METHOD> <path> <status>",
+		Use:     "remove <slug> <METHOD> <path> <status>",
 		Short:   "Remove a response",
 		Long:    editLong("Remove a response from an operation."),
-		Example: `  echopoint spec response remove GET /pets 404 --file openapi.yaml`,
-		Args:    cobra.ExactArgs(argsMethodPathName),
+		Example: `  echopoint spec response remove pets-api GET /pets 404 --live`,
+		Args:    specArgs(argsMethodPathName),
 	}
 	return newSpecEditCmd(state, cmd, func(_ flagReader, args []string, _ []byte) (specEdit, error) {
 		commands, err := buildResponseRemove(args[0], args[1], args[2])

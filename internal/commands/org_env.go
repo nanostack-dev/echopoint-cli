@@ -48,7 +48,7 @@ events and flow exports. A plain variable can become a secret; the reverse is
 refused, so delete it and set it again.`,
 	}
 	cmd.AddCommand(
-		newOrgEnvGetCmd(state),
+		newOrgEnvViewCmd(state),
 		newOrgEnvSetCmd(state),
 		newOrgEnvUnsetCmd(state),
 		newOrgEnvImportCmd(state),
@@ -62,7 +62,7 @@ refused, so delete it and set it again.`,
 func requireOrg(state *AppState) error {
 	if strings.TrimSpace(state.OrganizationID) == "" {
 		return fmt.Errorf(
-			"organization context required: set --organization-id, ECHOPOINT_ORGANIZATION_ID, or log in with a default organization",
+			"organization context required: set --org, ECHOPOINT_ORGANIZATION_ID, or log in with a default organization",
 		)
 	}
 	return nil
@@ -212,16 +212,19 @@ func layerPayload(vars map[string]string, showValues bool) any {
 	return variableNames(vars)
 }
 
-func newOrgEnvGetCmd(state *AppState) *cobra.Command {
+func newOrgEnvViewCmd(state *AppState) *cobra.Command {
 	var (
 		environment string
 		showValues  bool
 	)
 
 	cmd := &cobra.Command{
-		Use:   "get",
-		Short: "Get organization variables",
-		Long: `Get organization variables.
+		Use:     viewVerb,
+		Aliases: []string{getVerb},
+		Short:   "Show organization variables",
+		Example: `  echopoint org env view
+  echopoint org env view -e prd --show-values`,
+		Long: `Show organization variables.
 
 A variable set can hold live credentials, so values are hidden by default and
 only names are shown. Pass --show-values to reveal them. A secret has no value
@@ -290,6 +293,7 @@ to reveal: a read never returns one.`,
 	}
 
 	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
+	registerEnvironmentFlagCompletion(state, cmd)
 	cmd.Flags().BoolVar(&showValues, "show-values", false, "Reveal variable values instead of names only")
 	return cmd
 }
@@ -307,15 +311,13 @@ func newOrgEnvSetCmd(state *AppState) *cobra.Command {
 		Long: `Set organization variables.
 
 Each variable is written on its own; the others are left alone. Use
---environment/-e to target a named environment, which has to exist already.
+-e/--environment to target a named environment, which has to exist already.
 
 Pass --secret to encrypt the values at rest. A read never returns a secret, and
 execution results, progress events and flow exports replace it with ` + "`***`" + `. A
 plain variable can become a secret; the reverse is refused, so delete it and set
-it again.
-
-Examples:
-  echopoint org env set --var KEY=value
+it again.`,
+		Example: `  echopoint org env set --var KEY=value
   echopoint org env set --var KEY1=v1 --var KEY2=v2
   echopoint org env set -e prd --var BASE_URL=https://api.example.com
   echopoint org env set --secret --var API_KEY=sk-live-...`,
@@ -353,6 +355,7 @@ Examples:
 
 	cmd.Flags().StringArrayVar(&variables, "var", nil, "Variable in KEY=value format (repeatable)")
 	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
+	registerEnvironmentFlagCompletion(state, cmd)
 	cmd.Flags().BoolVar(&secret, "secret", false, "Store the values as secrets (encrypted, never read back)")
 	return cmd
 }
@@ -363,7 +366,9 @@ func newOrgEnvUnsetCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unset KEY [KEY...]",
 		Short: "Remove organization variables",
-		Args:  cobra.MinimumNArgs(1),
+		Example: `  echopoint org env unset API_KEY
+  echopoint org env unset -e prd BASE_URL`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -384,6 +389,7 @@ func newOrgEnvUnsetCmd(state *AppState) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
+	registerEnvironmentFlagCompletion(state, cmd)
 	return cmd
 }
 
@@ -395,22 +401,21 @@ func newOrgEnvImportCmd(state *AppState) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "import",
+		Use:   "import -f <file>",
 		Short: "Import organization variables from a file",
 		Long: `Import variables from a JSON object ({"KEY":"value"}) or a dotenv (KEY=value) file.
 
 Each variable is written on its own; the others are left alone. Pass --secret to
 store every imported value as a secret.`,
-		Args: cobra.NoArgs,
+		Example: `  echopoint org env import -f .env
+  echopoint org env import -f vars.json -e prd --secret`,
+		Args: fileFlagArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 			if err := requireOrg(state); err != nil {
 				return err
-			}
-			if file == "" {
-				return fmt.Errorf("--file is required")
 			}
 
 			updates, err := parseVarFile(file)
@@ -435,22 +440,29 @@ store every imported value as a secret.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&file, "file", "", "Path to a JSON or dotenv file")
+	addFileFlag(cmd, &file, "JSON or dotenv file of variables", "json", "env")
+	_ = cmd.MarkFlagRequired("file")
 	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
+	registerEnvironmentFlagCompletion(state, cmd)
 	cmd.Flags().BoolVar(&secret, "secret", false, "Store the imported values as secrets")
-	return cmd
+	return quietOnError(cmd)
 }
 
 func newOrgEnvDeleteCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   deleteVerb,
 		Short: "Delete the entire organization variable set",
-		Args:  cobra.NoArgs,
+		Example: `  echopoint org env delete
+  echopoint org env delete --yes`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 			if err := requireOrg(state); err != nil {
+				return err
+			}
+			if err := confirmDestructive(cmd, state, "delete", "the organization variable set"); err != nil {
 				return err
 			}
 
@@ -468,7 +480,7 @@ func newOrgEnvDeleteCmd(state *AppState) *cobra.Command {
 			return nil
 		},
 	}
-	return cmd
+	return quietOnError(cmd)
 }
 
 func newOrgEnvironmentsCmd(state *AppState) *cobra.Command {
@@ -487,9 +499,10 @@ func newOrgEnvironmentsCmd(state *AppState) *cobra.Command {
 
 func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   listVerb,
-		Short: "List named environments",
-		Args:  cobra.NoArgs,
+		Use:     listVerb,
+		Short:   "List named environments",
+		Example: `  echopoint org env environments list`,
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -538,7 +551,8 @@ func newOrgEnvironmentsCreateCmd(state *AppState) *cobra.Command {
 		Long: `Create a named environment such as dev or prd.
 
 It starts empty, and stays empty until a variable is written into it.`,
-		Args: cobra.ExactArgs(1),
+		Example: `  echopoint org env environments create prd`,
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -565,15 +579,20 @@ It starts empty, and stays empty until a variable is written into it.`,
 }
 
 func newOrgEnvironmentsDeleteCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   deleteVerb + " <name>",
 		Short: "Delete a named environment and every variable in it",
-		Args:  cobra.ExactArgs(1),
+		Example: `  echopoint org env environments delete dev
+  echopoint org env environments delete dev --yes`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 			if err := requireOrg(state); err != nil {
+				return err
+			}
+			if err := confirmDestructive(cmd, state, "delete", "environment "+args[0]); err != nil {
 				return err
 			}
 
@@ -591,6 +610,8 @@ func newOrgEnvironmentsDeleteCmd(state *AppState) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.ValidArgsFunction = completeEnvironmentArg(state)
+	return quietOnError(cmd)
 }
 
 // parseVarFlags turns repeated KEY=value flags into a map.

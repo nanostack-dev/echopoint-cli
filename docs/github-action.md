@@ -1,5 +1,12 @@
 # Running flows in CI: `echopoint flows run` and the GitHub Action
 
+`echopoint flows run` is the same command as `echopoint flow run`: `flows` is a permanent alias
+of `flow`. The GitHub Action runs `echopoint flows run ... -o json`, and that invocation, its
+flags, its JSON on stdout and its exit codes do not change.
+
+To ask EchoPoint to run a flow on Cloud or a Self-hosted runner and return without waiting,
+use `echopoint flow launch` instead; `flow run` is for the **Ephemeral** runner this page is about.
+
 Run Echopoint flows from any CI/CD system as **ephemeral runner** executions. The flow runs
 on your CI worker. Echopoint creates a one-shot Job for the execution and delivers its resolved
 inputs only when the CLI claims that Job. The CLI reports progress, renews the Job lease, and
@@ -142,7 +149,7 @@ The action is a thin wrapper around `echopoint flows run`. On any CI system:
 
 ```bash
 export ECHOPOINT_API_KEY=...          # or --api-key
-export ECHOPOINT_ORGANIZATION_ID=...  # or --organization-id
+export ECHOPOINT_ORGANIZATION_ID=...  # or --org
 
 echopoint flows run flow_abc123 \
   --environment staging \
@@ -152,10 +159,13 @@ echopoint flows run flow_abc123 \
   -o json
 ```
 
-Flags: `--environment`, `--version-id`, `--idempotency-key`,
-`--poll-timeout` (default `30m`), `--parallel` (default `1`), `-o json`. Auth comes from
-`--api-key` / `ECHOPOINT_API_KEY` and `--organization-id` / `ECHOPOINT_ORGANIZATION_ID`
-(API-key auth takes precedence over any Bearer token). When `GITHUB_ACTIONS=true` the CLI
+Flags: `-e/--environment`, `--version-id`, `--idempotency-key`,
+`--poll-timeout` (default `30m`), `--parallel` (default `1`), `-o json`. `-o` is the CLI's global
+output flag: `table` (the default) prints a summary on stderr, `json` prints the object below on
+stdout, and `yaml` prints the same object as YAML. Auth comes from
+`--api-key` / `ECHOPOINT_API_KEY` and `--org` / `ECHOPOINT_ORGANIZATION_ID`
+(`--organization-id` still works as a hidden alias of `--org`;
+API-key auth takes precedence over any Bearer token). When `GITHUB_ACTIONS=true` the CLI
 auto-derives `trigger_type=git` provenance (repository, workflow, job, run ID, run attempt, SHA,
 ref, actor) and a stable idempotency key.
 

@@ -48,41 +48,39 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 		Use:   "add <flow-id>",
 		Short: "Add a node to the flow",
 		Args:  cobra.ExactArgs(1),
-		Long: `Add a new node to the flow.
-
-Examples:
-  # Add a request node
-  echopoint flows node add <flow-id> --type request --name "API Call" --method POST --url "https://api.example.com"
+		Long:  `Add a new node to the flow.`,
+		Example: `  # Add a request node
+  echopoint flow node add <flow-id> --type request --name "API Call" --method POST --url "https://api.example.com"
 
   # Add a delay node
-  echopoint flows node add <flow-id> --type delay --name "Wait" --duration 5000
+  echopoint flow node add <flow-id> --type delay --name "Wait" --duration 5000
 
   # Add a webhook wait as the final check of a flow; then add its expected
-  # events with 'flows node expect add'
-  echopoint flows node add <flow-id> --id events --type webhook_wait --name "Every invitation event" \
+  # events with 'flow node expect add'
+  echopoint flow node add <flow-id> --id events --type webhook_wait --name "Every invitation event" \
     --timeout 30000 --settle 3000 --run-when always --after resend-invite
 
   # Add a module node that runs another flow (reuse a flow inside this one)
-  echopoint flows node add <flow-id> --type module --name "Login" \
+  echopoint flow node add <flow-id> --type module --name "Login" \
     --flow-id <child-flow-id> \
     --input email={{userEmail}} --input password={{userPassword}} \
     --output token=authToken
 
   # Logical id + auto-wire an edge from an existing node (no separate 'edge add')
-  echopoint flows node add <flow-id> --id get-product --after create-product \
+  echopoint flow node add <flow-id> --id get-product --after create-product \
     --type request --name "Get Product" --method GET --url ".../products/{{create-product.productId}}"
 
   # A cleanup node that runs even when an upstream branch has failed
-  echopoint flows node add <flow-id> --id cleanup --run-when always --after get-product \
+  echopoint flow node add <flow-id> --id cleanup --run-when always --after get-product \
     --type request --name "Cleanup" --method DELETE --url ".../products/{{create-product.productId}}"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			// Get current flow
@@ -126,6 +124,14 @@ Examples:
 				}
 				rw := api.FlowNodeRunWhen(runWhen)
 				runWhenPtr = &rw
+			}
+
+			if moduleFlowID != "" {
+				child, resolveErr := resolveFlowID(context.Background(), state, moduleFlowID)
+				if resolveErr != nil {
+					return fmt.Errorf("--flow-id: %w", resolveErr)
+				}
+				moduleFlowID = child.String()
 			}
 
 			newNode, buildErr := buildFlowNode(nodeBuildInput{
@@ -218,6 +224,7 @@ Examples:
 	cmd.Flags().IntVar(&settleMs, "settle", 0,
 		"How long to keep listening once every expected event arrived (for webhook_wait nodes)")
 	cmd.Flags().StringVar(&moduleFlowID, "flow-id", "", "Referenced child flow ID (for module nodes)")
+	_ = cmd.RegisterFlagCompletionFunc("flow-id", completeFlowFlag(state))
 	cmd.Flags().StringArrayVar(&inputBindings, "input", nil,
 		"Module input binding key=value (for module nodes; repeatable)")
 	cmd.Flags().StringArrayVar(&outputBindings, "output", nil,
@@ -246,17 +253,18 @@ func parseKeyVals(pairs []string) (map[string]string, error) {
 // newFlowNodeRemoveCmd removes a node from a flow
 func newFlowNodeRemoveCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove <flow-id> <node-id>",
-		Short: "Remove a node from the flow",
-		Args:  cobra.ExactArgs(2),
+		Use:     "remove <flow-id> <node-id>",
+		Short:   "Remove a node from the flow",
+		Example: `  echopoint flow node remove <flow-id> create-product`,
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			nodeID := args[1]
@@ -344,15 +352,17 @@ func newFlowNodeUpdateCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <flow-id> <node-id>",
 		Short: "Update a node's properties",
-		Args:  cobra.ExactArgs(2),
+		Example: `  echopoint flow node update <flow-id> create-product --name "Create a product"
+  echopoint flow node update <flow-id> create-product --method PUT --url "https://api.example.com/products"`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			nodeID := args[1]
@@ -462,28 +472,26 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 		Use:   addToNodeUse,
 		Short: "Add an output to a node",
 		Args:  cobra.ExactArgs(2),
-		Long: `Add an output extractor to a node.
-
-Examples:
-  # Add a JSONPath extractor
-  echopoint flows node output add <flow-id> <node-id> --name "token" --extractor json_path --path "$.token"
+		Long:  `Add an output extractor to a node.`,
+		Example: `  # Add a JSONPath extractor
+  echopoint flow node output add <flow-id> <node-id> --name "token" --extractor json_path --path "$.token"
 
   # Add a status code extractor
-  echopoint flows node output add <flow-id> <node-id> --name "status" --extractor status_code
+  echopoint flow node output add <flow-id> <node-id> --name "status" --extractor status_code
 
   # Add a body extractor
-  echopoint flows node output add <flow-id> <node-id> --name "response" --extractor body
+  echopoint flow node output add <flow-id> <node-id> --name "response" --extractor body
 
   # Add a header extractor
-  echopoint flows node output add <flow-id> <node-id> --name "contentType" --extractor header --header-name "Content-Type"`,
+  echopoint flow node output add <flow-id> <node-id> --name "contentType" --extractor header --header-name "Content-Type"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			nodeID := args[1]
@@ -617,17 +625,18 @@ Examples:
 // newFlowNodeOutputRemoveCmd removes an output from a node
 func newFlowNodeOutputRemoveCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove <flow-id> <node-id> <output-name>",
-		Short: "Remove an output from a node",
-		Args:  cobra.ExactArgs(3),
+		Use:     "remove <flow-id> <node-id> <output-name>",
+		Short:   "Remove an output from a node",
+		Example: `  echopoint flow node output remove <flow-id> create-product token`,
+		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			nodeID := args[1]
@@ -734,30 +743,28 @@ func newFlowNodeAssertionAddCmd(state *AppState) *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Long: `Add an assertion to validate node execution.
 
-Examples:
-  # Assert status code equals 200
-  echopoint flows node assertion add <flow-id> <node-id> --extractor status_code --operator equals --value "200"
-
-  # Assert JSONPath value equals expected
-  echopoint flows node assertion add <flow-id> <node-id> --extractor json_path --path "$.name" --operator equals --value "test"
-
-  # Assert response contains string
-  echopoint flows node assertion add <flow-id> <node-id> --extractor body --operator contains --value "success"
-
-  # On a webhook wait with expected events, an assertion is a check on every event
-  echopoint flows node assertion add <flow-id> events --extractor header --header-name webhook-signature \
-    --operator starts_with --value "v1,"
-
 Available operators: equals, not_equals, contains, not_contains, greater_than, less_than,
 greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_with, regex`,
+		Example: `  # Assert status code equals 200
+  echopoint flow node assertion add <flow-id> <node-id> --extractor status_code --operator equals --value "200"
+
+  # Assert JSONPath value equals expected
+  echopoint flow node assertion add <flow-id> <node-id> --extractor json_path --path "$.name" --operator equals --value "test"
+
+  # Assert response contains string
+  echopoint flow node assertion add <flow-id> <node-id> --extractor body --operator contains --value "success"
+
+  # On a webhook wait with expected events, an assertion is a check on every event
+  echopoint flow node assertion add <flow-id> events --extractor header --header-name webhook-signature \
+    --operator starts_with --value "v1,"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			nodeID := args[1]
@@ -905,17 +912,18 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 // newFlowNodeAssertionRemoveCmd removes an assertion from a node
 func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove <flow-id> <node-id> <index>",
-		Short: "Remove an assertion from a node by index",
-		Args:  cobra.ExactArgs(3),
+		Use:     "remove <flow-id> <node-id> <index>",
+		Short:   "Remove an assertion from a node by index",
+		Example: `  echopoint flow node assertion remove <flow-id> create-product 0`,
+		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			nodeID := args[1]

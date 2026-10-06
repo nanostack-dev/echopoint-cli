@@ -643,7 +643,7 @@ func TestIntegration_ParallelBounding(t *testing.T) {
 
 func TestIntegration_InvalidParallel(t *testing.T) {
 	state := makeState(t, "test-api-key", "", "http://localhost")
-	cmd := newFlowsRunCmd(state)
+	cmd := newFlowRunCmd(state)
 
 	cmd.SetArgs([]string{"--parallel", "0", flowUUID().String()})
 	var buf bytes.Buffer

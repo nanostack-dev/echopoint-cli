@@ -24,8 +24,8 @@ func TestStatusPageCommandsPreserveScopeAndVersions(t *testing.T) {
 		name, method, path, body string
 		args                     []string
 	}{
-		{"read", "GET", "/status-pages/current", "", []string{"get"}},
-		{"save", "PUT", "/status-pages/current", string(fixture), []string{"save", "-"}},
+		{"read", "GET", "/status-pages/current", "", []string{"view"}},
+		{"save", "PUT", "/status-pages/current", string(fixture), []string{"save", "-f", "-"}},
 		{
 			"publish",
 			"POST",
@@ -75,7 +75,8 @@ func TestStatusPageCommandsPreserveScopeAndVersions(t *testing.T) {
 			defer server.Close()
 			state := makeState(t, "test-key", "", server.URL)
 			state.OutputFormat = output.FormatJSON
-			cmd := newStatusPagesCmd(state)
+			state.AssumeYes = true
+			cmd := newStatusPageCmd(state)
 			var stdout bytes.Buffer
 			cmd.SetOut(&stdout)
 			cmd.SetIn(bytes.NewReader(fixture))
@@ -119,7 +120,7 @@ func TestStatusPagePublicNeverSendsStoredCredentials(t *testing.T) {
 	for _, key := range []string{"", "test-key"} {
 		state := makeState(t, key, "test-token", server.URL)
 		state.OutputFormat = output.FormatYAML
-		cmd := newStatusPagesCmd(state)
+		cmd := newStatusPageCmd(state)
 		var stdout bytes.Buffer
 		cmd.SetOut(&stdout)
 		cmd.SetArgs([]string{"public", "example-a1b2c3d4e5f6"})
@@ -138,18 +139,18 @@ func TestStatusPageValidationRejectsIncompleteOrUnknownInput(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, input := range []string{`{}`, `{"unexpected":true}`, strings.Replace(string(fixture), `"orbit"`, `"invalid-theme"`, 1), string(fixture) + `{}`} {
-		cmd := newStatusPagesCmd(&AppState{})
+		cmd := newStatusPageCmd(&AppState{})
 		cmd.SetOut(io.Discard)
 		cmd.SetErr(io.Discard)
 		cmd.SetIn(strings.NewReader(input))
-		cmd.SetArgs([]string{"validate", "-"})
+		cmd.SetArgs([]string{"validate", "-f", "-"})
 		if err := cmd.Execute(); err == nil {
 			t.Fatalf("accepted invalid request: %s", input)
 		}
 	}
-	cmd := newStatusPagesCmd(&AppState{})
+	cmd := newStatusPageCmd(&AppState{})
 	cmd.SetOut(io.Discard)
-	cmd.SetArgs([]string{"validate", "testdata/status-page.json"})
+	cmd.SetArgs([]string{"validate", "-f", "testdata/status-page.json"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +159,7 @@ func TestStatusPageValidationRejectsIncompleteOrUnknownInput(t *testing.T) {
 func TestStatusPageWritesRequireExplicitVersions(t *testing.T) {
 	state := makeState(t, "test-key", "", "http://127.0.0.1:1")
 	for _, args := range [][]string{{"publish"}, {"unpublish"}, {"publish", "--expected-draft-version", "1"}, {"publish", "--expected-draft-version", "-1", "--expected-intent-version", "0"}, {"unpublish", "--expected-intent-version", "-1"}} {
-		cmd := newStatusPagesCmd(state)
+		cmd := newStatusPageCmd(state)
 		cmd.SetOut(io.Discard)
 		cmd.SetErr(io.Discard)
 		cmd.SetArgs(args)
@@ -180,7 +181,7 @@ func TestStatusPageConflictRemainsAnError(t *testing.T) {
 		)
 	}))
 	defer server.Close()
-	cmd := newStatusPagesCmd(makeState(t, "test-key", "", server.URL))
+	cmd := newStatusPageCmd(makeState(t, "test-key", "", server.URL))
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
 	cmd.SetArgs([]string{"publish", "--expected-draft-version", "1", "--expected-intent-version", "0"})
@@ -226,11 +227,11 @@ func TestStatusPageSavesKeepServerAssignedAddress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		cmd := newStatusPagesCmd(state)
+		cmd := newStatusPageCmd(state)
 		var stdout bytes.Buffer
 		cmd.SetOut(&stdout)
 		cmd.SetIn(bytes.NewReader(data))
-		cmd.SetArgs([]string{"save", "-"})
+		cmd.SetArgs([]string{"save", "-f", "-"})
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
@@ -248,10 +249,10 @@ func TestStatusPageSavesKeepServerAssignedAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := newStatusPagesCmd(&AppState{})
+	cmd := newStatusPageCmd(&AppState{})
 	cmd.SetOut(io.Discard)
 	cmd.SetIn(bytes.NewReader(data))
-	cmd.SetArgs([]string{"validate", "-"})
+	cmd.SetArgs([]string{"validate", "-f", "-"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("accepted an overlong creation prefix")
 	}
@@ -273,7 +274,7 @@ func TestStatusPageOrganizationReadOmitsCredentials(t *testing.T) {
 	}))
 	defer server.Close()
 	state := makeState(t, "stored-key", "stored-token", server.URL)
-	cmd := newStatusPagesCmd(state)
+	cmd := newStatusPageCmd(state)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
 	cmd.SetArgs([]string{"public", "--organization-key", key})
@@ -284,7 +285,7 @@ func TestStatusPageOrganizationReadOmitsCredentials(t *testing.T) {
 		t.Fatalf("missing structured result: %s", stdout.String())
 	}
 	for _, args := range [][]string{{"public"}, {"public", "slug", "--organization-key", key}, {"public", "--organization-key", "../bad"}} {
-		rejected := newStatusPagesCmd(state)
+		rejected := newStatusPageCmd(state)
 		rejected.SetArgs(args)
 		if err := rejected.Execute(); err == nil {
 			t.Fatalf("accepted invalid arguments %v", args)

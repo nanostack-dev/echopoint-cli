@@ -13,6 +13,7 @@ import (
 	"echopoint-cli/internal/output"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type AppState struct {
@@ -25,6 +26,13 @@ type AppState struct {
 	OrganizationID string
 	Client         *client.Client
 	Debug          bool
+	AssumeYes      bool
+
+	// IsTerminal tells whether stdin and stdout are terminals; nil asks the real ones.
+	IsTerminal func() bool
+
+	// Configure resolves the state from the flags typed so far; completion calls it.
+	Configure func(cmd *cobra.Command) error
 }
 
 func NewRootCmd() *cobra.Command {
@@ -39,82 +47,98 @@ func NewRootCmd() *cobra.Command {
 		flagAPIKey         string
 		flagOrganizationID string
 		flagDebug          bool
+		flagYes            bool
 	)
 
-	cmd := &cobra.Command{
-		Use:   "echopoint",
-		Short: "Echopoint CLI",
-		Long:  "Echopoint CLI for managing webhooks, flows, collections, and analytics.",
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			profile := resolveProfile(flagProfile)
-			cfg, cfgPath, err := loadConfig(flagConfig, profile)
+	configure := func(cmd *cobra.Command) error {
+		profile := resolveProfile(flagProfile)
+		cfg, cfgPath, err := loadConfig(flagConfig, profile)
+		if err != nil {
+			return err
+		}
+
+		// a flag beats an environment variable, which beats the config
+		if envAPI := os.Getenv("ECHOPOINT_API_URL"); envAPI != "" {
+			cfg.API.BaseURL = envAPI
+		}
+		if flagAPIURL != "" {
+			cfg.API.BaseURL = flagAPIURL
+		}
+
+		outputValue := cfg.Defaults.OutputFormat
+		if envOutput := os.Getenv("ECHOPOINT_OUTPUT_FORMAT"); envOutput != "" {
+			outputValue = envOutput
+		}
+		if flagOutput != "" {
+			outputValue = flagOutput
+		}
+
+		// Resolve API key (flag > env var). An explicit API key takes precedence
+		// over a Bearer token.
+		apiKey := resolveAPIKey(flagAPIKey)
+		organizationID := resolveOrganizationIDFlag(flagOrganizationID, cfg.Profile)
+
+		// Skip token validation for auth/profile/version/update commands or when
+		// an API key is present.
+		var token string
+		if apiKey == "" && requiresToken(cmd) {
+			token, err = resolveToken(flagToken, cfg.Profile)
 			if err != nil {
 				return err
 			}
+			// Fall back to a stored API key per the profile's preference: a
+			// stored session (Bearer) is the default when both are present,
+			// unless the API key is marked preferred or no session is available.
+			apiKey = resolveStoredAPIKey(cfg.Profile, token)
+		}
 
-			if flagAPIURL != "" {
-				cfg.API.BaseURL = flagAPIURL
+		state.Config = cfg
+		state.ConfigPath = cfgPath
+		state.Profile = cfg.Profile
+		state.OutputFormat = output.ParseFormat(outputValue)
+		state.Token = token
+		state.APIKey = apiKey
+		state.OrganizationID = organizationID
+		state.Debug = flagDebug
+		state.AssumeYes = flagYes
+
+		// Set debug environment variable if --debug flag is used
+		if flagDebug {
+			os.Setenv("ECHOPOINT_DEBUG", "DEBUG")
+		}
+
+		if apiKey != "" {
+			cli, err := client.NewWithAPIKey(cfg.API.BaseURL, apiKey, organizationID, cfg.API.Timeout)
+			if err != nil {
+				return err
 			}
-			if envAPI := os.Getenv("ECHOPOINT_API_URL"); envAPI != "" {
-				cfg.API.BaseURL = envAPI
+			state.Client = cli
+		} else {
+			cli, err := client.New(cfg.API.BaseURL, token, organizationID, cfg.API.Timeout)
+			if err != nil {
+				return err
 			}
+			state.Client = cli
+		}
 
-			outputValue := cfg.Defaults.OutputFormat
-			if flagOutput != "" {
-				outputValue = flagOutput
+		return nil
+	}
+	state.Configure = configure
+
+	cmd := &cobra.Command{
+		Use:   "echopoint",
+		Short: "Manage flows, specs, collections and status pages in EchoPoint",
+		Long: `Manage what lives in EchoPoint: flows and their executions, OpenAPI specs,
+collections, status pages, and the variables of an organization.
+
+A flow runs on Cloud (EchoPoint runs it), on a Self-hosted runner (a long-lived
+runner you operate), or on an Ephemeral runner (a short-lived runner the caller
+operates: 'echopoint flow run' makes this CLI one).`,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			if skipsConfiguration(cmd) {
+				return nil
 			}
-			if envOutput := os.Getenv("ECHOPOINT_OUTPUT_FORMAT"); envOutput != "" {
-				outputValue = envOutput
-			}
-
-			// Resolve API key (flag > env var). An explicit API key takes precedence
-			// over a Bearer token.
-			apiKey := resolveAPIKey(flagAPIKey)
-			organizationID := resolveOrganizationIDFlag(flagOrganizationID, cfg.Profile)
-
-			// Skip token validation for auth/profile/version/update commands or when
-			// an API key is present.
-			var token string
-			if apiKey == "" && requiresToken(cmd) {
-				token, err = resolveToken(flagToken, cfg.Profile)
-				if err != nil {
-					return err
-				}
-				// Fall back to a stored API key per the profile's preference: a
-				// stored session (Bearer) is the default when both are present,
-				// unless the API key is marked preferred or no session is available.
-				apiKey = resolveStoredAPIKey(cfg.Profile, token)
-			}
-
-			state.Config = cfg
-			state.ConfigPath = cfgPath
-			state.Profile = cfg.Profile
-			state.OutputFormat = output.ParseFormat(outputValue)
-			state.Token = token
-			state.APIKey = apiKey
-			state.OrganizationID = organizationID
-			state.Debug = flagDebug
-
-			// Set debug environment variable if --debug flag is used
-			if flagDebug {
-				os.Setenv("ECHOPOINT_DEBUG", "DEBUG")
-			}
-
-			if apiKey != "" {
-				cli, err := client.NewWithAPIKey(cfg.API.BaseURL, apiKey, organizationID, cfg.API.Timeout)
-				if err != nil {
-					return err
-				}
-				state.Client = cli
-			} else {
-				cli, err := client.New(cfg.API.BaseURL, token, organizationID, cfg.API.Timeout)
-				if err != nil {
-					return err
-				}
-				state.Client = cli
-			}
-
-			return nil
+			return configure(cmd)
 		},
 	}
 
@@ -126,52 +150,55 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&flagToken, "token", "", "Session token (overrides stored credentials)")
 	cmd.PersistentFlags().StringVar(&flagAPIKey, "api-key", "",
 		"Organization API key (overrides ECHOPOINT_API_KEY env; takes precedence over Bearer token)")
-	cmd.PersistentFlags().StringVar(&flagOrganizationID, "organization-id", "",
-		"Organization ID for API key auth (overrides ECHOPOINT_ORGANIZATION_ID env)")
+	addOrganizationFlag(cmd.PersistentFlags(), &flagOrganizationID)
 	cmd.PersistentFlags().BoolVar(&flagDebug, "debug", false, "Enable debug logging")
+	cmd.PersistentFlags().BoolVarP(&flagYes, "yes", "y", false,
+		"Skip the confirmation of a command that deletes a whole resource")
+	_ = cmd.RegisterFlagCompletionFunc("profile", completeProfiles(true, false))
 
 	cmd.AddCommand(
-		newAuthCmd(state),
-		newFlowsCmd(state),
-		newOrgCmd(state),
-		newCollectionsCmd(state),
-		newConfigCmd(state),
-		newProfileCmd(state),
-		newMcpCmd(state),
+		newFlowCmd(state),
 		newSpecCmd(state),
-		newStatusPagesCmd(state),
+		newCollectionCmd(state),
+		newStatusPageCmd(state),
+		newOrgCmd(state),
+		newAuthCmd(state),
+		newProfileCmd(state),
+		newConfigCmd(state),
+		newMcpCmd(state),
 		newVersionCmd(),
 		newUpdateCmd(),
 	)
+	groupRootCommands(cmd)
+	cmd.InitDefaultCompletionCmd()
+	exampleCompletionCommands(cmd)
+	rejectUnknownSubcommands(cmd)
 
 	return cmd
 }
 
 // requiresToken reports whether a command needs a resolved session token in
-// PersistentPreRunE. Auth, profile, config, version, update, and mcp commands
+// PersistentPreRunE. Auth, profile, config, version, update, completion, and mcp commands
 // manage their own state and must run without valid credentials — mcp in
 // particular resolves auth itself (and may trigger browser sign-in) at launch.
 // A command annotated offline works on local files only.
 //
 // The auth/profile/config groups match anywhere in the parent chain so their
 // subcommands (e.g. "auth login") also skip token resolution. The top-level
-// self-management commands "version" and "update" match ONLY when they are a
+// self-management commands "version", "update", "completion" and "mcp" match ONLY when they are a
 // direct child of root — otherwise a subcommand named "update" (notably
-// "flows update") would wrongly skip token resolution and then fail its own
+// "flow update") would wrongly skip token resolution and then fail its own
 // requireToken check, making it impossible to authenticate.
 func requiresToken(cmd *cobra.Command) bool {
 	if cmd.Annotations[offlineAnnotation] == annotationEnabled ||
 		cmd.Annotations[anonymousAnnotation] == annotationEnabled {
 		return false
 	}
-	if flag := cmd.Annotations[offlineUnlessAnnotation]; flag != "" && !cmd.Flags().Changed(flag) {
-		return false
-	}
 	for c := cmd; c != nil; c = c.Parent() {
 		switch c.Name() {
 		case authCommandName, profileCommandName, configCommandName:
 			return false
-		case versionCommandName, updateCommandName, mcpCommandName:
+		case versionCommandName, updateCommandName, mcpCommandName, completionCommandName:
 			if isRootChild(c) {
 				return false
 			}
@@ -293,4 +320,30 @@ func resolveOrganizationIDFlag(flagValue, profile string) string {
 		return strings.TrimSpace(creds.OrganizationID)
 	}
 	return ""
+}
+
+// addOrganizationFlag registers --org, with --organization-id kept as a hidden alias.
+func addOrganizationFlag(flags *pflag.FlagSet, target *string) {
+	flags.StringVar(target, "org", "", "Organization ID (overrides ECHOPOINT_ORGANIZATION_ID)")
+	flags.StringVar(target, "organization-id", "", "Alias of --org")
+	_ = flags.MarkHidden("organization-id")
+}
+
+var completionExamples = map[string]string{
+	"bash":       `  echopoint completion bash > /usr/local/etc/bash_completion.d/echopoint`,
+	"zsh":        `  echopoint completion zsh > "${fpath[1]}/_echopoint"`,
+	"fish":       `  echopoint completion fish > ~/.config/fish/completions/echopoint.fish`,
+	"powershell": `  echopoint completion powershell | Out-String | Invoke-Expression`,
+}
+
+// exampleCompletionCommands gives the shell commands cobra generates the Example
+// every other leaf has.
+func exampleCompletionCommands(root *cobra.Command) {
+	completion, _, err := root.Find([]string{"completion"})
+	if err != nil {
+		return
+	}
+	for _, shell := range completion.Commands() {
+		shell.Example = completionExamples[shell.Name()]
+	}
 }

@@ -1,0 +1,18 @@
+exit: 3
+--- stdout ---
+--- stderr ---
+Launching flow 550e8400-e29b-41d4-a716-446655440001 (ephemeral)...
+Claiming Job for execution 550e8400-e29b-41d4-a716-446655440002...
+Launching flow 550e8400-e29b-41d4-a716-4466554400a2 (ephemeral)...
+Launching flow 550e8400-e29b-41d4-a716-4466554400a3 (ephemeral)...
+✓ Flow 550e8400-e29b-41d4-a716-446655440001: completed (Nms)
+✓ Flow 550e8400-e29b-41d4-a716-446655440001: completed
+✗ Flow 550e8400-e29b-41d4-a716-4466554400a3: error
+  Error: launch flow: unexpected status 403: {"errors":[{"code":"FORBIDDEN","message":"insufficient permissions"}]}
+
+exit code 3
+--- launches ---
+POST /flows/550e8400-e29b-41d4-a716-446655440001/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+POST /flows/550e8400-e29b-41d4-a716-4466554400a2/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+POST /flows/550e8400-e29b-41d4-a716-4466554400a3/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+--- step summary ---

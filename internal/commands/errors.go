@@ -26,3 +26,11 @@ func formatAPIError(resp *http.Response, body []byte) error {
 
 	return fmt.Errorf("api error (%d)", resp.StatusCode)
 }
+
+func apiErrorCode(body []byte) string {
+	var apiErr api.ApiErrorResponse
+	if err := json.Unmarshal(body, &apiErr); err != nil || len(apiErr.Errors) == 0 {
+		return ""
+	}
+	return apiErr.Errors[0].Code
+}

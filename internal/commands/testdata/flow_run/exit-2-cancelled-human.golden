@@ -1,0 +1,9 @@
+exit: 2
+--- stdout ---
+--- stderr ---
+Launching flow 550e8400-e29b-41d4-a716-4466554400a5 (ephemeral)...
+✗ Flow 550e8400-e29b-41d4-a716-446655440001: cancelled
+exit code 2
+--- launches ---
+POST /flows/550e8400-e29b-41d4-a716-4466554400a5/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+--- step summary ---

@@ -1,0 +1,18 @@
+exit: 3
+--- stdout ---
+{
+  "execution_id": "",
+  "flow_id": "",
+  "status": "error",
+  "success": false,
+  "exit_code": 3,
+  "duration_ms": 0,
+  "error_message": "--tag cannot be combined with positional flow IDs; use one or the other",
+  "nodes": null
+}
+--- stderr ---
+error: --tag cannot be combined with positional flow IDs; use one or the other
+exit code 3
+--- launches ---
+
+--- step summary ---

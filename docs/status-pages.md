@@ -1,7 +1,7 @@
 # Public status pages
 
-The `status-pages` command manages the organization's shared draft, monitored
-service binding and publication. It supports `--profile`, `--organization-id`
+The `status-page` command (alias `status-pages`) manages the organization's shared
+draft, monitored service binding and publication. It supports `--profile`, `--org`
 and the normal session/API-key authentication. Nested results default to JSON;
 `--output yaml` retains the same API field names.
 
@@ -9,24 +9,24 @@ and the normal session/API-key authentication. Nested results default to JSON;
 
 ```bash
 # Discover the shared draft. A 404 means the organization has no page yet.
-echopoint --profile prod status-pages get
+echopoint --profile prod status-page view
 
 # Discover the exact published version, environment and assertion choices.
-echopoint --profile prod status-pages binding-options \
-  --schedule-id <monitor-uuid> --flow-id <flow-uuid>
+echopoint --profile prod status-page binding-options \
+  --schedule-id <monitor-uuid> --flow-id <flow-id>
 
 # Validate a complete SaveStatusPageRequest without credentials or an API call.
-echopoint status-pages validate page.json
+echopoint status-page validate -f page.json
 
-# Save the private draft; '-' reads JSON from stdin.
-echopoint --profile prod status-pages save page.json > saved-page.json
+# Save the private draft; '-f -' reads JSON from stdin.
+echopoint --profile prod status-page save -f page.json > saved-page.json
 
-# Use the draft_version and intent_version returned by save/get.
-echopoint --profile prod status-pages publish \
+# Use the draft_version and intent_version returned by save/view.
+echopoint --profile prod status-page publish \
   --expected-draft-version 1 --expected-intent-version 0
 
 # Verify exactly what an anonymous visitor can read.
-echopoint --profile prod status-pages public "$(jq -r .slug saved-page.json)"
+echopoint --profile prod status-page public "$(jq -r .slug saved-page.json)"
 ```
 
 [Complete example input](../internal/commands/testdata/status-page.json) includes
@@ -39,7 +39,7 @@ server appends a random 12-character suffix on creation: an input such as `examp
 For an existing page, a complete editable request can be constructed without dropping the assigned address:
 
 ```bash
-echopoint --profile prod status-pages get | jq '{expected_draft_version: .draft_version, slug, config, binding} | with_entries(select(.value != null))' > page.json
+echopoint --profile prod status-page view | jq '{expected_draft_version: .draft_version, slug, config, binding} | with_entries(select(.value != null))' > page.json
 ```
 
 Existing addresses remain unchanged. This change adds suffixes only when creating new pages; it never renames a saved page.
@@ -77,10 +77,13 @@ uses `https://statusdev.echopoint.dev/<slug>`. The equivalent application route 
 `/status/<slug>`. Custom API hosts do not imply a particular frontend address.
 
 ```bash
-echopoint --profile prod status-pages unpublish --expected-intent-version 1
+echopoint --profile prod status-page unpublish --expected-intent-version 1
 ```
 
-Use the latest intent version from `get`. The public endpoint returns 404 after
+Unpublishing withdraws the whole page, so it asks first (deleting a whole resource asks; editing part of one does not): on a terminal `Unpublish the status page? [y/N]` (anything but
+`y` cancels with exit code 2); without a terminal it refuses unless `--yes` is given.
+
+Use the latest intent version from `view`. The public endpoint returns 404 after
 withdrawal, while the private draft remains editable. No page deletion endpoint
 exists in milestone 1.
 
@@ -103,15 +106,15 @@ releases, including v1.11.1, do not contain it.
 
 ## Permanent organization address
 
-`get`, `save`, `publish` and `unpublish` return `public_url`, the authoritative
+`view`, `save`, `publish` and `unpublish` return `public_url`, the authoritative
 link for the selected environment. Anchor organizations also return
 `organization_key`, a fixed 40-character lowercase hex encoding of the
 organization's KSUID bytes. Renaming or republishing never changes this key.
 
 ```bash
-echopoint --profile prod --organization-id "$ORG_ID" status-pages get > saved-page.json
+echopoint --profile prod --org "$ORG_ID" status-page view > saved-page.json
 jq -r .public_url saved-page.json
-echopoint --profile prod status-pages public \
+echopoint --profile prod status-page public \
   --organization-key "$(jq -r .organization_key saved-page.json)"
 ```
 

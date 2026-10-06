@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	googleuuid "github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"echopoint-cli/internal/api"
@@ -26,6 +25,7 @@ func newFlowValidateCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
 		Use:           "validate <flow-id>",
 		Short:         "Statically validate a flow's graph (edges, references, cycles)",
+		Example:       `  echopoint flow validate <flow-id>`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Long: `Validate a flow without running it. Reports, in one pass, every:
@@ -39,9 +39,9 @@ Exits non-zero if any problem is found.`,
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 			if err != nil {

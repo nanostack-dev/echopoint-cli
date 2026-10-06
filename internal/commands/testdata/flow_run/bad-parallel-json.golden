@@ -1,0 +1,18 @@
+exit: 3
+--- stdout ---
+{
+  "execution_id": "",
+  "flow_id": "",
+  "status": "error",
+  "success": false,
+  "exit_code": 3,
+  "duration_ms": 0,
+  "error_message": "--parallel must be \u003e= 1",
+  "nodes": null
+}
+--- stderr ---
+error: --parallel must be >= 1
+exit code 3
+--- launches ---
+
+--- step summary ---

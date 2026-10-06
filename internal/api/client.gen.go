@@ -841,6 +841,7 @@ const (
 	ResourceSearchDomainFlows             ResourceSearchDomain = "flows"
 	ResourceSearchDomainOpenapiOperations ResourceSearchDomain = "openapi_operations"
 	ResourceSearchDomainRequests          ResourceSearchDomain = "requests"
+	ResourceSearchDomainSpecs             ResourceSearchDomain = "specs"
 )
 
 // Valid indicates whether the value is a known member of the ResourceSearchDomain enum.
@@ -853,6 +854,8 @@ func (e ResourceSearchDomain) Valid() bool {
 	case ResourceSearchDomainOpenapiOperations:
 		return true
 	case ResourceSearchDomainRequests:
+		return true
+	case ResourceSearchDomainSpecs:
 		return true
 	default:
 		return false
@@ -886,6 +889,7 @@ const (
 	ResourceSearchTypeFlow             ResourceSearchType = "flow"
 	ResourceSearchTypeOpenapiOperation ResourceSearchType = "openapi_operation"
 	ResourceSearchTypeRequest          ResourceSearchType = "request"
+	ResourceSearchTypeSpec             ResourceSearchType = "spec"
 )
 
 // Valid indicates whether the value is a known member of the ResourceSearchType enum.
@@ -898,6 +902,8 @@ func (e ResourceSearchType) Valid() bool {
 	case ResourceSearchTypeOpenapiOperation:
 		return true
 	case ResourceSearchTypeRequest:
+		return true
+	case ResourceSearchTypeSpec:
 		return true
 	default:
 		return false
@@ -4175,6 +4181,14 @@ type PublishStatusPageRequest struct {
 
 // PushSpecVersionRequest defines model for PushSpecVersionRequest.
 type PushSpecVersionRequest struct {
+	// BaseVersion The Live version the document was written against. When Live is no
+	// longer that version, the push is refused with `SPEC_LIVE_MOVED` and
+	// nothing is published.
+	//
+	//
+	// Examples: 1.4.0
+	BaseVersion *string `json:"base_version,omitempty"`
+
 	// Document The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
 	// 15 MB. It must be self-contained: no external `$ref`. Its
 	// `info.version` is ignored: EchoPoint computes the version.
@@ -4351,6 +4365,9 @@ type ResourceSearchIdentifiers struct {
 
 	// ResourceId Canonical identifier for the matched resource.
 	ResourceId openapi_types.UUID `json:"resource_id"`
+
+	// SpecSlug The unique slug of the spec when the resource is a spec. It addresses the spec in the specs routes and in the CLI, for example `echopoint spec view <slug>`.
+	SpecSlug *string `json:"spec_slug,omitempty"`
 }
 
 // ResourceSearchOrgResyncReport Per-organization summary of what the resync corrected.
@@ -4805,7 +4822,7 @@ type Spec struct {
 	// Live A Live version of a spec, without its document and its changes.
 	Live SpecVersionSummary `json:"live"`
 
-	// Slug Identifies the spec within the organization, in URLs and in the CLI's `--spec`.
+	// Slug The spec's unique slug within the organization. It addresses the spec in URLs and in the CLI, for example `echopoint spec view <slug>`.
 	//
 	// Examples: echopoint-api
 	Slug string `json:"slug"`
@@ -5810,7 +5827,7 @@ type EnvironmentPath = string
 // InvitationId defines model for InvitationId.
 type InvitationId = string
 
-// LimitParameter defines model for LimitParameter.
+// LimitParameter Examples: 20
 type LimitParameter = int32
 
 // OffsetParameter defines model for OffsetParameter.
@@ -5869,8 +5886,8 @@ type ListAPIKeysParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -5911,8 +5928,8 @@ type ListCollectionsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -5971,8 +5988,8 @@ type ListCollectionRequestOpenAPISyncHistoryParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6025,8 +6042,8 @@ type ListOpenAPISyncHistoryParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6064,8 +6081,8 @@ type ListCollectionRequestsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6082,8 +6099,8 @@ type ListExecutionsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// Status Filter by execution status.
 	Status *ExecutionStatus `form:"status,omitempty" json:"status,omitempty"`
@@ -6115,8 +6132,8 @@ type ListFlowSchedulesParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// Enabled Filter by enabled/paused state.
 	Enabled *bool `form:"enabled,omitempty" json:"enabled,omitempty"`
@@ -6172,8 +6189,8 @@ type ListFlowScheduleRunsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6190,8 +6207,8 @@ type ListFlowsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6283,8 +6300,8 @@ type GetNodeExecutionHistoryParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6313,8 +6330,8 @@ type ListFlowExecutionsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6376,8 +6393,8 @@ type ListFlowVersionsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6400,8 +6417,8 @@ type ListOrganizationInvitationsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6436,8 +6453,8 @@ type ListOrganizationMembersParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// Search Full-text search term matched against member name/email.
 	Search *string `form:"search,omitempty" json:"search,omitempty"`
@@ -6556,8 +6573,8 @@ type ListSpecsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -6595,8 +6612,8 @@ type ListSpecVersionsParams struct {
 	// Limit Maximum number of items per page.
 	Limit LimitParameter `form:"limit" json:"limit"`
 
-	// Offset Number of items to skip.
-	Offset OffsetParameter `form:"offset" json:"offset"`
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -9106,7 +9123,7 @@ type ClientInterface interface {
 
 	// SearchResourcesWithBody Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9115,7 +9132,7 @@ type ClientInterface interface {
 
 	// SearchResources Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -9348,7 +9365,7 @@ type ClientInterface interface {
 	// Applies edit commands to the spec's Live version and publishes the result
 	// as the next Live version, with the version computed from the changes, as
 	// a push does. The commands apply in order and all or nothing. The CLI's
-	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
@@ -9373,7 +9390,7 @@ type ClientInterface interface {
 	// Applies edit commands to the spec's Live version and publishes the result
 	// as the next Live version, with the version computed from the changes, as
 	// a push does. The commands apply in order and all or nothing. The CLI's
-	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
@@ -9397,7 +9414,7 @@ type ClientInterface interface {
 	//
 	// Returns a Live version's document in the canonical YAML layout, with the
 	// snapshot ID that names it. Without `version`, returns the current Live
-	// version. `echopoint spec pull` writes `document` as is.
+	// version. `echopoint spec pull <slug>` writes `document` as is.
 	//
 	// Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
 	PullSpec(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9417,7 +9434,8 @@ type ClientInterface interface {
 	// that version into `info.version`, and stores the canonical YAML.
 	//
 	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+	// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 	// run; it is never reported as "no breaking changes"),
 	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -9436,7 +9454,8 @@ type ClientInterface interface {
 	// that version into `info.version`, and stores the canonical YAML.
 	//
 	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+	// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 	// run; it is never reported as "no breaking changes"),
 	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -12082,7 +12101,7 @@ func (c *Client) GetPublicStatusPage(ctx context.Context, slug string, reqEditor
 
 // SearchResourcesWithBody Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 //
 // Takes any type of body and a specified content type.
 //
@@ -12101,7 +12120,7 @@ func (c *Client) SearchResourcesWithBody(ctx context.Context, params *SearchReso
 
 // SearchResources Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -12534,7 +12553,7 @@ func (c *Client) GetSpec(ctx context.Context, slug SpecSlugParameter, params *Ge
 // Applies edit commands to the spec's Live version and publishes the result
 // as the next Live version, with the version computed from the changes, as
 // a push does. The commands apply in order and all or nothing. The CLI's
-// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
@@ -12569,7 +12588,7 @@ func (c *Client) ApplySpecCommandsWithBody(ctx context.Context, slug SpecSlugPar
 // Applies edit commands to the spec's Live version and publishes the result
 // as the next Live version, with the version computed from the changes, as
 // a push does. The commands apply in order and all or nothing. The CLI's
-// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
@@ -12603,7 +12622,7 @@ func (c *Client) ApplySpecCommands(ctx context.Context, slug SpecSlugParameter, 
 //
 // Returns a Live version's document in the canonical YAML layout, with the
 // snapshot ID that names it. Without `version`, returns the current Live
-// version. `echopoint spec pull` writes `document` as is.
+// version. `echopoint spec pull <slug>` writes `document` as is.
 //
 // Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
 func (c *Client) PullSpec(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -12643,7 +12662,8 @@ func (c *Client) ListSpecVersions(ctx context.Context, slug SpecSlugParameter, p
 // that version into `info.version`, and stores the canonical YAML.
 //
 // Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 // run; it is never reported as "no breaking changes"),
 // `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 // `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -12672,7 +12692,8 @@ func (c *Client) PushSpecVersionWithBody(ctx context.Context, slug SpecSlugParam
 // that version into `info.version`, and stores the canonical YAML.
 //
 // Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 // run; it is never reported as "no breaking changes"),
 // `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 // `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -21866,7 +21887,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchResourcesWithBodyWithResponse Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -21875,7 +21896,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchResourcesWithResponse Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22118,7 +22139,7 @@ type ClientWithResponsesInterface interface {
 	// Applies edit commands to the spec's Live version and publishes the result
 	// as the next Live version, with the version computed from the changes, as
 	// a push does. The commands apply in order and all or nothing. The CLI's
-	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
@@ -22143,7 +22164,7 @@ type ClientWithResponsesInterface interface {
 	// Applies edit commands to the spec's Live version and publishes the result
 	// as the next Live version, with the version computed from the changes, as
 	// a push does. The commands apply in order and all or nothing. The CLI's
-	// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+	// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
@@ -22167,7 +22188,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a Live version's document in the canonical YAML layout, with the
 	// snapshot ID that names it. Without `version`, returns the current Live
-	// version. `echopoint spec pull` writes `document` as is.
+	// version. `echopoint spec pull <slug>` writes `document` as is.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22191,7 +22212,8 @@ type ClientWithResponsesInterface interface {
 	// that version into `info.version`, and stores the canonical YAML.
 	//
 	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+	// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 	// run; it is never reported as "no breaking changes"),
 	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -22210,7 +22232,8 @@ type ClientWithResponsesInterface interface {
 	// that version into `info.version`, and stores the canonical YAML.
 	//
 	// Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-	// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+	// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+	// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 	// run; it is never reported as "no breaking changes"),
 	// `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 	// `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -32871,7 +32894,7 @@ func (c *ClientWithResponses) GetPublicStatusPageWithResponse(ctx context.Contex
 
 // SearchResourcesWithBodyWithResponse Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32886,7 +32909,7 @@ func (c *ClientWithResponses) SearchResourcesWithBodyWithResponse(ctx context.Co
 
 // SearchResourcesWithResponse Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -33249,7 +33272,7 @@ func (c *ClientWithResponses) GetSpecWithResponse(ctx context.Context, slug Spec
 // Applies edit commands to the spec's Live version and publishes the result
 // as the next Live version, with the version computed from the changes, as
 // a push does. The commands apply in order and all or nothing. The CLI's
-// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
@@ -33280,7 +33303,7 @@ func (c *ClientWithResponses) ApplySpecCommandsWithBodyWithResponse(ctx context.
 // Applies edit commands to the spec's Live version and publishes the result
 // as the next Live version, with the version computed from the changes, as
 // a push does. The commands apply in order and all or nothing. The CLI's
-// `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+// `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
@@ -33310,7 +33333,7 @@ func (c *ClientWithResponses) ApplySpecCommandsWithResponse(ctx context.Context,
 //
 // Returns a Live version's document in the canonical YAML layout, with the
 // snapshot ID that names it. Without `version`, returns the current Live
-// version. `echopoint spec pull` writes `document` as is.
+// version. `echopoint spec pull <slug>` writes `document` as is.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -33346,7 +33369,8 @@ func (c *ClientWithResponses) ListSpecVersionsWithResponse(ctx context.Context, 
 // that version into `info.version`, and stores the canonical YAML.
 //
 // Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 // run; it is never reported as "no breaking changes"),
 // `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 // `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -33371,7 +33395,8 @@ func (c *ClientWithResponses) PushSpecVersionWithBodyWithResponse(ctx context.Co
 // that version into `info.version`, and stores the canonical YAML.
 //
 // Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-// `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+// `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+// `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
 // run; it is never reported as "no breaking changes"),
 // `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
 // `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and

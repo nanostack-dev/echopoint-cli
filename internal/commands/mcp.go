@@ -32,6 +32,7 @@ func newMcpCmd(state *AppState) *cobra.Command {
 			"(Claude Desktop, Cursor, etc.). Communicates over stdin/stdout and " +
 			"authenticates with your stored session, an organization API key, or " +
 			"ECHOPOINT_API_KEY. With no valid credentials it opens the browser to sign in.",
+		Example:      `  echopoint mcp`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cli, err := resolveMcpClient(cmd, state)

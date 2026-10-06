@@ -43,9 +43,9 @@ func newFlowFolderCmd(state *AppState) *cobra.Command {
 Folders are addressed either by id or by a "/"-separated path of folder names
 from the tree root, so commands read the way the Flow Library looks:
 
-  echopoint flows folder create "Anchor/Identity"
-  echopoint flows folder list
-  echopoint flows move --to "Anchor/Identity" --match-tag anchor
+  echopoint flow folder create "Anchor/Identity"
+  echopoint flow folder list
+  echopoint flow move --to "Anchor/Identity" --match-tag anchor
 
 Path segments are matched case-insensitively; an ambiguous name must be
 addressed by id instead.`,
@@ -71,6 +71,9 @@ func newFlowFolderListCmd(state *AppState) *cobra.Command {
 		Long: `List the organization's flow folders as an indented tree.
 
 The trailing "(uncategorized)" row counts flows that sit outside every folder.`,
+		Example: `  echopoint flow folder list
+  echopoint flow folder list --counts=false -o json`,
+		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -130,12 +133,10 @@ func newFlowFolderCreateCmd(state *AppState) *cobra.Command {
 		Long: `Create a flow folder.
 
 The argument is a "/"-separated path; every missing segment is created and every
-existing segment is reused, so the command is safe to re-run.
-
-Examples:
-  echopoint flows folder create "Anchor"
-  echopoint flows folder create "Anchor/Identity/Roles"
-  echopoint flows folder create "Identity" --parent Anchor`,
+existing segment is reused, so the command is safe to re-run.`,
+		Example: `  echopoint flow folder create "Anchor"
+  echopoint flow folder create "Anchor/Identity/Roles"
+  echopoint flow folder create "Identity" --parent Anchor`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -188,14 +189,17 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&parentRef, "parent", "", "Existing folder the path is created under (id or path)")
+	cmd.ValidArgsFunction = cobra.NoFileCompletions
+	registerFolderFlagCompletion(state, cmd, "parent")
 	return cmd
 }
 
 func newFlowFolderRenameCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "rename <folder> <new-name>",
-		Short: "Rename a flow folder",
-		Args:  cobra.ExactArgs(2),
+		Use:     "rename <folder> <new-name>",
+		Short:   "Rename a flow folder",
+		Example: `  echopoint flow folder rename "Anchor/Identity" "Identity and access"`,
+		Args:    cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -232,6 +236,7 @@ func newFlowFolderRenameCmd(state *AppState) *cobra.Command {
 		},
 	}
 
+	cmd.ValidArgsFunction = completeFolderArg(state)
 	return cmd
 }
 
@@ -245,11 +250,9 @@ func newFlowFolderMoveCmd(state *AppState) *cobra.Command {
 		Long: `Move a folder — and everything under it — beneath a different parent.
 
 Pass --to root to move the folder back to the tree root. The server rejects a
-move that would put a folder inside itself or exceed the folder depth limit.
-
-Examples:
-  echopoint flows folder move "Identity" --to "Anchor"
-  echopoint flows folder move "Anchor/Identity" --to root`,
+move that would put a folder inside itself or exceed the folder depth limit.`,
+		Example: `  echopoint flow folder move "Identity" --to "Anchor"
+  echopoint flow folder move "Anchor/Identity" --to root`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -292,14 +295,13 @@ Examples:
 
 	cmd.Flags().StringVar(&parentRef, "to", "", `Destination parent folder (id or path), or "root"`)
 	_ = cmd.MarkFlagRequired("to")
+	cmd.ValidArgsFunction = completeFolderArg(state)
+	registerFolderFlagCompletion(state, cmd, "to", rootRef)
 	return cmd
 }
 
 func newFlowFolderDeleteCmd(state *AppState) *cobra.Command {
-	var (
-		deleteFlows bool
-		confirmed   bool
-	)
+	var deleteFlows bool
 
 	cmd := &cobra.Command{
 		Use:   "delete <folder>",
@@ -309,16 +311,12 @@ func newFlowFolderDeleteCmd(state *AppState) *cobra.Command {
 
 By default the flows inside the deleted subtree survive and become
 uncategorized. With --delete-flows they are permanently deleted along with their
-execution history; that is irreversible, so it also requires --yes.`,
-		RunE: func(_ *cobra.Command, args []string) error {
+execution history, which is irreversible.`,
+		Example: `  echopoint flow folder delete "Anchor/Identity"
+  echopoint flow folder delete "Anchor/Identity" --delete-flows --yes`,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
-			}
-			if deleteFlows && !confirmed {
-				return fmt.Errorf(
-					"--delete-flows permanently deletes every flow in the subtree with its execution history; " +
-						"pass --yes to confirm",
-				)
 			}
 
 			ctx := context.Background()
@@ -331,6 +329,14 @@ execution history; that is irreversible, so it also requires --yes.`,
 				return err
 			}
 			path := idx.path(id)
+
+			thing := "folder " + path
+			if deleteFlows {
+				thing += " and every flow in it"
+			}
+			if err := confirmDestructive(cmd, state, "delete", thing); err != nil {
+				return err
+			}
 
 			params := &api.DeleteFlowFolderParams{
 				XOrganizationID: state.OrganizationID,
@@ -354,13 +360,13 @@ execution history; that is irreversible, so it also requires --yes.`,
 	}
 
 	cmd.Flags().BoolVar(&deleteFlows, "delete-flows", false, "Also permanently delete every flow in the subtree")
-	cmd.Flags().BoolVar(&confirmed, "yes", false, "Confirm the irreversible --delete-flows deletion")
-	return cmd
+	cmd.ValidArgsFunction = completeFolderArg(state)
+	return quietOnError(cmd)
 }
 
-// newFlowsMoveCmd moves flows between folders. It lives with the folder
+// newFlowMoveCmd moves flows between folders. It lives with the folder
 // commands because the destination is a folder reference.
-func newFlowsMoveCmd(state *AppState) *cobra.Command {
+func newFlowMoveCmd(state *AppState) *cobra.Command {
 	var (
 		destination string
 		create      bool
@@ -374,20 +380,18 @@ func newFlowsMoveCmd(state *AppState) *cobra.Command {
 		Short: "Move flows into a folder",
 		Long: `Move flows into a folder in a single server-side transaction.
 
-Select the flows either by passing flow IDs, or by a search filter (the same
+Select the flows either by passing flows, or by a search filter (the same
 search that backs the flow list), in which case every matching flow moves — not
 just the first page. A filter is required for search-based selection: moving
-every flow in the organization is intentionally not supported.
-
-Examples:
-  # move specific flows
-  echopoint flows move <flow-id> <flow-id> --to "Anchor/Identity"
+every flow in the organization is intentionally not supported.`,
+		Example: `  # move specific flows
+  echopoint flow move <flow-id> <flow-id> --to "Anchor/Identity"
 
   # move every flow carrying a tag, creating the destination if needed
-  echopoint flows move --match-tag anchor --to "Anchor" --create
+  echopoint flow move --match-tag anchor --to "Anchor" --create
 
   # pull flows back out of every folder
-  echopoint flows move <flow-id> --to uncategorized`,
+  echopoint flow move <flow-id> --to uncategorized`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -395,11 +399,11 @@ Examples:
 
 			hasSearchFilter := query != "" || len(matchTags) > 0
 			if len(args) > 0 && hasSearchFilter {
-				return fmt.Errorf("flow IDs cannot be combined with --query/--match-tag")
+				return fmt.Errorf("flows cannot be combined with --query/--match-tag")
 			}
 			if len(args) == 0 && !hasSearchFilter {
 				return fmt.Errorf(
-					"select flows to move: pass flow IDs or a search filter (--query/--match-tag); " +
+					"select flows to move: pass flows or a search filter (--query/--match-tag); " +
 						"moving every flow in the organization is not supported",
 				)
 			}
@@ -414,7 +418,7 @@ Examples:
 			}
 
 			body := api.BulkMoveFlowsRequest{FolderId: folderID}
-			if err := applyMoveSelector(&body, args, query, matchTags, matchMode); err != nil {
+			if err := applyMoveSelector(ctx, state, &body, args, query, matchTags, matchMode); err != nil {
 				return err
 			}
 
@@ -442,6 +446,9 @@ Examples:
 	cmd.Flags().StringArrayVar(&matchTags, "match-tag", nil, "Select flows that have this tag (repeatable)")
 	cmd.Flags().StringVar(&matchMode, "match-mode", "", `Tag match mode for --match-tag: "any" (default) or "all"`)
 	_ = cmd.MarkFlagRequired("to")
+	cmd.ValidArgsFunction = completeFlowArgs(state, -1)
+	registerFolderFlagCompletion(state, cmd, "to", uncategorizedRef)
+	_ = cmd.RegisterFlagCompletionFunc("match-mode", staticCompletion(string(api.Any), string(api.All)))
 	return cmd
 }
 
@@ -449,6 +456,8 @@ Examples:
 // flows: an explicit id set when ids were passed, otherwise the search filter.
 // The two are mutually exclusive server-side.
 func applyMoveSelector(
+	ctx context.Context,
+	state *AppState,
 	body *api.BulkMoveFlowsRequest,
 	flowIDs []string,
 	query string,
@@ -458,9 +467,9 @@ func applyMoveSelector(
 	if len(flowIDs) > 0 {
 		ids := make([]uuid.UUID, 0, len(flowIDs))
 		for _, raw := range flowIDs {
-			id, err := uuid.Parse(raw)
+			id, err := resolveFlowID(ctx, state, raw)
 			if err != nil {
-				return fmt.Errorf("invalid flow id %q", raw)
+				return err
 			}
 			ids = append(ids, id)
 		}
