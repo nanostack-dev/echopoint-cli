@@ -28,7 +28,7 @@ exports.`,
 	}
 
 	cmd.AddCommand(
-		newFlowEnvGetCmd(state),
+		newFlowEnvViewCmd(state),
 		newFlowEnvSetCmd(state),
 		newFlowEnvUnsetCmd(state),
 		newFlowEnvDeleteCmd(state),
@@ -68,13 +68,16 @@ func setFlowVariable(state *AppState, flowID uuid.UUID, key, value string, secre
 	return nil
 }
 
-func newFlowEnvGetCmd(state *AppState) *cobra.Command {
+func newFlowEnvViewCmd(state *AppState) *cobra.Command {
 	var showValues bool
 
 	cmd := &cobra.Command{
-		Use:   "get <flow-id>",
-		Short: "Get flow variables",
-		Long: `Get the variables of a flow.
+		Use:     "view <flow-id>",
+		Aliases: []string{getVerb},
+		Short:   "Show flow variables",
+		Example: `  echopoint flow env view <flow-id>
+  echopoint flow env view <flow-id> --show-values`,
+		Long: `Show the variables of a flow.
 
 Values are hidden by default and only names are shown. Pass --show-values to
 reveal them. A secret has no value to reveal: a read never returns one.`,
@@ -84,9 +87,9 @@ reveal them. A secret has no value to reveal: a read never returns one.`,
 				return err
 			}
 
-			flowID, err := uuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow id %q: %w", args[0], err)
+				return err
 			}
 
 			set, err := fetchFlowVariables(state, flowID)
@@ -122,29 +125,28 @@ func newFlowEnvSetCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <flow-id>",
 		Short: "Set flow variables",
-		Args:  cobra.ExactArgs(1),
+		Args:  fileFlagArgs(1),
 		Long: `Set variables for a flow.
 
-Each variable is written on its own; the others are left alone. Pass --secret to
-encrypt the values at rest. A plain variable can become a secret; the reverse is
-refused, so delete it and set it again.
-
-Examples:
-  echopoint flows env set <flow-id> --var KEY=value
-  echopoint flows env set <flow-id> --var KEY1=value1 --var KEY2=value2
-  echopoint flows env set <flow-id> --file env.json
-  echopoint flows env set <flow-id> --secret --var API_KEY=sk-live-...`,
+Each variable is written on its own; the others are left alone. Variables come
+from --var and from a JSON or dotenv file given with -f; --var wins on a
+duplicate key. Pass --secret to encrypt the values at rest. A plain variable can
+become a secret; the reverse is refused, so delete it and set it again.`,
+		Example: `  echopoint flow env set <flow-id> --var KEY=value
+  echopoint flow env set <flow-id> --var KEY1=value1 --var KEY2=value2
+  echopoint flow env set <flow-id> -f env.json
+  echopoint flow env set <flow-id> --secret --var API_KEY=sk-live-...`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, parseErr := uuid.Parse(args[0])
-			if parseErr != nil {
-				return fmt.Errorf("invalid flow id %q: %w", args[0], parseErr)
+			flowID, flowErr := resolveFlowID(context.Background(), state, args[0])
+			if flowErr != nil {
+				return flowErr
 			}
-			if len(variables) == 0 && file == "" {
-				return fmt.Errorf("at least one --var KEY=value or --file is required")
+			if len(variables) == 0 && !cmd.Flags().Changed("file") {
+				return fmt.Errorf("at least one --var KEY=value or -f is required")
 			}
 
 			updates, err := collectVarInputs(file, variables)
@@ -171,24 +173,25 @@ Examples:
 	}
 
 	cmd.Flags().StringArrayVar(&variables, "var", nil, "Variable in KEY=value format (repeatable)")
-	cmd.Flags().StringVar(&file, "file", "", "Path to a JSON or dotenv file")
+	addFileFlag(cmd, &file, "JSON or dotenv file of variables", "json", "env")
 	cmd.Flags().BoolVar(&secret, "secret", false, "Store the values as secrets (encrypted, never read back)")
-	return cmd
+	return quietOnError(cmd)
 }
 
 func newFlowEnvUnsetCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "unset <flow-id> KEY [KEY...]",
-		Short: "Remove flow variables",
-		Args:  cobra.MinimumNArgs(2),
+		Use:     "unset <flow-id> KEY [KEY...]",
+		Short:   "Remove flow variables",
+		Example: `  echopoint flow env unset <flow-id> API_KEY BASE_URL`,
+		Args:    cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := uuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow id %q: %w", args[0], err)
+				return err
 			}
 
 			keys := args[1:]
@@ -211,18 +214,23 @@ func newFlowEnvUnsetCmd(state *AppState) *cobra.Command {
 }
 
 func newFlowEnvDeleteCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   deleteVerb + " <flow-id>",
 		Short: "Delete all variables of a flow",
-		Args:  cobra.ExactArgs(1),
+		Example: `  echopoint flow env delete <flow-id>
+  echopoint flow env delete <flow-id> --yes`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := uuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow id %q: %w", args[0], err)
+				return err
+			}
+			if err := confirmDestructive(cmd, state, "delete", "the variables of flow "+flowID.String()); err != nil {
+				return err
 			}
 
 			resp, err := state.Client.API().DeleteFlowVariablesWithResponse(
@@ -239,6 +247,7 @@ func newFlowEnvDeleteCmd(state *AppState) *cobra.Command {
 			return nil
 		},
 	}
+	return quietOnError(cmd)
 }
 
 // collectVarInputs merges a variable file with repeated --var flags. A flag

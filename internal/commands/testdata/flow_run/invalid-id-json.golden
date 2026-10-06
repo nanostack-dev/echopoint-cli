@@ -1,0 +1,20 @@
+exit: 3
+--- stdout ---
+{
+  "execution_id": "",
+  "flow_id": "not-a-uuid",
+  "flow_url": "https://app.echopoint.dev/flows/not-a-uuid",
+  "status": "error",
+  "success": false,
+  "exit_code": 3,
+  "duration_ms": 0,
+  "error_message": "invalid flow id \"not-a-uuid\": invalid UUID length: 10",
+  "nodes": null
+}
+--- stderr ---
+✗ Flow not-a-uuid: error
+  Error: invalid flow id "not-a-uuid": invalid UUID length: 10
+exit code 3
+--- launches ---
+
+--- step summary ---

@@ -22,6 +22,8 @@ func newUpdateCmd() *cobra.Command {
 
 The running binary is replaced in place after its checksum is verified. Use
 --check to see whether an update is available without installing it.`,
+		Example: `  echopoint update --check
+  echopoint update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			current := Version()
 

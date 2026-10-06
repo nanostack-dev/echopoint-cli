@@ -9,7 +9,6 @@ import (
 
 	"echopoint-cli/internal/api"
 
-	googleuuid "github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -114,9 +113,9 @@ func editWebhookWait(
 	if err := requireToken(state); err != nil {
 		return err
 	}
-	flowID, err := googleuuid.Parse(flowArg)
+	flowID, err := resolveFlowID(context.Background(), state, flowArg)
 	if err != nil {
-		return fmt.Errorf("invalid flow ID: %w", err)
+		return err
 	}
 	resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
 	if err != nil {
@@ -165,7 +164,7 @@ func newFlowNodeExpectCmd(state *AppState) *cobra.Command {
 final check of a flow. Each expected event is a group of checks: an event satisfies
 it when it passes all of them, and one event counts for one expected event only.
 Checks resolve {{node.output}} templates, which ties an event to the resource that
-caused it. The node's own assertions ("flows node assertion add") then run on
+caused it. The node's own assertions ("flow node assertion add") then run on
 every event an expected event claimed.`,
 	}
 	cmd.AddCommand(newFlowNodeExpectAddCmd(state), newFlowNodeExpectRemoveCmd(state))
@@ -193,14 +192,12 @@ Each --match is one check, written "<target> <operator> [value]":
 Count (default: at least once):
   --once        exactly one event
   --never       no event may arrive
-  --min/--max   a range
-
-Examples:
-  echopoint flows node expect add <flow-id> events --name "Resent with a new token" \
+  --min/--max   a range`,
+		Example: `  echopoint flow node expect add <flow-id> events --name "Resent with a new token" \
     --match '$.type equals organization.invitation.updated' \
     --match '$.data.invitation_id equals {{invite-resend.id}}'
 
-  echopoint flows node expect add <flow-id> events --name "No accept after withdrawal" --never \
+  echopoint flow node expect add <flow-id> events --name "No accept after withdrawal" --never \
     --match '$.type equals organization.invitation.accepted' \
     --match '$.data.invitation_id equals {{invite-withdraw.id}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -259,9 +256,10 @@ Examples:
 
 func newFlowNodeExpectRemoveCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove <flow-id> <node-id> <name>",
-		Short: "Remove an expected event from a webhook wait",
-		Args:  cobra.ExactArgs(3),
+		Use:     "remove <flow-id> <node-id> <name>",
+		Short:   "Remove an expected event from a webhook wait",
+		Example: `  echopoint flow node expect remove <flow-id> events "Resent with a new token"`,
+		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[2]
 			err := editWebhookWait(state, args[0], args[1], func(node *api.WebhookWaitFlowNode) error {

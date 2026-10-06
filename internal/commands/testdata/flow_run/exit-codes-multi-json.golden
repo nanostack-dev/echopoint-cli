@@ -1,0 +1,77 @@
+exit: 3
+--- stdout ---
+{
+  "status": "error",
+  "success": false,
+  "exit_code": 3,
+  "duration_ms": 0,
+  "results": [
+    {
+      "execution_id": "550e8400-e29b-41d4-a716-446655440002",
+      "flow_id": "550e8400-e29b-41d4-a716-446655440001",
+      "flow_url": "https://app.echopoint.dev/flows/550e8400-e29b-41d4-a716-446655440001",
+      "status": "completed",
+      "success": true,
+      "exit_code": 0,
+      "duration_ms": 0,
+      "error_message": null,
+      "nodes": [
+        {
+          "node_id": "wait",
+          "display_name": "",
+          "node_type": "delay",
+          "status": "completed",
+          "duration_ms": null,
+          "error_message": null
+        }
+      ]
+    },
+    {
+      "execution_id": "550e8400-e29b-41d4-a716-446655440002",
+      "flow_id": "550e8400-e29b-41d4-a716-446655440001",
+      "flow_url": "https://app.echopoint.dev/flows/550e8400-e29b-41d4-a716-446655440001",
+      "status": "failed",
+      "success": false,
+      "exit_code": 1,
+      "duration_ms": 0,
+      "error_message": null,
+      "nodes": null
+    },
+    {
+      "execution_id": "550e8400-e29b-41d4-a716-446655440002",
+      "flow_id": "550e8400-e29b-41d4-a716-446655440001",
+      "flow_url": "https://app.echopoint.dev/flows/550e8400-e29b-41d4-a716-446655440001",
+      "status": "cancelled",
+      "success": false,
+      "exit_code": 2,
+      "duration_ms": 0,
+      "error_message": null,
+      "nodes": null
+    },
+    {
+      "execution_id": "",
+      "flow_id": "550e8400-e29b-41d4-a716-4466554400a3",
+      "flow_url": "https://app.echopoint.dev/flows/550e8400-e29b-41d4-a716-4466554400a3",
+      "status": "error",
+      "success": false,
+      "exit_code": 3,
+      "duration_ms": 0,
+      "error_message": "launch flow: unexpected status 403: {\"errors\":[{\"code\":\"FORBIDDEN\",\"message\":\"insufficient permissions\"}]}\n",
+      "nodes": null
+    }
+  ]
+}
+--- stderr ---
+✓ Flow 550e8400-e29b-41d4-a716-446655440001: completed (Nms)
+✗ Flow 550e8400-e29b-41d4-a716-446655440001: failed
+✗ Flow 550e8400-e29b-41d4-a716-446655440001: cancelled
+✗ Flow 550e8400-e29b-41d4-a716-4466554400a3: error
+  Error: launch flow: unexpected status 403: {"errors":[{"code":"FORBIDDEN","message":"insufficient permissions"}]}
+
+exit code 3
+--- launches ---
+POST /flows/550e8400-e29b-41d4-a716-446655440001/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+POST /flows/550e8400-e29b-41d4-a716-4466554400a3/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+POST /flows/550e8400-e29b-41d4-a716-4466554400a4/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+POST /flows/550e8400-e29b-41d4-a716-4466554400a5/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+--- step summary ---

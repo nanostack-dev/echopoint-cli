@@ -14,7 +14,7 @@ import (
 
 const flowTagPageSize = 100
 
-func newFlowsTagCmd(state *AppState) *cobra.Command {
+func newFlowTagCmd(state *AppState) *cobra.Command {
 	var (
 		addTags    []string
 		removeTags []string
@@ -28,23 +28,21 @@ func newFlowsTagCmd(state *AppState) *cobra.Command {
 		Short: "Add or remove tags on flows",
 		Long: `Add or remove tags on flows.
 
-Select flows either by passing flow IDs, or by a search filter (the same search
+Select flows either by passing flows, or by a search filter (the same search
 that backs the flow list). A search filter is required for search-based
 selection — tagging every flow in the organization is intentionally not
 supported. Tags are merged with each flow's existing tags (add) or removed from
 them; no other flow fields are changed. Tags are normalized (lowercased) and
-de-duplicated server-side.
-
-Examples:
-  # tag specific flows
-  echopoint flows tag <flow-id> <flow-id> --add anchor
+de-duplicated server-side.`,
+		Example: `  # tag specific flows
+  echopoint flow tag <flow-id> <flow-id> --add anchor
 
   # tag every flow matched by a search filter
-  echopoint flows tag --query anchor --add anchor
-  echopoint flows tag --match-tag staging --match-mode any --add anchor
+  echopoint flow tag --query anchor --add anchor
+  echopoint flow tag --match-tag staging --match-mode any --add anchor
 
   # remove a tag
-  echopoint flows tag <flow-id> --remove deprecated`,
+  echopoint flow tag <flow-id> --remove deprecated`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -54,11 +52,11 @@ Examples:
 			}
 			hasSearchFilter := query != "" || len(matchTags) > 0
 			if len(args) > 0 && hasSearchFilter {
-				return fmt.Errorf("flow IDs cannot be combined with --query/--match-tag")
+				return fmt.Errorf("flows cannot be combined with --query/--match-tag")
 			}
 			if len(args) == 0 && !hasSearchFilter {
 				return fmt.Errorf(
-					"select flows to tag: pass flow IDs or a search filter (--query/--match-tag); " +
+					"select flows to tag: pass flows or a search filter (--query/--match-tag); " +
 						"tagging every flow in the organization is not supported",
 				)
 			}
@@ -80,9 +78,9 @@ Examples:
 
 			var updated, unchanged, failed int
 			for _, raw := range flowIDs {
-				id, parseErr := uuid.Parse(raw)
-				if parseErr != nil {
-					fmt.Fprintf(os.Stderr, "skip %q: invalid flow id\n", raw)
+				id, resolveErr := resolveFlowID(ctx, state, raw)
+				if resolveErr != nil {
+					fmt.Fprintf(os.Stderr, "skip: %v\n", resolveErr)
 					failed++
 					continue
 				}
@@ -114,6 +112,8 @@ Examples:
 	cmd.Flags().StringVar(&query, "query", "", "Select flows by full-text search instead of IDs")
 	cmd.Flags().StringArrayVar(&matchTags, "match-tag", nil, "Select flows that have this tag (repeatable)")
 	cmd.Flags().StringVar(&matchMode, "match-mode", "", `Tag match mode for --match-tag: "any" (default) or "all"`)
+	cmd.ValidArgsFunction = completeFlowArgs(state, -1)
+	_ = cmd.RegisterFlagCompletionFunc("match-mode", staticCompletion(string(api.Any), string(api.All)))
 	return cmd
 }
 

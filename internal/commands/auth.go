@@ -47,6 +47,9 @@ By default this opens your browser and stores a session (Bearer) token.
 Pass --api-key to store an organization API key instead. A session and an API
 key can both be stored; the session is preferred when both are present. Use
 --default with --api-key to prefer the API key instead.`,
+		Example: `  echopoint auth login
+  echopoint auth login --api-key <key>
+  echopoint auth login --api-key <key> --org <organization-id> --default`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if apiKey != "" {
 				return storeAPIKeyCredential(state, apiKey, organizationID, setDefault)
@@ -59,8 +62,8 @@ key can both be stored; the session is preferred when both are present. Use
 	cmd.Flags().BoolVar(&local, "local", false, "Use localhost:3001 for authentication")
 	cmd.Flags().StringVar(&apiKey, "api-key", "",
 		"Store an organization API key instead of signing in via browser")
-	cmd.Flags().StringVar(&organizationID, "organization-id", "",
-		"Organization id to store with the API key (optional; resolved from the key when omitted)")
+	addOrganizationFlag(cmd.Flags(), &organizationID)
+	cmd.Flags().Lookup("org").Usage = "Organization id to store with the API key (optional; resolved from the key when omitted)"
 	cmd.Flags().BoolVar(&setDefault, "default", false,
 		"Prefer this API key over a stored session when both are present")
 
@@ -173,8 +176,9 @@ func loadOrEmptyCredentials(profile string) auth.Credentials {
 
 func newAuthHelpCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "help",
-		Short: "Show authentication instructions",
+		Use:     "help",
+		Short:   "Show authentication instructions",
+		Example: `  echopoint auth help`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Fprint(os.Stdout, `
 ┌─────────────────────────────────────────────────────────────────┐
@@ -211,6 +215,8 @@ func newAuthStatusCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show authentication status",
+		Example: `  echopoint auth status
+  echopoint --profile staging auth status`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			creds, path, err := auth.LoadCredentials(state.Profile)
 			if err != nil {
@@ -327,6 +333,8 @@ func newAuthLogoutCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Remove stored credentials",
+		Example: `  echopoint auth logout
+  echopoint --profile staging auth logout`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := auth.DeleteCredentials(state.Profile)
 			if err != nil {

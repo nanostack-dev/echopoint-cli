@@ -88,7 +88,7 @@ func TestMergeTags(t *testing.T) {
 	}
 }
 
-func TestFlowsTag_AddTagUpdatesFlow(t *testing.T) {
+func TestFlowTag_AddTagUpdatesFlow(t *testing.T) {
 	id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440099")
 
 	var (
@@ -118,7 +118,7 @@ func TestFlowsTag_AddTagUpdatesFlow(t *testing.T) {
 	defer srv.Close()
 
 	state := makeState(t, "", "test-token", srv.URL)
-	cmd := newFlowsTagCmd(state)
+	cmd := newFlowTagCmd(state)
 	cmd.SetArgs([]string{id.String(), "--add", "anchor"})
 	var out bytes.Buffer
 	cmd.SetOut(&out)
@@ -141,14 +141,14 @@ func TestFlowsTag_AddTagUpdatesFlow(t *testing.T) {
 	}
 }
 
-func TestFlowsTag_RefusesTagAll(t *testing.T) {
+func TestFlowTag_RefusesTagAll(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer srv.Close()
 
 	state := makeState(t, "", "test-token", srv.URL)
-	cmd := newFlowsTagCmd(state)
+	cmd := newFlowTagCmd(state)
 	// No flow IDs and no search filter -> must refuse (never tag all flows).
 	cmd.SetArgs([]string{"--add", "anchor"})
 	var out bytes.Buffer
@@ -160,7 +160,7 @@ func TestFlowsTag_RefusesTagAll(t *testing.T) {
 	}
 }
 
-func TestFlowsTag_SearchSelectsAndTags(t *testing.T) {
+func TestFlowTag_SearchSelectsAndTags(t *testing.T) {
 	id := uuid.MustParse("550e8400-e29b-41d4-a716-4466554400aa")
 	var (
 		mu       sync.Mutex
@@ -198,7 +198,7 @@ func TestFlowsTag_SearchSelectsAndTags(t *testing.T) {
 	defer srv.Close()
 
 	state := makeState(t, "", "test-token", srv.URL)
-	cmd := newFlowsTagCmd(state)
+	cmd := newFlowTagCmd(state)
 	cmd.SetArgs([]string{"--query", "anchor", "--add", "anchor"})
 	var out bytes.Buffer
 	cmd.SetOut(&out)
@@ -218,14 +218,14 @@ func TestFlowsTag_SearchSelectsAndTags(t *testing.T) {
 	}
 }
 
-func TestFlowsTag_RequiresAddOrRemove(t *testing.T) {
+func TestFlowTag_RequiresAddOrRemove(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer srv.Close()
 
 	state := makeState(t, "", "test-token", srv.URL)
-	cmd := newFlowsTagCmd(state)
+	cmd := newFlowTagCmd(state)
 	cmd.SetArgs([]string{uuid.New().String()})
 	var out bytes.Buffer
 	cmd.SetOut(&out)

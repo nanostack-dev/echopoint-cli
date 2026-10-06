@@ -231,6 +231,14 @@ func SaveStore(store Store) (string, error) {
 	if err := EnsureConfigDir(); err != nil {
 		return "", err
 	}
+	return SaveStoreTo(path, store)
+}
+
+// SaveStoreTo writes the store to the given file, creating its directory.
+func SaveStoreTo(path string, store Store) (string, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return "", err
+	}
 
 	store.LegacyAPI = nil
 	data, err := yaml.Marshal(store)

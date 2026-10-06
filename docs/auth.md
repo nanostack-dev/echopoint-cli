@@ -29,7 +29,7 @@ echopoint auth login --token "<SESSION_JWT>"
 ### Environment Variable
 
 ```bash
-ECHOPOINT_TOKEN="<SESSION_JWT>" echopoint flows list
+ECHOPOINT_TOKEN="<SESSION_JWT>" echopoint flow list
 ```
 
 ## Development Authentication
@@ -41,7 +41,7 @@ ECHOPOINT_API_URL="https://apidev.echopoint.dev" \
 echopoint auth login
 
 ECHOPOINT_API_URL="https://apidev.echopoint.dev" \
-echopoint flows list
+echopoint flow list
 ```
 
 For local development environments, the repository includes `.test-credentials.json` (gitignored) with test login details.

@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Exit codes for `echopoint flows run`.
+// Exit codes for `echopoint flow run`.
 const (
 	exitSuccess    = 0
 	exitFlowFailed = 1
@@ -35,7 +35,6 @@ const (
 	statusFailed           = "failed"
 	statusCancelled        = "cancelled"
 	statusError            = "error"
-	outputFormatJSON       = "json"
 	githubActionsTrueValue = "true"
 )
 
@@ -83,7 +82,7 @@ type FlowRunNode struct {
 	Assertions  []AssertionSummary `json:"assertions,omitempty"`
 }
 
-// AssertionSummary mirrors a runner AssertionResult so `flows run` can show what
+// AssertionSummary mirrors a runner AssertionResult so `flow run` can show what
 // each assertion compared (expected vs actual), not just whether the node failed.
 type AssertionSummary struct {
 	Index     int    `json:"index"`
@@ -109,14 +108,13 @@ type MultiFlowRunOutput struct {
 	Results    []FlowRunResult `json:"results"`
 }
 
-func newFlowsRunCmd(state *AppState) *cobra.Command {
+func newFlowRunCmd(state *AppState) *cobra.Command {
 	var (
 		flagEnvironment    string
 		flagVersionID      string
 		flagIdempotencyKey string
 		flagPollTimeout    time.Duration
 		flagParallel       int
-		flagOutput         string
 		flagVerbose        bool
 		flagTags           []string
 		flagMatchMode      string
@@ -124,15 +122,22 @@ func newFlowsRunCmd(state *AppState) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "run [<flow-id>...] [--tag <tag>...]",
-		Short: "Run one or more flows using an ephemeral runner",
-		Long: `Run one or more flows locally using the ephemeral runner mode.
+		Short: "Run flows from this CLI as an Ephemeral runner, and wait for the result",
+		Long: `Run one or more flows with this CLI as the Ephemeral runner, and wait for them.
 
 The CLI launches each flow on the server with runner_type=ephemeral, claims its
-one-shot Job, and runs it with live progress and completion reporting.
+one-shot Job, and runs it with live progress and completion reporting. The
+command ends with the result, as an exit code (below) and with -o json.
+
+To ask EchoPoint to run a flow on Cloud or a Self-hosted runner and return
+without waiting, use 'echopoint flow launch'.
 
 Authentication: a logged-in session (echopoint auth login) or an organization
 API key (--api-key / ECHOPOINT_API_KEY). An organization ID is always required
-(--organization-id / ECHOPOINT_ORGANIZATION_ID, or the profile default).
+(--org / ECHOPOINT_ORGANIZATION_ID, or the profile default).
+
+Output: -o table (the default) prints a summary on stderr; -o json prints one
+JSON object on stdout, and -o yaml the same object as YAML.
 
 Exit codes:
   0  all flows succeeded
@@ -140,43 +145,46 @@ Exit codes:
   2  cancelled
   3  API / runner / contract error
   4  timeout`,
+		Example: `  echopoint flow run <flow-id>
+  echopoint flow run <flow-id> <flow-id> --parallel 2 -e dev
+  echopoint flow run --tag smoke --match-mode all -o json`,
 		Args:          cobra.ArbitraryArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
+			format := state.OutputFormat
+
 			// Launch and one-time claim use flows:execute. Reporting uses the
 			// one-Job token returned by the claim.
 			if state.APIKey == "" && state.Token == "" {
 				return runError(
-					cmd,
-					state,
-					flagOutput,
+					format,
 					nil,
 					exitError,
 					"ephemeral execution requires authentication: log in (echopoint auth login) or set an API key (--api-key or ECHOPOINT_API_KEY)",
 				)
 			}
 			if state.OrganizationID == "" {
-				return runError(cmd, state, flagOutput, nil, exitError,
+				return runError(format, nil, exitError,
 					"ephemeral execution requires an organization ID (--organization-id or ECHOPOINT_ORGANIZATION_ID)")
 			}
 
 			if flagParallel < 1 {
-				return runError(cmd, state, flagOutput, nil, exitError, "--parallel must be >= 1")
+				return runError(format, nil, exitError, "--parallel must be >= 1")
 			}
 
 			// --tag selects flows by tag and is mutually exclusive with positional flow IDs.
 			// Require exactly one selection mode.
 			if len(flagTags) > 0 && len(args) > 0 {
-				return runError(cmd, state, flagOutput, nil, exitError,
+				return runError(format, nil, exitError,
 					"--tag cannot be combined with positional flow IDs; use one or the other")
 			}
 			if len(flagTags) == 0 && len(args) == 0 {
-				return runError(cmd, state, flagOutput, nil, exitError,
+				return runError(format, nil, exitError,
 					"provide at least one flow ID, or use --tag to select flows by tag")
 			}
 			if flagMatchMode != string(api.Any) && flagMatchMode != string(api.All) {
-				return runError(cmd, state, flagOutput, nil, exitError,
+				return runError(format, nil, exitError,
 					fmt.Sprintf("invalid --match-mode %q; must be %q or %q", flagMatchMode, api.Any, api.All))
 			}
 
@@ -191,7 +199,7 @@ Exit codes:
 			if len(flagTags) > 0 {
 				resolved, resolveErr := resolveFlowIDsByTags(ctx, state, flagTags, flagMatchMode)
 				if resolveErr != nil {
-					return runError(cmd, state, flagOutput, nil, exitError, resolveErr.Error())
+					return runError(format, nil, exitError, resolveErr.Error())
 				}
 				flowIDs = resolved
 			}
@@ -200,16 +208,16 @@ Exit codes:
 
 			results, exitCode := executeFlows(
 				ctx, state, flowIDs, baseKey,
-				flagEnvironment, flagVersionID, flagParallel, flagOutput,
+				flagEnvironment, flagVersionID, flagParallel, string(format),
 			)
 
-			return emitOutput(cmd, state, flagOutput, flagVerbose, results, exitCode, len(flowIDs))
+			return emitOutput(format, flagVerbose, results, exitCode, len(flowIDs))
 		},
 	}
 
 	cmd.Flags().BoolVar(&flagVerbose, "verbose", false,
 		"Print each node's status (name, status, duration) as the flow runs")
-	cmd.Flags().StringVar(&flagEnvironment, "environment", "", "Named environment key to overlay on flow inputs")
+	cmd.Flags().StringVarP(&flagEnvironment, "environment", "e", "", "Environment to overlay on flow inputs (e.g. dev)")
 	cmd.Flags().StringVar(&flagVersionID, "version-id", "",
 		"Flow version ID to execute (default: current flow definition)")
 	cmd.Flags().StringVar(&flagIdempotencyKey, "idempotency-key", "",
@@ -217,11 +225,13 @@ Exit codes:
 	cmd.Flags().DurationVar(&flagPollTimeout, "poll-timeout", 30*time.Minute,
 		"Maximum time to wait for each flow execution")
 	cmd.Flags().IntVar(&flagParallel, "parallel", 1, "Maximum number of flows to run concurrently (>= 1)")
-	cmd.Flags().StringVarP(&flagOutput, "output", "o", "", "Output format: json (or empty for human)")
 	cmd.Flags().StringArrayVar(&flagTags, "tag", nil,
 		"Select flows by tag instead of by ID (repeatable). Mutually exclusive with positional flow IDs.")
 	cmd.Flags().StringVar(&flagMatchMode, "match-mode", string(api.Any),
 		`Tag match mode when using --tag: "any" (default, OR) or "all" (AND)`)
+	cmd.ValidArgsFunction = completeFlowArgs(state, -1)
+	registerEnvironmentFlagCompletion(state, cmd)
+	_ = cmd.RegisterFlagCompletionFunc("match-mode", staticCompletion(string(api.Any), string(api.All)))
 
 	return cmd
 }
@@ -416,9 +426,9 @@ func runSingleFlow(
 	versionID string,
 	outputFormat string,
 ) FlowRunResult {
-	flowUUID, err := uuid.Parse(flowID)
+	flowUUID, err := resolveFlowID(ctx, state, flowID)
 	if err != nil {
-		return errorResult(flowID, "", exitError, fmt.Sprintf("invalid flow id %q: %v", flowID, err))
+		return errorResult(flowID, "", exitError, invalidFlowIDMessage(flowID, err))
 	}
 
 	executionID, terminalResult, launchErr := launchEphemeral(
@@ -456,6 +466,15 @@ func runSingleFlow(
 		return errorResult(flowID, executionID.String(), exitCodeForError(runErr), runErr.Error())
 	}
 	return buildRunResultFromJob(flowID, executionID.String(), runnerResult)
+}
+
+// invalidFlowIDMessage is what a run reports for an argument that is not a flow
+// id: the words it has always used, with what the parser said.
+func invalidFlowIDMessage(arg string, err error) string {
+	if cause := errors.Unwrap(err); cause != nil {
+		return fmt.Sprintf("invalid flow id %q: %v", arg, cause)
+	}
+	return err.Error()
 }
 
 // exitCodeForError classifies an operational error into a stable CI exit code:
@@ -749,7 +768,7 @@ func errorResult(flowID, executionID string, exitCode int, msg string) FlowRunRe
 }
 
 func emitOutput(
-	_ *cobra.Command, _ *AppState, flagOutput string, verbose bool,
+	format output.Format, verbose bool,
 	results []FlowRunResult, exitCode int, numFlows int,
 ) error {
 	writeSummary(results, exitCode, verbose)
@@ -758,13 +777,24 @@ func emitOutput(
 		_ = writeGitHubStepSummary(summaryPath, results)
 	}
 
-	if strings.ToLower(strings.TrimSpace(flagOutput)) == outputFormatJSON {
-		if err := output.PrintJSON(os.Stdout, buildJSONOutput(results, exitCode, numFlows)); err != nil {
-			return err
-		}
+	if err := printRunResult(format, buildJSONOutput(results, exitCode, numFlows)); err != nil {
+		return err
 	}
 
 	return &exitCodeError{code: exitCode}
+}
+
+// printRunResult writes the result object to stdout for the structured formats;
+// the table format has only the summary on stderr.
+func printRunResult(format output.Format, result any) error {
+	switch format {
+	case output.FormatJSON:
+		return output.PrintJSON(os.Stdout, result)
+	case output.FormatYAML:
+		return output.PrintYAML(os.Stdout, result)
+	case output.FormatTable:
+	}
+	return nil
 }
 
 func buildJSONOutput(results []FlowRunResult, exitCode int, numFlows int) any {
@@ -789,16 +819,10 @@ func buildJSONOutput(results []FlowRunResult, exitCode int, numFlows int) any {
 	}
 }
 
-func runError(
-	_ *cobra.Command, _ *AppState, flagOutput string,
-	results []FlowRunResult, exitCode int, msg string,
-) error {
+func runError(format output.Format, results []FlowRunResult, exitCode int, msg string) error {
 	fmt.Fprintf(os.Stderr, "error: %s\n", msg)
 
-	if strings.ToLower(strings.TrimSpace(flagOutput)) == outputFormatJSON {
-		out := buildErrorJSON(results, exitCode, msg)
-		_ = output.PrintJSON(os.Stdout, out)
-	}
+	_ = printRunResult(format, buildErrorJSON(results, exitCode, msg))
 
 	return &exitCodeError{code: exitCode}
 }
@@ -940,7 +964,7 @@ func writeGitHubStepSummary(path string, results []FlowRunResult) error {
 }
 
 func progressf(outputFormat, format string, args ...any) {
-	if strings.ToLower(strings.TrimSpace(outputFormat)) != outputFormatJSON {
+	if output.ParseFormat(outputFormat) == output.FormatTable {
 		fmt.Fprintf(os.Stderr, format, args...)
 	}
 }

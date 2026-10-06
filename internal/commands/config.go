@@ -17,7 +17,7 @@ func newConfigCmd(state *AppState) *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		newConfigShowCmd(state),
+		newConfigViewCmd(state),
 		newConfigSetCmd(state),
 		newConfigResetCmd(state),
 	)
@@ -25,16 +25,45 @@ func newConfigCmd(state *AppState) *cobra.Command {
 	return cmd
 }
 
-func newConfigShowCmd(state *AppState) *cobra.Command {
+// configView is the configuration as -o json and -o yaml print it.
+type configView struct {
+	Profile     string             `json:"profile"`
+	API         configAPIView      `json:"api"`
+	FrontendURL string             `json:"frontend_url"`
+	Defaults    configDefaultsView `json:"defaults"`
+}
+
+type configAPIView struct {
+	BaseURL string `json:"base_url"`
+	Timeout string `json:"timeout"`
+}
+
+type configDefaultsView struct {
+	OutputFormat string `json:"output_format"`
+}
+
+func newConfigView(cfg config.Config) configView {
+	return configView{
+		Profile:     cfg.Profile,
+		API:         configAPIView{BaseURL: cfg.API.BaseURL, Timeout: cfg.API.Timeout.String()},
+		FrontendURL: cfg.FrontendURL,
+		Defaults:    configDefaultsView{OutputFormat: cfg.Defaults.OutputFormat},
+	}
+}
+
+func newConfigViewCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "show",
-		Short: "Show current configuration",
+		Use:     viewVerb,
+		Aliases: []string{showVerb},
+		Short:   "Show the current configuration",
+		Example: `  echopoint config view
+  echopoint config view -o yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch state.OutputFormat {
 			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, state.Config)
+				return output.PrintJSON(os.Stdout, newConfigView(state.Config))
 			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, state.Config)
+				return output.PrintYAML(os.Stdout, newConfigView(state.Config))
 			default:
 				fmt.Fprintf(os.Stdout, "Config path: %s\n", state.ConfigPath)
 				fmt.Fprintf(os.Stdout, "Profile: %s\n", state.Config.Profile)
@@ -58,12 +87,13 @@ Supported keys:
 
 Per-environment settings (API base URL, timeout) live on profiles — see
 'echopoint profile --help'.`,
-		Args: cobra.ExactArgs(2),
+		Example: `  echopoint config set defaults.output_format json`,
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 			value := args[1]
 
-			store, _, err := config.LoadStore()
+			store, err := state.loadStore()
 			if err != nil {
 				return err
 			}
@@ -78,7 +108,7 @@ Per-environment settings (API base URL, timeout) live on profiles — see
 				)
 			}
 
-			path, err := config.SaveStore(store)
+			path, err := state.saveStore(store)
 			if err != nil {
 				return err
 			}
@@ -92,11 +122,16 @@ Per-environment settings (API base URL, timeout) live on profiles — see
 }
 
 func newConfigResetCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "reset",
 		Short: "Reset configuration to defaults (removes all profiles)",
+		Example: `  echopoint config reset
+  echopoint config reset --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, err := config.SaveStore(config.DefaultStore())
+			if err := confirmDestructive(cmd, state, "reset", "the configuration and every profile"); err != nil {
+				return err
+			}
+			path, err := state.saveStore(config.DefaultStore())
 			if err != nil {
 				return err
 			}
@@ -104,4 +139,5 @@ func newConfigResetCmd(state *AppState) *cobra.Command {
 			return nil
 		},
 	}
+	return quietOnError(cmd)
 }

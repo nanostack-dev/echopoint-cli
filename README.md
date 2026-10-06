@@ -1,6 +1,6 @@
 # Echopoint CLI
 
-Terminal-first tooling for the Echopoint webhook testing platform. Manage webhooks, flows, collections, and analytics from a fast CLI.
+Terminal-first tooling for EchoPoint. Manage flows and their executions, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
 
 ## Installation
 
@@ -69,13 +69,16 @@ latest release.
 
 - Browser-based OAuth authentication via Clerk
 - Manage flows with granular node, edge, and assertion control
+- Run a flow from the CLI as an Ephemeral runner (`flow run`), or ask EchoPoint to run it on Cloud or a Self-hosted runner (`flow launch`)
 - Organize flows into folders, and bulk-move them by id, search, or tag
+- Keep [OpenAPI specs](docs/specs.md) in EchoPoint: create, push, pull, check, lint, diff, and edit them by slug
 - Configure and publish [public status pages](docs/status-pages.md), including anonymous verification
 - Manage collections with OpenAPI import support
-- Environment variable management for flows
+- Variables for an organization, its environments, and each flow
 - Flow reuse via module nodes (run a flow inside another flow)
 - JSON/YAML/Table output formats
-- Configuration profiles for switching between environments
+- Tab completion of flows, folders, executions, collections, environments and profiles
+- Configuration profiles for switching between API targets
 - Built-in self-update from GitHub releases
 - MCP server (`echopoint mcp`) exposing echopoint operations as tools for AI clients
 
@@ -86,16 +89,19 @@ latest release.
 echopoint auth login
 
 # List your flows
-echopoint flows list
+echopoint flow list
 
-# Create a flow interactively
-echopoint flows create-interactive --name "My API Test"
+# Create an empty flow
+echopoint flow create --name "My API Test"
 
 # Add nodes to a flow
-echopoint flows node add <flow-id> --type request --name "Login" --method POST --url "https://api.example.com/login"
+echopoint flow node add <flow-id> --type request --name "Login" --method POST --url "https://api.example.com/login"
 
-# Set environment variables
-echopoint flows env set <flow-id> --var API_KEY=secret --var BASE_URL=https://api.example.com
+# Set variables
+echopoint flow env set <flow-id> --var API_KEY=secret --var BASE_URL=https://api.example.com
+
+# Run it from here and wait for the result
+echopoint flow run <flow-id>
 ```
 
 ## MCP Server
@@ -129,7 +135,7 @@ echopoint auth login --token "<SESSION_JWT>"
 ### Environment Variable
 
 ```bash
-ECHOPOINT_TOKEN="<SESSION_JWT>" echopoint flows list
+ECHOPOINT_TOKEN="<SESSION_JWT>" echopoint flow list
 ```
 
 ### Organization API Key
@@ -183,12 +189,14 @@ echopoint profile use default
 echopoint profile delete staging
 ```
 
-Select a profile for a single command without switching the active one:
+A **profile** is the CLI's API target; it is not an environment (`dev`, `prd`), which is a
+named overlay of variables on an organization. Select a profile for a single command
+without switching the active one:
 
 ```bash
-echopoint --profile staging flows list
+echopoint --profile staging flow list
 # or
-ECHOPOINT_PROFILE=staging echopoint flows list
+ECHOPOINT_PROFILE=staging echopoint flow list
 ```
 
 The `default` profile always targets `https://api.echopoint.dev` and cannot be
@@ -196,35 +204,117 @@ modified or removed.
 
 ## Commands
 
+Nouns are singular and the plural stays as an alias: `flow` (`flows`), `collection`
+(`collections`), `status-page` (`status-pages`). `echopoint --help` groups the commands:
+
+| Group | Commands |
+|-------|----------|
+| Resources | `flow`, `spec`, `collection`, `status-page`, `org` |
+| Account and setup | `auth`, `profile`, `config` |
+| Tools | `mcp`, `completion`, `update`, `version` |
+
+Every command has an `Example:` in its `--help`. An unknown subcommand fails with suggestions.
+
+### Conventions
+
+- **One read verb: `view`.** `flow view`, `collection view`, `status-page view`,
+  `flow execution view`, `flow env view`, `org env view`, `spec view` and `config view` show one thing; `get` and
+  `show` still work as aliases of `view`. `list` shows many.
+- **A file is always `-f/--file`.** `flow create`, `flow update`, `collection import`,
+  `org env import`, `flow env set`, `status-page save`, `status-page validate` and the
+  `spec` commands take it that way; a file typed as an argument fails with
+  `pass the file with -f`. `-f -` reads stdin where the command says so
+  (`status-page save|validate`).
+- **Specs are named by their slug; flows by their id.** A spec's `<slug>` is unique and
+  its title is free text. A flow is `<flow-id>`, the id `flow list` shows; anything else
+  fails before any request.
+- **Deleting a whole resource asks; editing part of one does not.** `flow delete`,
+  `collection delete`, `flow folder delete`, `flow env delete`, `org env delete`,
+  `org env environments delete`, `profile delete`, `config reset` and
+  `status-page unpublish` ask `Delete flow <id>? [y/N]` on stderr when stdin and
+  stdout are terminals; anything but `y` or `yes` cancels with exit code 2. Without a
+  terminal they refuse (`pass --yes to delete flow <id> without a prompt`) unless
+  `-y/--yes` is given. `env unset`, removing a node, edge, assertion or output, and the
+  `spec` edit `remove` commands never ask.
+- **Output.** `-o table|json|yaml` is global. YAML uses the key names of the JSON.
+- **Precedence.** A flag beats an environment variable, which beats the config:
+  `--api-url` over `ECHOPOINT_API_URL`, `-o` over `ECHOPOINT_OUTPUT_FORMAT`, `--profile`
+  over `ECHOPOINT_PROFILE`, `--org` over `ECHOPOINT_ORGANIZATION_ID`.
+
+### Global flags
+
+| Flag | |
+|------|-|
+| `-o, --output` | `table` (default), `json`, `yaml` |
+| `--org` | Organization ID (`ECHOPOINT_ORGANIZATION_ID`); `--organization-id` is a hidden alias |
+| `--profile` | API target, for one command |
+| `--api-url`, `--api-key`, `--token`, `--config`, `--debug` | |
+| `-y, --yes` | Skip the confirmation of a command that deletes a whole resource |
+
 ### Flows
 
 ```bash
-# List flows
-echopoint flows list
-echopoint flows list -o json
+# List flows: NAME, ID, UPDATED
+echopoint flow list
+echopoint flow list -o json
+echopoint flow view <flow-id>
+echopoint flow view <flow-id> -o json
 
-# Get flow details
-echopoint flows get <flow-id>
-echopoint flows get <flow-id> -o json
+# Create: an empty flow, or one from a JSON file (exactly one of --name and -f)
+echopoint flow create --name "Checkout smoke"
+echopoint flow create -f flow.json
 
-# Create flow from JSON
-echopoint flows create --file flow.json
+# Update, from a file or by flags (exactly one of the two)
+echopoint flow update <flow-id> -f flow.json
+echopoint flow update <flow-id> --name "Checkout smoke test" --description "Runs after deploy"
 
-# Create flow interactively
-echopoint flows create-interactive --name "My Flow"
+# Delete
+echopoint flow delete <flow-id>
+echopoint flow delete <flow-id> --yes
+```
 
-# Update flow
-echopoint flows update <flow-id> --file flow.json
+### Running Flows
 
-# Delete flow
-echopoint flows delete <flow-id>
+`flow run` and `flow launch` are different commands. A flow runs on **Cloud**
+(EchoPoint runs it), on a **Self-hosted** runner (a long-lived runner you operate), or on
+an **Ephemeral** runner (a short-lived runner the caller operates).
+
+```bash
+# Run it here: this CLI is the Ephemeral runner. It waits, shows live progress, and exits
+# 0 (passed), 1 (failed), 2 (cancelled), 3 (error) or 4 (timeout).
+echopoint flow run <flow-id>
+echopoint flow run <flow-id> <flow-id> --parallel 2 -e dev -o json
+echopoint flow run --tag smoke
+
+# Ask EchoPoint to run it on Cloud or a Self-hosted runner: prints the execution id and returns.
+echopoint flow launch <flow-id>
+echopoint flow launch <flow-id> --runner self_hosted -e prd
+
+# Look at the executions
+echopoint flow execution list <flow-id>
+echopoint flow execution view <flow-id> <execution-id>
+```
+
+`-e/--environment` overlays a named environment on both. `echopoint flows run ... -o json` is
+what the [GitHub Action](docs/github-action.md) runs; it is the same command as `flow run`.
+
+### Flow Folders and Tags
+
+```bash
+echopoint flow folder list
+echopoint flow folder create "Anchor/Identity"
+echopoint flow folder rename "Anchor/Identity" "Identity and access"
+echopoint flow folder move "Identity" --to "Anchor"
+echopoint flow folder delete "Anchor/Identity"
+echopoint flow move <flow-id> <flow-id> --to "Anchor/Identity"
+echopoint flow tag <flow-id> --add smoke
 ```
 
 ### Flow Nodes
 
 ```bash
 # Add request node
-echopoint flows node add <flow-id> \
+echopoint flow node add <flow-id> \
   --type request \
   --name "API Call" \
   --method POST \
@@ -233,13 +323,13 @@ echopoint flows node add <flow-id> \
   --body '{"key": "value"}'
 
 # Add delay node
-echopoint flows node add <flow-id> \
+echopoint flow node add <flow-id> \
   --type delay \
   --name "Wait" \
   --duration 5000
 
 # Add module node (run another flow inside this one — flow reuse)
-echopoint flows node add <flow-id> \
+echopoint flow node add <flow-id> \
   --type module \
   --name "Login" \
   --flow-id <child-flow-id> \
@@ -248,10 +338,10 @@ echopoint flows node add <flow-id> \
   --output token=authToken
 
 # Remove node
-echopoint flows node remove <flow-id> <node-id>
+echopoint flow node remove <flow-id> <node-id>
 
 # Update node
-echopoint flows node update <flow-id> <node-id> --name "New Name"
+echopoint flow node update <flow-id> <node-id> --name "New Name"
 ```
 
 ### Module Nodes (Flow Reuse)
@@ -266,7 +356,7 @@ can be composed from smaller reusable flows.
   `parentName` for downstream nodes in the parent flow. Repeatable.
 
 ```bash
-echopoint flows node add <parent-flow-id> \
+echopoint flow node add <parent-flow> \
   --type module \
   --name "Authenticate" \
   --flow-id <auth-flow-id> \
@@ -280,78 +370,134 @@ echopoint flows node add <parent-flow-id> \
 
 ```bash
 # Add JSONPath output
-echopoint flows node output add <flow-id> <node-id> \
+echopoint flow node output add <flow-id> <node-id> \
   --name "token" \
   --extractor json_path \
   --path "$.accessToken"
 
 # Add body output
-echopoint flows node output add <flow-id> <node-id> \
+echopoint flow node output add <flow-id> <node-id> \
   --name "response" \
   --extractor body
 
 # Remove output
-echopoint flows node output remove <flow-id> <node-id> <output-name>
+echopoint flow node output remove <flow-id> <node-id> <output-name>
 ```
 
 ### Node Assertions
 
 ```bash
 # Add status code assertion
-echopoint flows node assertion add <flow-id> <node-id> \
+echopoint flow node assertion add <flow-id> <node-id> \
   --extractor status_code \
   --operator equals \
   --value "200"
 
 # Add JSONPath assertion
-echopoint flows node assertion add <flow-id> <node-id> \
+echopoint flow node assertion add <flow-id> <node-id> \
   --extractor json_path \
   --path "$.status" \
   --operator equals \
   --value "success"
 
 # Remove assertion
-echopoint flows node assertion remove <flow-id> <node-id> <index>
+echopoint flow node assertion remove <flow-id> <node-id> <index>
 ```
 
 ### Flow Edges
 
 ```bash
 # Connect nodes
-echopoint flows edge add <flow-id> \
+echopoint flow edge add <flow-id> \
   --from <source-node-id> \
   --to <target-node-id> \
   --type success
 
 # Remove edge
-echopoint flows edge remove <flow-id> <edge-id>
+echopoint flow edge remove <flow-id> <edge-id>
 ```
 
-### Flow Environment Variables
+### Flow Variables
 
 ```bash
-# Get environment variables
-echopoint flows env get <flow-id>
+# Get variables
+echopoint flow env view <flow-id>
 
-# Set environment variables
-echopoint flows env set <flow-id> --var KEY=value --var KEY2=value2
+# Set variables, inline or from a JSON or dotenv file
+echopoint flow env set <flow-id> --var KEY=value --var KEY2=value2
+echopoint flow env set <flow-id> -f vars.env
 
-# Delete environment
-echopoint flows env delete <flow-id>
+# Delete all variables of a flow (asks first)
+echopoint flow env delete <flow-id>
 ```
+
+### Organization Variables and Environments
+
+An **environment** is a named overlay of variables on an organization (`dev`, `prd`).
+
+```bash
+echopoint org env view -e prd
+echopoint org env set -e prd --var BASE_URL=https://api.example.com
+echopoint org env import -f vars.env -e prd --secret
+echopoint org env environments list
+echopoint org env environments create prd
+echopoint org env environments delete prd
+echopoint org env delete
+```
+
+### OpenAPI Specs
+
+```bash
+echopoint spec list
+echopoint spec view pets-api
+echopoint spec push pets-api -f openapi.yaml
+echopoint spec pull pets-api -f openapi.yaml
+```
+
+See [docs/specs.md](docs/specs.md) for the rest.
 
 ### Collections
 
 ```bash
-echopoint collections list
-echopoint collections get <id>
-echopoint collections create --name "My collection"
-echopoint collections update <id> --name "New name"
-echopoint collections delete <id>
-echopoint collections import --file ./openapi.json --name "My API"
+echopoint collection list
+echopoint collection view <id>
+echopoint collection create --name "My collection"
+echopoint collection update <id> --name "New name"
+echopoint collection delete <id>
+echopoint collection import -f ./openapi.json --name "My API"
 ```
 
+### Status Pages
+
+```bash
+echopoint status-page view
+echopoint status-page validate -f page.json
+echopoint status-page save -f page.json
+echopoint status-page publish --expected-draft-version 1 --expected-intent-version 0
+echopoint status-page unpublish --expected-intent-version 1
+```
+
+See [docs/status-pages.md](docs/status-pages.md).
+
 ### Configuration
+
+```bash
+echopoint config view
+echopoint config set defaults.output_format json
+echopoint config reset            # asks first; removes every profile
+```
+
+### Completion
+
+Flows (as `<id>`, with their name and folder), folders, executions of the flow already typed, collections, environments (`-e`
+and `org env environments delete`) and profiles (`profile use|delete`, `--profile`)
+complete with Tab, next to spec slugs and versions:
+
+```bash
+echopoint completion zsh > "${fpath[1]}/_echopoint"   # or bash, fish, powershell
+```
+
+## Configuration
 
 ```bash
 echopoint config show
@@ -375,16 +521,19 @@ defaults:
 
 | Variable | Description |
 |----------|-------------|
-| `ECHOPOINT_API_URL` | API base URL |
-| `ECHOPOINT_OUTPUT_FORMAT` | Default output format (table/json/yaml) |
+| `ECHOPOINT_API_URL` | API base URL (`--api-url` wins) |
+| `ECHOPOINT_OUTPUT_FORMAT` | Default output format (table/json/yaml) (`-o` wins) |
 | `ECHOPOINT_TOKEN` | Session token |
+| `ECHOPOINT_API_KEY` | Organization API key |
+| `ECHOPOINT_ORGANIZATION_ID` | Organization ID (same as `--org`) |
+| `ECHOPOINT_PROFILE` | Profile to use |
 | `ECHOPOINT_CONFIG` | Config file path |
 
 ### Using with Local Development
 
 ```bash
 # Point to local backend
-echopoint --api-url http://localhost:8080 flows list
+echopoint --api-url http://localhost:8080 flow list
 ```
 
 ## Development
@@ -417,8 +566,9 @@ golangci-lint run
 
 See the [docs/](./docs/) directory for detailed documentation:
 
-- [Flow Management](./docs/flows.md) - Comprehensive guide to managing flows
-- [OpenAPI specs](./docs/specs.md) - Validate, format, diff, lint, and edit OpenAPI documents
+- [Flow Management](./docs/flows.md) - Comprehensive guide to managing and running flows
+- [Running flows in CI](./docs/github-action.md) - `flow run` and the GitHub Action
+- [OpenAPI specs](./docs/specs.md) - Keep OpenAPI specs in EchoPoint: create, push, pull, check, lint, diff, and edit them by slug
 
 ## License
 

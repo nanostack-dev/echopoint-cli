@@ -37,10 +37,11 @@ self-hosted or alternate environment) and switch between them with
 
 func newProfileListCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   listVerb,
-		Short: "List configured profiles",
+		Use:     listVerb,
+		Short:   "List configured profiles",
+		Example: `  echopoint profile list`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, _, err := config.LoadStore()
+			store, err := state.loadStore()
 			if err != nil {
 				return err
 			}
@@ -80,8 +81,9 @@ func marker(current bool) string {
 
 func newProfileCurrentCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "current",
-		Short: "Show the active profile",
+		Use:     "current",
+		Short:   "Show the active profile",
+		Example: `  echopoint profile current`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stdout, "Profile: %s\n", state.Config.Profile)
 			fmt.Fprintf(os.Stdout, "API base URL: %s\n", state.Config.API.BaseURL)
@@ -91,14 +93,16 @@ func newProfileCurrentCmd(state *AppState) *cobra.Command {
 }
 
 func newProfileUseCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "use <name>",
 		Short: "Switch the active profile (use \"default\" to reset)",
-		Args:  cobra.ExactArgs(1),
+		Example: `  echopoint profile use staging
+  echopoint profile use default`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 
-			store, _, err := config.LoadStore()
+			store, err := state.loadStore()
 			if err != nil {
 				return err
 			}
@@ -116,7 +120,7 @@ func newProfileUseCmd(state *AppState) *cobra.Command {
 				store.CurrentProfile = name
 			}
 
-			path, err := config.SaveStore(store)
+			path, err := state.saveStore(store)
 			if err != nil {
 				return err
 			}
@@ -124,6 +128,8 @@ func newProfileUseCmd(state *AppState) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.ValidArgsFunction = completeProfiles(true, true)
+	return cmd
 }
 
 func newProfileAddCmd(state *AppState) *cobra.Command {
@@ -136,7 +142,9 @@ func newProfileAddCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add <name>",
 		Short: "Create or update a profile that overrides the API base URL",
-		Args:  cobra.ExactArgs(1),
+		Example: `  echopoint profile add staging --api-url https://staging.example.com
+  echopoint profile add staging --api-url https://staging.example.com --timeout 60s`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			if config.IsReservedProfileName(name) {
@@ -146,7 +154,7 @@ func newProfileAddCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("--api-url is required")
 			}
 
-			store, _, err := config.LoadStore()
+			store, err := state.loadStore()
 			if err != nil {
 				return err
 			}
@@ -165,7 +173,7 @@ func newProfileAddCmd(state *AppState) *cobra.Command {
 			}
 			store.Profiles[name] = profile
 
-			path, err := config.SaveStore(store)
+			path, err := state.saveStore(store)
 			if err != nil {
 				return err
 			}
@@ -179,27 +187,33 @@ func newProfileAddCmd(state *AppState) *cobra.Command {
 	cmd.Flags().StringVar(&frontendURL, "frontend-url", "",
 		"Browser-login frontend URL for this profile (defaults to the production frontend)")
 	cmd.Flags().DurationVar(&timeout, "timeout", 0, "Request timeout for this profile (e.g. 30s)")
+	cmd.ValidArgsFunction = cobra.NoFileCompletions
 
 	return cmd
 }
 
 func newProfileDeleteCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete a profile and its stored credentials",
-		Args:  cobra.ExactArgs(1),
+		Example: `  echopoint profile delete staging
+  echopoint profile delete staging --yes`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			if config.IsReservedProfileName(name) {
 				return fmt.Errorf("cannot delete the %q profile", config.DefaultProfile)
 			}
 
-			store, _, err := config.LoadStore()
+			store, err := state.loadStore()
 			if err != nil {
 				return err
 			}
 			if _, ok := store.Profiles[name]; !ok {
 				return fmt.Errorf("unknown profile %q", name)
+			}
+			if err := confirmDestructive(cmd, state, "delete", "profile "+name); err != nil {
+				return err
 			}
 
 			delete(store.Profiles, name)
@@ -207,7 +221,7 @@ func newProfileDeleteCmd(state *AppState) *cobra.Command {
 				store.CurrentProfile = ""
 			}
 
-			path, err := config.SaveStore(store)
+			path, err := state.saveStore(store)
 			if err != nil {
 				return err
 			}
@@ -221,4 +235,6 @@ func newProfileDeleteCmd(state *AppState) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.ValidArgsFunction = completeProfiles(false, true)
+	return quietOnError(cmd)
 }

@@ -30,22 +30,27 @@ type specRefusedError struct {
 
 func (e *specRefusedError) Error() string { return e.message }
 
+// specEditOutcome is what an edit made: the edited document of a dry run, or
+// the Live version it published.
+type specEditOutcome struct {
+	document  []byte
+	published *specPublished
+}
+
 // specLiveTarget edits the Live version of a spec in EchoPoint: it publishes
 // the next Live version with the commands, in one request.
 type specLiveTarget struct {
 	state     *AppState
-	slug      string
+	name      string
 	commandID uuid.UUID
 	pulled    *api.SpecDocument
 }
 
-func (t *specLiveTarget) Name() string { return t.slug }
-
 // Document pulls the Live version, so a parameter is found in the document
 // the commands apply to.
-func (t *specLiveTarget) Document() ([]byte, error) {
+func (t *specLiveTarget) Document(ctx context.Context) ([]byte, error) {
 	if t.pulled == nil {
-		pulled, err := pullSpec(t.state, t.slug, "")
+		pulled, err := pullSpec(ctx, t.state, t.name, "")
 		if err != nil {
 			return nil, err
 		}
@@ -54,9 +59,9 @@ func (t *specLiveTarget) Document() ([]byte, error) {
 	return []byte(t.pulled.Document), nil
 }
 
-func (t *specLiveTarget) Apply(commands []apispec.Command, dryRun bool) (specEditOutcome, error) {
+func (t *specLiveTarget) Apply(ctx context.Context, commands []apispec.Command, dryRun bool) (specEditOutcome, error) {
 	if dryRun {
-		return t.applyLocally(commands)
+		return t.applyLocally(ctx, commands)
 	}
 	request := struct {
 		CommandID   uuid.UUID         `json:"command_id"`
@@ -70,33 +75,33 @@ func (t *specLiveTarget) Apply(commands []apispec.Command, dryRun bool) (specEdi
 	if err != nil {
 		return specEditOutcome{}, err
 	}
-	resp, err := t.send(body)
+	resp, err := t.send(ctx, body)
 	if err != nil {
 		// A network error does not say whether the commands were applied. The
 		// same command ID makes the second try safe: an applied request answers
 		// with its version and applies nothing again.
-		resp, err = t.send(body)
+		resp, err = t.send(ctx, body)
 	}
 	if err != nil {
 		return specEditOutcome{}, err
 	}
 	switch {
 	case resp.JSON201 != nil:
-		return specEditOutcome{published: &specPublished{version: resp.JSON201}, changed: true}, nil
+		return specEditOutcome{published: &specPublished{version: resp.JSON201}}, nil
 	case resp.JSON200 != nil:
 		return specEditOutcome{published: &specPublished{version: resp.JSON200, replayed: true}}, nil
 	}
 	return specEditOutcome{}, &specRefusedError{message: apiErrorMessage(resp.HTTPResponse, resp.Body)}
 }
 
-func (t *specLiveTarget) send(body []byte) (*api.ApplySpecCommandsResponse, error) {
+func (t *specLiveTarget) send(ctx context.Context, body []byte) (*api.ApplySpecCommandsResponse, error) {
 	return t.state.Client.API().ApplySpecCommandsWithBodyWithResponse(
-		context.Background(), t.slug, nil, "application/json", bytes.NewReader(body))
+		ctx, t.name, nil, "application/json", bytes.NewReader(body))
 }
 
 // applyLocally edits the pulled Live document and sends nothing.
-func (t *specLiveTarget) applyLocally(commands []apispec.Command) (specEditOutcome, error) {
-	data, err := t.Document()
+func (t *specLiveTarget) applyLocally(ctx context.Context, commands []apispec.Command) (specEditOutcome, error) {
+	data, err := t.Document(ctx)
 	if err != nil {
 		return specEditOutcome{}, err
 	}
@@ -104,7 +109,7 @@ func (t *specLiveTarget) applyLocally(commands []apispec.Command) (specEditOutco
 	if err != nil {
 		return specEditOutcome{}, err
 	}
-	return specEditOutcome{document: edited, changed: !bytes.Equal(edited, data)}, nil
+	return specEditOutcome{document: edited}, nil
 }
 
 // apiErrorMessage is the message of the first error in an API error answer.
@@ -128,20 +133,17 @@ type specPublishedResult struct {
 	Replayed bool `json:"replayed"`
 }
 
-func printSpecPublished(w io.Writer, format output.Format, slug string, edit specEdit, published *specPublished) error {
+func printSpecPublished(w io.Writer, format output.Format, name string, edit specEdit, published *specPublished) error {
 	version := published.version
-	switch format {
-	case output.FormatJSON:
-		return output.PrintJSON(w, specPublishedResult{SpecVersion: *version, Replayed: published.replayed})
-	case output.FormatYAML:
-		return printJSONAsYAML(w, specPublishedResult{SpecVersion: *version, Replayed: published.replayed})
-	case output.FormatTable:
-	}
-	if published.replayed {
-		_, err := fmt.Fprintf(w, "✓ Already applied: %s %s\n", slug, version.Version)
+	result := specPublishedResult{SpecVersion: *version, Replayed: published.replayed}
+	if done, err := printStructured(w, format, result); done {
 		return err
 	}
-	fmt.Fprintf(w, "✓ Published %s %s (%s): %s\n", slug, version.Version, version.Bump, edit.what())
+	if published.replayed {
+		_, err := fmt.Fprintf(w, "✓ Already applied: %s %s\n", name, version.Version)
+		return err
+	}
+	fmt.Fprintf(w, "✓ Published %s %s (%s): %s\n", name, version.Version, version.Bump, edit.what())
 	printNewFindings(w, version.Findings)
 	return nil
 }

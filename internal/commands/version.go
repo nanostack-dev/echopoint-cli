@@ -49,6 +49,8 @@ func newVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   versionCommandName,
 		Short: "Show the CLI version",
+		Example: `  echopoint version
+  echopoint version --short`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if short {
 				fmt.Fprintln(os.Stdout, buildVersion)

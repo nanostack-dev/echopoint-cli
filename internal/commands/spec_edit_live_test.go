@@ -56,7 +56,7 @@ func sentCommands(t *testing.T, fake *specServer) commandsBody {
 func TestSpecEditLivePublishesTheCommandsInOneRequest(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 
-	stdout, _, err := runRemoteSpec(t, url, "route", "add", "POST", "/pets", "--spec", "pets-api", "--live",
+	stdout, _, err := runRemoteSpec(t, url, "route", "add", "pets-api", "POST", "/pets", "--live",
 		"--status", "201", "--operation-id", "createPet")
 
 	if err != nil {
@@ -80,7 +80,7 @@ func TestSpecEditLivePublishesTheCommandsInOneRequest(t *testing.T) {
 func TestSpecEditLiveSendsAllTheCommandsOfARouteUpdate(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 
-	_, _, err := runRemoteSpec(t, url, "route", "update", "GET", "/pets", "--spec", "pets-api", "--live",
+	_, _, err := runRemoteSpec(t, url, "route", "update", "pets-api", "GET", "/pets", "--live",
 		"--summary", "List", "--path", "/animals")
 
 	if err != nil {
@@ -99,8 +99,8 @@ func TestSpecEditLiveSendsAllTheCommandsOfARouteUpdate(t *testing.T) {
 func TestSpecEditLiveFindsAParameterInTheLiveDocument(t *testing.T) {
 	fake, url := liveServer(t, paramSpec)
 
-	_, _, err := runRemoteSpec(t, url, "param", "update", "GET", "/pets/{id}", "limit", "--in", "header",
-		"--spec", "pets-api", "--live", "--description", "Cap")
+	_, _, err := runRemoteSpec(t, url, "param", "update", "pets-api", "GET", "/pets/{id}", "limit", "--in", "header",
+		"--live", "--description", "Cap")
 
 	if err != nil {
 		t.Fatal(err)
@@ -121,8 +121,8 @@ func TestSpecEditLiveFindsAParameterInTheLiveDocument(t *testing.T) {
 func TestSpecEditLiveParamOfAnUnknownNameIsRefusedBeforeSending(t *testing.T) {
 	fake, url := liveServer(t, paramSpec)
 
-	_, stderr, err := runRemoteSpec(t, url, "param", "remove", "GET", "/pets/{id}", "nope", "--in", "query",
-		"--spec", "pets-api", "--live")
+	_, stderr, err := runRemoteSpec(t, url, "param", "remove", "pets-api", "GET", "/pets/{id}", "nope", "--in", "query",
+		"--live")
 
 	if exitCode(err) != 1 || !strings.Contains(stderr, "✗ ") || !strings.Contains(stderr, "nope") {
 		t.Errorf("exit %d, stderr %q", exitCode(err), stderr)
@@ -142,54 +142,110 @@ const parityDocument = paramSpec + `components:
       type: object
 `
 
-func TestSpecEditLiveCommandsEqualTheLocalOnes(t *testing.T) {
-	invocations := [][]string{
-		{"route", "add", "post", "/pets", "--status", "201", "--tag", "pets"},
-		{"route", "update", "GET", "/pets/{id}", "--summary", "S", "--path", "/x/{id}", "--method", "put"},
-		{"route", "remove", "GET", "/pets/{id}"},
-		{"method", "update", "GET", "/pets/{id}", "--to", "patch"},
-		{"schema", "add", "Owner", "--description", "An owner."},
-		{"property", "add", "Pet", "city", "--type", "string", "--required"},
-		{"property", "update", "Pet", "name", "--name", "title", "--enum", "a,b", "--required=false"},
-		{"param", "add", "GET", "/pets/{id}", "q", "--in", "query", "--required"},
-		{"param", "update", "GET", "/pets/{id}", "limit", "--in", "header", "--new-in", "cookie", "--type", "string"},
-		{"param", "remove", "GET", "/pets/{id}", "limit", "--in", "query"},
-		{"response", "add", "GET", "/pets/{id}", "4xx", "--schema", "Error"},
-		{"response", "update", "GET", "/pets/{id}", "200", "--description", "Ok"},
-		{"response", "remove", "GET", "/pets/{id}", "200"},
+func TestSpecEditEveryCommandTakesTheNameFirstAndSendsItsCommands(t *testing.T) {
+	invocations := []struct {
+		args []string
+		want []apispec.CommandKind
+	}{
+		{[]string{"route", "add", "pets-api", "post", "/pets", "--status", "201", "--tag", "pets"},
+			[]apispec.CommandKind{apispec.CommandAddOperation}},
+		{
+			[]string{
+				"route",
+				"update",
+				"pets-api",
+				"GET",
+				"/pets/{id}",
+				"--summary",
+				"S",
+				"--path",
+				"/x/{id}",
+				"--method",
+				"put",
+			},
+			[]apispec.CommandKind{apispec.CommandSetText, apispec.CommandRenamePath, apispec.CommandSetMethod},
+		},
+		{[]string{"route", "remove", "pets-api", "GET", "/pets/{id}"},
+			[]apispec.CommandKind{apispec.CommandRemoveOperation}},
+		{[]string{"method", "update", "pets-api", "GET", "/pets/{id}", "--to", "patch"},
+			[]apispec.CommandKind{apispec.CommandSetMethod}},
+		{[]string{"schema", "add", "pets-api", "Owner", "--description", "An owner."},
+			[]apispec.CommandKind{apispec.CommandAddSchema}},
+		{[]string{"schema", "update", "pets-api", "Pet", "--description", "D"},
+			[]apispec.CommandKind{apispec.CommandSetText}},
+		{[]string{"schema", "remove", "pets-api", "Pet"}, []apispec.CommandKind{apispec.CommandRemoveSchema}},
+		{[]string{"property", "add", "pets-api", "Pet", "city", "--type", "string", "--required"},
+			[]apispec.CommandKind{apispec.CommandAddProperty}},
+		{
+			[]string{
+				"property",
+				"update",
+				"pets-api",
+				"Pet",
+				"name",
+				"--name",
+				"title",
+				"--enum",
+				"a,b",
+				"--required=false",
+			},
+			[]apispec.CommandKind{apispec.CommandRenameProperty, apispec.CommandSetEnum, apispec.CommandSetRequired},
+		},
+		{[]string{"property", "remove", "pets-api", "Pet", "name"},
+			[]apispec.CommandKind{apispec.CommandRemoveProperty}},
+		{[]string{"param", "add", "pets-api", "GET", "/pets/{id}", "q", "--in", "query", "--required"},
+			[]apispec.CommandKind{apispec.CommandAddParameter}},
+		{
+			[]string{
+				"param",
+				"update",
+				"pets-api",
+				"GET",
+				"/pets/{id}",
+				"limit",
+				"--in",
+				"header",
+				"--new-in",
+				"cookie",
+				"--type",
+				"string",
+			},
+			[]apispec.CommandKind{apispec.CommandSetParameterType, apispec.CommandSetParameterField},
+		},
+		{[]string{"param", "remove", "pets-api", "GET", "/pets/{id}", "limit", "--in", "query"},
+			[]apispec.CommandKind{apispec.CommandRemoveParameter}},
+		{[]string{"response", "add", "pets-api", "GET", "/pets/{id}", "4xx", "--schema", "Error"},
+			[]apispec.CommandKind{apispec.CommandAddResponse}},
+		{[]string{"response", "update", "pets-api", "GET", "/pets/{id}", "200", "--description", "Ok"},
+			[]apispec.CommandKind{apispec.CommandSetResponse}},
+		{[]string{"response", "remove", "pets-api", "GET", "/pets/{id}", "200"},
+			[]apispec.CommandKind{apispec.CommandRemoveResponse}},
 	}
 	for _, invocation := range invocations {
 		fake, url := liveServer(t, parityDocument)
-		_, _, err := runRemoteSpec(t, url, append(slices.Clone(invocation), "--spec", "pets-api", "--live")...)
-		if err != nil {
-			t.Fatalf("%v remote: %v", invocation, err)
-		}
-		local := localCommands(t, invocation, writeSpec(t, parityDocument))
-		if remote := sentCommands(t, fake).Commands; !reflect.DeepEqual(remote, local) {
-			t.Errorf("%v\nremote %+v\nlocal  %+v", invocation, remote, local)
-		}
-	}
-}
 
-// localCommands are the commands the same invocation builds for a file.
-func localCommands(t *testing.T, invocation []string, path string) []apispec.Command {
-	t.Helper()
-	stdout, stderr, err := runSpec(t, output.FormatJSON, append(slices.Clone(invocation), "--file", path)...)
-	if err != nil {
-		t.Fatalf("%v local: %v %s", invocation, err, stderr)
+		_, _, err := runRemoteSpec(t, url, append(slices.Clone(invocation.args), "--live")...)
+
+		if err != nil {
+			t.Fatalf("%v: %v", invocation.args, err)
+		}
+		var sent []apispec.CommandKind
+		for _, command := range sentCommands(t, fake).Commands {
+			sent = append(sent, command.Kind)
+		}
+		for _, want := range invocation.want {
+			if !slices.Contains(sent, want) {
+				t.Errorf("%v sent %v, want %s among them", invocation.args, sent, want)
+			}
+		}
 	}
-	var result specEditResult
-	if err = json.Unmarshal([]byte(stdout), &result); err != nil {
-		t.Fatalf("decode %q: %v", stdout, err)
-	}
-	return result.Commands
 }
 
 func TestSpecEditLiveReplayIsReportedAndAppliesNothing(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 	fake.statuses[commandsRoute] = http.StatusOK
 
-	stdout, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api", "--live")
+	stdout, _, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet", "--live")
 
 	if err != nil {
 		t.Fatal(err)
@@ -210,7 +266,7 @@ func TestSpecEditLiveListsOnlyTheIntroducedFindings(t *testing.T) {
 			Rule: api.SpecLintRule("missing-description"), Pointer: "/paths/~1old", Message: "old", Introduced: false,
 		})
 
-	stdout, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api", "--live")
+	stdout, _, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet", "--live")
 
 	if err != nil {
 		t.Fatal(err)
@@ -231,7 +287,7 @@ func TestSpecEditLiveStructuredOutputIsTheVersionAndReplayed(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 	fake.statuses[commandsRoute] = http.StatusOK
 
-	stdout, _, err := runRemoteSpecAs(t, url, output.FormatJSON, "schema", "add", "Pet", "--spec", "pets-api", "--live")
+	stdout, _, err := runRemoteSpecAs(t, url, output.FormatJSON, "schema", "add", "pets-api", "Pet", "--live")
 
 	if err != nil {
 		t.Fatal(err)
@@ -243,17 +299,7 @@ func TestSpecEditLiveStructuredOutputIsTheVersionAndReplayed(t *testing.T) {
 	if result["version"] != "1.5.0" || result["replayed"] != true || result["bump"] != "minor" {
 		t.Errorf("result = %v", result)
 	}
-	yamlOut, _, err := runRemoteSpecAs(
-		t,
-		url,
-		output.FormatYAML,
-		"schema",
-		"add",
-		"Pet",
-		"--spec",
-		"pets-api",
-		"--live",
-	)
+	yamlOut, _, err := runRemoteSpecAs(t, url, output.FormatYAML, "schema", "add", "pets-api", "Pet", "--live")
 	if err != nil || !strings.Contains(yamlOut, "version: 1.5.0") || !strings.Contains(yamlOut, "replayed: true") {
 		t.Errorf("yaml = %q, err %v", yamlOut, err)
 	}
@@ -267,7 +313,7 @@ func TestSpecEditLiveRefusalPrintsTheAPIMessageAndExitsOne(t *testing.T) {
 			"code": "SPEC_COMMAND_REFUSED", "message": "Command 0 (add_schema) was refused: schema Pet already exists",
 		}}}
 
-		stdout, stderr, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api", "--live")
+		stdout, stderr, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet", "--live")
 
 		if exitCode(err) != 1 {
 			t.Fatalf("exit %d, want 1 (err %v)", exitCode(err), err)
@@ -283,7 +329,7 @@ func TestSpecEditLiveRefusalPrintsTheAPIMessageAndExitsOne(t *testing.T) {
 func TestSpecEditLiveDryRunSendsNothing(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 
-	stdout, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api", "--live", "--dry-run")
+	stdout, _, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet", "--live", "--dry-run")
 
 	if err != nil {
 		t.Fatal(err)
@@ -296,31 +342,63 @@ func TestSpecEditLiveDryRunSendsNothing(t *testing.T) {
 	}
 }
 
-func TestSpecEditLiveNeedsLive(t *testing.T) {
+func TestSpecEditNeedsLive(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 
-	_, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api")
+	_, _, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet")
 
 	if err == nil || !strings.Contains(err.Error(),
 		"drafts are not available yet: pass --live to write the Live version") {
 		t.Errorf("err = %v", err)
 	}
-	if _, sent := fake.bodies[commandsRoute]; sent {
-		t.Error("a request was sent")
-	}
-	_, _, err = runRemoteSpec(t, url, "schema", "add", "Pet", "--live")
-	if err == nil || !strings.Contains(err.Error(), "--live needs --spec") {
-		t.Errorf("--live alone: err = %v", err)
+	if len(fake.requests) != 0 {
+		t.Errorf("requests were made: %v", fake.requests)
 	}
 }
 
-func TestSpecEditFileAndSpecAreExclusive(t *testing.T) {
+func TestSpecEditOfAnUnknownSpecNamesItAndSuggestsList(t *testing.T) {
+	fake, server := newSpecServer(t)
+	fake.responses["GET /specs/nope/document"] = apiError("SPEC_NOT_FOUND", "The spec does not exist.")
+	fake.statuses["GET /specs/nope/document"] = http.StatusNotFound
+
+	_, _, err := runRemoteSpec(t, server.URL, "schema", "add", "nope", "Pet", "--live")
+
+	want := `api error (404): no spec with slug "nope"; list the specs with: echopoint spec list`
+	if err == nil || err.Error() != want {
+		t.Errorf("err = %v", err)
+	}
+	if len(fake.requests) != 1 {
+		t.Errorf("requests = %v, want only the pull of Live", fake.requests)
+	}
+}
+
+func TestSpecUpdateWithNoFlagNamesTheFlags(t *testing.T) {
+	for _, args := range [][]string{
+		{"route", "update", "pets-api", "GET", "/pets/{id}"},
+		{"schema", "update", "pets-api", "Pet"},
+		{"property", "update", "pets-api", "Pet", "name"},
+		{"param", "update", "pets-api", "GET", "/pets/{id}", "limit", "--in", "query"},
+		{"response", "update", "pets-api", "GET", "/pets/{id}", "200"},
+	} {
+		fake, url := liveServer(t, parityDocument)
+
+		_, _, err := runRemoteSpec(t, url, append(args, "--live")...)
+
+		if err == nil || !strings.Contains(err.Error(), "nothing to change") || !strings.Contains(err.Error(), "--") {
+			t.Errorf("%v: err = %v", args, err)
+		}
+		if _, sent := fake.bodies[commandsRoute]; sent {
+			t.Errorf("%v: a request was sent", args)
+		}
+	}
+}
+
+func TestSpecEditJSONAndDryRunDoNotCombine(t *testing.T) {
 	_, url := liveServer(t, canonicalSpecFixture)
 
-	_, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--file", writeSpec(t, editFixture),
-		"--spec", "pets-api", "--live")
+	_, _, err := runRemoteSpecAs(t, url, output.FormatJSON, "schema", "add", "pets-api", "Pet", "--live", "--dry-run")
 
-	if err == nil || !strings.Contains(err.Error(), "--file and --spec cannot be used together") {
+	if err == nil || !strings.Contains(err.Error(), "--dry-run") {
 		t.Errorf("err = %v", err)
 	}
 }
@@ -329,7 +407,7 @@ func TestSpecEditLiveCommandIDCanBePinned(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 	id := "5b2a1c0e-8f0d-4c1b-9d57-3a7f2e6c9b10"
 
-	if _, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api", "--live",
+	if _, _, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet", "--live",
 		"--command-id", id); err != nil {
 		t.Fatal(err)
 	}
@@ -337,13 +415,9 @@ func TestSpecEditLiveCommandIDCanBePinned(t *testing.T) {
 	if got := sentCommands(t, fake).CommandID; got != id {
 		t.Errorf("command_id = %q, want %q", got, id)
 	}
-	_, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api", "--live", "--command-id", "nope")
+	_, _, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet", "--live", "--command-id", "nope")
 	if err == nil || !strings.Contains(err.Error(), "not a UUID") {
 		t.Errorf("err = %v", err)
-	}
-	_, _, err = runRemoteSpec(t, url, "schema", "add", "Pet", "--file", writeSpec(t, editFixture), "--command-id", id)
-	if err == nil || !strings.Contains(err.Error(), "--command-id") {
-		t.Errorf("--command-id with --file: err = %v", err)
 	}
 }
 
@@ -351,7 +425,7 @@ func TestSpecEditLiveGeneratesANewCommandIDForEachRun(t *testing.T) {
 	fake, url := liveServer(t, canonicalSpecFixture)
 	var ids []string
 	for range 2 {
-		if _, _, err := runRemoteSpec(t, url, "schema", "add", "Pet", "--spec", "pets-api", "--live"); err != nil {
+		if _, _, err := runRemoteSpec(t, url, "schema", "add", "pets-api", "Pet", "--live"); err != nil {
 			t.Fatal(err)
 		}
 		ids = append(ids, sentCommands(t, fake).CommandID)
@@ -389,7 +463,7 @@ func TestSpecEditLiveRetriesANetworkErrorWithTheSameCommandID(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	stdout, _, err := runRemoteSpec(t, server.URL, "schema", "add", "Pet", "--spec", "pets-api", "--live")
+	stdout, _, err := runRemoteSpec(t, server.URL, "schema", "add", "pets-api", "Pet", "--live")
 
 	if err != nil {
 		t.Fatal(err)
@@ -407,33 +481,8 @@ func TestSpecEditLiveNeedsCredentials(t *testing.T) {
 	state := makeState(t, "test-api-key", "", url)
 	state.APIKey, state.Token = "", ""
 	cmd := newSpecCmd(state)
-	cmd.SetArgs([]string{"schema", "add", "Pet", "--spec", "pets-api", "--live"})
+	cmd.SetArgs([]string{"schema", "add", "pets-api", "Pet", "--live"})
 	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "authentication required") {
 		t.Errorf("err = %v", err)
-	}
-}
-
-func TestSpecPushListsTheIntroducedFindings(t *testing.T) {
-	fake, server := newSpecServer(t)
-	fake.responses["POST /specs/pets-api/versions"] = publishedVersion("0.4.0",
-		api.SpecFinding{
-			Rule: api.SpecLintRule("operation-id-casing"), Pointer: "/paths/~1owners/get/operationId",
-			Message: "list_owners is not camelCase", Introduced: true,
-		},
-		api.SpecFinding{Rule: api.SpecLintRule("missing-security"), Pointer: "/paths/~1old/get", Message: "old"})
-	fake.statuses["POST /specs/pets-api/versions"] = http.StatusCreated
-
-	stdout, _, err := runRemoteSpec(t, server.URL, "push", "--spec", "pets-api", writeSpec(t, specFixture))
-
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(stdout, "New findings (1)") ||
-		!strings.Contains(
-			stdout,
-			"operation-id-casing /paths/~1owners/get/operationId: list_owners is not camelCase",
-		) ||
-		strings.Contains(stdout, "~1old") {
-		t.Errorf("stdout:\n%s", stdout)
 	}
 }

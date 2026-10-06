@@ -1,0 +1,9 @@
+exit: 0
+--- stdout ---
+--- stderr ---
+Launching flow 550e8400-e29b-41d4-a716-446655440001 (ephemeral)...
+Claiming Job for execution 550e8400-e29b-41d4-a716-446655440002...
+✓ Flow 550e8400-e29b-41d4-a716-446655440001: completed (Nms)
+--- launches ---
+POST /flows/550e8400-e29b-41d4-a716-446655440001/launch idempotency-key="" {"ephemeral_job_version":1,"runner_type":"ephemeral"}
+--- step summary ---

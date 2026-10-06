@@ -13,31 +13,34 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCollectionsCmd(state *AppState) *cobra.Command {
+func newCollectionCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "collections",
-		Short: "Manage collections",
+		Use:     collectionCommandName,
+		Aliases: []string{"collections"},
+		Short:   "Manage collections of requests",
 	}
 
 	cmd.AddCommand(
-		newCollectionsListCmd(state),
-		newCollectionsGetCmd(state),
-		newCollectionsCreateCmd(state),
-		newCollectionsUpdateCmd(state),
-		newCollectionsDeleteCmd(state),
-		newCollectionsImportCmd(state),
+		newCollectionListCmd(state),
+		newCollectionViewCmd(state),
+		newCollectionCreateCmd(state),
+		newCollectionUpdateCmd(state),
+		newCollectionDeleteCmd(state),
+		newCollectionImportCmd(state),
 	)
 
 	return cmd
 }
 
-func newCollectionsListCmd(state *AppState) *cobra.Command {
+func newCollectionListCmd(state *AppState) *cobra.Command {
 	var limit int32 = 20
 	var offset int32
 
 	cmd := &cobra.Command{
 		Use:   listVerb,
 		Short: "List collections",
+		Example: `  echopoint collection list
+  echopoint collection list --limit 100 -o json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -67,7 +70,7 @@ func newCollectionsListCmd(state *AppState) *cobra.Command {
 				for _, collection := range resp.JSON200.Items {
 					rows = append(
 						rows,
-						[]string{collection.Id.String(), collection.Name, collection.UpdatedAt.String()},
+						[]string{collection.Id.String(), collection.Name, formatWhen(collection.UpdatedAt)},
 					)
 				}
 				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
@@ -82,11 +85,14 @@ func newCollectionsListCmd(state *AppState) *cobra.Command {
 	return cmd
 }
 
-func newCollectionsGetCmd(state *AppState) *cobra.Command {
+func newCollectionViewCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get <id>",
-		Short: "Get collection details",
-		Args:  cobra.ExactArgs(1),
+		Use:     "view <id>",
+		Aliases: []string{getVerb},
+		Short:   "Show a collection",
+		Example: `  echopoint collection view <id>
+  echopoint collection view <id> -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -121,17 +127,20 @@ func newCollectionsGetCmd(state *AppState) *cobra.Command {
 		},
 	}
 
+	cmd.ValidArgsFunction = completeCollectionArgs(state)
 	return cmd
 }
 
-func newCollectionsCreateCmd(state *AppState) *cobra.Command {
+func newCollectionCreateCmd(state *AppState) *cobra.Command {
 	var name string
 	var description string
 	var source string
 
 	cmd := &cobra.Command{
 		Use:   createVerb,
-		Short: "Create a collection",
+		Short: "Create an empty collection",
+		Example: `  echopoint collection create --name "Payments API"
+  echopoint collection create --name "Payments API" --description "Staging requests"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -179,14 +188,15 @@ func newCollectionsCreateCmd(state *AppState) *cobra.Command {
 	return cmd
 }
 
-func newCollectionsUpdateCmd(state *AppState) *cobra.Command {
+func newCollectionUpdateCmd(state *AppState) *cobra.Command {
 	var name string
 	var description string
 
 	cmd := &cobra.Command{
-		Use:   "update <id>",
-		Short: "Update a collection",
-		Args:  cobra.ExactArgs(1),
+		Use:     "update <id>",
+		Short:   "Update a collection",
+		Example: `  echopoint collection update <id> --name "Payments API v2"`,
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -228,14 +238,17 @@ func newCollectionsUpdateCmd(state *AppState) *cobra.Command {
 
 	cmd.Flags().StringVar(&name, "name", "", "Collection name")
 	cmd.Flags().StringVar(&description, "description", "", "Collection description")
+	cmd.ValidArgsFunction = completeCollectionArgs(state)
 	return cmd
 }
 
-func newCollectionsDeleteCmd(state *AppState) *cobra.Command {
+func newCollectionDeleteCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <id>",
 		Short: "Delete a collection",
-		Args:  cobra.ExactArgs(1),
+		Example: `  echopoint collection delete <id>
+  echopoint collection delete <id> --yes`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -244,6 +257,9 @@ func newCollectionsDeleteCmd(state *AppState) *cobra.Command {
 			id, err := uuid.Parse(args[0])
 			if err != nil {
 				return fmt.Errorf("invalid collection id")
+			}
+			if err := confirmDestructive(cmd, state, "delete", "collection "+id.String()); err != nil {
+				return err
 			}
 
 			resp, err := state.Client.API().DeleteCollectionWithResponse(context.Background(), id, nil)
@@ -259,23 +275,24 @@ func newCollectionsDeleteCmd(state *AppState) *cobra.Command {
 		},
 	}
 
-	return cmd
+	cmd.ValidArgsFunction = completeCollectionArgs(state)
+	return quietOnError(cmd)
 }
 
-func newCollectionsImportCmd(state *AppState) *cobra.Command {
+func newCollectionImportCmd(state *AppState) *cobra.Command {
 	var file string
 	var name string
 	var tagsAsFolders = true
 
 	cmd := &cobra.Command{
-		Use:   "import",
-		Short: "Import collection from OpenAPI spec",
+		Use:   "import -f <file>",
+		Short: "Import a collection from an OpenAPI file",
+		Example: `  echopoint collection import -f openapi.json
+  echopoint collection import -f openapi.json --name "Payments API" --tags-as-folders=false`,
+		Args: fileFlagArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
-			}
-			if file == "" {
-				return fmt.Errorf("--file is required")
 			}
 
 			var spec map[string]any
@@ -319,9 +336,10 @@ func newCollectionsImportCmd(state *AppState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&file, "file", "", "Path to OpenAPI spec (JSON or YAML)")
+	addFileFlag(cmd, &file, "OpenAPI file to import (JSON)", "json")
 	cmd.Flags().StringVar(&name, "name", "", "Collection name (defaults to API title)")
 	cmd.Flags().BoolVar(&tagsAsFolders, "tags-as-folders", true, "Use OpenAPI tags as folder structure")
 	_ = cmd.MarkFlagRequired("file")
-	return cmd
+	cmd.ValidArgsFunction = cobra.NoFileCompletions
+	return quietOnError(cmd)
 }

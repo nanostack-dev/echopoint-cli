@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/nanostack-dev/echopoint-kit/apispec"
 	"github.com/spf13/cobra"
 
 	"echopoint-cli/internal/api"
@@ -19,22 +21,101 @@ import (
 )
 
 const (
-	specFlagUsage = "Slug of the spec in EchoPoint"
-	specPageSize  = 100
+	specPageSize            = 100
+	specVersionsDefaultPage = 20
+	specNotFoundCode        = "SPEC_NOT_FOUND"
 )
+
+func fetchSpec(ctx context.Context, state *AppState, name string) (*api.Spec, error) {
+	resp, err := state.Client.API().GetSpecWithResponse(ctx, name, nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.JSON200 == nil {
+		return nil, specAPIError(resp.HTTPResponse, resp.Body, name, "")
+	}
+	return resp.JSON200, nil
+}
+
+func fetchSpecVersion(ctx context.Context, state *AppState, name, version string) (*api.SpecVersion, error) {
+	resp, err := state.Client.API().GetSpecVersionWithResponse(ctx, name, version, nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.JSON200 == nil {
+		return nil, specAPIError(resp.HTTPResponse, resp.Body, name, version)
+	}
+	return resp.JSON200, nil
+}
+
+func fetchSpecVersions(
+	ctx context.Context, state *AppState, name string, limit, offset int32,
+) (*api.SpecVersionListResponse, error) {
+	resp, err := state.Client.API().ListSpecVersionsWithResponse(ctx, name, &api.ListSpecVersionsParams{
+		Limit:  api.LimitParameter(limit),
+		Offset: api.OffsetParameter(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.JSON200 == nil {
+		return nil, specAPIError(resp.HTTPResponse, resp.Body, name, "")
+	}
+	return resp.JSON200, nil
+}
+
+func pullSpec(ctx context.Context, state *AppState, name, version string) (*api.SpecDocument, error) {
+	params := &api.PullSpecParams{}
+	if version != "" {
+		params.Version = &version
+	}
+	resp, err := state.Client.API().PullSpecWithResponse(ctx, name, params)
+	if err != nil {
+		return nil, err
+	}
+	if resp.JSON200 == nil {
+		return nil, specAPIError(resp.HTTPResponse, resp.Body, name, version)
+	}
+	return resp.JSON200, nil
+}
+
+func versionOrLive(ctx context.Context, state *AppState, name, version string) (string, error) {
+	if version != "" {
+		return version, nil
+	}
+	spec, err := fetchSpec(ctx, state, name)
+	if err != nil {
+		return "", err
+	}
+	return spec.Live.Version, nil
+}
+
+func specAPIError(resp *http.Response, body []byte, name, version string) error {
+	if resp == nil || resp.StatusCode != http.StatusNotFound {
+		return formatAPIError(resp, body)
+	}
+	if version != "" && apiErrorCode(body) != specNotFoundCode {
+		return fmt.Errorf("api error (%d): %s has no version %q; list its versions with: echopoint spec versions %s",
+			resp.StatusCode, name, version, name)
+	}
+	return fmt.Errorf("api error (%d): no spec with slug %q; list the specs with: echopoint spec list",
+		resp.StatusCode, name)
+}
 
 func newSpecListCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:           listVerb,
-		Short:         "List the organization's specs and their Live versions",
-		Args:          cobra.NoArgs,
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Use:               listVerb,
+		Short:             "List the organization's specs and their Live versions",
+		Example:           `  echopoint spec list`,
+		Args:              cobra.NoArgs,
+		ValidArgsFunction: cobra.NoFileCompletions,
+		SilenceUsage:      true,
+		SilenceErrors:     true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			resp, err := state.Client.API().ListSpecsWithResponse(context.Background(), &api.ListSpecsParams{
+			resp, err := state.Client.API().ListSpecsWithResponse(cmd.Context(), &api.ListSpecsParams{
 				Limit: api.LimitParameter(specPageSize),
 			})
 			if err != nil {
@@ -43,63 +124,145 @@ func newSpecListCmd(state *AppState) *cobra.Command {
 			if resp.JSON200 == nil {
 				return formatAPIError(resp.HTTPResponse, resp.Body)
 			}
-			switch state.OutputFormat {
-			case output.FormatJSON:
-				return output.PrintJSON(cmd.OutOrStdout(), resp.JSON200)
-			case output.FormatYAML:
-				return output.PrintYAML(cmd.OutOrStdout(), resp.JSON200)
-			case output.FormatTable:
+			if done, err := printStructured(cmd.OutOrStdout(), state.OutputFormat, resp.JSON200); done {
+				return err
 			}
 			rows := make([][]string, 0, len(resp.JSON200.Items))
 			for _, item := range resp.JSON200.Items {
 				rows = append(rows, []string{
-					item.Slug, item.Title, item.Live.Version, string(item.Live.Bump),
-					item.Live.CreatedAt.Format("2006-01-02 15:04"),
+					item.Slug, item.Title, item.Live.Version, string(item.Live.Bump), formatWhen(item.Live.CreatedAt),
 				})
 			}
-			return output.PrintTable([]string{"SLUG", "TITLE", "LIVE", "BUMP", "PUBLISHED"}, rows)
+			return output.PrintTableTo(cmd.OutOrStdout(), []string{"SLUG", "TITLE", "LIVE", "BUMP", "PUBLISHED"}, rows)
 		},
 	}
 }
 
-func newSpecPushCmd(state *AppState) *cobra.Command {
-	var (
-		slug      string
-		createNew bool
-		bundle    bool
-	)
+func newSpecViewCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "push <file>",
-		Short: "Publish a local OpenAPI document as the spec's next Live version",
-		Long: `Publish a local OpenAPI document to EchoPoint. EchoPoint compares it with the
-Live version, computes the next version from the changes (breaking -> major,
-additions -> minor, other edits -> patch), and keeps the history.
-
---new creates the spec with this document as its first Live version.
---bundle inlines external $ref (other files, URLs) before pushing; without it, a
-document with an external $ref is refused.`,
-		Args:          cobra.ExactArgs(1),
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Use:   "view <slug>",
+		Short: "Show a spec: its Live version, findings, changes, and web page",
+		Long: `Show a spec kept in EchoPoint: its title, the Live version and who published
+it, the OpenAPI version, how many convention findings Live has, what Live
+changed against the version before it, and the spec's page in EchoPoint.`,
+		Example: `  echopoint spec view pets-api
+  echopoint spec view pets-api -o json`,
+		Args: specArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			document, err := readDocumentForPush(args[0], bundle)
+			spec, err := fetchSpec(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
-			if createNew {
-				return createSpec(cmd.OutOrStdout(), state, slug, document)
+			if done, err := printStructured(cmd.OutOrStdout(), state.OutputFormat, spec); done {
+				return err
 			}
-			return pushSpecVersion(cmd.OutOrStdout(), state, slug, document)
+			return printSpecView(cmd.OutOrStdout(), state, spec)
 		},
 	}
-	cmd.Flags().StringVar(&slug, "spec", "", specFlagUsage)
-	cmd.Flags().BoolVar(&createNew, "new", false, "Create the spec")
-	cmd.Flags().BoolVar(&bundle, "bundle", false, "Inline external $ref before pushing")
-	_ = cmd.MarkFlagRequired("spec")
-	return cmd
+	return finishSpecCmd(state, cmd)
+}
+
+func printSpecView(w io.Writer, state *AppState, spec *api.Spec) error {
+	live := spec.Live
+	rows := [][]string{
+		{"Title:", spec.Title},
+		{"Slug:", spec.Slug},
+		{"Live:", fmt.Sprintf("%s (%s)", live.Version, live.Bump)},
+		{"OpenAPI:", live.OpenapiVersion},
+		{"Findings:", describeFindingCount(live.FindingCount)},
+		{"Changes:", describeChangeCounts(live.ChangeCounts)},
+		{"Published:", fmt.Sprintf("%s by %s", formatWhen(live.CreatedAt), actorLabel(live.CreatedBy))},
+		{"Created:", fmt.Sprintf("%s by %s", formatWhen(spec.CreatedAt), actorLabel(spec.CreatedBy))},
+		{"Updated:", formatWhen(spec.UpdatedAt)},
+	}
+	if frontend := strings.TrimRight(state.Config.FrontendURL, "/"); frontend != "" {
+		rows = append(rows, []string{"URL:", frontend + "/api/specs/" + url.PathEscape(spec.Slug)})
+	}
+	return output.PrintTableTo(w, nil, rows)
+}
+
+func newSpecVersionsCmd(state *AppState) *cobra.Command {
+	var limit, offset int32
+	cmd := &cobra.Command{
+		Use:   "versions <slug>",
+		Short: "List a spec's Live versions, newest first",
+		Long: `List the Live versions of a spec, newest first: the first one is Live now. Each
+shows its bump, what it changed against the version before it, how many
+convention findings it has, who published it, and when. The API returns at most
+100 versions a page: page with --offset.`,
+		Example: `  echopoint spec versions pets-api
+  echopoint spec versions pets-api --limit 100 --offset 100`,
+		Args: specArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireToken(state); err != nil {
+				return err
+			}
+			versions, err := fetchSpecVersions(cmd.Context(), state, args[0], limit, offset)
+			if err != nil {
+				return err
+			}
+			if done, err := printStructured(cmd.OutOrStdout(), state.OutputFormat, versions); done {
+				return err
+			}
+			rows := make([][]string, 0, len(versions.Items))
+			for i, item := range versions.Items {
+				version := item.Version
+				if offset == 0 && i == 0 {
+					version += " (Live)"
+				}
+				rows = append(rows, []string{
+					version, string(item.Bump), describeChangeCounts(item.ChangeCounts),
+					describeFindingCount(item.FindingCount), actorLabel(item.CreatedBy), formatWhen(item.CreatedAt),
+				})
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Total: %d\n", versions.Total)
+			return output.PrintTableTo(cmd.OutOrStdout(),
+				[]string{"VERSION", "BUMP", "CHANGES", "FINDINGS", "BY", "WHEN"}, rows)
+		},
+	}
+	cmd.Flags().
+		Int32Var(&limit, "limit", specVersionsDefaultPage, "Number of results to return (the API allows at most 100)")
+	cmd.Flags().Int32Var(&offset, "offset", 0, "Offset for pagination")
+	return finishSpecCmd(state, cmd)
+}
+
+func newSpecCreateCmd(state *AppState) *cobra.Command {
+	var file string
+	var bundle bool
+	cmd := &cobra.Command{
+		Use:   "create <slug> -f <file>",
+		Short: "Create a spec in EchoPoint from an OpenAPI file",
+		Long: `Create a spec in EchoPoint with the file as its first Live version. The slug is
+the spec's unique identifier in the organization: lowercase letters, digits, and
+single hyphens, at most 64 characters. A slug that is taken is refused.
+
+--bundle inlines external $ref (other files, URLs) before sending; without it, a
+document with an external $ref is refused.`,
+		Example: `  echopoint spec create pets-api -f openapi.yaml
+  echopoint spec create pets-api -f openapi.yaml --bundle`,
+		Args: specArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireToken(state); err != nil {
+				return err
+			}
+			document, err := readDocumentForPush(file, bundle)
+			if err != nil {
+				return err
+			}
+			return createSpec(cmd, state, args[0], document)
+		},
+	}
+	addSpecFileFlag(cmd, &file, "OpenAPI file to create the spec from")
+	cmd.Flags().BoolVar(&bundle, "bundle", false, "Inline external $ref before sending")
+	_ = cmd.MarkFlagRequired("file")
+	return finishSpecCmd(state, cmd)
+}
+
+func addSpecFileFlag(cmd *cobra.Command, file *string, usage string) {
+	addFileFlag(cmd, file, usage, "yaml", "yml", "json")
 }
 
 // readDocumentForPush reads the file as is, or, with bundle, loads it with its
@@ -123,9 +286,9 @@ func readDocumentForPush(path string, bundle bool) (string, error) {
 	return string(bundled), nil
 }
 
-func createSpec(w io.Writer, state *AppState, slug, document string) error {
-	resp, err := state.Client.API().CreateSpecWithResponse(context.Background(), nil, api.CreateSpecRequest{
-		Slug:     slug,
+func createSpec(cmd *cobra.Command, state *AppState, name, document string) error {
+	resp, err := state.Client.API().CreateSpecWithResponse(cmd.Context(), nil, api.CreateSpecRequest{
+		Slug:     name,
 		Document: document,
 	})
 	if err != nil {
@@ -134,35 +297,63 @@ func createSpec(w io.Writer, state *AppState, slug, document string) error {
 	if resp.JSON201 == nil {
 		return formatAPIError(resp.HTTPResponse, resp.Body)
 	}
-	switch state.OutputFormat {
-	case output.FormatJSON:
-		return output.PrintJSON(w, resp.JSON201)
-	case output.FormatYAML:
-		return output.PrintYAML(w, resp.JSON201)
-	case output.FormatTable:
+	if done, err := printStructured(cmd.OutOrStdout(), state.OutputFormat, resp.JSON201); done {
+		return err
 	}
-	_, err = fmt.Fprintf(w, "✓ Created spec %s: Live version %s\n", resp.JSON201.Slug, resp.JSON201.Live.Version)
+	_, err = fmt.Fprintf(cmd.OutOrStdout(), "✓ Created spec %s: Live version %s\n",
+		resp.JSON201.Slug, resp.JSON201.Live.Version)
 	return err
 }
 
-func pushSpecVersion(w io.Writer, state *AppState, slug, document string) error {
-	resp, err := state.Client.API().PushSpecVersionWithResponse(context.Background(), slug, nil,
+func newSpecPushCmd(state *AppState) *cobra.Command {
+	var file string
+	var bundle bool
+	cmd := &cobra.Command{
+		Use:   "push <slug> -f <file>",
+		Short: "Publish an OpenAPI file as the spec's next Live version",
+		Long: `Publish an OpenAPI file to a spec in EchoPoint. EchoPoint compares it with the
+Live version, computes the next version from the changes (breaking -> major,
+additions -> minor, other edits -> patch), and keeps the history. A file identical
+to Live, info.version aside, is refused. Create the spec first with 'echopoint
+spec create'.
+
+--bundle inlines external $ref (other files, URLs) before sending; without it, a
+document with an external $ref is refused.`,
+		Example: `  echopoint spec push pets-api -f openapi.yaml
+  echopoint spec push pets-api -f openapi.yaml --bundle`,
+		Args: specArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireToken(state); err != nil {
+				return err
+			}
+			document, err := readDocumentForPush(file, bundle)
+			if err != nil {
+				return err
+			}
+			return pushSpecVersion(cmd, state, args[0], document)
+		},
+	}
+	addSpecFileFlag(cmd, &file, "OpenAPI file to publish")
+	cmd.Flags().BoolVar(&bundle, "bundle", false, "Inline external $ref before sending")
+	_ = cmd.MarkFlagRequired("file")
+	return finishSpecCmd(state, cmd)
+}
+
+func pushSpecVersion(cmd *cobra.Command, state *AppState, name, document string) error {
+	resp, err := state.Client.API().PushSpecVersionWithResponse(cmd.Context(), name, nil,
 		api.PushSpecVersionRequest{Document: document})
 	if err != nil {
 		return err
 	}
 	if resp.JSON201 == nil {
-		return formatAPIError(resp.HTTPResponse, resp.Body)
+		return specAPIError(resp.HTTPResponse, resp.Body, name, "")
 	}
 	pushed := resp.JSON201
-	switch state.OutputFormat {
-	case output.FormatJSON:
-		return output.PrintJSON(w, pushed)
-	case output.FormatYAML:
-		return output.PrintYAML(w, pushed)
-	case output.FormatTable:
+	w := cmd.OutOrStdout()
+	if done, err := printStructured(w, state.OutputFormat, pushed); done {
+		return err
 	}
-	fmt.Fprintf(w, "✓ Published %s %s (%s)\n\n", slug, pushed.Version, pushed.Bump)
+	fmt.Fprintf(w, "✓ Published %s %s (%s)\n\n", name, pushed.Version, pushed.Bump)
 	if err = printSpecDiff(w, output.FormatTable, specDiffOfVersion(pushed)); err != nil {
 		return err
 	}
@@ -170,109 +361,78 @@ func pushSpecVersion(w io.Writer, state *AppState, slug, document string) error 
 	return nil
 }
 
-func specDiffOfVersion(version *api.SpecVersion) specDiff {
-	changes := make([]specDiffChange, 0, len(version.Changes))
-	for _, change := range version.Changes {
-		changes = append(changes, specDiffChange{
-			ID:       change.Id,
-			Severity: apispec.Severity(change.Severity),
-			Method:   valueOf(change.Method),
-			Path:     valueOf(change.Path),
-			Pointer:  valueOf(change.Pointer),
-			Text:     change.Text,
-		})
-	}
-	return specDiff{Bump: apispec.Bump(version.Bump), Changes: changes}
-}
-
-func valueOf(text *string) string {
-	if text == nil {
-		return ""
-	}
-	return *text
-}
-
 func newSpecPullCmd(state *AppState) *cobra.Command {
-	var slug, version string
+	var file, version string
 	cmd := &cobra.Command{
-		Use:   "pull <file>",
-		Short: "Write the spec's Live version to a file, in the canonical YAML layout",
-		Long: `Write a spec's Live version to a local file, byte for byte as EchoPoint keeps
-it. The file is generated: edit the spec in EchoPoint, or push a change, and pull
-again. --version pulls an earlier Live version.`,
-		Args:          cobra.ExactArgs(1),
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Use:   "pull <slug> [-f <file>]",
+		Short: "Write a spec's Live version, in the canonical YAML layout",
+		Long: `Write a version of a spec, byte for byte as EchoPoint keeps it, to the file
+named with -f, or to stdout without -f (and with -f -). The file is generated:
+edit the spec in EchoPoint, or push a change, and pull again. --version pulls an
+earlier version (default: Live).`,
+		Example: `  echopoint spec pull pets-api -f openapi.yaml
+  echopoint spec pull pets-api --version 1.2.0 -f old.yaml
+  echopoint spec pull pets-api > openapi.yaml`,
+		Args: specArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			pulled, err := pullSpec(state, slug, version)
+			pulled, err := pullSpec(cmd.Context(), state, args[0], version)
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(args[0], []byte(pulled.Document), 0o644); err != nil {
+			if !cmd.Flags().Changed("file") || file == "-" {
+				_, err = io.WriteString(cmd.OutOrStdout(), pulled.Document)
 				return err
 			}
-			fmt.Fprintf(cmd.ErrOrStderr(), "✓ Wrote %s %s to %s\n", slug, pulled.Version, args[0])
+			if err = os.WriteFile(file, []byte(pulled.Document), 0o644); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.ErrOrStderr(), "✓ Wrote %s %s to %s\n", args[0], pulled.Version, file)
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&slug, "spec", "", specFlagUsage)
-	cmd.Flags().StringVar(&version, "version", "", "Live version to pull (default: the current one)")
-	_ = cmd.MarkFlagRequired("spec")
-	return cmd
-}
-
-func pullSpec(state *AppState, slug, version string) (*api.SpecDocument, error) {
-	params := &api.PullSpecParams{}
-	if version != "" {
-		params.Version = &version
-	}
-	resp, err := state.Client.API().PullSpecWithResponse(context.Background(), slug, params)
-	if err != nil {
-		return nil, err
-	}
-	if resp.JSON200 == nil {
-		return nil, formatAPIError(resp.HTTPResponse, resp.Body)
-	}
-	return resp.JSON200, nil
+	addSpecFileFlag(cmd, &file, "File to write (default: stdout; - also means stdout)")
+	cmd.Flags().StringVar(&version, "version", "", "Version to pull (default: Live)")
+	registerSpecVersionCompletion(state, cmd, "version")
+	return finishSpecCmd(state, cmd)
 }
 
 func newSpecCheckCmd(state *AppState) *cobra.Command {
-	var slug string
+	var file string
 	cmd := &cobra.Command{
-		Use:   "check <file>",
-		Short: "Fail when a local file differs from the spec's Live version",
-		Long: `Compare a local file byte for byte with the spec's Live version, in the
-canonical layout EchoPoint stored it in. Exits non-zero on any difference, so CI
-fails when the repository copy drifts from Live. Fix it with 'echopoint spec pull'.`,
-		Args:          cobra.ExactArgs(1),
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Use:   "check <slug> -f <file>",
+		Short: "Fail when a file differs from the spec's Live version",
+		Long: `Compare a file byte for byte with the spec's Live version, in the canonical
+layout EchoPoint stored it in. Exits non-zero on any difference, so CI fails when
+the repository copy drifts from Live. Fix it with 'echopoint spec pull'.`,
+		Example: `  echopoint spec check pets-api -f openapi.yaml`,
+		Args:    specArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			pulled, err := pullSpec(state, slug, "")
+			name := args[0]
+			pulled, err := pullSpec(cmd.Context(), state, name, "")
 			if err != nil {
 				return err
 			}
-			local, err := os.ReadFile(args[0])
+			local, err := os.ReadFile(file)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
 			if bytes.Equal(local, []byte(pulled.Document)) {
-				fmt.Fprintf(cmd.OutOrStdout(), "✓ %s matches %s %s\n", args[0], slug, pulled.Version)
+				fmt.Fprintf(cmd.OutOrStdout(), "✓ %s matches %s %s\n", file, name, pulled.Version)
 				return nil
 			}
 			fmt.Fprintf(cmd.ErrOrStderr(),
-				"✗ %s differs from the Live version %s of %s (layout %s).\n  Run: echopoint spec pull --spec %s %s\n",
-				args[0], pulled.Version, slug, strconv.Itoa(int(pulled.LayoutVersion)), slug, args[0])
+				"✗ %s differs from the Live version %s of %s (layout %s).\n  Run: echopoint spec pull %s -f %s\n",
+				file, pulled.Version, name, strconv.Itoa(int(pulled.LayoutVersion)), name, file)
 			return &exitCodeError{code: 1}
 		},
 	}
-	cmd.Flags().StringVar(&slug, "spec", "", specFlagUsage)
-	_ = cmd.MarkFlagRequired("spec")
-	return cmd
+	addSpecFileFlag(cmd, &file, "File to compare with Live")
+	_ = cmd.MarkFlagRequired("file")
+	return finishSpecCmd(state, cmd)
 }

@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 1.6.0
+  version: 2.0.0
 paths:
   /webhooks:
     parameters:
@@ -118,7 +118,7 @@ paths:
       tags:
         - Resources
       summary: Search Resources
-      description: Cross-domain resource discovery across persisted flow-relevant resources.
+      description: Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
       operationId: searchResources
       requestBody:
         description: Search criteria for cross-domain resources.
@@ -4227,7 +4227,8 @@ paths:
         that version into `info.version`, and stores the canonical YAML.
 
         Errors: `SPEC_NOTHING_TO_PUBLISH` (409, identical to Live apart from
-        `info.version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
+        `info.version`), `SPEC_LIVE_MOVED` (409, Live is no longer
+        `base_version`), `SPEC_COMPARISON_FAILED` (400, the comparison could not
         run; it is never reported as "no breaking changes"),
         `SPEC_DOCUMENT_TOO_LARGE`, `SPEC_DOCUMENT_UNREADABLE`,
         `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
@@ -4311,7 +4312,7 @@ paths:
         Applies edit commands to the spec's Live version and publishes the result
         as the next Live version, with the version computed from the changes, as
         a push does. The commands apply in order and all or nothing. The CLI's
-        `echopoint spec route|method|schema|property|param|response … --spec <slug> --live`
+        `echopoint spec route|method|schema|property|param|response <verb> <slug> <args…> --live`
         and the docs editor send them.
 
         `command_id` makes a retry safe: a request whose `command_id` already
@@ -4372,7 +4373,7 @@ paths:
       description: |
         Returns a Live version's document in the canonical YAML layout, with the
         snapshot ID that names it. Without `version`, returns the current Live
-        version. `echopoint spec pull` writes `document` as is.
+        version. `echopoint spec pull <slug>` writes `document` as is.
       operationId: pullSpec
       parameters:
         - name: version
@@ -5139,6 +5140,7 @@ components:
         - requests
         - openapi_operations
         - flows
+        - specs
     ResourceSearchType:
       description: Concrete resource type represented by a search result item.
       type: string
@@ -5147,6 +5149,7 @@ components:
         - request
         - openapi_operation
         - flow
+        - spec
     RequestOrigin:
       description: Normalized provenance for saved request resources.
       type: string
@@ -5219,6 +5222,11 @@ components:
             - string
             - "null"
           format: uuid
+        spec_slug:
+          description: The unique slug of the spec when the resource is a spec. It addresses the spec in the specs routes and in the CLI, for example `echopoint spec view <slug>`.
+          type:
+            - string
+            - "null"
     ResourceSearchResultItem:
       type: object
       required:
@@ -10366,7 +10374,7 @@ components:
           type: string
           format: uuid
         slug:
-          description: Identifies the spec within the organization, in URLs and in the CLI's `--spec`.
+          description: The spec's unique slug within the organization. It addresses the spec in URLs and in the CLI, for example `echopoint spec view <slug>`.
           type: string
           examples:
             - echopoint-api
@@ -10612,6 +10620,14 @@ components:
             15 MB. It must be self-contained: no external `$ref`. Its
             `info.version` is ignored: EchoPoint computes the version.
           type: string
+        base_version:
+          description: |
+            The Live version the document was written against. When Live is no
+            longer that version, the push is refused with `SPEC_LIVE_MOVED` and
+            nothing is published.
+          type: string
+          examples:
+            - 1.4.0
     StatusPageTheme:
       type: string
       enum:
@@ -11156,19 +11172,21 @@ components:
       schema:
         type: integer
         format: int32
-        default: 20
         minimum: 1
         maximum: 100
+        examples:
+          - 20
     OffsetParameter:
       name: offset
       in: query
-      description: Number of items to skip.
-      required: true
+      description: Number of items to skip. Absent means 0.
+      required: false
       schema:
         type: integer
         format: int32
         default: 0
         minimum: 0
+      x-go-type-skip-optional-pointer: true
     RequiredOrganizationIDHeader:
       name: X-Organization-ID
       in: header

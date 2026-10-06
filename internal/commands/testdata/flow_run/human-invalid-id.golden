@@ -1,0 +1,9 @@
+exit: 3
+--- stdout ---
+--- stderr ---
+✗ Flow not-a-uuid: error
+  Error: invalid flow id "not-a-uuid": invalid UUID length: 10
+exit code 3
+--- launches ---
+
+--- step summary ---

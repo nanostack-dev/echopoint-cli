@@ -12,7 +12,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"echopoint-cli/internal/api"
 	"echopoint-cli/internal/client"
@@ -22,18 +21,25 @@ import (
 const anonymousAnnotation = "echopoint/anonymous"
 const annotationEnabled = "true"
 
-func newStatusPagesCmd(state *AppState) *cobra.Command {
+// offlineAnnotation marks a command that works on local files and never
+// needs credentials.
+const offlineAnnotation = "echopoint/offline"
+
+func offline() map[string]string {
+	return map[string]string{offlineAnnotation: annotationEnabled}
+}
+
+func newStatusPageCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "status-pages",
-		Short: "Configure, publish and verify the organization's public status page",
+		Use:     statusPageCommandName,
+		Aliases: []string{"status-pages"},
+		Short:   "Configure, publish and verify the organization's public status page",
 	}
 	cmd.AddCommand(
-		newStatusPageGetCmd(state),
+		newStatusPageViewCmd(state),
 		newStatusPageSaveCmd(state, false),
 		newStatusPageSaveCmd(state, true),
-		newStatusPagePublishCmd(
-			state,
-		),
+		newStatusPagePublishCmd(state),
 		newStatusPageUnpublishCmd(state),
 		newStatusPageBindingCmd(state),
 		newStatusPagePublicCmd(state),
@@ -52,23 +58,18 @@ func printStatusResponse[T any](
 		return formatAPIError(response, body)
 	}
 	if state.OutputFormat == output.FormatYAML {
-		data, err := json.Marshal(value)
-		if err != nil {
-			return err
-		}
-		var document any
-		if err := yaml.Unmarshal(data, &document); err != nil {
-			return err
-		}
-		return output.PrintYAML(cmd.OutOrStdout(), document)
+		return output.PrintYAML(cmd.OutOrStdout(), value)
 	}
 	// Nested configuration is emitted as JSON by default so it can be saved without losing fields.
 	return output.PrintJSON(cmd.OutOrStdout(), value)
 }
 
-func newStatusPageGetCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{Use: "get", Short: "Read the shared draft and its publication versions", Args: cobra.NoArgs,
-		SilenceUsage: true, SilenceErrors: true, RunE: func(cmd *cobra.Command, _ []string) error {
+func newStatusPageViewCmd(state *AppState) *cobra.Command {
+	return &cobra.Command{Use: viewVerb, Aliases: []string{getVerb},
+		Short: "Show the shared draft and its publication versions",
+		Example: `  echopoint status-page view
+  echopoint status-page view -o yaml`,
+		Args: cobra.NoArgs, SilenceUsage: true, SilenceErrors: true, RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
@@ -119,19 +120,25 @@ func readStatusPageRequest(cmd *cobra.Command, path string) (api.SaveStatusPageR
 }
 
 func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
-	verb, short := "save <file|->", "Save a complete private draft from JSON; use - for stdin"
+	var file string
+	verb, short := "save -f <file>", "Save a complete private draft from a JSON file (-f -: stdin)"
+	example := `  echopoint status-page save -f status-page.json
+  cat status-page.json | echopoint status-page save -f -`
 	if validateOnly {
-		verb, short = "validate <file|->", "Validate draft JSON offline against the API contract"
+		verb, short = "validate -f <file>", "Validate a draft JSON file offline against the API contract (-f -: stdin)"
+		example = `  echopoint status-page validate -f status-page.json
+  cat status-page.json | echopoint status-page validate -f -`
 	}
 	cmd := &cobra.Command{
 		Use:           verb,
 		Short:         short,
-		Long:          short + ". For a new page, slug is a 3-48 character prefix; the server adds a unique suffix. For edits and public reads, use the complete slug returned by save/get.",
-		Args:          cobra.ExactArgs(1),
+		Long:          short + ". For a new page, slug is a 3-48 character prefix; the server adds a unique suffix. For edits and public reads, use the complete slug returned by save/view.",
+		Example:       example,
+		Args:          fileFlagArgs(0),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			request, err := readStatusPageRequest(cmd, args[0])
+			request, err := readStatusPageRequest(cmd, file)
 			if err != nil {
 				return err
 			}
@@ -152,6 +159,9 @@ func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
 			return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
 		},
 	}
+	addFileFlag(cmd, &file, "Draft JSON file; - reads stdin", "json")
+	_ = cmd.MarkFlagRequired("file")
+	cmd.ValidArgsFunction = cobra.NoFileCompletions
 	if validateOnly {
 		cmd.Annotations = offline()
 	}
@@ -162,7 +172,8 @@ func newStatusPagePublishCmd(state *AppState) *cobra.Command {
 	var draft, intent int64
 	cmd := &cobra.Command{
 		Use:           "publish",
-		Short:         "Publish the saved draft using the versions returned by get/save",
+		Short:         "Publish the saved draft using the versions returned by view/save",
+		Example:       `  echopoint status-page publish --expected-draft-version 3 --expected-intent-version 2`,
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -195,6 +206,7 @@ func newStatusPageUnpublishCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "unpublish",
 		Short:         "Withdraw the public page using its current intent version",
+		Example:       `  echopoint status-page unpublish --expected-intent-version 4`,
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -204,6 +216,9 @@ func newStatusPageUnpublishCmd(state *AppState) *cobra.Command {
 			}
 			if intent < 0 {
 				return fmt.Errorf("expected intent version must be nonnegative")
+			}
+			if err := confirmDestructive(cmd, state, "unpublish", "the status page"); err != nil {
+				return err
 			}
 			resp, err := state.Client.API().
 				UnpublishStatusPageWithResponse(cmd.Context(), nil, api.UnpublishStatusPageRequest{ExpectedIntentVersion: intent})
@@ -223,6 +238,7 @@ func newStatusPageBindingCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "binding-options",
 		Short:         "Resolve a monitor's published flow and available checks",
+		Example:       `  echopoint status-page binding-options --schedule-id <schedule-id> --flow-id <flow-id>`,
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -234,9 +250,9 @@ func newStatusPageBindingCmd(state *AppState) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("invalid schedule ID: %w", err)
 			}
-			flowID, err := uuid.Parse(flow)
+			flowID, err := resolveFlowID(cmd.Context(), state, flow)
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return fmt.Errorf("--flow-id: %w", err)
 			}
 			resp, err := state.Client.API().
 				GetStatusPageBindingOptionsWithResponse(cmd.Context(), &api.GetStatusPageBindingOptionsParams{
@@ -250,6 +266,7 @@ func newStatusPageBindingCmd(state *AppState) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&schedule, "schedule-id", "", "Enabled monitor ID")
 	cmd.Flags().StringVar(&flow, "flow-id", "", "Flow selected by the monitor")
+	_ = cmd.RegisterFlagCompletionFunc("flow-id", completeFlowFlag(state))
 	_ = cmd.MarkFlagRequired("schedule-id")
 	_ = cmd.MarkFlagRequired("flow-id")
 	return cmd
@@ -258,9 +275,11 @@ func newStatusPageBindingCmd(state *AppState) *cobra.Command {
 func newStatusPagePublicCmd(state *AppState) *cobra.Command {
 	var key string
 	cmd := &cobra.Command{
-		Use:           "public [slug]",
-		Short:         "Read a published page anonymously by legacy slug or permanent organization key",
-		Long:          "Read public status without credentials or organization headers. Use the organization_key returned by status-pages get/save with --organization-key, or provide an existing slug.",
+		Use:   "public [slug]",
+		Short: "Read a published page anonymously by legacy slug or permanent organization key",
+		Long:  "Read public status without credentials or organization headers. Use the organization_key returned by status-page view/save with --organization-key, or provide an existing slug.",
+		Example: `  echopoint status-page public --organization-key <key>
+  echopoint status-page public acme-a1b2c3d4e5f6`,
 		Args:          cobra.MaximumNArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -290,6 +309,6 @@ func newStatusPagePublicCmd(state *AppState) *cobra.Command {
 			return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
 		},
 	}
-	cmd.Flags().StringVar(&key, "organization-key", "", "Permanent organization key returned by get/save")
+	cmd.Flags().StringVar(&key, "organization-key", "", "Permanent organization key returned by view/save")
 	return cmd
 }

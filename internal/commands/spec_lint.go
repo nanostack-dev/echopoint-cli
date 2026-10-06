@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -8,79 +9,59 @@ import (
 	"github.com/nanostack-dev/echopoint-kit/apispec"
 	"github.com/spf13/cobra"
 
-	"echopoint-cli/internal/output"
+	"echopoint-cli/internal/api"
 )
 
 type specLint struct {
-	File     string            `json:"file"     yaml:"file"`
-	Base     string            `json:"base"     yaml:"base"`
-	Findings []apispec.Finding `json:"findings" yaml:"findings"`
+	Spec     string            `json:"spec"`
+	Version  string            `json:"version"`
+	File     string            `json:"file,omitempty"`
+	Findings []api.SpecFinding `json:"findings"`
 }
 
 func newSpecLintCmd(state *AppState) *cobra.Command {
 	var (
-		file, base, slug string
-		failOnFindings   bool
+		file, version  string
+		failOnFindings bool
 	)
 	cmd := &cobra.Command{
-		Use:   "lint [file]",
-		Short: "Report where an OpenAPI document departs from its own conventions",
-		Long: `Report the places where a document departs from the conventions the rest of
-it follows: the casing most properties and operation IDs use, the responses,
-error shape, extensions, and security most operations declare, descriptions,
-and declared path parameters. EchoPoint stores the same findings with every
-Live version, and the editor shows them while you type.
+		Use:   "lint <slug> [-f <file>]",
+		Short: "Report where a spec, or what a file adds to it, departs from its conventions",
+		Long: `Report the places where a spec departs from the conventions the rest of it
+follows: the casing most properties and operation IDs use, the responses, error
+shape, extensions, and security most operations declare, descriptions, and
+declared path parameters.
 
---base reports only what the document adds compared with another local file,
-judged by that file's conventions. --spec does the same against the spec's Live
-version in EchoPoint, so a change can be checked before it is pushed.
+Without -f, list the findings EchoPoint stored with a version of the spec
+(default: Live). The ones the version introduced are marked new.
+
+With -f, list only the findings the file adds compared with Live, judged by
+Live's conventions: the check to run before 'echopoint spec push'.
 
 Exits 0 even with findings, unless --fail-on-findings is set.`,
-		Args:          cobra.MaximumNArgs(1),
-		Annotations:   offlineUnless("spec"),
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Example: `  echopoint spec lint pets-api
+  echopoint spec lint pets-api --version 1.3.0
+  echopoint spec lint pets-api -f openapi.yaml --fail-on-findings`,
+		Args: specArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, err := fileArgument(file, args)
+			fromFile := cmd.Flags().Changed("file")
+			if fromFile && version != "" {
+				return errors.New("--version and -f cannot be used together: a file is compared with Live")
+			}
+			if err := requireToken(state); err != nil {
+				return err
+			}
+			var result specLint
+			var err error
+			if fromFile {
+				result, err = lintFileAgainstLive(cmd.Context(), state, args[0], file)
+			} else {
+				result, err = lintStoredFindings(cmd.Context(), state, args[0], version)
+			}
 			if err != nil {
 				return err
 			}
-			if base != "" && slug != "" {
-				return errors.New("--base and --spec cannot be used together")
-			}
-			document, err := readSpec(path)
-			if err != nil {
-				return err
-			}
-			result := specLint{File: path, Base: base}
-			switch {
-			case slug != "":
-				if err := requireToken(state); err != nil {
-					return err
-				}
-				live, pullErr := pullSpec(state, slug, "")
-				if pullErr != nil {
-					return pullErr
-				}
-				liveDocument, parseErr := apispec.Parse([]byte(live.Document))
-				if parseErr != nil {
-					return fmt.Errorf("Live version of %s: %w", slug, parseErr)
-				}
-				result.Base = fmt.Sprintf("%s (Live %s)", slug, live.Version)
-				result.Findings = apispec.LintChanges(liveDocument, document)
-			case base != "":
-				baseDocument, readErr := readSpec(base)
-				if readErr != nil {
-					return readErr
-				}
-				result.Findings = apispec.LintChanges(baseDocument, document)
-			default:
-				result.Findings = document.Lint()
-			}
-			if result.Findings == nil {
-				result.Findings = []apispec.Finding{}
-			}
-			if err := printSpecLint(cmd.OutOrStdout(), state.OutputFormat, result); err != nil {
+			if err = printSpecLint(cmd, state, result); err != nil {
 				return err
 			}
 			if failOnFindings && len(result.Findings) > 0 {
@@ -89,45 +70,101 @@ Exits 0 even with findings, unless --fail-on-findings is set.`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&file, "file", "", "OpenAPI document to lint (or pass it as the argument)")
-	cmd.Flags().StringVar(&base, "base", "", "Report only findings the document adds compared with this file")
-	cmd.Flags().
-		StringVar(&slug, "spec", "", "Report only findings the document adds compared with this spec's Live version")
+	addSpecFileFlag(cmd, &file, "OpenAPI file: report only the findings it adds to Live")
+	cmd.Flags().StringVar(&version, "version", "", "Version whose stored findings to list (default: Live)")
 	cmd.Flags().BoolVar(&failOnFindings, "fail-on-findings", false, "Exit non-zero when there is a finding")
-	return cmd
+	registerSpecVersionCompletion(state, cmd, "version")
+	return finishSpecCmd(state, cmd)
 }
 
-func fileArgument(file string, args []string) (string, error) {
-	switch {
-	case file != "" && len(args) > 0:
-		return "", errors.New("pass the file as the argument or with --file, not both")
-	case file != "":
-		return file, nil
-	case len(args) > 0:
-		return args[0], nil
+func lintStoredFindings(ctx context.Context, state *AppState, name, version string) (specLint, error) {
+	version, err := versionOrLive(ctx, state, name, version)
+	if err != nil {
+		return specLint{}, err
 	}
-	return "", errors.New("name the OpenAPI document to read, as the argument or with --file")
+	stored, err := fetchSpecVersion(ctx, state, name, version)
+	if err != nil {
+		return specLint{}, err
+	}
+	findings := stored.Findings
+	if findings == nil {
+		findings = []api.SpecFinding{}
+	}
+	return specLint{Spec: name, Version: stored.Version, Findings: findings}, nil
 }
 
-func printSpecLint(w io.Writer, format output.Format, result specLint) error {
-	switch format {
-	case output.FormatJSON:
-		return output.PrintJSON(w, result)
-	case output.FormatYAML:
-		return output.PrintYAML(w, result)
-	case output.FormatTable:
+func lintFileAgainstLive(ctx context.Context, state *AppState, name, file string) (specLint, error) {
+	live, err := pullSpec(ctx, state, name, "")
+	if err != nil {
+		return specLint{}, err
 	}
-	if len(result.Findings) == 0 {
-		_, err := fmt.Fprintf(w, "✓ %s follows its conventions\n", result.File)
+	base, err := parsePulled(name, live)
+	if err != nil {
+		return specLint{}, err
+	}
+	document, err := readSpec(file)
+	if err != nil {
+		return specLint{}, err
+	}
+	added := apispec.LintChanges(base, document)
+	findings := make([]api.SpecFinding, 0, len(added))
+	for _, finding := range added {
+		findings = append(findings, api.SpecFinding{
+			Rule:       api.SpecLintRule(finding.Rule),
+			Pointer:    finding.Pointer,
+			Message:    finding.Message,
+			Convention: finding.Convention,
+			Evidence:   finding.Evidence,
+			Introduced: true,
+		})
+	}
+	return specLint{Spec: name, Version: live.Version, File: file, Findings: findings}, nil
+}
+
+func printSpecLint(cmd *cobra.Command, state *AppState, result specLint) error {
+	w := cmd.OutOrStdout()
+	if done, err := printStructured(w, state.OutputFormat, result); done {
 		return err
 	}
-	fmt.Fprintf(w, "%s: %d finding(s)\n", result.File, len(result.Findings))
+	subject := fmt.Sprintf("%s %s", result.Spec, result.Version)
+	if result.File != "" {
+		return printFileFindings(w, result, subject)
+	}
+	if len(result.Findings) == 0 {
+		_, err := fmt.Fprintf(w, "✓ %s follows its conventions\n", subject)
+		return err
+	}
+	introduced := 0
 	for _, finding := range result.Findings {
-		fmt.Fprintf(w, "\n%s  %s\n  %s\n  Convention: %s\n", finding.Rule, finding.Pointer, finding.Message,
-			finding.Convention)
+		if finding.Introduced {
+			introduced++
+		}
+	}
+	fmt.Fprintf(w, "%s: %d finding(s), %d new\n", subject, len(result.Findings), introduced)
+	printFindings(w, result.Findings, true)
+	return nil
+}
+
+func printFileFindings(w io.Writer, result specLint, subject string) error {
+	if len(result.Findings) == 0 {
+		_, err := fmt.Fprintf(w, "✓ %s adds no findings to %s (Live)\n", result.File, subject)
+		return err
+	}
+	fmt.Fprintf(w, "%s adds %d finding(s) to %s (Live)\n", result.File, len(result.Findings), subject)
+	printFindings(w, result.Findings, false)
+	return nil
+}
+
+func printFindings(w io.Writer, findings []api.SpecFinding, markNew bool) {
+	for _, finding := range findings {
+		marker := ""
+		if markNew && finding.Introduced {
+			marker = "  (new)"
+		}
+		fmt.Fprintf(w, "\n%s  %s%s\n  %s\n  Convention: %s\n", finding.Rule, finding.Pointer, marker,
+			finding.Message, finding.Convention)
 		if finding.Evidence != "" {
 			fmt.Fprintf(w, "  Evidence: %s\n", finding.Evidence)
 		}
 	}
-	return nil
 }

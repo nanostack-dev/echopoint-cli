@@ -7,7 +7,6 @@ import (
 	"echopoint-cli/internal/api"
 
 	"github.com/gofrs/uuid/v5"
-	googleuuid "github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -37,22 +36,20 @@ func newFlowEdgeAddCmd(state *AppState) *cobra.Command {
 		Use:   "add <flow-id>",
 		Short: "Add an edge between nodes",
 		Args:  cobra.ExactArgs(1),
-		Long: `Add a connection (edge) between two nodes.
-
-Examples:
-  # Add a success edge
-  echopoint flows edge add <flow-id> --from <node1-id> --to <node2-id> --type success
+		Long:  `Add a connection (edge) between two nodes.`,
+		Example: `  # Add a success edge
+  echopoint flow edge add <flow-id> --from <node1-id> --to <node2-id> --type success
 
   # Add a failure edge
-  echopoint flows edge add <flow-id> --from <node1-id> --to <node2-id> --type failure`,
+  echopoint flow edge add <flow-id> --from <node1-id> --to <node2-id> --type failure`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			// Validate edge type
@@ -175,17 +172,18 @@ Examples:
 // newFlowEdgeRemoveCmd removes an edge from a flow
 func newFlowEdgeRemoveCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove <flow-id> <edge-id>",
-		Short: "Remove an edge from the flow",
-		Args:  cobra.ExactArgs(2),
+		Use:     "remove <flow-id> <edge-id>",
+		Short:   "Remove an edge from the flow",
+		Example: `  echopoint flow edge remove <flow-id> <edge-id>`,
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := googleuuid.Parse(args[0])
+			flowID, err := resolveFlowID(context.Background(), state, args[0])
 			if err != nil {
-				return fmt.Errorf("invalid flow ID: %w", err)
+				return err
 			}
 
 			edgeID := args[1]

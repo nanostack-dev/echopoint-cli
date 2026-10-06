@@ -98,5 +98,5 @@ to expose it.
 `get_status_page`, `save_status_page` and `get_status_page_binding_options`
 manage the private draft and discover monitor checks. Publication and withdrawal
 remain excluded by the API contract; use the explicit
-[`status-pages` CLI commands](status-pages.md) for those actions and anonymous
+[`status-page` CLI commands](status-pages.md) for those actions and anonymous
 public verification.
