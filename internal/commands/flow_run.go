@@ -18,6 +18,7 @@ import (
 	"echopoint-cli/internal/output"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
@@ -206,6 +207,7 @@ Exit codes:
 
 			baseKey := resolveIdempotencyKey(flagIdempotencyKey, flowIDs)
 
+			zerolog.SetGlobalLevel(runnerLogLevel(flagVerbose, state.Debug))
 			results, exitCode := executeFlows(
 				ctx, state, flowIDs, baseKey,
 				flagEnvironment, flagVersionID, flagParallel, string(format),
@@ -216,7 +218,7 @@ Exit codes:
 	}
 
 	cmd.Flags().BoolVar(&flagVerbose, "verbose", false,
-		"Print each node's status (name, status, duration) as the flow runs")
+		"Print each node's status (name, status, duration) and the runner's logs as the flow runs")
 	cmd.Flags().StringVarP(&flagEnvironment, "environment", "e", "", "Environment to overlay on flow inputs (e.g. dev)")
 	cmd.Flags().StringVar(&flagVersionID, "version-id", "",
 		"Flow version ID to execute (default: current flow definition)")
@@ -967,4 +969,13 @@ func progressf(outputFormat, format string, args ...any) {
 	if output.ParseFormat(outputFormat) == output.FormatTable {
 		fmt.Fprintf(os.Stderr, format, args...)
 	}
+}
+
+// The embedded runner logs through zerolog's global logger, every debug line
+// included unless the level is raised.
+func runnerLogLevel(verbose, debug bool) zerolog.Level {
+	if verbose || debug {
+		return zerolog.DebugLevel
+	}
+	return zerolog.WarnLevel
 }
