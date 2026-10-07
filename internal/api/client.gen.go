@@ -2715,7 +2715,7 @@ type ExportedFlow struct {
 	Edges []FlowEdge `json:"edges"`
 
 	// InitialInputs Initial input variables for the flow (from its variable set)
-	InitialInputs map[string]interface{} `json:"initialInputs"`
+	InitialInputs map[string]interface{} `json:"initial_inputs"`
 
 	// Name Name of the flow
 	//
@@ -4341,9 +4341,9 @@ type ResourceSearchDomain string
 // ResourceSearchDriftDocument A single resource_search_documents row that drifted from its canonical source.
 type ResourceSearchDriftDocument struct {
 	Domain         string `json:"domain"`
-	OrganizationId string `json:"organizationId"`
-	ResourceId     string `json:"resourceId"`
-	ResourceType   string `json:"resourceType"`
+	OrganizationId string `json:"organization_id"`
+	ResourceId     string `json:"resource_id"`
+	ResourceType   string `json:"resource_type"`
 }
 
 // ResourceSearchIdentifiers defines model for ResourceSearchIdentifiers.
@@ -4376,17 +4376,17 @@ type ResourceSearchOrgResyncReport struct {
 	Added []ResourceSearchDriftDocument `json:"added"`
 
 	// AddedCount Total canonical rows that were missing and inserted back for this org.
-	AddedCount     int64  `json:"addedCount"`
-	OrganizationId string `json:"organizationId"`
+	AddedCount     int64  `json:"added_count"`
+	OrganizationId string `json:"organization_id"`
 
 	// Removed Bounded sample of the removed rows (capped at sampleLimitPerDirection).
 	Removed []ResourceSearchDriftDocument `json:"removed"`
 
 	// RemovedCount Total stale rows that were present but unexpected and deleted for this org.
-	RemovedCount int64 `json:"removedCount"`
+	RemovedCount int64 `json:"removed_count"`
 
 	// SampleTruncated True when addedCount+removedCount exceeds the returned sample size.
-	SampleTruncated bool `json:"sampleTruncated"`
+	SampleTruncated bool `json:"sample_truncated"`
 }
 
 // ResourceSearchPreset Preset that shapes default search behavior for a specific discovery workflow.
@@ -4464,13 +4464,13 @@ type ResourceSearchResultItem struct {
 // ResourceSearchResyncReport Result of an admin resync — what drifted and was corrected, grouped by organization.
 type ResourceSearchResyncReport struct {
 	// OrganizationCount Number of organizations that had drift corrected.
-	OrganizationCount int                             `json:"organizationCount"`
+	OrganizationCount int                             `json:"organization_count"`
 	Organizations     []ResourceSearchOrgResyncReport `json:"organizations"`
 
 	// SampleLimitPerDirection Max added/removed rows returned per org per direction.
-	SampleLimitPerDirection int   `json:"sampleLimitPerDirection"`
-	TotalAdded              int64 `json:"totalAdded"`
-	TotalRemoved            int64 `json:"totalRemoved"`
+	SampleLimitPerDirection int   `json:"sample_limit_per_direction"`
+	TotalAdded              int64 `json:"total_added"`
+	TotalRemoved            int64 `json:"total_removed"`
 }
 
 // ResourceSearchScope defines model for ResourceSearchScope.
@@ -5216,12 +5216,12 @@ type StatusPageColors struct {
 
 // StatusPageConfig Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
 type StatusPageConfig struct {
-	BrandName    string `json:"brandName"`
+	BrandName    string `json:"brand_name"`
 	CustomColors struct {
 		Ledger *StatusPageColors `json:"ledger"`
 		Orbit  *StatusPageColors `json:"orbit"`
 		Signal *StatusPageColors `json:"signal"`
-	} `json:"customColors"`
+	} `json:"custom_colors"`
 	Description string `json:"description"`
 	Headlines   struct {
 		Ledger string `json:"ledger"`
@@ -5233,9 +5233,9 @@ type StatusPageConfig struct {
 	Palette       StatusPagePalette       `json:"palette"`
 	Regions       []StatusPageRegion      `json:"regions"`
 	Services      []StatusPageService     `json:"services"`
-	ShowHistory   bool                    `json:"showHistory"`
-	ShowRegions   bool                    `json:"showRegions"`
-	ShowSubscribe bool                    `json:"showSubscribe"`
+	ShowHistory   bool                    `json:"show_history"`
+	ShowRegions   bool                    `json:"show_regions"`
+	ShowSubscribe bool                    `json:"show_subscribe"`
 	Theme         StatusPageTheme         `json:"theme"`
 	Version       StatusPageConfigVersion `json:"version"`
 }
@@ -8435,10 +8435,14 @@ type ClientInterface interface {
 
 	// GetFlowSchedule Get Flow Schedule
 	//
+	// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
+	//
 	// Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
 	GetFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateFlowScheduleWithBody Update Flow Schedule
+	//
+	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -8446,6 +8450,8 @@ type ClientInterface interface {
 	UpdateFlowScheduleWithBody(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateFlowSchedule Update Flow Schedule
+	//
+	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -9113,10 +9119,14 @@ type ClientInterface interface {
 
 	// GetPublicStatusPageByOrganization Read a published status page by permanent organization key
 	//
+	// Anonymous read of an organization's published status page by its permanent organization key. Returns 404 when the organization has no published page.
+	//
 	// Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
 	GetPublicStatusPageByOrganization(ctx context.Context, organizationKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPublicStatusPage Read a published status page
+	//
+	// Anonymous read of a published status page by its slug. Returns 404 when no published page has this slug.
 	//
 	// Corresponds with GET /public/status-pages/{slug} (the `GetPublicStatusPage` operationId).
 	GetPublicStatusPage(ctx context.Context, slug string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9475,15 +9485,21 @@ type ClientInterface interface {
 
 	// GetStatusPageBindingOptions List publishable monitor checks
 	//
+	// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
+	//
 	// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
 	GetStatusPageBindingOptions(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetStatusPage Read the shared status page draft
 	//
+	// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
+	//
 	// Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
 	GetStatusPage(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SaveStatusPageWithBody Save a private status page draft
+	//
+	// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9492,12 +9508,16 @@ type ClientInterface interface {
 
 	// SaveStatusPage Save a private status page draft
 	//
+	// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
+	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
 	SaveStatusPage(ctx context.Context, params *SaveStatusPageParams, body SaveStatusPageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PublishStatusPageWithBody Publish a saved status page
+	//
+	// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9506,6 +9526,8 @@ type ClientInterface interface {
 
 	// PublishStatusPage Publish a saved status page
 	//
+	// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
+	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
@@ -9513,12 +9535,16 @@ type ClientInterface interface {
 
 	// UnpublishStatusPageWithBody Withdraw a public status page
 	//
+	// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
 	UnpublishStatusPageWithBody(ctx context.Context, params *UnpublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UnpublishStatusPage Withdraw a public status page
+	//
+	// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -10663,6 +10689,8 @@ func (c *Client) DeleteFlowSchedule(ctx context.Context, scheduleId openapi_type
 
 // GetFlowSchedule Get Flow Schedule
 //
+// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
+//
 // Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
 func (c *Client) GetFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetFlowScheduleRequest(c.Server, scheduleId, params)
@@ -10677,6 +10705,8 @@ func (c *Client) GetFlowSchedule(ctx context.Context, scheduleId openapi_types.U
 }
 
 // UpdateFlowScheduleWithBody Update Flow Schedule
+//
+// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
 //
 // Takes any type of body and a specified content type.
 //
@@ -10694,6 +10724,8 @@ func (c *Client) UpdateFlowScheduleWithBody(ctx context.Context, scheduleId open
 }
 
 // UpdateFlowSchedule Update Flow Schedule
+//
+// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -12071,6 +12103,8 @@ func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsPar
 
 // GetPublicStatusPageByOrganization Read a published status page by permanent organization key
 //
+// Anonymous read of an organization's published status page by its permanent organization key. Returns 404 when the organization has no published page.
+//
 // Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
 func (c *Client) GetPublicStatusPageByOrganization(ctx context.Context, organizationKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPublicStatusPageByOrganizationRequest(c.Server, organizationKey)
@@ -12085,6 +12119,8 @@ func (c *Client) GetPublicStatusPageByOrganization(ctx context.Context, organiza
 }
 
 // GetPublicStatusPage Read a published status page
+//
+// Anonymous read of a published status page by its slug. Returns 404 when no published page has this slug.
 //
 // Corresponds with GET /public/status-pages/{slug} (the `GetPublicStatusPage` operationId).
 func (c *Client) GetPublicStatusPage(ctx context.Context, slug string, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -12733,6 +12769,8 @@ func (c *Client) GetSpecVersion(ctx context.Context, slug SpecSlugParameter, ver
 
 // GetStatusPageBindingOptions List publishable monitor checks
 //
+// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
+//
 // Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
 func (c *Client) GetStatusPageBindingOptions(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetStatusPageBindingOptionsRequest(c.Server, params)
@@ -12748,6 +12786,8 @@ func (c *Client) GetStatusPageBindingOptions(ctx context.Context, params *GetSta
 
 // GetStatusPage Read the shared status page draft
 //
+// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
+//
 // Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
 func (c *Client) GetStatusPage(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetStatusPageRequest(c.Server, params)
@@ -12762,6 +12802,8 @@ func (c *Client) GetStatusPage(ctx context.Context, params *GetStatusPageParams,
 }
 
 // SaveStatusPageWithBody Save a private status page draft
+//
+// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
 //
 // Takes any type of body and a specified content type.
 //
@@ -12780,6 +12822,8 @@ func (c *Client) SaveStatusPageWithBody(ctx context.Context, params *SaveStatusP
 
 // SaveStatusPage Save a private status page draft
 //
+// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
+//
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
@@ -12796,6 +12840,8 @@ func (c *Client) SaveStatusPage(ctx context.Context, params *SaveStatusPageParam
 }
 
 // PublishStatusPageWithBody Publish a saved status page
+//
+// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
 //
 // Takes any type of body and a specified content type.
 //
@@ -12814,6 +12860,8 @@ func (c *Client) PublishStatusPageWithBody(ctx context.Context, params *PublishS
 
 // PublishStatusPage Publish a saved status page
 //
+// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
+//
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
@@ -12831,6 +12879,8 @@ func (c *Client) PublishStatusPage(ctx context.Context, params *PublishStatusPag
 
 // UnpublishStatusPageWithBody Withdraw a public status page
 //
+// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
@@ -12847,6 +12897,8 @@ func (c *Client) UnpublishStatusPageWithBody(ctx context.Context, params *Unpubl
 }
 
 // UnpublishStatusPage Withdraw a public status page
+//
+// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -21109,6 +21161,8 @@ type ClientWithResponsesInterface interface {
 
 	// GetFlowScheduleWithResponse Get Flow Schedule
 	//
+	// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
+	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
@@ -21116,12 +21170,16 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateFlowScheduleWithBodyWithResponse Update Flow Schedule
 	//
+	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
 	UpdateFlowScheduleWithBodyWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error)
 
 	// UpdateFlowScheduleWithResponse Update Flow Schedule
+	//
+	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -21873,12 +21931,16 @@ type ClientWithResponsesInterface interface {
 
 	// GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
 	//
+	// Anonymous read of an organization's published status page by its permanent organization key. Returns 404 when the organization has no published page.
+	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
 	GetPublicStatusPageByOrganizationWithResponse(ctx context.Context, organizationKey string, reqEditors ...RequestEditorFn) (*GetPublicStatusPageByOrganizationResponse, error)
 
 	// GetPublicStatusPageWithResponse Read a published status page
+	//
+	// Anonymous read of a published status page by its slug. Returns 404 when no published page has this slug.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22255,12 +22317,16 @@ type ClientWithResponsesInterface interface {
 
 	// GetStatusPageBindingOptionsWithResponse List publishable monitor checks
 	//
+	// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
+	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
 	GetStatusPageBindingOptionsWithResponse(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*GetStatusPageBindingOptionsResponse, error)
 
 	// GetStatusPageWithResponse Read the shared status page draft
+	//
+	// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22269,12 +22335,16 @@ type ClientWithResponsesInterface interface {
 
 	// SaveStatusPageWithBodyWithResponse Save a private status page draft
 	//
+	// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
 	SaveStatusPageWithBodyWithResponse(ctx context.Context, params *SaveStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveStatusPageResponse, error)
 
 	// SaveStatusPageWithResponse Save a private status page draft
+	//
+	// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22283,12 +22353,16 @@ type ClientWithResponsesInterface interface {
 
 	// PublishStatusPageWithBodyWithResponse Publish a saved status page
 	//
+	// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
 	PublishStatusPageWithBodyWithResponse(ctx context.Context, params *PublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PublishStatusPageResponse, error)
 
 	// PublishStatusPageWithResponse Publish a saved status page
+	//
+	// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22297,12 +22371,16 @@ type ClientWithResponsesInterface interface {
 
 	// UnpublishStatusPageWithBodyWithResponse Withdraw a public status page
 	//
+	// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
 	UnpublishStatusPageWithBodyWithResponse(ctx context.Context, params *UnpublishStatusPageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnpublishStatusPageResponse, error)
 
 	// UnpublishStatusPageWithResponse Withdraw a public status page
+	//
+	// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29002,6 +29080,8 @@ type ListRunnerJobWebhookRequestsResponse struct {
 	JSON200 *WebhookRequestListResponse
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -29012,6 +29092,11 @@ func (r ListRunnerJobWebhookRequestsResponse) GetJSON200() *WebhookRequestListRe
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListRunnerJobWebhookRequestsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListRunnerJobWebhookRequestsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
 }
 
 // GetBody returns the raw response body bytes
@@ -30643,6 +30728,10 @@ type GetWebhookMethodDistributionResponse struct {
 	JSON200 *MethodDistributionResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -30655,6 +30744,16 @@ func (r GetWebhookMethodDistributionResponse) GetJSON200() *MethodDistributionRe
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
 func (r GetWebhookMethodDistributionResponse) GetJSON400() *BadRequest {
 	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetWebhookMethodDistributionResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetWebhookMethodDistributionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -30698,6 +30797,10 @@ type GetWebhookRequestVolumesResponse struct {
 	JSON200 *RequestVolumesResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -30710,6 +30813,16 @@ func (r GetWebhookRequestVolumesResponse) GetJSON200() *RequestVolumesResponse {
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
 func (r GetWebhookRequestVolumesResponse) GetJSON400() *BadRequest {
 	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetWebhookRequestVolumesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetWebhookRequestVolumesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31666,6 +31779,8 @@ func (c *ClientWithResponses) DeleteFlowScheduleWithResponse(ctx context.Context
 
 // GetFlowScheduleWithResponse Get Flow Schedule
 //
+// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
+//
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
@@ -31679,6 +31794,8 @@ func (c *ClientWithResponses) GetFlowScheduleWithResponse(ctx context.Context, s
 
 // UpdateFlowScheduleWithBodyWithResponse Update Flow Schedule
 //
+// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
@@ -31691,6 +31808,8 @@ func (c *ClientWithResponses) UpdateFlowScheduleWithBodyWithResponse(ctx context
 }
 
 // UpdateFlowScheduleWithResponse Update Flow Schedule
+//
+// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32868,6 +32987,8 @@ func (c *ClientWithResponses) ListPermissionsWithResponse(ctx context.Context, p
 
 // GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
 //
+// Anonymous read of an organization's published status page by its permanent organization key. Returns 404 when the organization has no published page.
+//
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /public/status-pages/organizations/{organization_key} (the `GetPublicStatusPageByOrganization` operationId).
@@ -32880,6 +33001,8 @@ func (c *ClientWithResponses) GetPublicStatusPageByOrganizationWithResponse(ctx 
 }
 
 // GetPublicStatusPageWithResponse Read a published status page
+//
+// Anonymous read of a published status page by its slug. Returns 404 when no published page has this slug.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -33430,6 +33553,8 @@ func (c *ClientWithResponses) GetSpecVersionWithResponse(ctx context.Context, sl
 
 // GetStatusPageBindingOptionsWithResponse List publishable monitor checks
 //
+// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
+//
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
@@ -33442,6 +33567,8 @@ func (c *ClientWithResponses) GetStatusPageBindingOptionsWithResponse(ctx contex
 }
 
 // GetStatusPageWithResponse Read the shared status page draft
+//
+// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -33456,6 +33583,8 @@ func (c *ClientWithResponses) GetStatusPageWithResponse(ctx context.Context, par
 
 // SaveStatusPageWithBodyWithResponse Save a private status page draft
 //
+// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PUT /status-pages/current (the `SaveStatusPage` operationId).
@@ -33468,6 +33597,8 @@ func (c *ClientWithResponses) SaveStatusPageWithBodyWithResponse(ctx context.Con
 }
 
 // SaveStatusPageWithResponse Save a private status page draft
+//
+// Creates or replaces the private draft. Send `expected_draft_version` from the last read, or 0 to create the first page; a stale version returns 409. The slug is fixed at creation. The public page does not change until the draft is published again.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -33482,6 +33613,8 @@ func (c *ClientWithResponses) SaveStatusPageWithResponse(ctx context.Context, pa
 
 // PublishStatusPageWithBodyWithResponse Publish a saved status page
 //
+// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /status-pages/current/publish (the `PublishStatusPage` operationId).
@@ -33494,6 +33627,8 @@ func (c *ClientWithResponses) PublishStatusPageWithBodyWithResponse(ctx context.
 }
 
 // PublishStatusPageWithResponse Publish a saved status page
+//
+// Publishes the saved draft as the public page. `expected_draft_version` and `expected_intent_version` must match the current page, or the call returns 409. A draft bound to a monitor check shows that check's health.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -33508,6 +33643,8 @@ func (c *ClientWithResponses) PublishStatusPageWithResponse(ctx context.Context,
 
 // UnpublishStatusPageWithBodyWithResponse Withdraw a public status page
 //
+// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /status-pages/current/unpublish (the `UnpublishStatusPage` operationId).
@@ -33520,6 +33657,8 @@ func (c *ClientWithResponses) UnpublishStatusPageWithBodyWithResponse(ctx contex
 }
 
 // UnpublishStatusPageWithResponse Withdraw a public status page
+//
+// Takes the public page offline and keeps the draft. `expected_intent_version` must match the current page, or the call returns 409.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -38832,6 +38971,13 @@ func ParseListRunnerJobWebhookRequestsResponse(rsp *http.Response) (*ListRunnerJ
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
 	}
 
 	return response, nil
@@ -40131,6 +40277,20 @@ func ParseGetWebhookMethodDistributionResponse(rsp *http.Response) (*GetWebhookM
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -40170,6 +40330,20 @@ func ParseGetWebhookRequestVolumesResponse(rsp *http.Response) (*GetWebhookReque
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound

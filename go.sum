@@ -79,8 +79,8 @@ github.com/modelcontextprotocol/go-sdk v1.6.1 h1:0zOSupjKUxPKSocPT1Wtago+mUHU2/u
 github.com/modelcontextprotocol/go-sdk v1.6.1/go.mod h1:kzm3kzFL1/+AziGOE0nUs3gvPoNxMCvkxokMkuFapXQ=
 github.com/nanostack-dev/echopoint-kit v0.3.0 h1:ITG1EpK0hZIAyudxzJiFEsGYlxpHZwL/VrVkpWVxkAQ=
 github.com/nanostack-dev/echopoint-kit v0.3.0/go.mod h1:+NQxoG0w/0nOpjh9Q7S88qgeNQ2varjD4U15Fn+5wPs=
-github.com/nanostack-dev/echopoint-runner v0.68.0 h1:3yTQLDax8iDrfo2+dMERo1wqCYTQ4qceg0gET0cIYys=
-github.com/nanostack-dev/echopoint-runner v0.68.0/go.mod h1:NqYWs8myxHvPVRTEmxoIh4M9ZSgJUZgorVBIPD/rfSk=
+github.com/nanostack-dev/echopoint-runner v0.72.0 h1:W5gFpkrMQW99PnNb/VKflcrRT5loD4ByMSA0SE1cAbQ=
+github.com/nanostack-dev/echopoint-runner v0.72.0/go.mod h1:NqYWs8myxHvPVRTEmxoIh4M9ZSgJUZgorVBIPD/rfSk=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
