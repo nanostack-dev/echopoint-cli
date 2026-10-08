@@ -402,11 +402,13 @@ func logProbeE2ENodeErrors(t *testing.T, run api.ProbeRun) {
 	}
 }
 
-func decodeProbeE2E(t *testing.T, value string, target any) {
+func decodeProbeE2E[T any](t *testing.T, value string, target *T) {
 	t.Helper()
-	if err := json.Unmarshal([]byte(value), target); err != nil {
+	var decoded T
+	if err := json.Unmarshal([]byte(value), &decoded); err != nil {
 		t.Fatalf("decode CLI JSON: %v", err)
 	}
+	*target = decoded
 }
 
 func probeE2EFile(t *testing.T, name string, value any) string {
