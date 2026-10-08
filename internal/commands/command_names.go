@@ -1,6 +1,7 @@
 package commands
 
 const (
+	adminCommandName      = "admin"
 	authCommandName       = "auth"
 	collectionCommandName = "collection"
 	completionCommandName = "completion"

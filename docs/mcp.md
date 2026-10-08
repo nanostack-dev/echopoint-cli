@@ -90,6 +90,11 @@ set:
 - **SSE streams** — long-lived, incompatible with request/response tools
 - **Public webhook ingestion**, **admin routes**, `/me`, `/init`
 
+Cloud fleet administration follows the same admin-route exclusion: `get_cloud_fleet`
+and `update_cloud_fleet` are not tools. Product administrators can use the explicit
+[`admin cloud-fleet` CLI workflow](technical/cloud-fleet-administration.md) with a
+session token and a selected deployment profile.
+
 The tool set tracks the contract: annotate an operation `x-ai-tool` (and resync)
 to expose it.
 

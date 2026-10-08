@@ -144,6 +144,66 @@ paths:
         - BearerAuth: []
         - ApiKeys: []
       x-ai-tool: true
+  /administrations/cloud-fleet:
+    get:
+      tags:
+        - Administration
+      summary: Get Cloud Fleet Capacity
+      description: |-
+        Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
+        Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+      operationId: getCloudFleet
+      responses:
+        "200":
+          description: Effective settings and current aggregate capacity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudFleetStatus'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth: []
+      x-ai-danger: Admin route - requires a privileged session.
+    put:
+      tags:
+        - Administration
+      summary: Update Cloud Fleet Settings
+      description: |-
+        Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+        Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+        Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+      operationId: updateCloudFleet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCloudFleetRequest'
+      responses:
+        "200":
+          description: Persisted settings and current aggregate capacity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudFleetStatus'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth: []
+      x-ai-danger: Admin route - requires a privileged session.
   /administrations/resource-search/resync:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -524,6 +584,12 @@ paths:
         executions in any 24 hours, counting every trigger and runner. A launch past
         it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
         earlier launch does not count.
+
+        Cloud launches additionally share an operator-configured fleet budget in
+        any 24 hours. Exhausting it also answers 429
+        `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+        survives deletion of flows and executions, excludes self-hosted and
+        ephemeral launches, and leaves accepted jobs and idempotent replays valid.
       operationId: launchFlow
       parameters:
         - name: id
@@ -4719,6 +4785,113 @@ paths:
       x-ai-danger: Anonymous public projection; visitor data endpoint, not a workspace tool.
 components:
   schemas:
+    CloudFleetSettingsSource:
+      type: string
+      description: Whether the effective settings come from deployment configuration or a saved platform administrator override.
+      enum:
+        - deployment_defaults
+        - admin_override
+    CloudFleetStatus:
+      type: object
+      description: Cloud execution safety capacity across every organization in the current deployment.
+      required:
+        - daily_launch_limit
+        - global_cap
+        - revision
+        - settings_source
+        - settings_updated_at
+        - launches_last_24h
+        - launches_remaining
+        - claimed_jobs
+        - queued_jobs
+        - paused
+        - window_start
+        - generated_at
+        - next_launch_available_at
+      properties:
+        daily_launch_limit:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Maximum accepted Cloud launches across the deployment in a rolling 24-hour window. Zero pauses new Cloud launches.
+        global_cap:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Maximum claimed Cloud jobs across the deployment. Accepted jobs wait while this cap is reached.
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Settings revision for optimistic concurrency. Zero means deployment defaults with no saved override.
+        settings_source:
+          $ref: '#/components/schemas/CloudFleetSettingsSource'
+        settings_updated_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Database timestamp of the latest saved override, or null when deployment defaults are in use.
+        launches_last_24h:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Accepted Cloud launch reservations since window_start, including queued and subsequently deleted executions.
+        launches_remaining:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Additional Cloud launches the fleet budget currently permits, clamped to zero when paused or exhausted. Organization license checks also apply.
+        claimed_jobs:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Claimed Cloud jobs across all organizations, including jobs awaiting delivery to a container.
+        queued_jobs:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Accepted Cloud jobs waiting for a dispatch claim across all organizations.
+        paused:
+          type: boolean
+          description: True when daily_launch_limit is zero.
+        window_start:
+          type: string
+          format: date-time
+          description: Start of the rolling 24-hour launch window used for this report.
+        generated_at:
+          type: string
+          format: date-time
+          description: Time the capacity report was generated.
+        next_launch_available_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: When existing reservations will free a launch slot if the fleet budget is exhausted, assuming no settings changes. Null when paused or a slot is already available.
+    UpdateCloudFleetRequest:
+      type: object
+      description: Both replacement fleet limits and the revision being edited.
+      required:
+        - daily_launch_limit
+        - global_cap
+        - expected_revision
+      properties:
+        daily_launch_limit:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Rolling 24-hour accepted Cloud launch cap. Zero pauses new Cloud launches.
+        global_cap:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Positive fleet-wide cap on claimed Cloud jobs.
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Settings revision returned by the last fleet read. A mismatch returns 409 without saving changes.
     AssistantChatScope:
       description: |
         Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.

@@ -18,13 +18,33 @@ The callback document is rendered by `internal/auth/browser_page.go` from `inter
 
 Its CSS, SVGs, fonts, and font license notices are embedded in the initial response. Keep it self-contained: the CLI shuts down the local server after receiving the login token, so later asset requests may fail. Error messages pass through `html/template` escaping.
 
-### Token-based Login
+### Product administrator login
+
+For product-wide operations such as Cloud fleet administration, request an
+administrator session from the existing default JWT template:
+
+```bash
+echopoint auth login --admin --profile dev
+echopoint admin cloud-fleet view --profile dev -o json
+```
+
+The ordinary CLI JWT template may omit the platform administrator claim even
+when the signed-in user is a product administrator. `--admin` selects the browser
+exchange that includes that claim; it does not grant a role. Organization API
+keys and organization administrator roles do not authorize product administration.
+The token's actual expiry is stored. Run the browser login again when it expires.
+
+### Use an existing session token
 
 If you already have a session token:
 
 ```bash
-echopoint auth login --token "<SESSION_JWT>"
+echopoint admin cloud-fleet view --profile dev --token "<ADMIN_SESSION_JWT>" -o json
 ```
+
+`--token` supplies a session for the requested API command; `auth login --token`
+does not store it. Avoid putting real credentials in shell history; the
+environment variable below is suitable for a token supplied by your environment.
 
 ### Environment Variable
 
