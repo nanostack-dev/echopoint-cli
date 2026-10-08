@@ -26,8 +26,10 @@ echopoint --org "$ORG_ID" probe estimate \
 Use exactly one selector: repeatable `--flow-id` inputs or repeatable `--tag`
 inputs. `--match-mode any` is the default; `all` requires every selected tag.
 Tags resolve at each occurrence. The estimate is read-only and includes matching
-flow IDs, executions and static HTTP requests per occurrence/day/30 days, remaining
-monthly executions, and notes about uncertain request counts. Branches, retries
+flow IDs, executions and static HTTP requests per occurrence/day/30 days, forecast
+executions from now until the calendar month ends, and notes about uncertain
+request counts. The month-end forecast is expected usage, not the execution
+allowance left on the license. Branches, retries
 and modules can make request counts approximate; an estimate is not a promise of
 throughput. Each selected flow is a separate execution. Two flows requested every
 60 seconds forecast 2,880 executions per day and 86,400 over 30 days, before
