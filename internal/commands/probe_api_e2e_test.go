@@ -9,9 +9,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"echopoint-cli/internal/api"
 	"echopoint-cli/internal/client"
@@ -33,47 +36,54 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	environment := "probe-cli-" + suffix
 	cli("org", "env", "environments", "create", environment)
 	t.Cleanup(func() { cli("org", "env", "environments", "delete", environment, "--yes") })
-	flowFile := writeTemp(t, "flow.json", fmt.Sprintf(`{
-  "name":"CLI probe E2E %s",
+	tag := "probe-cli-" + suffix
+	flows := make([]api.Flow, 0, 2)
+	for i := range 2 {
+		flowFile := writeTemp(t, fmt.Sprintf("flow-%d.json", i), fmt.Sprintf(`{
+  "name":"CLI probe E2E %s %d", "tags":[%q],
   "flow_definition":{"name":"Health capability","version":"1.0","nodes":[{
     "id":"health","display_name":"Capability HTTP check","type":"request",
     "data":{"method":"GET","url":%q,"timeout":5000},
     "assertions":[{"extractor_type":"status_code","extractor_data":{},"operator_type":"equals","operator_data":{"value":200}}]
   }],"edges":[]}
-}`, suffix, targetURL))
-	var flow api.Flow
-	decodeProbeE2E(t, cli("flow", "create", "-f", flowFile), &flow)
-	t.Cleanup(func() { cli("flow", "delete", flow.Id.String(), "--yes") })
-	var published api.FlowVersion
-	decodeProbeE2E(t, cli("flow", "publish", flow.Id.String()), &published)
-	var pin api.FlowVersion
-	decodeProbeE2E(t, cli("flow", "version", "view", flow.Id.String(), published.Id.String()), &pin)
-	if pin.Id != published.Id {
-		t.Fatal("published pin did not round trip")
+}`, suffix, i, tag, targetURL))
+		var flow api.Flow
+		decodeProbeE2E(t, cli("flow", "create", "-f", flowFile), &flow)
+		flows = append(flows, flow)
+		t.Cleanup(func() { cli("flow", "delete", flow.Id.String(), "--yes") })
 	}
+	flowIDs := []uuid.UUID{flows[0].Id, flows[1].Id}
+	// No publication or version selection is necessary for a monitor-backed probe.
 	var source api.ProbeSourceOptions
+	decodeProbeE2E(
+		t,
+		cli("probe", "source-options", "--flow-id", flowIDs[0].String(), "--environment", environment),
+		&source,
+	)
+	if source.EnvironmentKey != environment || len(source.Checks) != 1 || source.Checks[0].FlowId != flowIDs[0] ||
+		source.Checks[0].NodeId != "health" ||
+		source.Checks[0].AssertionIndex != 0 {
+		t.Fatalf("source = %+v", source)
+	}
+	var estimate api.ProbeEstimate
 	decodeProbeE2E(
 		t,
 		cli(
 			"probe",
-			"source-options",
+			"estimate",
 			"--flow-id",
-			flow.Id.String(),
-			"--version-id",
-			published.Id.String(),
+			flowIDs[0].String(),
+			"--flow-id",
+			flowIDs[1].String(),
 			"--environment",
 			environment,
 		),
-		&source,
+		&estimate,
 	)
-	if source.EnvironmentKey != environment || len(source.Checks) != 1 || source.Checks[0].NodeId != "health" ||
-		source.Checks[0].AssertionIndex != 0 {
-		t.Fatalf("source = %+v", source)
-	}
+	assertProbeE2EForecast(t, estimate)
 	config := api.ProbeConfig{
 		Name:             "CLI capability " + suffix,
-		FlowId:           flow.Id,
-		VersionId:        published.Id,
+		FlowIds:          &flowIDs,
 		EnvironmentKey:   environment,
 		RunnerType:       api.ProbeRunnerCloud,
 		Enabled:          false,
@@ -83,19 +93,29 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 		RecoveryRuns:     2,
 		FreshnessSeconds: 180,
 		Capabilities: []api.ProbeCapability{
-			{
-				Id:        "api",
-				Name:      "API availability",
-				Enabled:   true,
-				Checks:    []api.ProbeCheck{{NodeId: "health", AssertionIndex: 0}},
-				DependsOn: []string{},
-			},
+			{Id: "suite", Name: "API availability", Enabled: true, Checks: []api.ProbeCheck{}, DependsOn: []string{}},
 		},
 	}
 	createFile := probeE2EFile(t, "probe.json", api.CreateProbeRequest{Config: config})
 	cli("probe", "validate", "-f", createFile)
 	var probe api.Probe
-	decodeProbeE2E(t, cli("probe", "create", "-f", createFile, "--environment", environment), &probe)
+	decodeProbeE2E(
+		t,
+		cli(
+			"probe",
+			"create",
+			"--name",
+			config.Name,
+			"--flow-id",
+			flowIDs[0].String(),
+			"--flow-id",
+			flowIDs[1].String(),
+			"--environment",
+			environment,
+			"--paused",
+		),
+		&probe,
+	)
 	t.Cleanup(func() {
 		var current api.Probe
 		decodeProbeE2E(t, cli("probe", "view", probe.Id), &current)
@@ -103,12 +123,25 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	})
 	var reloaded api.Probe
 	decodeProbeE2E(t, cli("probe", "view", probe.Id), &reloaded)
-	if reloaded.Config.VersionId != published.Id || reloaded.Config.EnvironmentKey != environment ||
-		reloaded.Revision != probe.Revision {
+	if reloaded.Config.FlowIds == nil || !sameProbeE2EFlowIDs(*reloaded.Config.FlowIds, flowIDs) ||
+		reloaded.Config.EnvironmentKey != environment ||
+		reloaded.Revision != probe.Revision ||
+		reloaded.ScheduleId == uuid.Nil {
 		t.Fatal("durable probe source did not round trip")
 	}
-	assertProbeE2EDiagnostic(t, cli, probe, published, environment)
+	assertProbeE2EMonitor(t, probe, flowIDs)
+	assertProbeE2EDiagnostic(t, cli, probe, flowIDs, environment)
 	config.Name += " updated"
+	config.FlowIds = nil
+	tags := []string{tag}
+	mode := api.All
+	config.Tags, config.TagMatchMode = &tags, &mode
+	decodeProbeE2E(
+		t,
+		cli("probe", "estimate", "--tag", tag, "--match-mode", "all", "--environment", environment),
+		&estimate,
+	)
+	assertProbeE2EForecast(t, estimate)
 	updateFile := probeE2EFile(
 		t,
 		"update.json",
@@ -116,7 +149,9 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	)
 	cli("probe", "validate", "--update", "-f", updateFile)
 	decodeProbeE2E(t, cli("probe", "update", probe.Id, "-f", updateFile), &probe)
-	if probe.Config.Name != config.Name || probe.Revision <= reloaded.Revision {
+	if probe.Config.Name != config.Name || probe.Revision <= reloaded.Revision || probe.Config.FlowIds != nil ||
+		probe.Config.Tags == nil ||
+		!slices.Equal(*probe.Config.Tags, tags) {
 		t.Fatal("update did not persist a new revision")
 	}
 	decodeProbeE2E(t, cli("probe", "resume", probe.Id, "--expected-revision", fmt.Sprint(probe.Revision)), &probe)
@@ -132,7 +167,7 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	pageRequest.Slug = "probe-cli-" + suffix
 	pageRequest.Config.BrandName = "Disposable CLI verification"
 	pageRequest.ProbeBindings = &[]api.StatusPageProbeBinding{
-		{ServiceId: "api", ProbeId: probe.Id, CapabilityId: "api"},
+		{ServiceId: "api", ProbeId: probe.Id, CapabilityId: "suite"},
 	}
 	pageFile := probeE2EFile(t, "page.json", pageRequest)
 	cli("status-page", "validate", "-f", pageFile)
@@ -179,8 +214,62 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 		t.Fatal("pause did not persist")
 	}
 	t.Log(
-		"CLI/API configuration, source pin, diagnostic isolation, scheduled confirmation, persistence and lifecycle verified. Cleanup removes probe/flow/environment and withdraws publication; the private draft remains in the disposable organization because no page deletion API exists.",
+		"CLI/API explicit flow set, tag selector, request forecast, shared monitor linkage/type, diagnostic isolation, scheduled confirmation, persistence and lifecycle verified. Cleanup removes probe/flows/environment and withdraws publication; the private draft remains in the disposable organization because no page deletion API exists.",
 	)
+}
+
+func sameProbeE2EFlowIDs(got, want []uuid.UUID) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for _, id := range want {
+		if !slices.Contains(got, id) {
+			return false
+		}
+	}
+	return true
+}
+
+func assertProbeE2EForecast(t *testing.T, estimate api.ProbeEstimate) {
+	t.Helper()
+	if estimate.MatchedFlowCount != 2 || len(estimate.Flows) != 2 || estimate.ExecutionsPerOccurrence != 2 ||
+		estimate.ExecutionsPerDay != 2880 ||
+		estimate.ExecutionsPer30Days != 86400 ||
+		!estimate.RequestsExact ||
+		estimate.RequestsPerOccurrence == nil ||
+		*estimate.RequestsPerOccurrence != 2 ||
+		estimate.RequestsPerDay == nil ||
+		*estimate.RequestsPerDay != 2880 ||
+		estimate.RequestsPer30Days == nil ||
+		*estimate.RequestsPer30Days != 86400 {
+		t.Fatalf("forecast not based on both flows at 60-second cadence: %+v", estimate)
+	}
+}
+
+func assertProbeE2EMonitor(t *testing.T, probe api.Probe, flowIDs []uuid.UUID) {
+	t.Helper()
+	c, err := client.NewWithAPIKey(
+		os.Getenv("ECHOPOINT_PROBE_E2E_API_URL"),
+		os.Getenv("ECHOPOINT_PROBE_E2E_API_KEY"),
+		os.Getenv("ECHOPOINT_PROBE_E2E_ORG_ID"),
+		10*time.Second,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := c.API().
+		GetFlowScheduleWithResponse(t.Context(), probe.ScheduleId, &api.GetFlowScheduleParams{XOrganizationID: os.Getenv("ECHOPOINT_PROBE_E2E_ORG_ID")})
+	if err != nil || response.JSON200 == nil {
+		t.Fatalf("monitor read unavailable: %v", err)
+	}
+	schedule := response.JSON200
+	if schedule.Type != api.FlowScheduleTypeProbe || schedule.ProbeId == nil || *schedule.ProbeId != probe.Id ||
+		schedule.IntervalSeconds != 60 ||
+		!sameProbeE2EFlowIDs(schedule.FlowIds, flowIDs) ||
+		schedule.EnvironmentKey != probe.Config.EnvironmentKey ||
+		schedule.Enabled {
+		t.Fatal("probe was not backed by the configured shared monitor")
+	}
 }
 
 func newProbeE2ECLI(t *testing.T) (string, func(...string) string) {
@@ -238,7 +327,7 @@ func assertProbeE2EDiagnostic(
 	t *testing.T,
 	cli func(...string) string,
 	probe api.Probe,
-	published api.FlowVersion,
+	flowIDs []uuid.UUID,
 	environment string,
 ) {
 	t.Helper()
@@ -246,15 +335,26 @@ func assertProbeE2EDiagnostic(
 	var diagnostic api.ProbeRun
 	decodeProbeE2E(t, cli("probe", "run", probe.Id, "--expected-revision", fmt.Sprint(probe.Revision)), &diagnostic)
 	diagnostic = awaitProbeE2ERun(t, cli, probe.Id, diagnostic.Id)
-	if diagnostic.Origin != api.ProbeDiagnostic || diagnostic.Config.VersionId != published.Id ||
+	if diagnostic.Origin != api.ProbeDiagnostic || diagnostic.Config.FlowIds == nil ||
+		!sameProbeE2EFlowIDs(*diagnostic.Config.FlowIds, flowIDs) ||
 		diagnostic.Config.EnvironmentKey != environment ||
-		diagnostic.ExecutionId == nil ||
-		len(diagnostic.Steps) != 1 ||
-		len(diagnostic.Steps[0].Assertions) != 1 ||
-		diagnostic.Steps[0].Assertions[0].Passed == nil ||
-		!*diagnostic.Steps[0].Assertions[0].Passed {
+		diagnostic.ScheduleRunId == uuid.Nil ||
+		len(diagnostic.Executions) != 2 ||
+		len(diagnostic.Steps) != 2 {
 		logProbeE2ENodeErrors(t, diagnostic)
 		t.Fatalf("real diagnostic evidence missing: %+v", diagnostic)
+	}
+	for _, step := range diagnostic.Steps {
+		if !slices.Contains(flowIDs, step.FlowId) || len(step.Assertions) != 1 || step.Assertions[0].Passed == nil ||
+			!*step.Assertions[0].Passed {
+			t.Fatal("selected flow assertion evidence missing")
+		}
+	}
+	for _, execution := range diagnostic.Executions {
+		if !slices.Contains(flowIDs, execution.FlowId) || execution.ExecutionId == uuid.Nil ||
+			execution.Status != "completed" {
+			t.Fatal("selected flow execution missing")
+		}
 	}
 	decodeProbeE2E(t, cli("probe", "view", probe.Id), &reloaded)
 	if len(reloaded.Health) != 1 || reloaded.Health[0].State != api.ProbeNotMonitored {
@@ -270,7 +370,7 @@ func assertProbeE2EDiagnostic(
 // Only transport error codes are logged, never raw node exchanges or headers.
 func logProbeE2ENodeErrors(t *testing.T, run api.ProbeRun) {
 	t.Helper()
-	if run.ExecutionId == nil {
+	if run.ExecutionId == nil || len(run.Executions) == 0 {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -287,7 +387,7 @@ func logProbeE2ENodeErrors(t *testing.T, run api.ProbeRun) {
 	}
 	response, err := c.API().GetExecutionNodeResultsWithResponse(
 		ctx,
-		run.Config.FlowId,
+		run.Executions[0].FlowId,
 		*run.ExecutionId,
 		&api.GetExecutionNodeResultsParams{XOrganizationID: os.Getenv("ECHOPOINT_PROBE_E2E_ORG_ID")},
 	)
@@ -340,7 +440,7 @@ func awaitProbeE2EPublicHealth(t *testing.T, cli func(...string) string, slug st
 		result := cli("status-page", "public", slug)
 		var value api.PublicStatusView
 		decodeProbeE2E(t, result, &value)
-		for _, private := range []string{"probe_id", "flow_id", "execution_id", "node_id", "assertion_index", "expected_revision", "extractor_data", "operator_data", "source_fingerprint"} {
+		for _, private := range []string{"probe_id", "flow_id", "flow_ids", "execution_id", "schedule_id", "schedule_run_id", "node_id", "assertion_index", "expected_revision", "extractor_data", "operator_data", "source_fingerprint"} {
 			if strings.Contains(result, `"`+private+`"`) {
 				t.Fatalf("public view leaked private field %s", private)
 			}

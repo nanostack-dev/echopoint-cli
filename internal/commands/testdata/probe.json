@@ -1,8 +1,7 @@
 {
   "config": {
     "name": "Production API capability",
-    "flow_id": "550e8400-e29b-41d4-a716-446655440001",
-    "version_id": "550e8400-e29b-41d4-a716-446655440002",
+    "flow_ids": ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"],
     "environment_key": "production",
     "runner_type": "cloud",
     "enabled": true,
@@ -16,7 +15,7 @@
         "id": "api",
         "name": "API availability",
         "enabled": true,
-        "checks": [{"node_id": "health", "assertion_index": 0}],
+        "checks": [],
         "depends_on": []
       }
     ]

@@ -39,7 +39,8 @@ func TestProbeToolsDispatchScopeSourceAndRevision(t *testing.T) {
 		{"run_probe", "POST", "/probes/probe-id/run", `{"probeId":"probe-id","expected_revision":4}`, []string{"probeId", "expected_revision"}},
 		{"list_probe_runs", "GET", "/probes/probe-id/runs", `{"probeId":"probe-id","limit":7,"offset":2}`, []string{"probeId", "limit"}},
 		{"get_probe_run", "GET", "/probes/probe-id/runs/run-id", `{"probeId":"probe-id","runId":"run-id"}`, []string{"probeId", "runId"}},
-		{"get_probe_source_options", "GET", "/probes/source-options", `{"flow_id":"flow","version_id":"version","environment_key":"production"}`, []string{"flow_id", "version_id"}},
+		{"get_probe_source_options", "GET", "/probes/source-options", `{"flow_id":"flow","environment_key":"production"}`, []string{"flow_id"}},
+		{"estimate_probe", "POST", "/probes/estimate", `{"tags":["production"],"tag_match_mode":"all","interval_seconds":60,"runner_type":"cloud","environment_key":"production"}`, []string{"interval_seconds", "runner_type"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			td, found := byName[tc.name]
@@ -60,6 +61,11 @@ func TestProbeToolsDispatchScopeSourceAndRevision(t *testing.T) {
 			}
 			if _, exists := schema.Properties["origin"]; exists {
 				t.Fatal("manual run exposes a policy origin override")
+			}
+			if tc.name == "get_probe_source_options" {
+				if _, exists := schema.Properties["version_id"]; exists {
+					t.Fatal("source discovery still requires a published version")
+				}
 			}
 			calls := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

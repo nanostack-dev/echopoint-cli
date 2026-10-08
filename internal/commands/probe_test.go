@@ -56,7 +56,7 @@ func TestProbeCommandsKeepScopeRevisionAndSource(t *testing.T) {
 		{"execution list", http.MethodGet, "/probes/" + testProbeID + "/runs", "", 200, []string{"execution", "list", testProbeID}},
 		{"execution view", http.MethodGet, "/probes/" + testProbeID + "/runs/" + testProbeRunID, "", 200, []string{"execution", "view", testProbeID, testProbeRunID}},
 		{"delete", http.MethodDelete, "/probes/" + testProbeID, "", 204, []string{"delete", testProbeID, "--expected-revision", "4"}},
-		{"source options", http.MethodGet, "/probes/source-options", "", 200, []string{"source-options", "--flow-id", idFor("1").String(), "--version-id", idFor("2").String(), "--environment", "development"}},
+		{"source options", http.MethodGet, "/probes/source-options", "", 200, []string{"source-options", "--flow-id", idFor("1").String(), "--environment", "development"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var received []byte
@@ -68,7 +68,7 @@ func TestProbeCommandsKeepScopeRevisionAndSource(t *testing.T) {
 					t.Error("missing tenant authentication")
 				}
 				if tc.name == "source options" &&
-					(r.URL.Query().Get("flow_id") != idFor("1").String() || r.URL.Query().Get("version_id") != idFor("2").String() || r.URL.Query().Get("environment_key") != "development") {
+					(r.URL.Query().Get("flow_id") != idFor("1").String() || r.URL.Query().Has("version_id") || r.URL.Query().Get("environment_key") != "development") {
 					t.Error("lost source selection")
 				}
 				if (tc.name == "list" || tc.name == "history") &&
@@ -121,7 +121,10 @@ func TestProbeOfflineValidationAndInputRejection(t *testing.T) {
 		strings.Replace(fixture, `"interval_seconds": 60`, `"interval_seconds": 59`, 1),
 		strings.Replace(fixture, `"runner_type": "cloud"`, `"runner_type": "ephemeral"`, 1),
 		strings.Replace(fixture, `"config": {`, `"origin":"scheduled", "config": {`, 1),
-		strings.Replace(fixture, `"node_id": "health"`, `"unexpected":true,"node_id": "health"`, 1),
+		strings.Replace(fixture, `"checks": []`, `"checks": [{"unexpected":true,"flow_id":"550e8400-e29b-41d4-a716-446655440001","node_id":"health","assertion_index":0}]`, 1),
+		strings.Replace(fixture, `"flow_ids":`, `"tags":["production"],"flow_ids":`, 1),
+		strings.Replace(fixture, `"flow_ids": ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"]`, `"flow_ids": []`, 1),
+		strings.Replace(fixture, `"flow_ids":`, `"version_id":"550e8400-e29b-41d4-a716-446655440003","flow_ids":`, 1),
 	} {
 		_, _, err := execute(t, newProbeCmd(&AppState{}), input, "validate", "-f", "-")
 		if err == nil {
@@ -147,14 +150,88 @@ func TestProbeOfflineValidationAndInputRejection(t *testing.T) {
 	}
 }
 
+func TestProbeSelectorsAndForecastKeepCallerIntent(t *testing.T) {
+	for _, tc := range []struct {
+		name, path, input string
+		args              []string
+		want              map[string]any
+	}{
+		{"flow set", "/probes", "", []string{"create", "--name", "Production", "--flow-id", idFor("1").String(), "--flow-id", idFor("2").String(), "--environment", "production", "--paused"}, map[string]any{"flow_ids": []any{idFor("1").String(), idFor("2").String()}, "environment_key": "production", "enabled": false, "interval_seconds": float64(60)}},
+		{"tag selector", "/probes", "", []string{"create", "--name", "Production", "--tag", "api", "--tag", "production", "--match-mode", "all", "--interval", "120"}, map[string]any{"tags": []any{"api", "production"}, "tag_match_mode": "all", "interval_seconds": float64(120)}},
+		{"file selector override", "/probes", probeFixture(t, false), []string{"create", "-f", "-", "--tag", "production", "--match-mode", "all"}, map[string]any{"tags": []any{"production"}, "tag_match_mode": "all", "name": "Production API capability"}},
+		{"forecast", "/probes/estimate", "", []string{"estimate", "--flow-id", idFor("1").String(), "--flow-id", idFor("2").String(), "--environment", "production"}, map[string]any{"flow_ids": []any{idFor("1").String(), idFor("2").String()}, "environment_key": "production", "runner_type": "cloud", "interval_seconds": float64(60)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				if r.Method != http.MethodPost || r.URL.Path != tc.path ||
+					r.Header.Get("X-Organization-ID") != "org_test" ||
+					r.Header.Get("X-Api-Key") != "test-key" {
+					t.Errorf("wrong request or scope")
+				}
+				var body map[string]any
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Error(err)
+					return
+				}
+				value := body
+				if tc.path == "/probes" {
+					value = body["config"].(map[string]any)
+				}
+				for key, want := range tc.want {
+					if !reflect.DeepEqual(value[key], want) {
+						t.Errorf("%s = %#v, want %#v", key, value[key], want)
+					}
+				}
+				for _, forbidden := range []string{"flow_id", "version_id", "origin"} {
+					if _, ok := value[forbidden]; ok {
+						t.Errorf("unexpected old source %s", forbidden)
+					}
+				}
+				if _, hasFlows := value["flow_ids"]; hasFlows {
+					if _, hasTags := value["tags"]; hasTags {
+						t.Error("both source selectors sent")
+					}
+				}
+				if tc.path == "/probes" && tc.input == "" {
+					capability := value["capabilities"].([]any)[0].(map[string]any)
+					if capability["id"] != "suite" || len(capability["checks"].([]any)) != 0 {
+						t.Error("flag creation did not request full suite health")
+					}
+				}
+				w.Header().Set("Content-Type", "application/json")
+				if tc.path == "/probes" {
+					w.WriteHeader(http.StatusCreated)
+				}
+				_, _ = io.WriteString(
+					w,
+					`{"id":"`+testProbeID+`","matched_flow_count":2,"requests_exact":false,"estimate_notes":["Dynamic requests vary"]}`,
+				)
+			}))
+			defer server.Close()
+			out, _, err := execute(t, newProbeCmd(makeState(t, "test-key", "", server.URL)), tc.input, tc.args...)
+			if err != nil || !json.Valid([]byte(out)) || calls != 1 {
+				t.Fatalf("calls=%d output=%s error=%v", calls, out, err)
+			}
+		})
+	}
+}
+
 func TestProbeInvalidArgumentsMakeNoRequests(t *testing.T) {
 	stub := newAPIStub(t)
 	for _, args := range [][]string{
 		{"pause", testProbeID}, {"resume", testProbeID, "--expected-revision", "0"}, {"run", testProbeID},
 		{"delete", testProbeID}, {"list", "--limit", "101"}, {"history", testProbeID, "--offset", "-1"},
 		{"view", "not-an-id"}, {"execution", "view", testProbeID, "bad-run"},
-		{"source-options", "--flow-id", "name", "--version-id", idFor("2").String()},
+		{"source-options", "--flow-id", "name"},
 		{"source-options", "--flow-id", idFor("1").String(), "--version-id", "bad-version"},
+		{"estimate"}, {"estimate", "--flow-id", "name"},
+		{"estimate", "--tag", "production", "--flow-id", idFor("1").String()},
+		{"estimate", "--tag", "production", "--interval", "59"},
+		{"estimate", "--tag", "production", "--match-mode", "invalid"},
+		{"create"}, {"create", "--name", "Production"},
+		{"create", "--name", "Production", "--flow-id", "name"},
 		{"create", "probe.json"}, {"update", testProbeID, "probe.json"},
 		{"run", testProbeID, "--expected-revision", "1", "--origin", "scheduled"},
 	} {

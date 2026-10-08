@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"echopoint-cli/internal/api"
@@ -17,7 +16,7 @@ func newProbeCmd(state *AppState) *cobra.Command {
 		Use:     probeCommandName,
 		Aliases: []string{"probes"},
 		Short:   "Manage durable capability probes and private diagnostic runs",
-		Long:    "A probe pins a published flow version, environment, assertions and health policy. Scheduled occurrences measure capabilities; manual runs are private diagnostics and never confirm public health.",
+		Long:    "A probe is a monitor that runs flows selected by tags or explicit IDs, with an environment and health policy. The server snapshots each run's flow sources. Scheduled occurrences measure capabilities; manual runs are private diagnostics and never confirm public health.",
 	}
 	cmd.AddCommand(
 		newProbeListCmd(state),
@@ -31,6 +30,7 @@ func newProbeCmd(state *AppState) *cobra.Command {
 		newProbeRunCmd(state),
 		newProbeExecutionCmd(state),
 		newProbeSourceOptionsCmd(state),
+		newProbeEstimateCmd(state),
 	)
 	history := newProbeExecutionListCmd(state)
 	history.Use = "history <probe-id>"
@@ -122,7 +122,9 @@ func newProbeViewCmd(state *AppState) *cobra.Command {
 
 func newProbeWriteCmd(state *AppState, update bool) *cobra.Command {
 	var file, environment string
-	use, short, count := "create -f <file>", "Create a durable probe from a complete JSON request (-f -: stdin)", 0
+	var selectors probeSelectorFlags
+	var creation probeCreationFlags
+	use, short, count := "create", "Create a probe from flow/tag flags or a complete JSON request (-f -: stdin)", 0
 	if update {
 		use, short, count = "update <probe-id> -f <file>", "Replace source and policy using expected_revision from a complete JSON request", 1
 	}
@@ -130,7 +132,7 @@ func newProbeWriteCmd(state *AppState, update bool) *cobra.Command {
 		Example: "  echopoint --org <organization-id> probe create -f probe.json --environment production -o json",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !update {
-				request, err := readProbeRequest[api.CreateProbeRequest](cmd, file, "CreateProbeRequest", environment)
+				request, err := readProbeCreation(cmd, state, file, environment, selectors, creation)
 				if err != nil {
 					return err
 				}
@@ -143,7 +145,14 @@ func newProbeWriteCmd(state *AppState, update bool) *cobra.Command {
 				}
 				return printStatusResponse(cmd, state, resp.JSON201, resp.HTTPResponse, resp.Body)
 			}
-			request, err := readProbeRequest[api.UpdateProbeRequest](cmd, file, "UpdateProbeRequest", environment)
+			request, err := readProbeRequest[api.UpdateProbeRequest](
+				cmd,
+				state,
+				file,
+				"UpdateProbeRequest",
+				environment,
+				selectors,
+			)
 			if err != nil {
 				return err
 			}
@@ -165,15 +174,24 @@ func newProbeWriteCmd(state *AppState, update bool) *cobra.Command {
 		cmd.Example = "  echopoint probe update <probe-id> -f update.json --environment production -o json"
 		cmd.ValidArgsFunction = completeProbeArgs(state)
 	} else {
+		cmd.Example = "  echopoint --org <organization-id> probe create --name Checkout --tag production --environment production -o json\n  echopoint probe create --name API --flow-id <flow-id> --interval 60 --paused -o json\n  echopoint probe create -f probe.json -o json"
 		cmd.ValidArgsFunction = cobra.NoFileCompletions
+		cmd.Flags().StringVar(&creation.name, probeNameField, "", "Probe name (required when creating from flags)")
+		cmd.Flags().StringVar(&creation.runner, "runner", "cloud", "Where EchoPoint runs flows: cloud or self_hosted")
+		cmd.Flags().IntVar(&creation.interval, "interval", 60, "Requested measurement interval in seconds (minimum 60)")
+		cmd.Flags().IntVar(&creation.timeout, "timeout", 30, "Per-flow execution timeout in seconds")
+		cmd.Flags().BoolVar(&creation.paused, "paused", false, "Create with scheduled measurements paused")
+		_ = cmd.RegisterFlagCompletionFunc("runner", staticCompletion("cloud", "self_hosted"))
 	}
-	addProbeFileFlags(state, cmd, &file, &environment)
+	addProbeFileFlags(state, cmd, &file, &environment, update)
+	selectors.register(cmd, state)
 	return cmd
 }
 
 func newProbeValidateCmd(state *AppState) *cobra.Command {
 	var file, environment string
 	var update bool
+	var selectors probeSelectorFlags
 	cmd := quietOnError(
 		&cobra.Command{
 			Use:               "validate -f <file>",
@@ -187,27 +205,37 @@ func newProbeValidateCmd(state *AppState) *cobra.Command {
 				if update {
 					schema = "UpdateProbeRequest"
 				}
-				if _, err := readProbeRequest[map[string]any](cmd, file, schema, environment); err != nil {
+				if _, err := readProbeRequest[map[string]any](
+					cmd,
+					state,
+					file,
+					schema,
+					environment,
+					selectors,
+				); err != nil {
 					return err
 				}
 				result := struct {
 					Valid bool   `json:"valid"`
 					Scope string `json:"scope"`
-				}{true, "schema; server validates ownership, published source, assertions and policy"}
+				}{true, "schema; server validates selector ownership, environment, execution limits and health policy"}
 				return printStatusResponse(cmd, state, &result, nil, nil)
 			},
 		},
 	)
 	cmd.Flags().BoolVar(&update, "update", false, "Validate UpdateProbeRequest including expected_revision")
-	addProbeFileFlags(state, cmd, &file, &environment)
+	addProbeFileFlags(state, cmd, &file, &environment, true)
+	selectors.register(cmd, state)
 	return cmd
 }
 
-func addProbeFileFlags(state *AppState, cmd *cobra.Command, file, environment *string) {
+func addProbeFileFlags(state *AppState, cmd *cobra.Command, file, environment *string, required bool) {
 	addFileFlag(cmd, file, "Complete probe request JSON file; - reads stdin", "json")
-	_ = cmd.MarkFlagRequired("file")
+	if required {
+		_ = cmd.MarkFlagRequired("file")
+	}
 	cmd.Flags().
-		StringVarP(environment, "environment", "e", "", "Override config.environment_key; an empty value selects the published flow default")
+		StringVarP(environment, "environment", "e", "", "Override config.environment_key; empty uses each flow's saved default")
 	registerEnvironmentFlagCompletion(state, cmd)
 }
 
@@ -314,12 +342,12 @@ func addProbePagination(cmd *cobra.Command, limit, offset *int) {
 }
 
 func newProbeSourceOptionsCmd(state *AppState) *cobra.Command {
-	var flow, version, environment string
+	var flow, environment string
 	cmd := quietOnError(
 		&cobra.Command{
 			Use:     "source-options",
-			Short:   "Resolve a published flow pin, effective environment and available assertions",
-			Example: "  echopoint probe source-options --flow-id <flow-id> --version-id <version-id> --environment production -o json",
+			Short:   "Inspect the current flow source, effective environment and optional assertion checks",
+			Example: "  echopoint probe source-options --flow-id <flow-id> --environment production -o json",
 			Args:    cobra.NoArgs,
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				if err := requireToken(state); err != nil {
@@ -329,12 +357,8 @@ func newProbeSourceOptionsCmd(state *AppState) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("--flow-id: %w", err)
 				}
-				versionID, err := uuid.Parse(version)
-				if err != nil {
-					return fmt.Errorf("invalid version ID: %w", err)
-				}
 				resp, err := state.Client.API().
-					GetProbeSourceOptionsWithResponse(cmd.Context(), &api.GetProbeSourceOptionsParams{FlowId: flowID, VersionId: versionID, EnvironmentKey: &environment})
+					GetProbeSourceOptionsWithResponse(cmd.Context(), &api.GetProbeSourceOptionsParams{FlowId: flowID, EnvironmentKey: &environment})
 				if err != nil {
 					return err
 				}
@@ -343,11 +367,9 @@ func newProbeSourceOptionsCmd(state *AppState) *cobra.Command {
 		},
 	)
 	cmd.Flags().StringVar(&flow, "flow-id", "", "Flow ID")
-	cmd.Flags().StringVar(&version, "version-id", "", "Immutable published version ID")
 	cmd.Flags().
-		StringVarP(&environment, "environment", "e", "", "Environment overlay; empty selects the published flow default")
+		StringVarP(&environment, "environment", "e", "", "Environment overlay; empty uses the flow's saved default")
 	_ = cmd.MarkFlagRequired("flow-id")
-	_ = cmd.MarkFlagRequired("version-id")
 	_ = cmd.RegisterFlagCompletionFunc("flow-id", completeFlowFlag(state))
 	registerEnvironmentFlagCompletion(state, cmd)
 	return cmd

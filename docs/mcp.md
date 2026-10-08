@@ -97,15 +97,19 @@ to expose it.
 
 The contract exposes `list_probes`, `get_probe`, `create_probe`, `update_probe`,
 `delete_probe`, `pause_probe`, `resume_probe`, `run_probe`, `list_probe_runs`,
-`get_probe_run` and `get_probe_source_options`. Path arguments use `probeId` and
-`runId`. Updates, pause/resume, delete and run require the current
+`get_probe_run`, `get_probe_source_options` and `estimate_probe`. Path arguments
+use `probeId` and `runId`. Updates, pause/resume, delete and run require the current
 `expected_revision`. Create/update accept a nested `config`; source discovery uses
-`flow_id`, `version_id` and `environment_key`. Every call retains the selected
+`flow_id` and `environment_key` without a version input. Probe configuration uses
+exactly one of `flow_ids` or `tags` (with `tag_match_mode`); `estimate_probe` accepts
+the same selector, `interval_seconds`, `runner_type` and optional environment.
+Every call retains the selected
 organization and authenticated API permissions.
 
 `run_probe` is diagnostic only and never establishes public health. Scheduled
 occurrences are owned by the durable scheduler. [`docs/probes.md`](probes.md)
-describes the complete configuration workflow and assertion mapping.
+describes the complete monitor-backed configuration workflow, forecast and
+optional assertion mapping.
 
 ## Status pages
 

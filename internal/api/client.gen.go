@@ -379,6 +379,24 @@ func (e FlowRunStatus) Valid() bool {
 	}
 }
 
+// Defines values for FlowScheduleType.
+const (
+	FlowScheduleTypeProbe    FlowScheduleType = "probe"
+	FlowScheduleTypeStandard FlowScheduleType = "standard"
+)
+
+// Valid indicates whether the value is a known member of the FlowScheduleType enum.
+func (e FlowScheduleType) Valid() bool {
+	switch e {
+	case FlowScheduleTypeProbe:
+		return true
+	case FlowScheduleTypeStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HttpMethod.
 const (
 	DELETE  HttpMethod = "DELETE"
@@ -796,6 +814,24 @@ func (e ProbeConfigRunnerType) Valid() bool {
 	case ProbeRunnerCloud:
 		return true
 	case ProbeRunnerSelfHosted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProbeEstimateRequestRunnerType.
+const (
+	ProbeEstimateCloud      ProbeEstimateRequestRunnerType = "cloud"
+	ProbeEstimateSelfHosted ProbeEstimateRequestRunnerType = "self_hosted"
+)
+
+// Valid indicates whether the value is a known member of the ProbeEstimateRequestRunnerType enum.
+func (e ProbeEstimateRequestRunnerType) Valid() bool {
+	switch e {
+	case ProbeEstimateCloud:
+		return true
+	case ProbeEstimateSelfHosted:
 		return true
 	default:
 		return false
@@ -3153,16 +3189,21 @@ type FlowSchedule struct {
 
 	// CronExpression Standard 5-field cron expression (minute hour day-of-month month day-of-week)
 	// evaluated in `timezone`.
-	CronExpression string             `json:"cron_expression"`
-	Description    *string            `json:"description,omitempty"`
-	Enabled        bool               `json:"enabled"`
-	EnvironmentKey string             `json:"environment_key"`
-	Id             openapi_types.UUID `json:"id"`
-	Name           string             `json:"name"`
+	CronExpression string               `json:"cron_expression"`
+	Description    *string              `json:"description,omitempty"`
+	Enabled        bool                 `json:"enabled"`
+	EnvironmentKey string               `json:"environment_key"`
+	FlowIds        []openapi_types.UUID `json:"flow_ids"`
+	Id             openapi_types.UUID   `json:"id"`
+
+	// IntervalSeconds Probe cadence; zero for cron-based standard monitors.
+	IntervalSeconds int    `json:"interval_seconds"`
+	Name            string `json:"name"`
 
 	// NextRunAt Next due time in UTC; null when paused with no future occurrence computed.
 	NextRunAt      *time.Time `json:"next_run_at,omitempty"`
 	OrganizationId string     `json:"organization_id"`
+	ProbeId        *string    `json:"probe_id,omitempty"`
 
 	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
 	// ad-hoc addresses; an empty set disables alerting for this schedule.
@@ -3186,9 +3227,13 @@ type FlowSchedule struct {
 	TimeoutSeconds int32 `json:"timeout_seconds"`
 
 	// Timezone IANA timezone name stored for display and anchoring; due times remain UTC.
-	Timezone  string    `json:"timezone"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Timezone  string           `json:"timezone"`
+	Type      FlowScheduleType `json:"type"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }
+
+// FlowScheduleType defines model for FlowSchedule.Type.
+type FlowScheduleType string
 
 // FlowScheduleListResponse defines model for FlowScheduleListResponse.
 type FlowScheduleListResponse struct {
@@ -4241,13 +4286,14 @@ type PollNodeData struct {
 
 // Probe defines model for Probe.
 type Probe struct {
-	Config    ProbeConfig   `json:"config"`
-	CreatedAt time.Time     `json:"created_at"`
-	Health    []ProbeHealth `json:"health"`
-	Id        string        `json:"id"`
-	NextRunAt time.Time     `json:"next_run_at"`
-	Revision  int64         `json:"revision"`
-	UpdatedAt time.Time     `json:"updated_at"`
+	Config     ProbeConfig        `json:"config"`
+	CreatedAt  time.Time          `json:"created_at"`
+	Health     []ProbeHealth      `json:"health"`
+	Id         string             `json:"id"`
+	NextRunAt  time.Time          `json:"next_run_at"`
+	Revision   int64              `json:"revision"`
+	ScheduleId openapi_types.UUID `json:"schedule_id"`
+	UpdatedAt  time.Time          `json:"updated_at"`
 }
 
 // ProbeAssertionEvidence defines model for ProbeAssertionEvidence.
@@ -4259,6 +4305,7 @@ type ProbeAssertionEvidence struct {
 
 // ProbeCapability defines model for ProbeCapability.
 type ProbeCapability struct {
+	// Checks Empty checks evaluate the complete selected flow suite.
 	Checks    []ProbeCheck `json:"checks"`
 	DependsOn []string     `json:"depends_on"`
 	Enabled   bool         `json:"enabled"`
@@ -4268,24 +4315,28 @@ type ProbeCapability struct {
 
 // ProbeCheck defines model for ProbeCheck.
 type ProbeCheck struct {
-	AssertionIndex int    `json:"assertion_index"`
-	NodeId         string `json:"node_id"`
+	AssertionIndex int                `json:"assertion_index"`
+	FlowId         openapi_types.UUID `json:"flow_id"`
+	NodeId         string             `json:"node_id"`
 }
 
 // ProbeCheckOption defines model for ProbeCheckOption.
 type ProbeCheckOption struct {
-	AssertionIndex int    `json:"assertion_index"`
-	Label          string `json:"label"`
-	NodeId         string `json:"node_id"`
+	AssertionIndex int                `json:"assertion_index"`
+	FlowId         openapi_types.UUID `json:"flow_id"`
+	Label          string             `json:"label"`
+	NodeId         string             `json:"node_id"`
 }
 
 // ProbeConfig defines model for ProbeConfig.
 type ProbeConfig struct {
-	Capabilities     []ProbeCapability  `json:"capabilities"`
-	ConfirmationRuns int                `json:"confirmation_runs"`
-	Enabled          bool               `json:"enabled"`
-	EnvironmentKey   string             `json:"environment_key"`
-	FlowId           openapi_types.UUID `json:"flow_id"`
+	Capabilities     []ProbeCapability `json:"capabilities"`
+	ConfirmationRuns int               `json:"confirmation_runs"`
+	Enabled          bool              `json:"enabled"`
+	EnvironmentKey   string            `json:"environment_key"`
+
+	// FlowIds Explicit flows; mutually exclusive with tags.
+	FlowIds *[]openapi_types.UUID `json:"flow_ids,omitempty"`
 
 	// FreshnessSeconds Must cover interval_seconds + timeout_seconds; stale measurements become Unknown.
 	FreshnessSeconds int                   `json:"freshness_seconds"`
@@ -4294,14 +4345,58 @@ type ProbeConfig struct {
 	RecoveryRuns     int                   `json:"recovery_runs"`
 	RunnerType       ProbeConfigRunnerType `json:"runner_type"`
 
-	// SourceFingerprint Server-owned approval fingerprint of the published root and resolved module definitions. Caller values are ignored on save.
-	SourceFingerprint *string            `json:"source_fingerprint,omitempty"`
-	TimeoutSeconds    int                `json:"timeout_seconds"`
-	VersionId         openapi_types.UUID `json:"version_id"`
+	// SourceFingerprint Server-owned source signature; caller values are ignored.
+	SourceFingerprint *string `json:"source_fingerprint,omitempty"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
+
+	// Tags Tag selector; mutually exclusive with flow_ids.
+	Tags           *[]string `json:"tags,omitempty"`
+	TimeoutSeconds int       `json:"timeout_seconds"`
 }
 
 // ProbeConfigRunnerType defines model for ProbeConfig.RunnerType.
 type ProbeConfigRunnerType string
+
+// ProbeEstimate defines model for ProbeEstimate.
+type ProbeEstimate struct {
+	EstimateNotes            []string            `json:"estimate_notes"`
+	ExecutionsPer30Days      int64               `json:"executions_per_30_days"`
+	ExecutionsPerDay         int64               `json:"executions_per_day"`
+	ExecutionsPerOccurrence  int64               `json:"executions_per_occurrence"`
+	ExecutionsRemainingMonth int64               `json:"executions_remaining_month"`
+	Flows                    []ProbeEstimateFlow `json:"flows"`
+	GeneratedAt              time.Time           `json:"generated_at"`
+	MatchedFlowCount         int                 `json:"matched_flow_count"`
+	RequestsExact            bool                `json:"requests_exact"`
+	RequestsPer30Days        *int64              `json:"requests_per_30_days,omitempty"`
+	RequestsPerDay           *int64              `json:"requests_per_day,omitempty"`
+	RequestsPerOccurrence    *int64              `json:"requests_per_occurrence,omitempty"`
+}
+
+// ProbeEstimateFlow defines model for ProbeEstimateFlow.
+type ProbeEstimateFlow struct {
+	Id                    openapi_types.UUID `json:"id"`
+	Name                  string             `json:"name"`
+	RequestsExact         bool               `json:"requests_exact"`
+	RequestsPerOccurrence *int64             `json:"requests_per_occurrence,omitempty"`
+}
+
+// ProbeEstimateRequest defines model for ProbeEstimateRequest.
+type ProbeEstimateRequest struct {
+	EnvironmentKey  *string                        `json:"environment_key,omitempty"`
+	FlowIds         *[]openapi_types.UUID          `json:"flow_ids,omitempty"`
+	IntervalSeconds int                            `json:"interval_seconds"`
+	RunnerType      ProbeEstimateRequestRunnerType `json:"runner_type"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
+	Tags         *[]string     `json:"tags,omitempty"`
+}
+
+// ProbeEstimateRequestRunnerType defines model for ProbeEstimateRequest.RunnerType.
+type ProbeEstimateRequestRunnerType string
 
 // ProbeHealth defines model for ProbeHealth.
 type ProbeHealth struct {
@@ -4345,6 +4440,7 @@ type ProbeRun struct {
 	DueAt           time.Time           `json:"due_at"`
 	ExecutionId     *openapi_types.UUID `json:"execution_id,omitempty"`
 	ExecutionStatus *string             `json:"execution_status,omitempty"`
+	Executions      []ProbeRunExecution `json:"executions"`
 	Id              string              `json:"id"`
 	Observations    []ProbeObservation  `json:"observations"`
 	ObservedAt      *time.Time          `json:"observed_at,omitempty"`
@@ -4352,6 +4448,7 @@ type ProbeRun struct {
 	ProbeId         string              `json:"probe_id"`
 	Reason          string              `json:"reason"`
 	Revision        int64               `json:"revision"`
+	ScheduleRunId   openapi_types.UUID  `json:"schedule_run_id"`
 	Status          ProbeRunStatus      `json:"status"`
 	Steps           []ProbeStepEvidence `json:"steps"`
 	UpdatedAt       time.Time           `json:"updated_at"`
@@ -4362,6 +4459,13 @@ type ProbeRunOrigin string
 
 // ProbeRunStatus defines model for ProbeRun.Status.
 type ProbeRunStatus string
+
+// ProbeRunExecution defines model for ProbeRunExecution.
+type ProbeRunExecution struct {
+	ExecutionId openapi_types.UUID `json:"execution_id"`
+	FlowId      openapi_types.UUID `json:"flow_id"`
+	Status      string             `json:"status"`
+}
 
 // ProbeRunListResponse defines model for ProbeRunListResponse.
 type ProbeRunListResponse struct {
@@ -4378,12 +4482,12 @@ type ProbeSourceOptions struct {
 	Checks         []ProbeCheckOption `json:"checks"`
 	EnvironmentKey string             `json:"environment_key"`
 	FlowId         openapi_types.UUID `json:"flow_id"`
-	VersionId      openapi_types.UUID `json:"version_id"`
 }
 
 // ProbeStepEvidence defines model for ProbeStepEvidence.
 type ProbeStepEvidence struct {
 	Assertions []ProbeAssertionEvidence `json:"assertions"`
+	FlowId     openapi_types.UUID       `json:"flow_id"`
 	Label      string                   `json:"label"`
 	NodeId     string                   `json:"node_id"`
 	Status     string                   `json:"status"`
@@ -6816,10 +6920,15 @@ type CreateProbeParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// EstimateProbeParams defines parameters for EstimateProbe.
+type EstimateProbeParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetProbeSourceOptionsParams defines parameters for GetProbeSourceOptions.
 type GetProbeSourceOptionsParams struct {
 	FlowId         openapi_types.UUID `form:"flow_id" json:"flow_id"`
-	VersionId      openapi_types.UUID `form:"version_id" json:"version_id"`
 	EnvironmentKey *string            `form:"environment_key,omitempty" json:"environment_key,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -7165,6 +7274,9 @@ type SetOrganizationVariableJSONRequestBody = SetVariableRequest
 
 // CreateProbeJSONRequestBody defines body for CreateProbe for application/json ContentType.
 type CreateProbeJSONRequestBody = CreateProbeRequest
+
+// EstimateProbeJSONRequestBody defines body for EstimateProbe for application/json ContentType.
+type EstimateProbeJSONRequestBody = ProbeEstimateRequest
 
 // UpdateProbeJSONRequestBody defines body for UpdateProbe for application/json ContentType.
 type UpdateProbeJSONRequestBody = UpdateProbeRequest
@@ -9479,7 +9591,7 @@ type ClientInterface interface {
 
 	// CreateProbeWithBody CreateProbe
 	//
-	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9488,16 +9600,34 @@ type ClientInterface interface {
 
 	// CreateProbe CreateProbe
 	//
-	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /probes (the `CreateProbe` operationId).
 	CreateProbe(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// EstimateProbeWithBody EstimateProbe
+	//
+	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+	EstimateProbeWithBody(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// EstimateProbe EstimateProbe
+	//
+	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+	EstimateProbe(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetProbeSourceOptions GetProbeSourceOptions
 	//
-	// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+	// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
 	//
 	// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
 	GetProbeSourceOptions(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -12605,7 +12735,7 @@ func (c *Client) ListProbes(ctx context.Context, params *ListProbesParams, reqEd
 
 // CreateProbeWithBody CreateProbe
 //
-// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 //
 // Takes any type of body and a specified content type.
 //
@@ -12624,7 +12754,7 @@ func (c *Client) CreateProbeWithBody(ctx context.Context, params *CreateProbePar
 
 // CreateProbe CreateProbe
 //
-// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -12641,9 +12771,47 @@ func (c *Client) CreateProbe(ctx context.Context, params *CreateProbeParams, bod
 	return c.Client.Do(req)
 }
 
+// EstimateProbeWithBody EstimateProbe
+//
+// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+func (c *Client) EstimateProbeWithBody(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEstimateProbeRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// EstimateProbe EstimateProbe
+//
+// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+func (c *Client) EstimateProbe(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEstimateProbeRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetProbeSourceOptions GetProbeSourceOptions
 //
-// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
 //
 // Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
 func (c *Client) GetProbeSourceOptions(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -19522,6 +19690,59 @@ func NewCreateProbeRequestWithBody(server string, params *CreateProbeParams, con
 	return req, nil
 }
 
+// NewEstimateProbeRequest calls the generic EstimateProbe builder with application/json body
+func NewEstimateProbeRequest(server string, params *EstimateProbeParams, body EstimateProbeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewEstimateProbeRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewEstimateProbeRequestWithBody constructs an http.Request for the EstimateProbe method, with any body, and a specified content type
+func NewEstimateProbeRequestWithBody(server string, params *EstimateProbeParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/estimate")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetProbeSourceOptionsRequest constructs an http.Request for the GetProbeSourceOptions method
 func NewGetProbeSourceOptionsRequest(server string, params *GetProbeSourceOptionsParams) (*http.Request, error) {
 	var err error
@@ -19551,14 +19772,6 @@ func NewGetProbeSourceOptionsRequest(server string, params *GetProbeSourceOption
 		var rawQueryFragments []string
 
 		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_id", params.FlowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "version_id", params.VersionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
 			return nil, err
 		} else {
 			for _, qp := range strings.Split(queryFrag, "&") {
@@ -23413,7 +23626,7 @@ type ClientWithResponsesInterface interface {
 
 	// CreateProbeWithBodyWithResponse CreateProbe
 	//
-	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -23422,16 +23635,34 @@ type ClientWithResponsesInterface interface {
 
 	// CreateProbeWithResponse CreateProbe
 	//
-	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /probes (the `CreateProbe` operationId).
 	CreateProbeWithResponse(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error)
 
+	// EstimateProbeWithBodyWithResponse EstimateProbe
+	//
+	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+	EstimateProbeWithBodyWithResponse(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error)
+
+	// EstimateProbeWithResponse EstimateProbe
+	//
+	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+	EstimateProbeWithResponse(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error)
+
 	// GetProbeSourceOptionsWithResponse GetProbeSourceOptions
 	//
-	// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+	// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -30094,6 +30325,96 @@ func (r CreateProbeResponse) ContentType() string {
 	return ""
 }
 
+type EstimateProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ProbeEstimate
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r EstimateProbeResponse) GetJSON200() *ProbeEstimate {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r EstimateProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r EstimateProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r EstimateProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r EstimateProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r EstimateProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r EstimateProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r EstimateProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r EstimateProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r EstimateProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r EstimateProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r EstimateProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetProbeSourceOptionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -35602,7 +35923,7 @@ func (c *ClientWithResponses) ListProbesWithResponse(ctx context.Context, params
 
 // CreateProbeWithBodyWithResponse CreateProbe
 //
-// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35617,7 +35938,7 @@ func (c *ClientWithResponses) CreateProbeWithBodyWithResponse(ctx context.Contex
 
 // CreateProbeWithResponse CreateProbe
 //
-// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35630,9 +35951,39 @@ func (c *ClientWithResponses) CreateProbeWithResponse(ctx context.Context, param
 	return ParseCreateProbeResponse(rsp)
 }
 
+// EstimateProbeWithBodyWithResponse EstimateProbe
+//
+// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+func (c *ClientWithResponses) EstimateProbeWithBodyWithResponse(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error) {
+	rsp, err := c.EstimateProbeWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEstimateProbeResponse(rsp)
+}
+
+// EstimateProbeWithResponse EstimateProbe
+//
+// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
+func (c *ClientWithResponses) EstimateProbeWithResponse(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error) {
+	rsp, err := c.EstimateProbe(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEstimateProbeResponse(rsp)
+}
+
 // GetProbeSourceOptionsWithResponse GetProbeSourceOptions
 //
-// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -41222,6 +41573,81 @@ func ParseCreateProbeResponse(rsp *http.Response) (*CreateProbeResponse, error) 
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseEstimateProbeResponse parses an HTTP response from a EstimateProbeWithResponse call
+func ParseEstimateProbeResponse(rsp *http.Response) (*EstimateProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &EstimateProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProbeEstimate
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
 		var dest BadRequest

@@ -3745,7 +3745,7 @@ paths:
       tags:
         - Probes
       summary: CreateProbe
-      description: Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+      description: Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
       operationId: createProbe
       requestBody:
         content:
@@ -3782,6 +3782,45 @@ paths:
             - flows:update
             - flows:execute
       x-ai-tool: true
+  /probes/estimate:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags: [Probes]
+      summary: EstimateProbe
+      description: Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
+      operationId: estimateProbe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProbeEstimateRequest'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbeEstimate'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth: [flows:read]
+        - ApiKeys: [flows:read]
+      x-ai-tool: true
   /probes/source-options:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -3789,16 +3828,10 @@ paths:
       tags:
         - Probes
       summary: GetProbeSourceOptions
-      description: Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+      description: Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
       operationId: getProbeSourceOptions
       parameters:
         - name: flow_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: version_id
           in: query
           required: true
           schema:
@@ -10276,9 +10309,13 @@ components:
     ProbeCheck:
       type: object
       required:
+        - flow_id
         - node_id
         - assertion_index
       properties:
+        flow_id:
+          type: string
+          format: uuid
         node_id:
           type: string
           minLength: 1
@@ -10311,7 +10348,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProbeCheck'
-          minItems: 1
+          description: Empty checks evaluate the complete selected flow suite.
           maxItems: 16
         depends_on:
           type: array
@@ -10324,8 +10361,6 @@ components:
       type: object
       required:
         - name
-        - flow_id
-        - version_id
         - environment_key
         - runner_type
         - enabled
@@ -10337,19 +10372,28 @@ components:
         - capabilities
       properties:
         source_fingerprint:
-          description: Server-owned approval fingerprint of the published root and resolved module definitions. Caller values are ignored on save.
+          description: Server-owned source signature; caller values are ignored.
           type: string
           readOnly: true
         name:
           type: string
           minLength: 1
           maxLength: 120
-        flow_id:
-          type: string
-          format: uuid
-        version_id:
-          type: string
-          format: uuid
+        flow_ids:
+          description: Explicit flows; mutually exclusive with tags.
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 500
+        tags:
+          description: Tag selector; mutually exclusive with flow_ids.
+          type: array
+          items:
+            type: string
+          maxItems: 100
+        tag_match_mode:
+          $ref: '#/components/schemas/TagMatchMode'
         environment_key:
           type: string
           maxLength: 128
@@ -10430,6 +10474,7 @@ components:
       type: object
       required:
         - id
+        - schedule_id
         - revision
         - config
         - next_run_at
@@ -10439,6 +10484,9 @@ components:
       properties:
         id:
           type: string
+        schedule_id:
+          type: string
+          format: uuid
         revision:
           type: integer
           format: int64
@@ -10474,11 +10522,15 @@ components:
     ProbeStepEvidence:
       type: object
       required:
+        - flow_id
         - node_id
         - label
         - status
         - assertions
       properties:
+        flow_id:
+          type: string
+          format: uuid
         node_id:
           type: string
         label:
@@ -10509,6 +10561,8 @@ components:
       required:
         - id
         - probe_id
+        - schedule_run_id
+        - executions
         - revision
         - origin
         - status
@@ -10524,6 +10578,13 @@ components:
           type: string
         probe_id:
           type: string
+        schedule_run_id:
+          type: string
+          format: uuid
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeRunExecution'
         revision:
           type: integer
           format: int64
@@ -10580,10 +10641,14 @@ components:
     ProbeCheckOption:
       type: object
       required:
+        - flow_id
         - node_id
         - assertion_index
         - label
       properties:
+        flow_id:
+          type: string
+          format: uuid
         node_id:
           type: string
         assertion_index:
@@ -10595,14 +10660,10 @@ components:
       type: object
       required:
         - flow_id
-        - version_id
         - environment_key
         - checks
       properties:
         flow_id:
-          type: string
-          format: uuid
-        version_id:
           type: string
           format: uuid
         environment_key:
@@ -10611,6 +10672,104 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProbeCheckOption'
+      additionalProperties: false
+    ProbeRunExecution:
+      type: object
+      required: [flow_id, execution_id, status]
+      properties:
+        flow_id:
+          type: string
+          format: uuid
+        execution_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+      additionalProperties: false
+    ProbeEstimateRequest:
+      type: object
+      required: [interval_seconds, runner_type]
+      properties:
+        flow_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 500
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+        tag_match_mode:
+          $ref: '#/components/schemas/TagMatchMode'
+        interval_seconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+        runner_type:
+          type: string
+          enum: [cloud, self_hosted]
+          x-enum-varnames: [ProbeEstimateCloud, ProbeEstimateSelfHosted]
+        environment_key:
+          type: string
+          maxLength: 128
+      additionalProperties: false
+    ProbeEstimateFlow:
+      type: object
+      required: [id, name, requests_exact]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        requests_per_occurrence:
+          type: integer
+          format: int64
+        requests_exact:
+          type: boolean
+      additionalProperties: false
+    ProbeEstimate:
+      type: object
+      required: [matched_flow_count, flows, executions_per_occurrence, executions_per_day, executions_per_30_days, executions_remaining_month, requests_exact, estimate_notes, generated_at]
+      properties:
+        matched_flow_count:
+          type: integer
+        flows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeEstimateFlow'
+        executions_per_occurrence:
+          type: integer
+          format: int64
+        executions_per_day:
+          type: integer
+          format: int64
+        executions_per_30_days:
+          type: integer
+          format: int64
+        executions_remaining_month:
+          type: integer
+          format: int64
+        requests_per_occurrence:
+          type: integer
+          format: int64
+        requests_per_day:
+          type: integer
+          format: int64
+        requests_per_30_days:
+          type: integer
+          format: int64
+        requests_exact:
+          type: boolean
+        estimate_notes:
+          type: array
+          items:
+            type: string
+        generated_at:
+          type: string
+          format: date-time
       additionalProperties: false
     CreateProbeRequest:
       type: object
@@ -10670,6 +10829,9 @@ components:
       type: object
       required:
         - id
+        - type
+        - flow_ids
+        - interval_seconds
         - organization_id
         - tags
         - tag_match_mode
@@ -10686,6 +10848,19 @@ components:
         - created_at
         - updated_at
       properties:
+        type:
+          type: string
+          enum: [standard, probe]
+        probe_id:
+          type: string
+        flow_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        interval_seconds:
+          description: Probe cadence; zero for cron-based standard monitors.
+          type: integer
         id:
           type: string
           format: uuid

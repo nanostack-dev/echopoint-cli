@@ -474,7 +474,9 @@ echopoint collection import -f ./openapi.json --name "My API"
 
 ```bash
 echopoint probe list -o json
-echopoint probe source-options --flow-id <flow-id> --version-id <version-id> --environment production
+echopoint probe source-options --flow-id <flow-id> --environment production
+echopoint probe estimate --tag production --interval 60 -o json
+echopoint probe create --name API --flow-id <flow-id> --environment production -o json
 echopoint probe validate -f probe.json
 echopoint probe create -f probe.json --environment production -o json
 echopoint probe view <probe-id> -o json
