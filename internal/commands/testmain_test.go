@@ -79,14 +79,6 @@ func runCLIWithLogs(t *testing.T, args ...string) (string, string, int) {
 	return runCLIWithLogsContext(t, t.Context(), args...)
 }
 
-// runCLIWithContext permits cleanup commands after t.Context is canceled.
-// Callers must supply a bounded context; the binary still builds once per suite.
-func runCLIWithContext(t *testing.T, ctx context.Context, args ...string) (string, string, int) {
-	t.Helper()
-	stdout, stderr, code := runCLIWithLogsContext(t, ctx, args...)
-	return stdout, withoutLibraryLogs(stderr), code
-}
-
 func runCLIWithLogsContext(t *testing.T, ctx context.Context, args ...string) (string, string, int) {
 	t.Helper()
 	cmd := exec.CommandContext(ctx, echopointBinary(t), args...)

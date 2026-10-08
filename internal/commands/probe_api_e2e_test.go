@@ -17,6 +17,14 @@ import (
 	"echopoint-cli/internal/client"
 )
 
+// runCLIWithContext permits cleanup commands after t.Context is canceled.
+// Callers must supply a bounded context; the binary still builds once per suite.
+func runCLIWithContext(t *testing.T, ctx context.Context, args ...string) (string, string, int) {
+	t.Helper()
+	stdout, stderr, code := runCLIWithLogsContext(t, ctx, args...)
+	return stdout, withoutLibraryLogs(stderr), code
+}
+
 // TestProbeAPIConfigurationWorkflow runs the built CLI against an owned local
 // API, not a stub. Supply a disposable organization without an existing page.
 func TestProbeAPIConfigurationWorkflow(t *testing.T) {
