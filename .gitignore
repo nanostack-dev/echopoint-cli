@@ -12,3 +12,6 @@ worktrees/
 
 # Local UI previews and PR screenshots
 .ui-craft/
+
+# Developer-owned Claude overrides
+.claude/settings.local.json
