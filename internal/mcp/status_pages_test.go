@@ -21,7 +21,7 @@ func TestStatusPageToolsDispatchWithTenantScope(t *testing.T) {
 	}
 	for _, tc := range []struct{ name, method, path, args string }{
 		{"get_status_page", "GET", "/status-pages/current", `{}`},
-		{"save_status_page", "PUT", "/status-pages/current", `{"expected_draft_version":7,"slug":"example","config":{"theme":"orbit"}}`},
+		{"save_status_page", "PUT", "/status-pages/current", `{"expected_draft_version":7,"slug":"example","config":{"theme":"orbit"},"probe_bindings":[{"service_id":"api","probe_id":"probe","capability_id":"api"}]}`},
 		{"get_status_page_binding_options", "GET", "/status-pages/binding-options", `{"schedule_id":"schedule","flow_id":"flow"}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -42,6 +42,10 @@ func TestStatusPageToolsDispatchWithTenantScope(t *testing.T) {
 					}
 					if input["expected_draft_version"] != float64(7) || input["slug"] != "example" {
 						t.Errorf("body = %s", data)
+					}
+					bindings, ok := input["probe_bindings"].([]any)
+					if !ok || len(bindings) != 1 {
+						t.Errorf("probe mapping dropped: %s", data)
 					}
 				}
 				if tc.name == "get_status_page_binding_options" &&

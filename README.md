@@ -2,7 +2,7 @@
 
 Contributor and agent guidance: [documentation index](docs/README.md) and [AGENTS.md](AGENTS.md). This repository works as a standalone checkout.
 
-Terminal-first tooling for EchoPoint. Manage flows and their executions, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
+Terminal-first tooling for EchoPoint. Manage flows and their executions, capability probes, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
 
 ## Installation
 
@@ -75,6 +75,7 @@ latest release.
 - Organize flows into folders, and bulk-move them by id, search, or tag
 - Keep [OpenAPI specs](docs/specs.md) in EchoPoint: create, push, pull, check, lint, diff, and edit them by slug
 - Configure and publish [public status pages](docs/status-pages.md), including anonymous verification
+- Configure [durable capability probes](docs/probes.md), inspect scheduled evidence and run private diagnostics
 - Manage collections with OpenAPI import support
 - Variables for an organization, its environments, and each flow
 - Flow reuse via module nodes (run a flow inside another flow)
@@ -207,11 +208,11 @@ modified or removed.
 ## Commands
 
 Nouns are singular and the plural stays as an alias: `flow` (`flows`), `collection`
-(`collections`), `status-page` (`status-pages`). `echopoint --help` groups the commands:
+(`collections`), `probe` (`probes`), `status-page` (`status-pages`). `echopoint --help` groups the commands:
 
 | Group | Commands |
 |-------|----------|
-| Resources | `flow`, `spec`, `collection`, `status-page`, `org` |
+| Resources | `flow`, `probe`, `spec`, `collection`, `status-page`, `org` |
 | Account and setup | `auth`, `profile`, `config` |
 | Tools | `mcp`, `completion`, `update`, `version` |
 
@@ -223,17 +224,17 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
   `flow execution view`, `flow env view`, `org env view`, `spec view` and `config view` show one thing; `get` and
   `show` still work as aliases of `view`. `list` shows many.
 - **A file is always `-f/--file`.** `flow create`, `flow update`, `collection import`,
-  `org env import`, `flow env set`, `status-page save`, `status-page validate` and the
+  `org env import`, `flow env set`, `probe create|update|validate`, `status-page save`, `status-page validate` and the
   `spec` commands take it that way; a file typed as an argument fails with
   `pass the file with -f`. `-f -` reads stdin where the command says so
-  (`status-page save|validate`).
+  (`status-page save|validate`, `probe create|update|validate`).
 - **Specs are named by their slug; flows by their id.** A spec's `<slug>` is unique and
   its title is free text. A flow is `<flow-id>`, the id `flow list` shows; anything else
   fails before any request.
 - **Deleting a whole resource asks; editing part of one does not.** `flow delete`,
   `collection delete`, `flow folder delete`, `flow env delete`, `org env delete`,
   `org env environments delete`, `profile delete`, `config reset` and
-  `status-page unpublish` ask `Delete flow <id>? [y/N]` on stderr when stdin and
+  `probe delete` and `status-page unpublish` ask `Delete flow <id>? [y/N]` on stderr when stdin and
   stdout are terminals; anything but `y` or `yes` cancels with exit code 2. Without a
   terminal they refuse (`pass --yes to delete flow <id> without a prompt`) unless
   `-y/--yes` is given. `env unset`, removing a node, edge, assertion or output, and the
@@ -468,6 +469,23 @@ echopoint collection update <id> --name "New name"
 echopoint collection delete <id>
 echopoint collection import -f ./openapi.json --name "My API"
 ```
+
+### Capability Probes
+
+```bash
+echopoint probe list -o json
+echopoint probe source-options --flow-id <flow-id> --version-id <version-id> --environment production
+echopoint probe validate -f probe.json
+echopoint probe create -f probe.json --environment production -o json
+echopoint probe view <probe-id> -o json
+echopoint probe run <probe-id> --expected-revision 1 -o json
+echopoint probe history <probe-id> -o json
+echopoint probe pause <probe-id> --expected-revision 1
+echopoint probe resume <probe-id> --expected-revision 2
+echopoint probe delete <probe-id> --expected-revision 3 --yes
+```
+
+See [docs/probes.md](docs/probes.md) for complete noninteractive setup and status-page mapping.
 
 ### Status Pages
 

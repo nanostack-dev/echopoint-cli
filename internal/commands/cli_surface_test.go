@@ -27,6 +27,7 @@ func TestPluralAliasesReachTheSameCommands(t *testing.T) {
 		"flows":        "flow",
 		"collections":  "collection",
 		"status-pages": "status-page",
+		"probes":       "probe",
 	} {
 		group, _, err := root.Find([]string{singular})
 		if err != nil || !slices.Contains(group.Aliases, plural) {
@@ -54,6 +55,8 @@ func TestGetAndShowStayAsAliasesOfView(t *testing.T) {
 		{[]string{"flow", "view"}, []string{"get", "show"}},
 		{[]string{"collection", "view"}, []string{"get"}},
 		{[]string{"status-page", "view"}, []string{"get"}},
+		{[]string{"probe", "view"}, []string{"get", "show"}},
+		{[]string{"probe", "execution", "view"}, []string{"get", "show"}},
 		{[]string{"flow", "execution", "view"}, []string{"get"}},
 		{[]string{"flow", "env", "view"}, []string{"get"}},
 		{[]string{"org", "env", "view"}, []string{"get"}},
@@ -109,7 +112,7 @@ func TestRootCommandsAreGroupedUnderTheirHeadings(t *testing.T) {
 	}
 
 	want := map[string][]string{
-		"Resources":         {"collection", "flow", "org", "spec", "status-page"},
+		"Resources":         {"collection", "flow", "org", "probe", "spec", "status-page"},
 		"Account and setup": {"auth", "config", "profile"},
 		"Tools":             {"completion", "help", "mcp", "update", "version"},
 	}

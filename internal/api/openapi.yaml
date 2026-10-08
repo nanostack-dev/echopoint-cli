@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 5.0.0
+  version: 5.1.0
 paths:
   /webhooks:
     parameters:
@@ -3702,6 +3702,507 @@ paths:
       security:
         - BearerAuth: []
       x-ai-danger: Membership change - requires a human session of the invited person.
+  /probes:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Probes
+      summary: ListProbes
+      description: Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+      operationId: listProbes
+      parameters:
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/OffsetParameter'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbeListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+    post:
+      tags:
+        - Probes
+      summary: CreateProbe
+      description: Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+      operationId: createProbe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProbeRequest'
+        required: true
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Probe'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:update
+            - flows:execute
+        - ApiKeys:
+            - flows:update
+            - flows:execute
+      x-ai-tool: true
+  /probes/source-options:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Probes
+      summary: GetProbeSourceOptions
+      description: Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+      operationId: getProbeSourceOptions
+      parameters:
+        - name: flow_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: version_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: environment_key
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbeSourceOptions'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /probes/{probeId}:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: probeId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+    get:
+      tags:
+        - Probes
+      summary: GetProbe
+      description: Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+      operationId: getProbe
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Probe'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+    put:
+      tags:
+        - Probes
+      summary: UpdateProbe
+      description: Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+      operationId: updateProbe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProbeRequest'
+        required: true
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Probe'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:update
+            - flows:execute
+        - ApiKeys:
+            - flows:update
+            - flows:execute
+      x-ai-tool: true
+    delete:
+      tags:
+        - Probes
+      summary: DeleteProbe
+      description: Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
+      operationId: deleteProbe
+      parameters:
+        - name: expected_revision
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "204":
+          description: Success
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:update
+        - ApiKeys:
+            - flows:update
+      x-ai-tool: true
+  /probes/{probeId}/pause:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: probeId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+    post:
+      tags:
+        - Probes
+      summary: PauseProbe
+      description: Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+      operationId: pauseProbe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProbeRevisionRequest'
+        required: true
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Probe'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:update
+        - ApiKeys:
+            - flows:update
+      x-ai-tool: true
+  /probes/{probeId}/resume:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: probeId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+    post:
+      tags:
+        - Probes
+      summary: ResumeProbe
+      description: Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+      operationId: resumeProbe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProbeRevisionRequest'
+        required: true
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Probe'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:update
+            - flows:execute
+        - ApiKeys:
+            - flows:update
+            - flows:execute
+      x-ai-tool: true
+  /probes/{probeId}/run:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: probeId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+    post:
+      tags:
+        - Probes
+      summary: RunProbe
+      description: Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+      operationId: runProbe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProbeRevisionRequest'
+        required: true
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbeRun'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:execute
+        - ApiKeys:
+            - flows:execute
+      x-ai-tool: true
+  /probes/{probeId}/runs:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: probeId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+    get:
+      tags:
+        - Probes
+      summary: ListProbeRuns
+      description: Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
+      operationId: listProbeRuns
+      parameters:
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/OffsetParameter'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbeRunListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /probes/{probeId}/runs/{runId}:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: probeId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+    get:
+      tags:
+        - Probes
+      summary: GetProbeRun
+      description: Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
+      operationId: getProbeRun
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbeRun'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
   /flow-schedules:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -9772,6 +10273,398 @@ components:
           type: string
         organization_name:
           type: string
+    ProbeCheck:
+      type: object
+      required:
+        - node_id
+        - assertion_index
+      properties:
+        node_id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        assertion_index:
+          type: integer
+          minimum: 0
+          maximum: 1000
+      additionalProperties: false
+    ProbeCapability:
+      type: object
+      required:
+        - id
+        - name
+        - enabled
+        - checks
+        - depends_on
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 64
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        enabled:
+          type: boolean
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeCheck'
+          minItems: 1
+          maxItems: 16
+        depends_on:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          maxItems: 8
+      additionalProperties: false
+    ProbeConfig:
+      type: object
+      required:
+        - name
+        - flow_id
+        - version_id
+        - environment_key
+        - runner_type
+        - enabled
+        - interval_seconds
+        - timeout_seconds
+        - confirmation_runs
+        - recovery_runs
+        - freshness_seconds
+        - capabilities
+      properties:
+        source_fingerprint:
+          description: Server-owned approval fingerprint of the published root and resolved module definitions. Caller values are ignored on save.
+          type: string
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        flow_id:
+          type: string
+          format: uuid
+        version_id:
+          type: string
+          format: uuid
+        environment_key:
+          type: string
+          maxLength: 128
+        runner_type:
+          type: string
+          enum:
+            - cloud
+            - self_hosted
+          x-enum-varnames:
+            - ProbeRunnerCloud
+            - ProbeRunnerSelfHosted
+        enabled:
+          type: boolean
+        interval_seconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 900
+        confirmation_runs:
+          type: integer
+          minimum: 1
+          maximum: 10
+        recovery_runs:
+          type: integer
+          minimum: 1
+          maximum: 10
+        freshness_seconds:
+          description: Must cover interval_seconds + timeout_seconds; stale measurements become Unknown.
+          type: integer
+          minimum: 60
+          maximum: 604800
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeCapability'
+          minItems: 1
+          maxItems: 8
+      additionalProperties: false
+    ProbeHealthState:
+      type: string
+      enum:
+        - operational
+        - outage
+        - unknown
+        - not_monitored
+      x-enum-varnames:
+        - ProbeOperational
+        - ProbeOutage
+        - ProbeUnknown
+        - ProbeNotMonitored
+    ProbeHealth:
+      type: object
+      required:
+        - capability_id
+        - state
+        - reason
+        - confirmation_count
+      properties:
+        capability_id:
+          type: string
+        state:
+          $ref: '#/components/schemas/ProbeHealthState'
+        reason:
+          type: string
+        observed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        confirmation_count:
+          type: integer
+      additionalProperties: false
+    Probe:
+      type: object
+      required:
+        - id
+        - revision
+        - config
+        - next_run_at
+        - health
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        revision:
+          type: integer
+          format: int64
+        config:
+          $ref: '#/components/schemas/ProbeConfig'
+        next_run_at:
+          type: string
+          format: date-time
+        health:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeHealth'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ProbeAssertionEvidence:
+      type: object
+      required:
+        - index
+        - error
+      properties:
+        index:
+          type: integer
+        passed:
+          type: boolean
+        error:
+          type: boolean
+      additionalProperties: false
+    ProbeStepEvidence:
+      type: object
+      required:
+        - node_id
+        - label
+        - status
+        - assertions
+      properties:
+        node_id:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+        assertions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeAssertionEvidence'
+      additionalProperties: false
+    ProbeObservation:
+      type: object
+      required:
+        - capability_id
+        - state
+        - reason
+      properties:
+        capability_id:
+          type: string
+        state:
+          $ref: '#/components/schemas/ProbeHealthState'
+        reason:
+          type: string
+      additionalProperties: false
+    ProbeRun:
+      type: object
+      required:
+        - id
+        - probe_id
+        - revision
+        - origin
+        - status
+        - config
+        - due_at
+        - reason
+        - observations
+        - steps
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        probe_id:
+          type: string
+        revision:
+          type: integer
+          format: int64
+        origin:
+          type: string
+          enum:
+            - scheduled
+            - diagnostic
+          x-enum-varnames:
+            - ProbeScheduled
+            - ProbeDiagnostic
+        status:
+          type: string
+          enum:
+            - pending
+            - running
+            - completed
+            - unavailable
+          x-enum-varnames:
+            - ProbePending
+            - ProbeRunning
+            - ProbeCompleted
+            - ProbeUnavailable
+        config:
+          $ref: '#/components/schemas/ProbeConfig'
+        due_at:
+          type: string
+          format: date-time
+        execution_id:
+          type: string
+          format: uuid
+        execution_status:
+          type: string
+        observed_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeObservation'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeStepEvidence'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ProbeCheckOption:
+      type: object
+      required:
+        - node_id
+        - assertion_index
+        - label
+      properties:
+        node_id:
+          type: string
+        assertion_index:
+          type: integer
+        label:
+          type: string
+      additionalProperties: false
+    ProbeSourceOptions:
+      type: object
+      required:
+        - flow_id
+        - version_id
+        - environment_key
+        - checks
+      properties:
+        flow_id:
+          type: string
+          format: uuid
+        version_id:
+          type: string
+          format: uuid
+        environment_key:
+          type: string
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProbeCheckOption'
+      additionalProperties: false
+    CreateProbeRequest:
+      type: object
+      required:
+        - config
+      properties:
+        config:
+          $ref: '#/components/schemas/ProbeConfig'
+      additionalProperties: false
+    UpdateProbeRequest:
+      type: object
+      required:
+        - expected_revision
+        - config
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        config:
+          $ref: '#/components/schemas/ProbeConfig'
+      additionalProperties: false
+    ProbeRevisionRequest:
+      type: object
+      required:
+        - expected_revision
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 1
+      additionalProperties: false
+    ProbeListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Probe'
+    ProbeRunListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProbeRun'
     FlowSchedule:
       description: A recurring schedule that launches the tag-selected suite of flows resolved at each due tick.
       type: object
@@ -10885,6 +11778,26 @@ components:
         check:
           $ref: '#/components/schemas/StatusPageCheck'
       additionalProperties: false
+    StatusPageProbeBinding:
+      type: object
+      required:
+        - service_id
+        - probe_id
+        - capability_id
+      properties:
+        service_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        probe_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        capability_id:
+          type: string
+          minLength: 1
+          maxLength: 64
+      additionalProperties: false
     SaveStatusPageRequest:
       type: object
       required:
@@ -10906,6 +11819,11 @@ components:
           $ref: '#/components/schemas/StatusPageConfig'
         binding:
           $ref: '#/components/schemas/StatusPageBinding'
+        probe_bindings:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusPageProbeBinding'
+          maxItems: 32
       additionalProperties: false
     PublishStatusPageRequest:
       type: object
@@ -10981,6 +11899,11 @@ components:
           $ref: '#/components/schemas/StatusPageConfig'
         binding:
           $ref: '#/components/schemas/StatusPageBinding'
+        probe_bindings:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusPageProbeBinding'
+          maxItems: 32
         updated_at:
           type: string
           format: date-time

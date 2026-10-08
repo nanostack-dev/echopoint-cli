@@ -35,6 +35,19 @@ echopoint flow view <flow-id> -o yaml
 ```
 `get` and `show` are aliases of `view`.
 
+### Publish and inspect immutable versions
+
+```bash
+echopoint --org <organization-id> flow publish <flow-id> -o json
+echopoint --org <organization-id> flow version list <flow-id> --limit 20 -o json
+echopoint --org <organization-id> flow version view <flow-id> <version-id> -o json
+```
+
+Publishing snapshots the saved definition. The returned version ID pins a probe's
+source; publishing a later version does not change that pin. Version reads include
+the definition and assertions, and default to JSON so nested fields are preserved.
+`flow versions` is an alias of `flow version`; `get` and `show` alias `view`.
+
 ### Create a Flow
 Pass exactly one of `--name` and `-f`:
 ```bash

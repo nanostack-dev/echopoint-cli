@@ -784,6 +784,90 @@ func (e PollFlowNodeType) Valid() bool {
 	}
 }
 
+// Defines values for ProbeConfigRunnerType.
+const (
+	ProbeRunnerCloud      ProbeConfigRunnerType = "cloud"
+	ProbeRunnerSelfHosted ProbeConfigRunnerType = "self_hosted"
+)
+
+// Valid indicates whether the value is a known member of the ProbeConfigRunnerType enum.
+func (e ProbeConfigRunnerType) Valid() bool {
+	switch e {
+	case ProbeRunnerCloud:
+		return true
+	case ProbeRunnerSelfHosted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProbeHealthState.
+const (
+	ProbeNotMonitored ProbeHealthState = "not_monitored"
+	ProbeOperational  ProbeHealthState = "operational"
+	ProbeOutage       ProbeHealthState = "outage"
+	ProbeUnknown      ProbeHealthState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the ProbeHealthState enum.
+func (e ProbeHealthState) Valid() bool {
+	switch e {
+	case ProbeNotMonitored:
+		return true
+	case ProbeOperational:
+		return true
+	case ProbeOutage:
+		return true
+	case ProbeUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProbeRunOrigin.
+const (
+	ProbeDiagnostic ProbeRunOrigin = "diagnostic"
+	ProbeScheduled  ProbeRunOrigin = "scheduled"
+)
+
+// Valid indicates whether the value is a known member of the ProbeRunOrigin enum.
+func (e ProbeRunOrigin) Valid() bool {
+	switch e {
+	case ProbeDiagnostic:
+		return true
+	case ProbeScheduled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProbeRunStatus.
+const (
+	ProbeCompleted   ProbeRunStatus = "completed"
+	ProbePending     ProbeRunStatus = "pending"
+	ProbeRunning     ProbeRunStatus = "running"
+	ProbeUnavailable ProbeRunStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ProbeRunStatus enum.
+func (e ProbeRunStatus) Valid() bool {
+	switch e {
+	case ProbeCompleted:
+		return true
+	case ProbePending:
+		return true
+	case ProbeRunning:
+		return true
+	case ProbeUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RequestFlowNodeType.
 const (
 	RequestFlowNodeTypeRequest RequestFlowNodeType = "request"
@@ -2363,6 +2447,11 @@ type CreateFolderRequest struct {
 type CreateOrganizationInvitationRequest struct {
 	// Email The email address to invite. The role is always admin.
 	Email openapi_types.Email `json:"email"`
+}
+
+// CreateProbeRequest defines model for CreateProbeRequest.
+type CreateProbeRequest struct {
+	Config ProbeConfig `json:"config"`
 }
 
 // CreateRequestRequest defines model for CreateRequestRequest.
@@ -4150,6 +4239,156 @@ type PollNodeData struct {
 	TimeoutMs *int `json:"timeout_ms,omitempty"`
 }
 
+// Probe defines model for Probe.
+type Probe struct {
+	Config    ProbeConfig   `json:"config"`
+	CreatedAt time.Time     `json:"created_at"`
+	Health    []ProbeHealth `json:"health"`
+	Id        string        `json:"id"`
+	NextRunAt time.Time     `json:"next_run_at"`
+	Revision  int64         `json:"revision"`
+	UpdatedAt time.Time     `json:"updated_at"`
+}
+
+// ProbeAssertionEvidence defines model for ProbeAssertionEvidence.
+type ProbeAssertionEvidence struct {
+	Error  bool  `json:"error"`
+	Index  int   `json:"index"`
+	Passed *bool `json:"passed,omitempty"`
+}
+
+// ProbeCapability defines model for ProbeCapability.
+type ProbeCapability struct {
+	Checks    []ProbeCheck `json:"checks"`
+	DependsOn []string     `json:"depends_on"`
+	Enabled   bool         `json:"enabled"`
+	Id        string       `json:"id"`
+	Name      string       `json:"name"`
+}
+
+// ProbeCheck defines model for ProbeCheck.
+type ProbeCheck struct {
+	AssertionIndex int    `json:"assertion_index"`
+	NodeId         string `json:"node_id"`
+}
+
+// ProbeCheckOption defines model for ProbeCheckOption.
+type ProbeCheckOption struct {
+	AssertionIndex int    `json:"assertion_index"`
+	Label          string `json:"label"`
+	NodeId         string `json:"node_id"`
+}
+
+// ProbeConfig defines model for ProbeConfig.
+type ProbeConfig struct {
+	Capabilities     []ProbeCapability  `json:"capabilities"`
+	ConfirmationRuns int                `json:"confirmation_runs"`
+	Enabled          bool               `json:"enabled"`
+	EnvironmentKey   string             `json:"environment_key"`
+	FlowId           openapi_types.UUID `json:"flow_id"`
+
+	// FreshnessSeconds Must cover interval_seconds + timeout_seconds; stale measurements become Unknown.
+	FreshnessSeconds int                   `json:"freshness_seconds"`
+	IntervalSeconds  int                   `json:"interval_seconds"`
+	Name             string                `json:"name"`
+	RecoveryRuns     int                   `json:"recovery_runs"`
+	RunnerType       ProbeConfigRunnerType `json:"runner_type"`
+
+	// SourceFingerprint Server-owned approval fingerprint of the published root and resolved module definitions. Caller values are ignored on save.
+	SourceFingerprint *string            `json:"source_fingerprint,omitempty"`
+	TimeoutSeconds    int                `json:"timeout_seconds"`
+	VersionId         openapi_types.UUID `json:"version_id"`
+}
+
+// ProbeConfigRunnerType defines model for ProbeConfig.RunnerType.
+type ProbeConfigRunnerType string
+
+// ProbeHealth defines model for ProbeHealth.
+type ProbeHealth struct {
+	CapabilityId      string           `json:"capability_id"`
+	ConfirmationCount int              `json:"confirmation_count"`
+	ExpiresAt         *time.Time       `json:"expires_at,omitempty"`
+	ObservedAt        *time.Time       `json:"observed_at,omitempty"`
+	Reason            string           `json:"reason"`
+	State             ProbeHealthState `json:"state"`
+}
+
+// ProbeHealthState defines model for ProbeHealthState.
+type ProbeHealthState string
+
+// ProbeListResponse defines model for ProbeListResponse.
+type ProbeListResponse struct {
+	// Count The number of items returned in this response.
+	Count int     `json:"count"`
+	Items []Probe `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
+}
+
+// ProbeObservation defines model for ProbeObservation.
+type ProbeObservation struct {
+	CapabilityId string           `json:"capability_id"`
+	Reason       string           `json:"reason"`
+	State        ProbeHealthState `json:"state"`
+}
+
+// ProbeRevisionRequest defines model for ProbeRevisionRequest.
+type ProbeRevisionRequest struct {
+	ExpectedRevision int64 `json:"expected_revision"`
+}
+
+// ProbeRun defines model for ProbeRun.
+type ProbeRun struct {
+	Config          ProbeConfig         `json:"config"`
+	CreatedAt       time.Time           `json:"created_at"`
+	DueAt           time.Time           `json:"due_at"`
+	ExecutionId     *openapi_types.UUID `json:"execution_id,omitempty"`
+	ExecutionStatus *string             `json:"execution_status,omitempty"`
+	Id              string              `json:"id"`
+	Observations    []ProbeObservation  `json:"observations"`
+	ObservedAt      *time.Time          `json:"observed_at,omitempty"`
+	Origin          ProbeRunOrigin      `json:"origin"`
+	ProbeId         string              `json:"probe_id"`
+	Reason          string              `json:"reason"`
+	Revision        int64               `json:"revision"`
+	Status          ProbeRunStatus      `json:"status"`
+	Steps           []ProbeStepEvidence `json:"steps"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+}
+
+// ProbeRunOrigin defines model for ProbeRun.Origin.
+type ProbeRunOrigin string
+
+// ProbeRunStatus defines model for ProbeRun.Status.
+type ProbeRunStatus string
+
+// ProbeRunListResponse defines model for ProbeRunListResponse.
+type ProbeRunListResponse struct {
+	// Count The number of items returned in this response.
+	Count int        `json:"count"`
+	Items []ProbeRun `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
+}
+
+// ProbeSourceOptions defines model for ProbeSourceOptions.
+type ProbeSourceOptions struct {
+	Checks         []ProbeCheckOption `json:"checks"`
+	EnvironmentKey string             `json:"environment_key"`
+	FlowId         openapi_types.UUID `json:"flow_id"`
+	VersionId      openapi_types.UUID `json:"version_id"`
+}
+
+// ProbeStepEvidence defines model for ProbeStepEvidence.
+type ProbeStepEvidence struct {
+	Assertions []ProbeAssertionEvidence `json:"assertions"`
+	Label      string                   `json:"label"`
+	NodeId     string                   `json:"node_id"`
+	Status     string                   `json:"status"`
+}
+
 // PublicStatusService defines model for PublicStatusService.
 type PublicStatusService struct {
 	Detail string           `json:"detail"`
@@ -4677,8 +4916,9 @@ type SaveStatusPageRequest struct {
 	Binding *StatusPageBinding `json:"binding,omitempty"`
 
 	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
-	Config               StatusPageConfig `json:"config"`
-	ExpectedDraftVersion int64            `json:"expected_draft_version"`
+	Config               StatusPageConfig          `json:"config"`
+	ExpectedDraftVersion int64                     `json:"expected_draft_version"`
+	ProbeBindings        *[]StatusPageProbeBinding `json:"probe_bindings,omitempty"`
 
 	// Slug On creation, a 3-48 character name prefix; the server appends a random suffix. On update, send the complete immutable slug returned by save/get.
 	Slug string `json:"slug"`
@@ -5254,7 +5494,8 @@ type StatusPageEditor struct {
 	IntentVersion int64            `json:"intent_version"`
 
 	// OrganizationKey Permanent DNS-safe lowercase hex encoding of the Anchor organization KSUID bytes. Absent for legacy organizations without an Anchor KSUID.
-	OrganizationKey *string `json:"organization_key,omitempty"`
+	OrganizationKey *string                   `json:"organization_key,omitempty"`
+	ProbeBindings   *[]StatusPageProbeBinding `json:"probe_bindings,omitempty"`
 
 	// PublicUrl Authoritative public URL for this environment. Stable organization hostname when configured, otherwise the application status path. Present even while unpublished.
 	PublicUrl             string `json:"public_url"`
@@ -5279,6 +5520,13 @@ type StatusPageHealthState string
 
 // StatusPagePalette defines model for StatusPagePalette.
 type StatusPagePalette string
+
+// StatusPageProbeBinding defines model for StatusPageProbeBinding.
+type StatusPageProbeBinding struct {
+	CapabilityId string `json:"capability_id"`
+	ProbeId      string `json:"probe_id"`
+	ServiceId    string `json:"service_id"`
+}
 
 // StatusPageRegion defines model for StatusPageRegion.
 type StatusPageRegion struct {
@@ -5418,6 +5666,12 @@ type UpdateFolderRequest struct {
 
 	// ParentId Parent folder ID (null to move to root)
 	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
+}
+
+// UpdateProbeRequest defines model for UpdateProbeRequest.
+type UpdateProbeRequest struct {
+	Config           ProbeConfig `json:"config"`
+	ExpectedRevision int64       `json:"expected_revision"`
 }
 
 // UpdateRequestRequest defines model for UpdateRequestRequest.
@@ -6544,6 +6798,90 @@ type ListPermissionsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListProbesParams defines parameters for ListProbes.
+type ListProbesParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// CreateProbeParams defines parameters for CreateProbe.
+type CreateProbeParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetProbeSourceOptionsParams defines parameters for GetProbeSourceOptions.
+type GetProbeSourceOptionsParams struct {
+	FlowId         openapi_types.UUID `form:"flow_id" json:"flow_id"`
+	VersionId      openapi_types.UUID `form:"version_id" json:"version_id"`
+	EnvironmentKey *string            `form:"environment_key,omitempty" json:"environment_key,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteProbeParams defines parameters for DeleteProbe.
+type DeleteProbeParams struct {
+	ExpectedRevision int64 `form:"expected_revision" json:"expected_revision"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetProbeParams defines parameters for GetProbe.
+type GetProbeParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// UpdateProbeParams defines parameters for UpdateProbe.
+type UpdateProbeParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PauseProbeParams defines parameters for PauseProbe.
+type PauseProbeParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ResumeProbeParams defines parameters for ResumeProbe.
+type ResumeProbeParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// RunProbeParams defines parameters for RunProbe.
+type RunProbeParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListProbeRunsParams defines parameters for ListProbeRuns.
+type ListProbeRunsParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetProbeRunParams defines parameters for GetProbeRun.
+type GetProbeRunParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // SearchResourcesParams defines parameters for SearchResources.
 type SearchResourcesParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -6824,6 +7162,21 @@ type SetEnvironmentVariableJSONRequestBody = SetVariableRequest
 
 // SetOrganizationVariableJSONRequestBody defines body for SetOrganizationVariable for application/json ContentType.
 type SetOrganizationVariableJSONRequestBody = SetVariableRequest
+
+// CreateProbeJSONRequestBody defines body for CreateProbe for application/json ContentType.
+type CreateProbeJSONRequestBody = CreateProbeRequest
+
+// UpdateProbeJSONRequestBody defines body for UpdateProbe for application/json ContentType.
+type UpdateProbeJSONRequestBody = UpdateProbeRequest
+
+// PauseProbeJSONRequestBody defines body for PauseProbe for application/json ContentType.
+type PauseProbeJSONRequestBody = ProbeRevisionRequest
+
+// ResumeProbeJSONRequestBody defines body for ResumeProbe for application/json ContentType.
+type ResumeProbeJSONRequestBody = ProbeRevisionRequest
+
+// RunProbeJSONRequestBody defines body for RunProbe for application/json ContentType.
+type RunProbeJSONRequestBody = ProbeRevisionRequest
 
 // SearchResourcesJSONRequestBody defines body for SearchResources for application/json ContentType.
 type SearchResourcesJSONRequestBody = ResourceSearchRequest
@@ -9116,6 +9469,138 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProbes ListProbes
+	//
+	// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+	//
+	// Corresponds with GET /probes (the `ListProbes` operationId).
+	ListProbes(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProbeWithBody CreateProbe
+	//
+	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /probes (the `CreateProbe` operationId).
+	CreateProbeWithBody(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProbe CreateProbe
+	//
+	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /probes (the `CreateProbe` operationId).
+	CreateProbe(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProbeSourceOptions GetProbeSourceOptions
+	//
+	// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+	//
+	// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
+	GetProbeSourceOptions(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProbe DeleteProbe
+	//
+	// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
+	//
+	// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
+	DeleteProbe(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProbe GetProbe
+	//
+	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+	//
+	// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
+	GetProbe(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProbeWithBody UpdateProbe
+	//
+	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+	UpdateProbeWithBody(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProbe UpdateProbe
+	//
+	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+	UpdateProbe(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PauseProbeWithBody PauseProbe
+	//
+	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+	PauseProbeWithBody(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PauseProbe PauseProbe
+	//
+	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+	PauseProbe(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResumeProbeWithBody ResumeProbe
+	//
+	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+	ResumeProbeWithBody(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResumeProbe ResumeProbe
+	//
+	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+	ResumeProbe(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RunProbeWithBody RunProbe
+	//
+	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+	RunProbeWithBody(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RunProbe RunProbe
+	//
+	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+	RunProbe(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProbeRuns ListProbeRuns
+	//
+	// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
+	//
+	// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
+	ListProbeRuns(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProbeRun GetProbeRun
+	//
+	// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
+	//
+	// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
+	GetProbeRun(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPublicStatusPageByOrganization Read a published status page by permanent organization key
 	//
@@ -12091,6 +12576,298 @@ func (c *Client) SetOrganizationVariable(ctx context.Context, key VariableKey, p
 // Corresponds with GET /permissions (the `ListPermissions` operationId).
 func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListPermissionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListProbes ListProbes
+//
+// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+//
+// Corresponds with GET /probes (the `ListProbes` operationId).
+func (c *Client) ListProbes(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProbesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateProbeWithBody CreateProbe
+//
+// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /probes (the `CreateProbe` operationId).
+func (c *Client) CreateProbeWithBody(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProbeRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateProbe CreateProbe
+//
+// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /probes (the `CreateProbe` operationId).
+func (c *Client) CreateProbe(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProbeRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetProbeSourceOptions GetProbeSourceOptions
+//
+// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+//
+// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
+func (c *Client) GetProbeSourceOptions(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProbeSourceOptionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteProbe DeleteProbe
+//
+// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
+//
+// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
+func (c *Client) DeleteProbe(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProbeRequest(c.Server, probeId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetProbe GetProbe
+//
+// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+//
+// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
+func (c *Client) GetProbe(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProbeRequest(c.Server, probeId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateProbeWithBody UpdateProbe
+//
+// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+func (c *Client) UpdateProbeWithBody(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProbeRequestWithBody(c.Server, probeId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateProbe UpdateProbe
+//
+// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+func (c *Client) UpdateProbe(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProbeRequest(c.Server, probeId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PauseProbeWithBody PauseProbe
+//
+// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+func (c *Client) PauseProbeWithBody(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPauseProbeRequestWithBody(c.Server, probeId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PauseProbe PauseProbe
+//
+// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+func (c *Client) PauseProbe(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPauseProbeRequest(c.Server, probeId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ResumeProbeWithBody ResumeProbe
+//
+// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+func (c *Client) ResumeProbeWithBody(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResumeProbeRequestWithBody(c.Server, probeId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ResumeProbe ResumeProbe
+//
+// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+func (c *Client) ResumeProbe(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResumeProbeRequest(c.Server, probeId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RunProbeWithBody RunProbe
+//
+// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+func (c *Client) RunProbeWithBody(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRunProbeRequestWithBody(c.Server, probeId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RunProbe RunProbe
+//
+// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+func (c *Client) RunProbe(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRunProbeRequest(c.Server, probeId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListProbeRuns ListProbeRuns
+//
+// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
+//
+// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
+func (c *Client) ListProbeRuns(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProbeRunsRequest(c.Server, probeId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetProbeRun GetProbeRun
+//
+// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
+//
+// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
+func (c *Client) GetProbeRun(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProbeRunRequest(c.Server, probeId, runId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -18621,6 +19398,702 @@ func NewListPermissionsRequest(server string, params *ListPermissionsParams) (*h
 	return req, nil
 }
 
+// NewListProbesRequest constructs an http.Request for the ListProbes method
+func NewListProbesRequest(server string, params *ListProbesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateProbeRequest calls the generic CreateProbe builder with application/json body
+func NewCreateProbeRequest(server string, params *CreateProbeParams, body CreateProbeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateProbeRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateProbeRequestWithBody constructs an http.Request for the CreateProbe method, with any body, and a specified content type
+func NewCreateProbeRequestWithBody(server string, params *CreateProbeParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetProbeSourceOptionsRequest constructs an http.Request for the GetProbeSourceOptions method
+func NewGetProbeSourceOptionsRequest(server string, params *GetProbeSourceOptionsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/source-options")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_id", params.FlowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "version_id", params.VersionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.EnvironmentKey != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "environment_key", *params.EnvironmentKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteProbeRequest constructs an http.Request for the DeleteProbe method
+func NewDeleteProbeRequest(server string, probeId string, params *DeleteProbeParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "expected_revision", params.ExpectedRevision, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int64"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetProbeRequest constructs an http.Request for the GetProbe method
+func NewGetProbeRequest(server string, probeId string, params *GetProbeParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUpdateProbeRequest calls the generic UpdateProbe builder with application/json body
+func NewUpdateProbeRequest(server string, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
+}
+
+// NewUpdateProbeRequestWithBody constructs an http.Request for the UpdateProbe method, with any body, and a specified content type
+func NewUpdateProbeRequestWithBody(server string, probeId string, params *UpdateProbeParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPauseProbeRequest calls the generic PauseProbe builder with application/json body
+func NewPauseProbeRequest(server string, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPauseProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
+}
+
+// NewPauseProbeRequestWithBody constructs an http.Request for the PauseProbe method, with any body, and a specified content type
+func NewPauseProbeRequestWithBody(server string, probeId string, params *PauseProbeParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s/pause", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewResumeProbeRequest calls the generic ResumeProbe builder with application/json body
+func NewResumeProbeRequest(server string, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewResumeProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
+}
+
+// NewResumeProbeRequestWithBody constructs an http.Request for the ResumeProbe method, with any body, and a specified content type
+func NewResumeProbeRequestWithBody(server string, probeId string, params *ResumeProbeParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s/resume", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewRunProbeRequest calls the generic RunProbe builder with application/json body
+func NewRunProbeRequest(server string, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRunProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
+}
+
+// NewRunProbeRequestWithBody constructs an http.Request for the RunProbe method, with any body, and a specified content type
+func NewRunProbeRequestWithBody(server string, probeId string, params *RunProbeParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s/run", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListProbeRunsRequest constructs an http.Request for the ListProbeRuns method
+func NewListProbeRunsRequest(server string, probeId string, params *ListProbeRunsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s/runs", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetProbeRunRequest constructs an http.Request for the GetProbeRun method
+func NewGetProbeRunRequest(server string, probeId string, runId string, params *GetProbeRunParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "runId", runId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/probes/%s/runs/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetPublicStatusPageByOrganizationRequest constructs an http.Request for the GetPublicStatusPageByOrganization method
 func NewGetPublicStatusPageByOrganizationRequest(server string, organizationKey string) (*http.Request, error) {
 	var err error
@@ -21928,6 +23401,150 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissionsWithResponse(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*ListPermissionsResponse, error)
+
+	// ListProbesWithResponse ListProbes
+	//
+	// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /probes (the `ListProbes` operationId).
+	ListProbesWithResponse(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*ListProbesResponse, error)
+
+	// CreateProbeWithBodyWithResponse CreateProbe
+	//
+	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes (the `CreateProbe` operationId).
+	CreateProbeWithBodyWithResponse(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error)
+
+	// CreateProbeWithResponse CreateProbe
+	//
+	// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes (the `CreateProbe` operationId).
+	CreateProbeWithResponse(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error)
+
+	// GetProbeSourceOptionsWithResponse GetProbeSourceOptions
+	//
+	// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
+	GetProbeSourceOptionsWithResponse(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*GetProbeSourceOptionsResponse, error)
+
+	// DeleteProbeWithResponse DeleteProbe
+	//
+	// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
+	DeleteProbeWithResponse(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*DeleteProbeResponse, error)
+
+	// GetProbeWithResponse GetProbe
+	//
+	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
+	GetProbeWithResponse(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*GetProbeResponse, error)
+
+	// UpdateProbeWithBodyWithResponse UpdateProbe
+	//
+	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+	UpdateProbeWithBodyWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error)
+
+	// UpdateProbeWithResponse UpdateProbe
+	//
+	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+	UpdateProbeWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error)
+
+	// PauseProbeWithBodyWithResponse PauseProbe
+	//
+	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+	PauseProbeWithBodyWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error)
+
+	// PauseProbeWithResponse PauseProbe
+	//
+	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+	PauseProbeWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error)
+
+	// ResumeProbeWithBodyWithResponse ResumeProbe
+	//
+	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+	ResumeProbeWithBodyWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error)
+
+	// ResumeProbeWithResponse ResumeProbe
+	//
+	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+	ResumeProbeWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error)
+
+	// RunProbeWithBodyWithResponse RunProbe
+	//
+	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+	RunProbeWithBodyWithResponse(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RunProbeResponse, error)
+
+	// RunProbeWithResponse RunProbe
+	//
+	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+	RunProbeWithResponse(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*RunProbeResponse, error)
+
+	// ListProbeRunsWithResponse ListProbeRuns
+	//
+	// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
+	ListProbeRunsWithResponse(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*ListProbeRunsResponse, error)
+
+	// GetProbeRunWithResponse GetProbeRun
+	//
+	// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
+	GetProbeRunWithResponse(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*GetProbeRunResponse, error)
 
 	// GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
 	//
@@ -28297,6 +29914,989 @@ func (r ListPermissionsResponse) ContentType() string {
 	return ""
 }
 
+type ListProbesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ProbeListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListProbesResponse) GetJSON200() *ProbeListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListProbesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListProbesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListProbesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListProbesResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ListProbesResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListProbesResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListProbesResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListProbesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProbesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProbesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListProbesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *Probe
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateProbeResponse) GetJSON201() *Probe {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r CreateProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetProbeSourceOptionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ProbeSourceOptions
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON200() *ProbeSourceOptions {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetProbeSourceOptionsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetProbeSourceOptionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProbeSourceOptionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProbeSourceOptionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetProbeSourceOptionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeleteProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Probe
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetProbeResponse) GetJSON200() *Probe {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Probe
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateProbeResponse) GetJSON200() *Probe {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r UpdateProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PauseProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Probe
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PauseProbeResponse) GetJSON200() *Probe {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PauseProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PauseProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PauseProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PauseProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PauseProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r PauseProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r PauseProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r PauseProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PauseProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PauseProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PauseProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ResumeProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Probe
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ResumeProbeResponse) GetJSON200() *Probe {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ResumeProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ResumeProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ResumeProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ResumeProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ResumeProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ResumeProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ResumeProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ResumeProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ResumeProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResumeProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ResumeProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RunProbeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ProbeRun
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r RunProbeResponse) GetJSON202() *ProbeRun {
+	return r.JSON202
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RunProbeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RunProbeResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RunProbeResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RunProbeResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r RunProbeResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r RunProbeResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RunProbeResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r RunProbeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RunProbeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RunProbeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RunProbeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListProbeRunsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ProbeRunListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListProbeRunsResponse) GetJSON200() *ProbeRunListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListProbeRunsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListProbeRunsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListProbeRunsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListProbeRunsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ListProbeRunsResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListProbeRunsResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListProbeRunsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListProbeRunsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProbeRunsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProbeRunsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListProbeRunsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetProbeRunResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ProbeRun
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetProbeRunResponse) GetJSON200() *ProbeRun {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetProbeRunResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetProbeRunResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetProbeRunResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetProbeRunResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r GetProbeRunResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetProbeRunResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetProbeRunResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetProbeRunResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProbeRunResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProbeRunResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetProbeRunResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetPublicStatusPageByOrganizationResponse200Headers the declared response headers of an HTTP 200 response for GetPublicStatusPageByOrganization
 type GetPublicStatusPageByOrganizationResponse200Headers struct {
 	CacheControl *string
@@ -32983,6 +35583,246 @@ func (c *ClientWithResponses) ListPermissionsWithResponse(ctx context.Context, p
 		return nil, err
 	}
 	return ParseListPermissionsResponse(rsp)
+}
+
+// ListProbesWithResponse ListProbes
+//
+// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /probes (the `ListProbes` operationId).
+func (c *ClientWithResponses) ListProbesWithResponse(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*ListProbesResponse, error) {
+	rsp, err := c.ListProbes(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProbesResponse(rsp)
+}
+
+// CreateProbeWithBodyWithResponse CreateProbe
+//
+// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes (the `CreateProbe` operationId).
+func (c *ClientWithResponses) CreateProbeWithBodyWithResponse(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error) {
+	rsp, err := c.CreateProbeWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProbeResponse(rsp)
+}
+
+// CreateProbeWithResponse CreateProbe
+//
+// Creates a tenant-scoped Probe pinned to a published flow version and effective environment. The server approves its resolved source fingerprint and schedules enabled Probes independently of the browser.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes (the `CreateProbe` operationId).
+func (c *ClientWithResponses) CreateProbeWithResponse(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error) {
+	rsp, err := c.CreateProbe(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProbeResponse(rsp)
+}
+
+// GetProbeSourceOptionsWithResponse GetProbeSourceOptions
+//
+// Lists selectable root-node assertions from the specified published flow version and validates the effective environment. Flow and version identifiers must belong to the organization.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
+func (c *ClientWithResponses) GetProbeSourceOptionsWithResponse(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*GetProbeSourceOptionsResponse, error) {
+	rsp, err := c.GetProbeSourceOptions(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProbeSourceOptionsResponse(rsp)
+}
+
+// DeleteProbeWithResponse DeleteProbe
+//
+// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
+func (c *ClientWithResponses) DeleteProbeWithResponse(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*DeleteProbeResponse, error) {
+	rsp, err := c.DeleteProbe(ctx, probeId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProbeResponse(rsp)
+}
+
+// GetProbeWithResponse GetProbe
+//
+// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
+func (c *ClientWithResponses) GetProbeWithResponse(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*GetProbeResponse, error) {
+	rsp, err := c.GetProbe(ctx, probeId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProbeResponse(rsp)
+}
+
+// UpdateProbeWithBodyWithResponse UpdateProbe
+//
+// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+func (c *ClientWithResponses) UpdateProbeWithBodyWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error) {
+	rsp, err := c.UpdateProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProbeResponse(rsp)
+}
+
+// UpdateProbeWithResponse UpdateProbe
+//
+// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
+func (c *ClientWithResponses) UpdateProbeWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error) {
+	rsp, err := c.UpdateProbe(ctx, probeId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProbeResponse(rsp)
+}
+
+// PauseProbeWithBodyWithResponse PauseProbe
+//
+// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+func (c *ClientWithResponses) PauseProbeWithBodyWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error) {
+	rsp, err := c.PauseProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePauseProbeResponse(rsp)
+}
+
+// PauseProbeWithResponse PauseProbe
+//
+// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
+func (c *ClientWithResponses) PauseProbeWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error) {
+	rsp, err := c.PauseProbe(ctx, probeId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePauseProbeResponse(rsp)
+}
+
+// ResumeProbeWithBodyWithResponse ResumeProbe
+//
+// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+func (c *ClientWithResponses) ResumeProbeWithBodyWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error) {
+	rsp, err := c.ResumeProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResumeProbeResponse(rsp)
+}
+
+// ResumeProbeWithResponse ResumeProbe
+//
+// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
+func (c *ClientWithResponses) ResumeProbeWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error) {
+	rsp, err := c.ResumeProbe(ctx, probeId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResumeProbeResponse(rsp)
+}
+
+// RunProbeWithBodyWithResponse RunProbe
+//
+// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+func (c *ClientWithResponses) RunProbeWithBodyWithResponse(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RunProbeResponse, error) {
+	rsp, err := c.RunProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRunProbeResponse(rsp)
+}
+
+// RunProbeWithResponse RunProbe
+//
+// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
+func (c *ClientWithResponses) RunProbeWithResponse(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*RunProbeResponse, error) {
+	rsp, err := c.RunProbe(ctx, probeId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRunProbeResponse(rsp)
+}
+
+// ListProbeRunsWithResponse ListProbeRuns
+//
+// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
+func (c *ClientWithResponses) ListProbeRunsWithResponse(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*ListProbeRunsResponse, error) {
+	rsp, err := c.ListProbeRuns(ctx, probeId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProbeRunsResponse(rsp)
+}
+
+// GetProbeRunWithResponse GetProbeRun
+//
+// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
+func (c *ClientWithResponses) GetProbeRunWithResponse(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*GetProbeRunResponse, error) {
+	rsp, err := c.GetProbeRun(ctx, probeId, runId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProbeRunResponse(rsp)
 }
 
 // GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
@@ -38274,6 +41114,827 @@ func ParseListPermissionsResponse(rsp *http.Response) (*ListPermissionsResponse,
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProbesResponse parses an HTTP response from a ListProbesWithResponse call
+func ParseListProbesResponse(rsp *http.Response) (*ListProbesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProbesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProbeListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProbeResponse parses an HTTP response from a CreateProbeWithResponse call
+func ParseCreateProbeResponse(rsp *http.Response) (*CreateProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest Probe
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProbeSourceOptionsResponse parses an HTTP response from a GetProbeSourceOptionsWithResponse call
+func ParseGetProbeSourceOptionsResponse(rsp *http.Response) (*GetProbeSourceOptionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProbeSourceOptionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProbeSourceOptions
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProbeResponse parses an HTTP response from a DeleteProbeWithResponse call
+func ParseDeleteProbeResponse(rsp *http.Response) (*DeleteProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProbeResponse parses an HTTP response from a GetProbeWithResponse call
+func ParseGetProbeResponse(rsp *http.Response) (*GetProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Probe
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProbeResponse parses an HTTP response from a UpdateProbeWithResponse call
+func ParseUpdateProbeResponse(rsp *http.Response) (*UpdateProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Probe
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePauseProbeResponse parses an HTTP response from a PauseProbeWithResponse call
+func ParsePauseProbeResponse(rsp *http.Response) (*PauseProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PauseProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Probe
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResumeProbeResponse parses an HTTP response from a ResumeProbeWithResponse call
+func ParseResumeProbeResponse(rsp *http.Response) (*ResumeProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResumeProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Probe
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRunProbeResponse parses an HTTP response from a RunProbeWithResponse call
+func ParseRunProbeResponse(rsp *http.Response) (*RunProbeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RunProbeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest ProbeRun
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProbeRunsResponse parses an HTTP response from a ListProbeRunsWithResponse call
+func ParseListProbeRunsResponse(rsp *http.Response) (*ListProbeRunsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProbeRunsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProbeRunListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProbeRunResponse parses an HTTP response from a GetProbeRunWithResponse call
+func ParseGetProbeRunResponse(rsp *http.Response) (*GetProbeRunResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProbeRunResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProbeRun
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError

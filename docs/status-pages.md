@@ -33,13 +33,13 @@ echopoint --profile prod status-page public "$(jq -r .slug saved-page.json)"
 all design fields for Orbit, Ledger and Signal. For a new page,
 `expected_draft_version` is `0`. For edits, read the current draft and construct
 `{expected_draft_version, slug, config, binding}` from its current versions and
-configuration. Keep any existing binding unless intentionally removing it. The
+configuration. Keep any existing binding and `probe_bindings` unless intentionally removing them. The
 server appends a random 12-character suffix on creation: an input such as `example` becomes `example-a1b2c3d4e5f6`. The prefix accepts 3–48 characters and may be shared by other organizations. The returned full slug (up to 61 characters) is immutable: use it for later saves and public reads; never reconstruct it from the company name. Saving does not change the published page.
 
 For an existing page, a complete editable request can be constructed without dropping the assigned address:
 
 ```bash
-echopoint --profile prod status-page view | jq '{expected_draft_version: .draft_version, slug, config, binding} | with_entries(select(.value != null))' > page.json
+echopoint --profile prod status-page view | jq '{expected_draft_version: .draft_version, slug, config, binding, probe_bindings} | with_entries(select(.value != null))' > page.json
 ```
 
 Existing addresses remain unchanged. This change adds suffixes only when creating new pages; it never renames a saved page.
@@ -87,8 +87,11 @@ Use the latest intent version from `view`. The public endpoint returns 404 after
 withdrawal, while the private draft remains editable. No page deletion endpoint
 exists in milestone 1.
 
-Health needs two consecutive scheduled measurements. Manual launches do not
-establish public health. The minimum monitor interval is 15 minutes. Missing,
+Legacy monitor health needs two consecutive scheduled measurements. Manual launches do not
+establish public health. The minimum monitor interval is 15 minutes. [Durable probes](probes.md)
+support a minimum 60-second interval and configurable confirmation, recovery and freshness.
+Attach selected probe capabilities with the complete request's `probe_bindings` array;
+publication pins their revisions server-side. Missing,
 stale or inconclusive evidence stays Unknown; publishing never fabricates uptime.
 
 The public HTML and JSON responses request exclusion from search engines with `X-Robots-Tag: noindex, nofollow`. They remain anonymously accessible. Customer CNAME domains require verified hostname routing and TLS; this milestone does not provide custom-domain commands.

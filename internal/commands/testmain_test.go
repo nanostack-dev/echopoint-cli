@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -75,7 +76,20 @@ func runCLI(t *testing.T, args ...string) (string, string, int) {
 // runCLIWithLogs is runCLI keeping every line the binary wrote to stderr.
 func runCLIWithLogs(t *testing.T, args ...string) (string, string, int) {
 	t.Helper()
-	cmd := exec.CommandContext(t.Context(), echopointBinary(t), args...)
+	return runCLIWithLogsContext(t, t.Context(), args...)
+}
+
+// runCLIWithContext permits cleanup commands after t.Context is canceled.
+// Callers must supply a bounded context; the binary still builds once per suite.
+func runCLIWithContext(t *testing.T, ctx context.Context, args ...string) (string, string, int) {
+	t.Helper()
+	stdout, stderr, code := runCLIWithLogsContext(t, ctx, args...)
+	return stdout, withoutLibraryLogs(stderr), code
+}
+
+func runCLIWithLogsContext(t *testing.T, ctx context.Context, args ...string) (string, string, int) {
+	t.Helper()
+	cmd := exec.CommandContext(ctx, echopointBinary(t), args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()

@@ -93,6 +93,20 @@ set:
 The tool set tracks the contract: annotate an operation `x-ai-tool` (and resync)
 to expose it.
 
+## Capability probes
+
+The contract exposes `list_probes`, `get_probe`, `create_probe`, `update_probe`,
+`delete_probe`, `pause_probe`, `resume_probe`, `run_probe`, `list_probe_runs`,
+`get_probe_run` and `get_probe_source_options`. Path arguments use `probeId` and
+`runId`. Updates, pause/resume, delete and run require the current
+`expected_revision`. Create/update accept a nested `config`; source discovery uses
+`flow_id`, `version_id` and `environment_key`. Every call retains the selected
+organization and authenticated API permissions.
+
+`run_probe` is diagnostic only and never establishes public health. Scheduled
+occurrences are owned by the durable scheduler. [`docs/probes.md`](probes.md)
+describes the complete configuration workflow and assertion mapping.
+
 ## Status pages
 
 `get_status_page`, `save_status_page` and `get_status_page_binding_options`
@@ -100,3 +114,7 @@ manage the private draft and discover monitor checks. Publication and withdrawal
 remain excluded by the API contract; use the explicit
 [`status-page` CLI commands](status-pages.md) for those actions and anonymous
 public verification.
+
+`save_status_page` also accepts `probe_bindings` for selected capability-to-service
+sources. The server pins revisions when publishing; raw diagnostic evidence is not
+part of the anonymous projection.
