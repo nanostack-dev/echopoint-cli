@@ -1,5 +1,7 @@
 # Echopoint CLI
 
+Contributor and agent guidance: [documentation index](docs/README.md) and [AGENTS.md](AGENTS.md). This repository works as a standalone checkout.
+
 Terminal-first tooling for EchoPoint. Manage flows and their executions, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
 
 ## Installation

@@ -1,0 +1,12 @@
+# Agent workflow
+
+This repository is sufficient for implementation and review in a standalone clone. Shared workspace skills are optional helpers; the rules and commands referenced by `AGENTS.md` live here.
+
+1. Read `CONTEXT.md` for domain work and the relevant capability documentation before changing behavior.
+2. Fetch the affected repository and create an isolated worktree from `origin/main`: `git fetch origin`, then `git worktree add worktrees/<topic> -b <type>/<topic> origin/main`. Preserve developer changes in the original checkout.
+3. Implement the smallest complete change. Use the repository's pinned dependencies and code generation entry points. Pass context and honor cancellation in operations, wrap errors with `%w`, and regenerate generated code from its owning schema. Keep pure logic tests in the owning package and use existing integration fixtures for external behavior. Prefer clear names; reserve comments for complex algorithms and contract rationale. Keep credentials and runtime data out of commits and diagnostics.
+4. Run the affected local tests before pushing; follow `testing.md` for full verification. Consumer-facing contract changes need matching consumer validation and linked companion PRs. Report any missing consumer checkout or blocked integration test explicitly.
+5. Update the authoritative documentation in the same PR when behavior, vocabulary, a consequential decision or a recurring verified fix changes. Technical docs describe shipped behavior; `CONTEXT.md` owns vocabulary; ADRs record decisions; troubleshooting and runbooks record proven procedures. Keep proposals in research and incidents in postmortems when real evidence exists.
+6. Use Conventional Commits and open a focused PR with the change, validation evidence and release consequences. CI completes verification; distinguish passing local checks, skipped checks and unavailable integration evidence. Remove the worktree before deleting its branch after merge.
+
+Use `AGENTS.md` as the guide filename. Maintain local relative pointers and preserve existing ADR numbers. Component READMEs remain authoritative for their component. A documentation-only change needs link, command provenance and diff checks; runtime tests are required when behavior changes.
