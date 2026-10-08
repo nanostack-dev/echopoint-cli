@@ -36,7 +36,7 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	environment := "probe-cli-" + suffix
 	cli("org", "env", "environments", "create", environment)
 	t.Cleanup(func() { cli("org", "env", "environments", "delete", environment, "--yes") })
-	tag := "probe-cli-" + suffix
+	tag := "probe-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:14]
 	flows := make([]api.Flow, 0, 2)
 	for i := range 2 {
 		flowFile := writeTemp(t, fmt.Sprintf("flow-%d.json", i), fmt.Sprintf(`{
