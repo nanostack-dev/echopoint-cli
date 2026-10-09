@@ -205,7 +205,9 @@ echopoint flow node add <flow-id> \
 ```bash
 echopoint flow node remove <flow-id> <node-id>
 ```
-Removes a node and all connected edges automatically.
+Removes a node and all connected edges automatically. Removal and edge endpoint
+lookup recognize all schema node types, including branch, loop, poll, SSE and
+webhook-wait nodes, and preserve the other nodes in a mixed flow.
 
 ### Update Node
 ```bash
@@ -219,6 +221,11 @@ echopoint flow node update <flow-id> <node-id> \
 - `--name`: New display name
 - `--method`: New HTTP method (request nodes only)
 - `--url`: New URL (request nodes only)
+
+Incremental `node update` supports request, delay and module nodes. Other existing
+types return an explicit unsupported-editing error; use a complete flow definition
+with `flow update -f` to edit them. Graph edits and flow-variable requests use the
+command's cancellation context, including the read and save stages of an edit.
 
 ---
 
