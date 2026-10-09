@@ -463,11 +463,13 @@ func awaitProbeE2EPausedPublicHealth(t *testing.T, cli func(...string) string, s
 	t.Helper()
 	// Public health is projected by the 30-second status evaluator, not on reads.
 	deadline := time.Now().Add(60 * time.Second)
+	var last api.PublicStatusView
 	for time.Now().Before(deadline) {
 		result := cli("status-page", "public", slug)
 		assertProbeE2EPublicPrivacy(t, result)
 		var value api.PublicStatusView
 		decodeProbeE2E(t, result, &value)
+		last = value
 		if len(value.Services) != 1 || value.Services[0].Messages != nil {
 			t.Fatal("omitted public service messages did not retain defaults")
 		}
@@ -477,7 +479,10 @@ func awaitProbeE2EPausedPublicHealth(t *testing.T, cli func(...string) string, s
 		}
 		time.Sleep(2 * time.Second)
 	}
-	t.Fatal("paused probe public health did not become Unknown within 60 seconds")
+	if len(last.Services) == 1 {
+		t.Fatalf("paused probe public health did not become Unknown within 60 seconds: page=%s/%s service=%s/%s", last.Health.State, last.Health.Reason, last.Services[0].Health.State, last.Services[0].Health.Reason)
+	}
+	t.Fatalf("paused probe public health did not become Unknown within 60 seconds: page=%s/%s service_count=%d", last.Health.State, last.Health.Reason, len(last.Services))
 }
 
 func assertProbeE2EPublicPrivacy(t *testing.T, result string) {
