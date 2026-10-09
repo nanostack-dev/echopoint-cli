@@ -25,3 +25,8 @@ roundtrip: its custom marshaler is the secret-redaction boundary. Status uses
 non-null skip/error field presence, while displayed error text requires a string.
 Legacy non-object nodes and malformed assertion lists remain ignored; node IDs
 remain sorted and an absent node map yields a non-null empty list.
+
+Status-page save and offline validation share request parsing, with a private
+`draftAction` naming which command the factory builds. This enum only routes the
+CLI factory; it is not a copied server domain type. Offline validation still
+requires no credentials or API call, and saving still writes the private draft.
