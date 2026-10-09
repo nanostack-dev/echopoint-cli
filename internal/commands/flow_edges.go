@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"echopoint-cli/internal/api"
@@ -47,7 +46,7 @@ func newFlowEdgeAddCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
@@ -58,46 +57,18 @@ func newFlowEdgeAddCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid edge type: %s (must be 'success' or 'failure')", edgeType)
 			}
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
-			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
+				return err
 			}
 
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
-
-			// Validate that source and target nodes exist
-			sourceExists := false
-			targetExists := false
-			for _, node := range definition.Nodes {
-				nodeData, _ := node.ValueByDiscriminator()
-				switch n := nodeData.(type) {
-				case api.RequestFlowNode:
-					if n.Id == fromNode {
-						sourceExists = true
-					}
-					if n.Id == toNode {
-						targetExists = true
-					}
-				case api.DelayFlowNode:
-					if n.Id == fromNode {
-						sourceExists = true
-					}
-					if n.Id == toNode {
-						targetExists = true
-					}
-				case api.ModuleFlowNode:
-					if n.Id == fromNode {
-						sourceExists = true
-					}
-					if n.Id == toNode {
-						targetExists = true
-					}
-				}
+			sourceExists, err := nodeIDExists(definition.Nodes, fromNode)
+			if err != nil {
+				return err
+			}
+			targetExists, err := nodeIDExists(definition.Nodes, toNode)
+			if err != nil {
+				return err
 			}
 
 			if !sourceExists {
@@ -132,19 +103,8 @@ func newFlowEdgeAddCmd(state *AppState) *cobra.Command {
 			// Add edge to definition
 			definition.Edges = append(definition.Edges, newEdge)
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Edge added: %s\n", edgeID)
@@ -181,24 +141,17 @@ func newFlowEdgeRemoveCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
 
 			edgeID := args[1]
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
+				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
 
 			// Find and remove edge
 			found := false
@@ -217,19 +170,8 @@ func newFlowEdgeRemoveCmd(state *AppState) *cobra.Command {
 
 			definition.Edges = newEdges
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Edge removed: %s\n", edgeID)
