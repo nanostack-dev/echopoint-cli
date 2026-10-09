@@ -1,6 +1,6 @@
 {
   "config": {
-    "name": "Production API capability",
+    "name": "Production API",
     "flow_ids": ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"],
     "environment_key": "production",
     "runner_type": "cloud",
@@ -9,15 +9,6 @@
     "timeout_seconds": 30,
     "confirmation_runs": 2,
     "recovery_runs": 2,
-    "freshness_seconds": 180,
-    "capabilities": [
-      {
-        "id": "api",
-        "name": "API availability",
-        "enabled": true,
-        "checks": [],
-        "depends_on": []
-      }
-    ]
+    "freshness_seconds": 180
   }
 }

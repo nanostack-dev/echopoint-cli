@@ -1,8 +1,8 @@
-# Capability probes
+# Probes
 
 `echopoint probe` (alias `probes`) manages monitors of type `probe`. A probe
 selects a set of flows or a tag query, then runs them with an environment, runner,
-cadence and capability health policy. It uses the ordinary monitor scheduler,
+cadence and health policy. It uses the ordinary monitor scheduler,
 flow execution path and durable history. The server snapshots each occurrence's
 sources; creating a probe does not require publishing flows or selecting version
 IDs. All commands support the normal `--profile`, `--org` and authentication
@@ -50,11 +50,12 @@ echopoint --org "$ORG_ID" probe list --limit 20 --offset 0 -o json
 Flag creation defaults to enabled, Cloud, 60-second cadence, 30-second execution
 timeout, two confirming/recovery occurrences, and freshness of at least 180
 seconds or interval plus timeout. Add `--paused` to configure without scheduling.
-It creates one capability named after the probe, with ID `suite`, measuring the
-entire selected suite. `--runner self_hosted` selects a customer-operated runner.
+Each probe reports one health result from all selected flows and their executed
+assertions. Use separate probes with dedicated flows for separate outcomes.
+`--runner self_hosted` selects a customer-operated runner.
 The effective cadence remains subject to execution budgets and capacity.
 
-## Complete JSON configuration and optional checks
+## Complete JSON configuration
 
 [Example input](../internal/commands/testdata/probe.json) is a complete
 `CreateProbeRequest`. Replace its flow IDs and environment before sending it:
@@ -67,7 +68,7 @@ echopoint --org "$ORG_ID" probe create -f probe.json --environment production -o
 `-f -` reads stdin. JSON uses `config.flow_ids` **or** `config.tags` with optional
 `tag_match_mode`; both nonempty selectors are refused. Create, update and
 validation accept selector flags to replace the file's selector, while preserving
-its capability policy. An explicit `--environment` overrides the file, including
+its health policy. An explicit `--environment` overrides the file, including
 an empty value allowing each flow's saved target environment (or organization
 base variables when no flow default is saved). Other convenience creation
 flags cannot be mixed with `--file`; edit those fields in the complete file.
@@ -76,21 +77,14 @@ server-assigned KSUIDs; flow and monitor IDs are UUIDs. `probe view` includes th
 backing `schedule_id`, and runs include their `schedule_run_id` and execution
 references.
 
-Empty `capabilities[].checks` measures the whole selected suite. Advanced
-capabilities may select individual assertions using `flow_id`, `node_id` and
-zero-based `assertion_index`, with stable capability IDs and optional `depends_on`
-IDs. Discover optional checks without supplying a version:
-
-```bash
-echopoint --org "$ORG_ID" probe source-options \
-  --flow-id "$FIRST_FLOW_ID" --environment production -o json
-```
-
 The execution path resolves the latest published source when available and the
 current flow definition otherwise, and records immutable execution snapshots.
 Environment values resolve at launch through the normal encrypted-input path.
 Offline validation checks schema and selector shape; the server validates tenant
-ownership, environments, limits, checks and dependencies.
+ownership, environments and execution limits. Probes use normal flow execution:
+assertions run at each reached node, and a failed assertion can prevent later
+assertions or dependent nodes from running. There is no separate assertion
+selection or dependency policy in probe configuration.
 
 ## Edit, pause, resume and delete
 
@@ -128,9 +122,12 @@ echopoint --org "$ORG_ID" probe history "$PROBE_ID" --limit 20 -o json
 stale revision and shares the monitor's overlap gate. Diagnostics never confirm,
 clear or extend public health. History retains origin, revision, flow/execution
 references and sanitized assertion evidence. Scheduled occurrences alone
-establish health. Missing, blocked, skipped, unavailable, expired or incompatible
-evidence remains Unknown; an unmet dependency cannot establish a downstream
-outage. Disabled capabilities are Not monitored. Confirmation, recovery and
+establish health. A conclusive assertion failure is Outage. When no assertion
+failure is recorded, incomplete, blocked, unavailable, expired or incompatible
+evidence remains Unknown; successful normal flow completion is Operational.
+Ordinary skipped branches do not make a completed flow Unknown. A paused probe
+is Not monitored. The saved probe's `health` and each run's `observation` are single
+objects. Confirmation, recovery and
 freshness remain probe policies rather than ordinary monitor success/failure.
 
 ## Connect to a status page
@@ -144,15 +141,27 @@ echopoint --org "$ORG_ID" status-page view -o json \
 ```
 
 Add a mapping to the complete `SaveStatusPageRequest`, using a visible service ID
-and capability ID (`suite` for flag-created probes):
+and the probe ID:
 
 ```json
-{"probe_bindings":[{"service_id":"api","probe_id":"<probe-id>","capability_id":"suite"}]}
+{"probe_bindings":[{"service_id":"api","probe_id":"<probe-id>"}]}
 ```
 
 Up to 32 mappings are supported. Preserve an existing legacy `binding` when
 retaining it. Publication approves source revisions server-side; client mappings
 do not accept revision overrides.
+
+Optional public wording belongs to the status-page service. Include it in the
+complete service configuration, alongside its existing ID, name and design fields:
+
+```json
+{"messages":{"operational":"Checkout is available","outage":"Checkout is unavailable","unknown":"We are checking checkout"}}
+```
+
+Each message is plain text of at most 240 characters. Empty or omitted state
+messages use the existing public wording. Publication freezes these messages;
+private draft edits do not change what visitors see. A message does not change
+the measured state, and assertion errors are never copied into public text.
 
 ```bash
 echopoint status-page validate -f page.json
@@ -171,10 +180,10 @@ IDs, raw exchanges, assertion operands or credentials.
 
 The embedded contract exposes `list_probes`, `create_probe`, `get_probe`,
 `update_probe`, `delete_probe`, `pause_probe`, `resume_probe`, `run_probe`,
-`list_probe_runs`, `get_probe_run`, `get_probe_source_options` and `estimate_probe`.
+`list_probe_runs`, `get_probe_run` and `estimate_probe`.
 Arguments use API names (`probeId`, `runId`, `flow_ids`, `tags`, `tag_match_mode`,
 `environment_key`, `expected_revision`); create/update retain nested `config`.
-Existing `save_status_page` accepts `probe_bindings`; publication and withdrawal
+Existing `save_status_page` accepts direct `probe_bindings` and service `messages`; publication and withdrawal
 retain their exclusion rules.
 
 The CLI feature must merge and release alongside the API/UI milestone. Deployment
@@ -199,6 +208,8 @@ set and tag query, creates a paused probe without publishing/version inputs,
 checks its shared monitor linkage/type, executes both flows in a private
 diagnostic, updates to tags, resumes scheduling, publishes a status-page mapping
 and waits for two distinct scheduled measurements and Operational public health.
+It verifies direct bindings, frozen custom service messages, default wording
+when messages are omitted, draft isolation and Unknown when the probe is paused.
 Cleanup withdraws publication and removes the probe, flows and environment through
 supported commands. A private draft remains because there is no page-delete API.
 Cloud targets cannot use loopback/private networks. The integration build tag

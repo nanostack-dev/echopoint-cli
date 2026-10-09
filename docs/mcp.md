@@ -93,14 +93,13 @@ set:
 The tool set tracks the contract: annotate an operation `x-ai-tool` (and resync)
 to expose it.
 
-## Capability probes
+## Probes
 
 The contract exposes `list_probes`, `get_probe`, `create_probe`, `update_probe`,
 `delete_probe`, `pause_probe`, `resume_probe`, `run_probe`, `list_probe_runs`,
-`get_probe_run`, `get_probe_source_options` and `estimate_probe`. Path arguments
+`get_probe_run` and `estimate_probe`. Path arguments
 use `probeId` and `runId`. Updates, pause/resume, delete and run require the current
-`expected_revision`. Create/update accept a nested `config`; source discovery uses
-`flow_id` and `environment_key` without a version input. Probe configuration uses
+`expected_revision`. Create/update accept a nested `config`. Probe configuration uses
 exactly one of `flow_ids` or `tags` (with `tag_match_mode`); `estimate_probe` accepts
 the same selector, `interval_seconds`, `runner_type` and optional environment.
 Every call retains the selected
@@ -108,8 +107,9 @@ organization and authenticated API permissions.
 
 `run_probe` is diagnostic only and never establishes public health. Scheduled
 occurrences are owned by the durable scheduler. [`docs/probes.md`](probes.md)
-describes the complete monitor-backed configuration workflow, forecast and
-optional assertion mapping.
+describes the complete monitor-backed configuration workflow and forecast. Each
+probe reports one `health` result from all selected flows and their executed
+assertions. Separate outcomes use separate probes with dedicated flows.
 
 ## Status pages
 
@@ -119,6 +119,8 @@ remain excluded by the API contract; use the explicit
 [`status-page` CLI commands](status-pages.md) for those actions and anonymous
 public verification.
 
-`save_status_page` also accepts `probe_bindings` for selected capability-to-service
-sources. The server pins revisions when publishing; raw diagnostic evidence is not
-part of the anonymous projection.
+`save_status_page` also accepts direct `probe_bindings` using `service_id` and
+`probe_id`. Optional `config.services[].messages` supplies plain public text for
+`operational`, `outage` and `unknown` states. The server freezes messages and probe
+revisions when publishing; raw diagnostic evidence is not part of the anonymous
+projection.

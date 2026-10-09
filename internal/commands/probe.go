@@ -15,8 +15,8 @@ func newProbeCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     probeCommandName,
 		Aliases: []string{"probes"},
-		Short:   "Manage durable capability probes and private diagnostic runs",
-		Long:    "A probe is a monitor that runs flows selected by tags or explicit IDs, with an environment and health policy. The server snapshots each run's flow sources. Scheduled occurrences measure capabilities; manual runs are private diagnostics and never confirm public health.",
+		Short:   "Manage probes and private diagnostic runs",
+		Long:    "A probe is a monitor that runs flows selected by tags or explicit IDs, with an environment and health policy. The server snapshots each run's flow sources. Scheduled occurrences produce one health result from all selected flows and their executed assertions; manual runs are private diagnostics and never confirm public health.",
 	}
 	cmd.AddCommand(
 		newProbeListCmd(state),
@@ -29,7 +29,6 @@ func newProbeCmd(state *AppState) *cobra.Command {
 		newProbeStateCmd(state, true),
 		newProbeRunCmd(state),
 		newProbeExecutionCmd(state),
-		newProbeSourceOptionsCmd(state),
 		newProbeEstimateCmd(state),
 	)
 	history := newProbeExecutionListCmd(state)
@@ -72,7 +71,7 @@ func completeProbeArgs(state *AppState) completionFunc {
 
 func newProbeListCmd(state *AppState) *cobra.Command {
 	var limit, offset int
-	cmd := quietOnError(&cobra.Command{Use: listVerb, Short: "List saved probes and their current capability health",
+	cmd := quietOnError(&cobra.Command{Use: listVerb, Short: "List saved probes and their current health",
 		Example: "  echopoint --org <organization-id> probe list --limit 20 -o json", Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := requireToken(state); err != nil {
@@ -98,7 +97,7 @@ func newProbeViewCmd(state *AppState) *cobra.Command {
 		&cobra.Command{
 			Use:               "view <probe-id>",
 			Aliases:           []string{getVerb, showVerb},
-			Short:             "Show the saved source, policy, revision and capability health",
+			Short:             "Show the saved source, policy, revision and health",
 			Example:           "  echopoint probe view <probe-id> -o json",
 			Args:              cobra.ExactArgs(1),
 			ValidArgsFunction: completeProbeArgs(state),
@@ -339,38 +338,4 @@ func validateProbeRevision(revision int64) error {
 func addProbePagination(cmd *cobra.Command, limit, offset *int) {
 	cmd.Flags().IntVar(limit, "limit", 20, "Maximum results (1-100)")
 	cmd.Flags().IntVar(offset, "offset", 0, "Results to skip")
-}
-
-func newProbeSourceOptionsCmd(state *AppState) *cobra.Command {
-	var flow, environment string
-	cmd := quietOnError(
-		&cobra.Command{
-			Use:     "source-options",
-			Short:   "Inspect the current flow source, effective environment and optional assertion checks",
-			Example: "  echopoint probe source-options --flow-id <flow-id> --environment production -o json",
-			Args:    cobra.NoArgs,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				if err := requireToken(state); err != nil {
-					return err
-				}
-				flowID, err := resolveFlowID(cmd.Context(), state, flow)
-				if err != nil {
-					return fmt.Errorf("--flow-id: %w", err)
-				}
-				resp, err := state.Client.API().
-					GetProbeSourceOptionsWithResponse(cmd.Context(), &api.GetProbeSourceOptionsParams{FlowId: flowID, EnvironmentKey: &environment})
-				if err != nil {
-					return err
-				}
-				return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
-			},
-		},
-	)
-	cmd.Flags().StringVar(&flow, "flow-id", "", "Flow ID")
-	cmd.Flags().
-		StringVarP(&environment, "environment", "e", "", "Environment overlay; empty uses the flow's saved default")
-	_ = cmd.MarkFlagRequired("flow-id")
-	_ = cmd.RegisterFlagCompletionFunc("flow-id", completeFlowFlag(state))
-	registerEnvironmentFlagCompletion(state, cmd)
-	return cmd
 }

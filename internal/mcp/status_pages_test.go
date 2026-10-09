@@ -21,7 +21,7 @@ func TestStatusPageToolsDispatchWithTenantScope(t *testing.T) {
 	}
 	for _, tc := range []struct{ name, method, path, args string }{
 		{"get_status_page", "GET", "/status-pages/current", `{}`},
-		{"save_status_page", "PUT", "/status-pages/current", `{"expected_draft_version":7,"slug":"example","config":{"theme":"orbit"},"probe_bindings":[{"service_id":"api","probe_id":"probe","capability_id":"api"}]}`},
+		{"save_status_page", "PUT", "/status-pages/current", `{"expected_draft_version":7,"slug":"example","config":{"theme":"orbit","services":[{"id":"api","messages":{"operational":"Checkout is available","outage":"Checkout is unavailable","unknown":"We are checking checkout"}}]},"probe_bindings":[{"service_id":"api","probe_id":"probe"}]}`},
 		{"get_status_page_binding_options", "GET", "/status-pages/binding-options", `{"schedule_id":"schedule","flow_id":"flow"}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -4288,7 +4288,7 @@ type PollNodeData struct {
 type Probe struct {
 	Config     ProbeConfig        `json:"config"`
 	CreatedAt  time.Time          `json:"created_at"`
-	Health     []ProbeHealth      `json:"health"`
+	Health     ProbeHealth        `json:"health"`
 	Id         string             `json:"id"`
 	NextRunAt  time.Time          `json:"next_run_at"`
 	Revision   int64              `json:"revision"`
@@ -4303,37 +4303,11 @@ type ProbeAssertionEvidence struct {
 	Passed *bool `json:"passed,omitempty"`
 }
 
-// ProbeCapability defines model for ProbeCapability.
-type ProbeCapability struct {
-	// Checks Empty checks evaluate the complete selected flow suite.
-	Checks    []ProbeCheck `json:"checks"`
-	DependsOn []string     `json:"depends_on"`
-	Enabled   bool         `json:"enabled"`
-	Id        string       `json:"id"`
-	Name      string       `json:"name"`
-}
-
-// ProbeCheck defines model for ProbeCheck.
-type ProbeCheck struct {
-	AssertionIndex int                `json:"assertion_index"`
-	FlowId         openapi_types.UUID `json:"flow_id"`
-	NodeId         string             `json:"node_id"`
-}
-
-// ProbeCheckOption defines model for ProbeCheckOption.
-type ProbeCheckOption struct {
-	AssertionIndex int                `json:"assertion_index"`
-	FlowId         openapi_types.UUID `json:"flow_id"`
-	Label          string             `json:"label"`
-	NodeId         string             `json:"node_id"`
-}
-
 // ProbeConfig defines model for ProbeConfig.
 type ProbeConfig struct {
-	Capabilities     []ProbeCapability `json:"capabilities"`
-	ConfirmationRuns int               `json:"confirmation_runs"`
-	Enabled          bool              `json:"enabled"`
-	EnvironmentKey   string            `json:"environment_key"`
+	ConfirmationRuns int    `json:"confirmation_runs"`
+	Enabled          bool   `json:"enabled"`
+	EnvironmentKey   string `json:"environment_key"`
 
 	// FlowIds Explicit flows; mutually exclusive with tags.
 	FlowIds *[]openapi_types.UUID `json:"flow_ids,omitempty"`
@@ -4400,7 +4374,6 @@ type ProbeEstimateRequestRunnerType string
 
 // ProbeHealth defines model for ProbeHealth.
 type ProbeHealth struct {
-	CapabilityId      string           `json:"capability_id"`
 	ConfirmationCount int              `json:"confirmation_count"`
 	ExpiresAt         *time.Time       `json:"expires_at,omitempty"`
 	ObservedAt        *time.Time       `json:"observed_at,omitempty"`
@@ -4423,9 +4396,8 @@ type ProbeListResponse struct {
 
 // ProbeObservation defines model for ProbeObservation.
 type ProbeObservation struct {
-	CapabilityId string           `json:"capability_id"`
-	Reason       string           `json:"reason"`
-	State        ProbeHealthState `json:"state"`
+	Reason string           `json:"reason"`
+	State  ProbeHealthState `json:"state"`
 }
 
 // ProbeRevisionRequest defines model for ProbeRevisionRequest.
@@ -4442,7 +4414,7 @@ type ProbeRun struct {
 	ExecutionStatus *string             `json:"execution_status,omitempty"`
 	Executions      []ProbeRunExecution `json:"executions"`
 	Id              string              `json:"id"`
-	Observations    []ProbeObservation  `json:"observations"`
+	Observation     ProbeObservation    `json:"observation"`
 	ObservedAt      *time.Time          `json:"observed_at,omitempty"`
 	Origin          ProbeRunOrigin      `json:"origin"`
 	ProbeId         string              `json:"probe_id"`
@@ -4477,13 +4449,6 @@ type ProbeRunListResponse struct {
 	Total int64 `json:"total"`
 }
 
-// ProbeSourceOptions defines model for ProbeSourceOptions.
-type ProbeSourceOptions struct {
-	Checks         []ProbeCheckOption `json:"checks"`
-	EnvironmentKey string             `json:"environment_key"`
-	FlowId         openapi_types.UUID `json:"flow_id"`
-}
-
 // ProbeStepEvidence defines model for ProbeStepEvidence.
 type ProbeStepEvidence struct {
 	Assertions []ProbeAssertionEvidence `json:"assertions"`
@@ -4498,7 +4463,10 @@ type PublicStatusService struct {
 	Detail string           `json:"detail"`
 	Health StatusPageHealth `json:"health"`
 	Id     string           `json:"id"`
-	Name   string           `json:"name"`
+
+	// Messages Optional plain-text public wording per measured state. Blank values use the default wording. Messages are frozen on publication and never change health or expose execution errors.
+	Messages *StatusPageServiceMessages `json:"messages,omitempty"`
+	Name     string                     `json:"name"`
 }
 
 // PublicStatusView defines model for PublicStatusView.
@@ -5627,9 +5595,8 @@ type StatusPagePalette string
 
 // StatusPageProbeBinding defines model for StatusPageProbeBinding.
 type StatusPageProbeBinding struct {
-	CapabilityId string `json:"capability_id"`
-	ProbeId      string `json:"probe_id"`
-	ServiceId    string `json:"service_id"`
+	ProbeId   string `json:"probe_id"`
+	ServiceId string `json:"service_id"`
 }
 
 // StatusPageRegion defines model for StatusPageRegion.
@@ -5645,15 +5612,25 @@ type StatusPageRegionLocation string
 
 // StatusPageService defines model for StatusPageService.
 type StatusPageService struct {
-	Detail   string                    `json:"detail"`
-	Enabled  bool                      `json:"enabled"`
-	Id       string                    `json:"id"`
-	Name     string                    `json:"name"`
-	Template StatusPageServiceTemplate `json:"template"`
+	Detail  string `json:"detail"`
+	Enabled bool   `json:"enabled"`
+	Id      string `json:"id"`
+
+	// Messages Optional plain-text public wording per measured state. Blank values use the default wording. Messages are frozen on publication and never change health or expose execution errors.
+	Messages *StatusPageServiceMessages `json:"messages,omitempty"`
+	Name     string                     `json:"name"`
+	Template StatusPageServiceTemplate  `json:"template"`
 }
 
 // StatusPageServiceTemplate defines model for StatusPageService.Template.
 type StatusPageServiceTemplate string
+
+// StatusPageServiceMessages Optional plain-text public wording per measured state. Blank values use the default wording. Messages are frozen on publication and never change health or expose execution errors.
+type StatusPageServiceMessages struct {
+	Operational *string `json:"operational,omitempty"`
+	Outage      *string `json:"outage,omitempty"`
+	Unknown     *string `json:"unknown,omitempty"`
+}
 
 // StatusPageTheme defines model for StatusPageTheme.
 type StatusPageTheme string
@@ -6922,15 +6899,6 @@ type CreateProbeParams struct {
 
 // EstimateProbeParams defines parameters for EstimateProbe.
 type EstimateProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// GetProbeSourceOptionsParams defines parameters for GetProbeSourceOptions.
-type GetProbeSourceOptionsParams struct {
-	FlowId         openapi_types.UUID `form:"flow_id" json:"flow_id"`
-	EnvironmentKey *string            `form:"environment_key,omitempty" json:"environment_key,omitempty"`
-
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -9584,7 +9552,7 @@ type ClientInterface interface {
 
 	// ListProbes ListProbes
 	//
-	// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+	// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
 	//
 	// Corresponds with GET /probes (the `ListProbes` operationId).
 	ListProbes(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9625,13 +9593,6 @@ type ClientInterface interface {
 	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
 	EstimateProbe(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetProbeSourceOptions GetProbeSourceOptions
-	//
-	// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
-	//
-	// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
-	GetProbeSourceOptions(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteProbe DeleteProbe
 	//
 	// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
@@ -9641,7 +9602,7 @@ type ClientInterface interface {
 
 	// GetProbe GetProbe
 	//
-	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
 	//
 	// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
 	GetProbe(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -12718,7 +12679,7 @@ func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsPar
 
 // ListProbes ListProbes
 //
-// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
 //
 // Corresponds with GET /probes (the `ListProbes` operationId).
 func (c *Client) ListProbes(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -12809,23 +12770,6 @@ func (c *Client) EstimateProbe(ctx context.Context, params *EstimateProbeParams,
 	return c.Client.Do(req)
 }
 
-// GetProbeSourceOptions GetProbeSourceOptions
-//
-// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
-//
-// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
-func (c *Client) GetProbeSourceOptions(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetProbeSourceOptionsRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // DeleteProbe DeleteProbe
 //
 // Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
@@ -12845,7 +12789,7 @@ func (c *Client) DeleteProbe(ctx context.Context, probeId string, params *Delete
 
 // GetProbe GetProbe
 //
-// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
 //
 // Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
 func (c *Client) GetProbe(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -19743,81 +19687,6 @@ func NewEstimateProbeRequestWithBody(server string, params *EstimateProbeParams,
 	return req, nil
 }
 
-// NewGetProbeSourceOptionsRequest constructs an http.Request for the GetProbeSourceOptions method
-func NewGetProbeSourceOptionsRequest(server string, params *GetProbeSourceOptionsParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/source-options")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_id", params.FlowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if params.EnvironmentKey != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "environment_key", *params.EnvironmentKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
 // NewDeleteProbeRequest constructs an http.Request for the DeleteProbe method
 func NewDeleteProbeRequest(server string, probeId string, params *DeleteProbeParams) (*http.Request, error) {
 	var err error
@@ -23617,7 +23486,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListProbesWithResponse ListProbes
 	//
-	// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+	// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -23660,15 +23529,6 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
 	EstimateProbeWithResponse(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error)
 
-	// GetProbeSourceOptionsWithResponse GetProbeSourceOptions
-	//
-	// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
-	GetProbeSourceOptionsWithResponse(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*GetProbeSourceOptionsResponse, error)
-
 	// DeleteProbeWithResponse DeleteProbe
 	//
 	// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
@@ -23680,7 +23540,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetProbeWithResponse GetProbe
 	//
-	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -30415,96 +30275,6 @@ func (r EstimateProbeResponse) ContentType() string {
 	return ""
 }
 
-type GetProbeSourceOptionsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ProbeSourceOptions
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON200() *ProbeSourceOptions {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r GetProbeSourceOptionsResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r GetProbeSourceOptionsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetProbeSourceOptionsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetProbeSourceOptionsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetProbeSourceOptionsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 type DeleteProbeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -35908,7 +35678,7 @@ func (c *ClientWithResponses) ListPermissionsWithResponse(ctx context.Context, p
 
 // ListProbesWithResponse ListProbes
 //
-// Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -35981,21 +35751,6 @@ func (c *ClientWithResponses) EstimateProbeWithResponse(ctx context.Context, par
 	return ParseEstimateProbeResponse(rsp)
 }
 
-// GetProbeSourceOptionsWithResponse GetProbeSourceOptions
-//
-// Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /probes/source-options (the `GetProbeSourceOptions` operationId).
-func (c *ClientWithResponses) GetProbeSourceOptionsWithResponse(ctx context.Context, params *GetProbeSourceOptionsParams, reqEditors ...RequestEditorFn) (*GetProbeSourceOptionsResponse, error) {
-	rsp, err := c.GetProbeSourceOptions(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetProbeSourceOptionsResponse(rsp)
-}
-
 // DeleteProbeWithResponse DeleteProbe
 //
 // Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
@@ -36013,7 +35768,7 @@ func (c *ClientWithResponses) DeleteProbeWithResponse(ctx context.Context, probe
 
 // GetProbeWithResponse GetProbe
 //
-// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -41644,81 +41399,6 @@ func ParseEstimateProbeResponse(rsp *http.Response) (*EstimateProbeResponse, err
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest ProbeEstimate
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetProbeSourceOptionsResponse parses an HTTP response from a GetProbeSourceOptionsWithResponse call
-func ParseGetProbeSourceOptionsResponse(rsp *http.Response) (*GetProbeSourceOptionsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetProbeSourceOptionsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ProbeSourceOptions
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

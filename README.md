@@ -2,7 +2,7 @@
 
 Contributor and agent guidance: [documentation index](docs/README.md) and [AGENTS.md](AGENTS.md). This repository works as a standalone checkout.
 
-Terminal-first tooling for EchoPoint. Manage flows and their executions, capability probes, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
+Terminal-first tooling for EchoPoint. Manage flows and their executions, probes, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
 
 ## Installation
 
@@ -75,7 +75,7 @@ latest release.
 - Organize flows into folders, and bulk-move them by id, search, or tag
 - Keep [OpenAPI specs](docs/specs.md) in EchoPoint: create, push, pull, check, lint, diff, and edit them by slug
 - Configure and publish [public status pages](docs/status-pages.md), including anonymous verification
-- Configure [durable capability probes](docs/probes.md), inspect scheduled evidence and run private diagnostics
+- Configure [probes](docs/probes.md), inspect scheduled evidence and run private diagnostics
 - Manage collections with OpenAPI import support
 - Variables for an organization, its environments, and each flow
 - Flow reuse via module nodes (run a flow inside another flow)
@@ -470,11 +470,10 @@ echopoint collection delete <id>
 echopoint collection import -f ./openapi.json --name "My API"
 ```
 
-### Capability Probes
+### Probes
 
 ```bash
 echopoint probe list -o json
-echopoint probe source-options --flow-id <flow-id> --environment production
 echopoint probe estimate --tag production --interval 60 -o json
 echopoint probe create --name API --flow-id <flow-id> --environment production -o json
 echopoint probe validate -f probe.json
@@ -487,7 +486,9 @@ echopoint probe resume <probe-id> --expected-revision 2
 echopoint probe delete <probe-id> --expected-revision 3 --yes
 ```
 
-See [docs/probes.md](docs/probes.md) for complete noninteractive setup and status-page mapping.
+Each probe produces one health result from its selected flows and executed
+assertions. See [docs/probes.md](docs/probes.md) for complete noninteractive setup,
+direct status-page binding and optional public service messages.
 
 ### Status Pages
 

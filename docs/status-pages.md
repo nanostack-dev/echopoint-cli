@@ -90,8 +90,13 @@ exists in milestone 1.
 Legacy monitor health needs two consecutive scheduled measurements. Manual launches do not
 establish public health. The minimum monitor interval is 15 minutes. [Durable probes](probes.md)
 support a minimum 60-second interval and configurable confirmation, recovery and freshness.
-Attach selected probe capabilities with the complete request's `probe_bindings` array;
-publication pins their revisions server-side. Missing,
+Attach probes directly with the complete request's `probe_bindings` array, each
+entry containing `service_id` and `probe_id`; publication pins their revisions
+server-side. Optional `config.services[].messages` contains `operational`, `outage`
+and `unknown` text, each at most 240 characters. Empty or absent messages retain
+the normal public wording. Messages belong to the service and are frozen with the
+published page; editing a draft does not change the public page. Custom text does
+not alter measured health. Missing,
 stale or inconclusive evidence stays Unknown; publishing never fabricates uptime.
 
 The public HTML and JSON responses request exclusion from search engines with `X-Robots-Tag: noindex, nofollow`. They remain anonymously accessible. Customer CNAME domains require verified hostname routing and TLS; this milestone does not provide custom-domain commands.

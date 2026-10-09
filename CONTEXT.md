@@ -7,7 +7,7 @@
 | Environment | Named overlay of organization variables. |
 | Flow | Graph identified by an ID and free-text name; it has no slug. |
 | Monitor | Recurring execution configuration selecting flows by tags or explicit IDs. |
-| Probe | A monitor of type `probe`, with capability health and safe status-page publication policy. |
+| Probe | A monitor of type `probe` producing one health result from all selected flows and their executed assertions, with safe status-page publication policy. |
 | Collection | API request grouping identified by an ID and name. |
 | Spec | OpenAPI document stored in Echopoint, addressed by a unique slug with a separate title. |
 | Cloud | Echopoint operates the execution runner. |

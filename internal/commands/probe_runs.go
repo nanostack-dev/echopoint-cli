@@ -15,7 +15,7 @@ func newProbeRunCmd(state *AppState) *cobra.Command {
 		&cobra.Command{
 			Use:               "run <probe-id>",
 			Short:             "Queue a private diagnostic run; it never contributes to public health",
-			Long:              "Queue a diagnostic run of the saved flow selector and return without waiting. This does not create a policy occurrence. Follow its ID with probe execution view; scheduled occurrences alone establish capability health.",
+			Long:              "Queue a diagnostic run of the saved flow selector and return without waiting. This does not create a policy occurrence. Follow its ID with probe execution view; scheduled occurrences alone establish probe health.",
 			Example:           "  echopoint probe run <probe-id> --expected-revision 3 -o json",
 			Args:              cobra.ExactArgs(1),
 			ValidArgsFunction: completeProbeArgs(state),

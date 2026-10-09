@@ -3709,7 +3709,7 @@ paths:
       tags:
         - Probes
       summary: ListProbes
-      description: Lists the organization's persistent Probes with configuration revisions and current server-derived capability health. Supports limit and offset pagination.
+      description: Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
       operationId: listProbes
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
@@ -3821,55 +3821,6 @@ paths:
         - BearerAuth: [flows:read]
         - ApiKeys: [flows:read]
       x-ai-tool: true
-  /probes/source-options:
-    parameters:
-      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
-    get:
-      tags:
-        - Probes
-      summary: GetProbeSourceOptions
-      description: Lists selectable assertions from the definition the monitor will execute, resolving the latest published source or the current flow when none is published.
-      operationId: getProbeSourceOptions
-      parameters:
-        - name: flow_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: environment_key
-          in: query
-          required: false
-          schema:
-            type: string
-            maxLength: 128
-      responses:
-        "200":
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProbeSourceOptions'
-        "400":
-          $ref: '#/components/responses/BadRequest'
-        "401":
-          $ref: '#/components/responses/Unauthorized'
-        "403":
-          $ref: '#/components/responses/Forbidden'
-        "404":
-          $ref: '#/components/responses/NotFound'
-        "409":
-          $ref: '#/components/responses/Conflict'
-        "429":
-          $ref: '#/components/responses/TooManyRequests'
-        "500":
-          $ref: '#/components/responses/InternalServerError'
-      security:
-        - BearerAuth:
-            - flows:read
-        - ApiKeys:
-            - flows:read
-      x-ai-tool: true
   /probes/{probeId}:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -3884,7 +3835,7 @@ paths:
       tags:
         - Probes
       summary: GetProbe
-      description: Returns a tenant-scoped Probe, its approved configuration revision, next due time and current capability health derived only from compatible scheduled occurrences.
+      description: Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
       operationId: getProbe
       responses:
         "200":
@@ -10306,57 +10257,6 @@ components:
           type: string
         organization_name:
           type: string
-    ProbeCheck:
-      type: object
-      required:
-        - flow_id
-        - node_id
-        - assertion_index
-      properties:
-        flow_id:
-          type: string
-          format: uuid
-        node_id:
-          type: string
-          minLength: 1
-          maxLength: 200
-        assertion_index:
-          type: integer
-          minimum: 0
-          maximum: 1000
-      additionalProperties: false
-    ProbeCapability:
-      type: object
-      required:
-        - id
-        - name
-        - enabled
-        - checks
-        - depends_on
-      properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 64
-        name:
-          type: string
-          minLength: 1
-          maxLength: 120
-        enabled:
-          type: boolean
-        checks:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProbeCheck'
-          description: Empty checks evaluate the complete selected flow suite.
-          maxItems: 16
-        depends_on:
-          type: array
-          items:
-            type: string
-            maxLength: 64
-          maxItems: 8
-      additionalProperties: false
     ProbeConfig:
       type: object
       required:
@@ -10369,7 +10269,6 @@ components:
         - confirmation_runs
         - recovery_runs
         - freshness_seconds
-        - capabilities
       properties:
         source_fingerprint:
           description: Server-owned source signature; caller values are ignored.
@@ -10428,12 +10327,6 @@ components:
           type: integer
           minimum: 60
           maximum: 604800
-        capabilities:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProbeCapability'
-          minItems: 1
-          maxItems: 8
       additionalProperties: false
     ProbeHealthState:
       type: string
@@ -10450,13 +10343,10 @@ components:
     ProbeHealth:
       type: object
       required:
-        - capability_id
         - state
         - reason
         - confirmation_count
       properties:
-        capability_id:
-          type: string
         state:
           $ref: '#/components/schemas/ProbeHealthState'
         reason:
@@ -10496,9 +10386,7 @@ components:
           type: string
           format: date-time
         health:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProbeHealth'
+          $ref: '#/components/schemas/ProbeHealth'
         created_at:
           type: string
           format: date-time
@@ -10545,12 +10433,9 @@ components:
     ProbeObservation:
       type: object
       required:
-        - capability_id
         - state
         - reason
       properties:
-        capability_id:
-          type: string
         state:
           $ref: '#/components/schemas/ProbeHealthState'
         reason:
@@ -10569,7 +10454,7 @@ components:
         - config
         - due_at
         - reason
-        - observations
+        - observation
         - steps
         - created_at
         - updated_at
@@ -10623,10 +10508,8 @@ components:
           format: date-time
         reason:
           type: string
-        observations:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProbeObservation'
+        observation:
+          $ref: '#/components/schemas/ProbeObservation'
         steps:
           type: array
           items:
@@ -10637,41 +10520,6 @@ components:
         updated_at:
           type: string
           format: date-time
-      additionalProperties: false
-    ProbeCheckOption:
-      type: object
-      required:
-        - flow_id
-        - node_id
-        - assertion_index
-        - label
-      properties:
-        flow_id:
-          type: string
-          format: uuid
-        node_id:
-          type: string
-        assertion_index:
-          type: integer
-        label:
-          type: string
-      additionalProperties: false
-    ProbeSourceOptions:
-      type: object
-      required:
-        - flow_id
-        - environment_key
-        - checks
-      properties:
-        flow_id:
-          type: string
-          format: uuid
-        environment_key:
-          type: string
-        checks:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProbeCheckOption'
       additionalProperties: false
     ProbeRunExecution:
       type: object
@@ -11757,6 +11605,20 @@ components:
           type: string
           pattern: ^#[0-9a-fA-F]{6}$
       additionalProperties: false
+    StatusPageServiceMessages:
+      type: object
+      description: Optional plain-text public wording per measured state. Blank values use the default wording. Messages are frozen on publication and never change health or expose execution errors.
+      properties:
+        operational:
+          type: string
+          maxLength: 240
+        outage:
+          type: string
+          maxLength: 240
+        unknown:
+          type: string
+          maxLength: 240
+      additionalProperties: false
     StatusPageService:
       type: object
       required:
@@ -11781,6 +11643,8 @@ components:
         name:
           type: string
           maxLength: 48
+        messages:
+          $ref: '#/components/schemas/StatusPageServiceMessages'
         detail:
           type: string
           maxLength: 120
@@ -11958,7 +11822,6 @@ components:
       required:
         - service_id
         - probe_id
-        - capability_id
       properties:
         service_id:
           type: string
@@ -11968,10 +11831,6 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-        capability_id:
-          type: string
-          minLength: 1
-          maxLength: 64
       additionalProperties: false
     SaveStatusPageRequest:
       type: object
@@ -12115,6 +11974,8 @@ components:
         name:
           type: string
           maxLength: 48
+        messages:
+          $ref: '#/components/schemas/StatusPageServiceMessages'
         detail:
           type: string
           maxLength: 120

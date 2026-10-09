@@ -58,15 +58,6 @@ func readProbeCreation(
 		"confirmation_runs": 2,
 		"recovery_runs":     2,
 		"freshness_seconds": max(180, creation.interval+creation.timeout),
-		"capabilities": []any{
-			map[string]any{
-				"id":           "suite",
-				probeNameField: name,
-				"enabled":      true,
-				"checks":       []any{},
-				"depends_on":   []string{},
-			},
-		},
 	}
 	return decodeProbeRequest[api.CreateProbeRequest](
 		cmd,

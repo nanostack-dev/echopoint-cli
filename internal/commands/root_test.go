@@ -62,7 +62,7 @@ func TestRequiresToken(t *testing.T) {
 		{"probe run", []string{"probe", "run"}, true},
 		{"probe history", []string{"probe", "history"}, true},
 		{"probe execution view", []string{"probe", "execution", "view"}, true},
-		{"probe source-options", []string{"probe", "source-options"}, true},
+		{"probe estimate", []string{"probe", "estimate"}, true},
 		{"probe validate", []string{"probe", "validate"}, false},
 
 		{"status-page view", []string{"status-page", "view"}, true},

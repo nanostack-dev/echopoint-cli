@@ -23,10 +23,16 @@ func TestStatusPageProbeBindingsValidateSaveAndReadBack(t *testing.T) {
 		t.Fatal(err)
 	}
 	bindings := []api.StatusPageProbeBinding{
-		{ServiceId: "api", ProbeId: testProbeID, CapabilityId: "api"},
-		{ServiceId: "api", ProbeId: testProbeID, CapabilityId: "webhook"},
+		{ServiceId: "api", ProbeId: testProbeID},
+		{ServiceId: "api", ProbeId: testProbeRunID},
 	}
 	request.ProbeBindings = &bindings
+	operational, outage, unknown := "Checkout is available", "Checkout is unavailable", "We are checking checkout"
+	request.Config.Services[0].Messages = &api.StatusPageServiceMessages{
+		Operational: &operational,
+		Outage:      &outage,
+		Unknown:     &unknown,
+	}
 	data, err := json.Marshal(request)
 	if err != nil {
 		t.Fatal(err)
@@ -46,6 +52,9 @@ func TestStatusPageProbeBindingsValidateSaveAndReadBack(t *testing.T) {
 			}
 			if !reflect.DeepEqual(input.ProbeBindings, request.ProbeBindings) {
 				t.Error("probe bindings dropped on save")
+			}
+			if !reflect.DeepEqual(input.Config.Services[0].Messages, request.Config.Services[0].Messages) {
+				t.Error("service public messages dropped on save")
 			}
 			saved = &api.StatusPageEditor{
 				ProbeBindings: input.ProbeBindings,
@@ -73,9 +82,15 @@ func TestStatusPageProbeBindingsValidateSaveAndReadBack(t *testing.T) {
 	if !reflect.DeepEqual(readBack.ProbeBindings, &bindings) {
 		t.Fatalf("bindings = %+v", readBack.ProbeBindings)
 	}
+	if !reflect.DeepEqual(readBack.Config.Services[0].Messages, request.Config.Services[0].Messages) {
+		t.Fatal("service messages did not round trip")
+	}
 	for _, bad := range []string{
-		strings.Replace(string(data), `"capability_id":"api"`, `"capability_id":""`, 1),
-		strings.Replace(string(data), `"capability_id":"api"`, `"capability_id":"api","revision":1`, 1),
+		strings.Replace(string(data), `"probe_id":"`+testProbeID+`"`, `"probe_id":""`, 1),
+		strings.Replace(string(data), `"probe_id":"`+testProbeID+`"`, `"probe_id":"`+testProbeID+`","revision":1`, 1),
+		strings.Replace(string(data), `"probe_id":"`+testProbeID+`"`, `"probe_id":"`+testProbeID+`","capability_id":"api"`, 1),
+		strings.Replace(string(data), `"operational":"Checkout is available"`, `"operational":"`+strings.Repeat("a", 241)+`"`, 1),
+		strings.Replace(string(data), `"messages":{`, `"messages":{"error":"private assertion",`, 1),
 	} {
 		cmd := newStatusPageCmd(&AppState{})
 		cmd.SetOut(io.Discard)

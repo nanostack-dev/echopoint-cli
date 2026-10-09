@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -41,8 +42,8 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	for i := range 2 {
 		flowFile := writeTemp(t, fmt.Sprintf("flow-%d.json", i), fmt.Sprintf(`{
   "name":"CLI probe E2E %s %d", "tags":[%q],
-  "flow_definition":{"name":"Health capability","version":"1.0","nodes":[{
-    "id":"health","display_name":"Capability HTTP check","type":"request",
+  "flow_definition":{"name":"Service availability","version":"1.0","nodes":[{
+    "id":"health","display_name":"Availability HTTP request","type":"request",
     "data":{"method":"GET","url":%q,"timeout":5000},
     "assertions":[{"extractor_type":"status_code","extractor_data":{},"operator_type":"equals","operator_data":{"value":200}}]
   }],"edges":[]}
@@ -54,17 +55,6 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	}
 	flowIDs := []uuid.UUID{flows[0].Id, flows[1].Id}
 	// No publication or version selection is necessary for a monitor-backed probe.
-	var source api.ProbeSourceOptions
-	decodeProbeE2E(
-		t,
-		cli("probe", "source-options", "--flow-id", flowIDs[0].String(), "--environment", environment),
-		&source,
-	)
-	if source.EnvironmentKey != environment || len(source.Checks) != 1 || source.Checks[0].FlowId != flowIDs[0] ||
-		source.Checks[0].NodeId != "health" ||
-		source.Checks[0].AssertionIndex != 0 {
-		t.Fatalf("source = %+v", source)
-	}
 	var estimate api.ProbeEstimate
 	decodeProbeE2E(
 		t,
@@ -82,7 +72,7 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	)
 	assertProbeE2EForecast(t, estimate)
 	config := api.ProbeConfig{
-		Name:             "CLI capability " + suffix,
+		Name:             "CLI availability " + suffix,
 		FlowIds:          &flowIDs,
 		EnvironmentKey:   environment,
 		RunnerType:       api.ProbeRunnerCloud,
@@ -92,9 +82,6 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 		ConfirmationRuns: 2,
 		RecoveryRuns:     2,
 		FreshnessSeconds: 180,
-		Capabilities: []api.ProbeCapability{
-			{Id: "suite", Name: "API availability", Enabled: true, Checks: []api.ProbeCheck{}, DependsOn: []string{}},
-		},
 	}
 	createFile := probeE2EFile(t, "probe.json", api.CreateProbeRequest{Config: config})
 	cli("probe", "validate", "-f", createFile)
@@ -166,8 +153,14 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	decodeProbeE2E(t, string(pageBytes), &pageRequest)
 	pageRequest.Slug = "probe-cli-" + suffix
 	pageRequest.Config.BrandName = "Disposable CLI verification"
+	operational, outage, unknown := "Checkout is available", "Checkout is unavailable", "We are checking checkout"
+	pageRequest.Config.Services[0].Messages = &api.StatusPageServiceMessages{
+		Operational: &operational,
+		Outage:      &outage,
+		Unknown:     &unknown,
+	}
 	pageRequest.ProbeBindings = &[]api.StatusPageProbeBinding{
-		{ServiceId: "api", ProbeId: probe.Id, CapabilityId: "suite"},
+		{ServiceId: "api", ProbeId: probe.Id},
 	}
 	pageFile := probeE2EFile(t, "page.json", pageRequest)
 	cli("status-page", "validate", "-f", pageFile)
@@ -193,10 +186,18 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	var pageReadBack api.StatusPageEditor
 	decodeProbeE2E(t, cli("status-page", "view"), &pageReadBack)
 	if pageReadBack.ProbeBindings == nil || len(*pageReadBack.ProbeBindings) != 1 ||
-		(*pageReadBack.ProbeBindings)[0].ProbeId != probe.Id {
+		(*pageReadBack.ProbeBindings)[0].ProbeId != probe.Id ||
+		!reflect.DeepEqual(pageReadBack.Config.Services[0].Messages, pageRequest.Config.Services[0].Messages) {
 		t.Fatal("status page mapping did not persist")
 	}
-	awaitProbeE2EPublicHealth(t, cli, page.Slug)
+	// A draft update must not change the published service's messages.
+	pageRequest.ExpectedDraftVersion = pageReadBack.DraftVersion
+	pageRequest.Slug = pageReadBack.Slug
+	pageRequest.Config.Services[0].Messages = nil
+	pageFile = probeE2EFile(t, "default-page.json", pageRequest)
+	cli("status-page", "validate", "-f", pageFile)
+	decodeProbeE2E(t, cli("status-page", "save", "-f", pageFile), &page)
+	awaitProbeE2EPublicHealth(t, cli, page.Slug, pageReadBack.Config.Services[0].Messages)
 	var history api.ProbeRunListResponse
 	decodeProbeE2E(t, cli("probe", "history", probe.Id), &history)
 	var confirmed int
@@ -209,12 +210,20 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	if confirmed < 2 {
 		t.Fatal("public health lacked two distinct scheduled occurrences")
 	}
+	decodeProbeE2E(t, cli("status-page", "publish", "--expected-draft-version", fmt.Sprint(page.DraftVersion), "--expected-intent-version", fmt.Sprint(page.IntentVersion)), &page)
+	awaitProbeE2EPublicHealth(t, cli, page.Slug, nil)
 	decodeProbeE2E(t, cli("probe", "pause", probe.Id, "--expected-revision", fmt.Sprint(probe.Revision)), &probe)
 	if probe.Config.Enabled {
 		t.Fatal("pause did not persist")
 	}
+	var pausedPublic api.PublicStatusView
+	decodeProbeE2E(t, cli("status-page", "public", page.Slug), &pausedPublic)
+	if pausedPublic.Health.State != api.StatusPageHealthStateUnknown || len(pausedPublic.Services) != 1 ||
+		pausedPublic.Services[0].Health.State != api.StatusPageHealthStateUnknown || pausedPublic.Services[0].Messages != nil {
+		t.Fatal("paused probe retained Operational public health or omitted message overrides did not retain defaults")
+	}
 	t.Log(
-		"CLI/API explicit flow set, tag selector, request forecast, shared monitor linkage/type, diagnostic isolation, scheduled confirmation, persistence and lifecycle verified. Cleanup removes probe/flows/environment and withdraws publication; the private draft remains in the disposable organization because no page deletion API exists.",
+		"CLI/API explicit flow set, tag selector, request forecast, shared monitor linkage/type, single health result, diagnostic isolation, scheduled confirmation, direct status bindings, frozen public messages, draft isolation, omitted-message defaults and paused Unknown verified. Cleanup removes probe/flows/environment and withdraws publication; the private draft remains in the disposable organization because no page deletion API exists.",
 	)
 }
 
@@ -357,7 +366,7 @@ func assertProbeE2EDiagnostic(
 		}
 	}
 	decodeProbeE2E(t, cli("probe", "view", probe.Id), &reloaded)
-	if len(reloaded.Health) != 1 || reloaded.Health[0].State != api.ProbeNotMonitored {
+	if reloaded.Health.State != api.ProbeNotMonitored || diagnostic.Observation.State != api.ProbeOperational {
 		t.Fatal("diagnostic changed paused policy health")
 	}
 	var history api.ProbeRunListResponse
@@ -435,17 +444,20 @@ func awaitProbeE2ERun(t *testing.T, cli func(...string) string, probe, run strin
 	return api.ProbeRun{}
 }
 
-func awaitProbeE2EPublicHealth(t *testing.T, cli func(...string) string, slug string) {
+func awaitProbeE2EPublicHealth(t *testing.T, cli func(...string) string, slug string, messages *api.StatusPageServiceMessages) {
 	t.Helper()
 	deadline := time.Now().Add(165 * time.Second)
 	for time.Now().Before(deadline) {
 		result := cli("status-page", "public", slug)
 		var value api.PublicStatusView
 		decodeProbeE2E(t, result, &value)
-		for _, private := range []string{"probe_id", "flow_id", "flow_ids", "execution_id", "schedule_id", "schedule_run_id", "node_id", "assertion_index", "expected_revision", "extractor_data", "operator_data", "source_fingerprint"} {
+		for _, private := range []string{"probe_id", "flow_id", "flow_ids", "execution_id", "schedule_id", "schedule_run_id", "node_id", "assertion_index", "expected_revision", "extractor_data", "operator_data", "source_fingerprint", "capability_id", "error_message"} {
 			if strings.Contains(result, `"`+private+`"`) {
 				t.Fatalf("public view leaked private field %s", private)
 			}
+		}
+		if len(value.Services) != 1 || !reflect.DeepEqual(value.Services[0].Messages, messages) {
+			t.Fatal("published service messages changed before publication or did not round trip")
 		}
 		if value.Health.State == api.StatusPageHealthStateOperational && len(value.Services) == 1 &&
 			value.Services[0].Health.State == api.StatusPageHealthStateOperational {
