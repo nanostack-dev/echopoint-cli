@@ -216,12 +216,7 @@ func TestProbeAPIConfigurationWorkflow(t *testing.T) {
 	if probe.Config.Enabled {
 		t.Fatal("pause did not persist")
 	}
-	var pausedPublic api.PublicStatusView
-	decodeProbeE2E(t, cli("status-page", "public", page.Slug), &pausedPublic)
-	if pausedPublic.Health.State != api.StatusPageHealthStateUnknown || len(pausedPublic.Services) != 1 ||
-		pausedPublic.Services[0].Health.State != api.StatusPageHealthStateUnknown || pausedPublic.Services[0].Messages != nil {
-		t.Fatal("paused probe retained Operational public health or omitted message overrides did not retain defaults")
-	}
+	awaitProbeE2EPausedPublicHealth(t, cli, page.Slug)
 	t.Log(
 		"CLI/API explicit flow set, tag selector, request forecast, shared monitor linkage/type, single health result, diagnostic isolation, scheduled confirmation, direct status bindings, frozen public messages, draft isolation, omitted-message defaults and paused Unknown verified. Cleanup removes probe/flows/environment and withdraws publication; the private draft remains in the disposable organization because no page deletion API exists.",
 	)
@@ -451,11 +446,7 @@ func awaitProbeE2EPublicHealth(t *testing.T, cli func(...string) string, slug st
 		result := cli("status-page", "public", slug)
 		var value api.PublicStatusView
 		decodeProbeE2E(t, result, &value)
-		for _, private := range []string{"probe_id", "flow_id", "flow_ids", "execution_id", "schedule_id", "schedule_run_id", "node_id", "assertion_index", "expected_revision", "extractor_data", "operator_data", "source_fingerprint", "capability_id", "error_message"} {
-			if strings.Contains(result, `"`+private+`"`) {
-				t.Fatalf("public view leaked private field %s", private)
-			}
-		}
+		assertProbeE2EPublicPrivacy(t, result)
 		if len(value.Services) != 1 || !reflect.DeepEqual(value.Services[0].Messages, messages) {
 			t.Fatal("published service messages changed before publication or did not round trip")
 		}
@@ -466,4 +457,34 @@ func awaitProbeE2EPublicHealth(t *testing.T, cli func(...string) string, slug st
 		time.Sleep(2 * time.Second)
 	}
 	t.Fatal("scheduled probe evidence did not establish public Operational health within 165 seconds")
+}
+
+func awaitProbeE2EPausedPublicHealth(t *testing.T, cli func(...string) string, slug string) {
+	t.Helper()
+	// Public health is projected by the 30-second status evaluator, not on reads.
+	deadline := time.Now().Add(60 * time.Second)
+	for time.Now().Before(deadline) {
+		result := cli("status-page", "public", slug)
+		assertProbeE2EPublicPrivacy(t, result)
+		var value api.PublicStatusView
+		decodeProbeE2E(t, result, &value)
+		if len(value.Services) != 1 || value.Services[0].Messages != nil {
+			t.Fatal("omitted public service messages did not retain defaults")
+		}
+		if value.Health.State == api.StatusPageHealthStateUnknown &&
+			value.Services[0].Health.State == api.StatusPageHealthStateUnknown {
+			return
+		}
+		time.Sleep(2 * time.Second)
+	}
+	t.Fatal("paused probe public health did not become Unknown within 60 seconds")
+}
+
+func assertProbeE2EPublicPrivacy(t *testing.T, result string) {
+	t.Helper()
+	for _, private := range []string{"probe_id", "flow_id", "flow_ids", "execution_id", "schedule_id", "schedule_run_id", "node_id", "assertion_index", "expected_revision", "extractor_data", "operator_data", "source_fingerprint", "capability_id", "error_message"} {
+		if strings.Contains(result, `"`+private+`"`) {
+			t.Fatalf("public view leaked private field %s", private)
+		}
+	}
 }

@@ -129,6 +129,10 @@ Ordinary skipped branches do not make a completed flow Unknown. A paused probe
 is Not monitored. The saved probe's `health` and each run's `observation` are single
 objects. Confirmation, recovery and
 freshness remain probe policies rather than ordinary monitor success/failure.
+The status evaluator refreshes the public projection every 30 seconds. A probe
+pause or policy change can therefore take an evaluation cycle to appear as
+Unknown publicly; anonymous reads do not execute probes or evaluate their
+private configuration.
 
 ## Connect to a status page
 
