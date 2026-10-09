@@ -1,10 +1,9 @@
 // Package mcp exposes echopoint API operations as Model Context Protocol tools.
 //
-// The tool catalog is derived entirely from the embedded OpenAPI spec: any
-// operation annotated with `x-ai-tool: true` (and not `x-ai-danger: true`)
-// becomes a tool. The operation's parameters and JSON request body are merged
-// into a single flat input schema. There is no per-operation Go glue — adding a
-// tool is a spec annotation, nothing more.
+// The tool catalog is derived from the embedded OpenAPI spec. Administration
+// routes are always excluded. Other operations annotated with `x-ai-tool: true`
+// (and not `x-ai-danger`) become tools. The operation's parameters and JSON
+// request body are merged into a single flat input schema.
 package mcp
 
 import (
@@ -56,6 +55,11 @@ func buildCatalog(spec []byte) ([]toolDef, error) {
 
 	var tools []toolDef
 	for _, path := range doc.Paths.InMatchingOrder() {
+		// Product administration belongs to the browser administration panel,
+		// regardless of any tool annotations in the mirrored API contract.
+		if path == "/administrations" || strings.HasPrefix(path, "/administrations/") {
+			continue
+		}
 		item := doc.Paths.Find(path)
 		for method, op := range item.Operations() {
 			if !truthy(op.Extensions[extAITool]) || present(op.Extensions[extAIDanger]) {

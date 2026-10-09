@@ -15,7 +15,8 @@ import (
 )
 
 // newMcpCmd runs a Model Context Protocol server over stdio, exposing echopoint
-// operations annotated with `x-ai-tool` as tools. The user points an
+// eligible operations annotated with `x-ai-tool` as tools, excluding product
+// administration. The user points an
 // MCP-compatible AI client (Claude Desktop, Cursor, ...) at this command; the
 // client owns the agent loop, and every tool call is dispatched through the
 // CLI's existing authenticated API client.

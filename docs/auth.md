@@ -18,13 +18,21 @@ The callback document is rendered by `internal/auth/browser_page.go` from `inter
 
 Its CSS, SVGs, fonts, and font license notices are embedded in the initial response. Keep it self-contained: the CLI shuts down the local server after receiving the login token, so later asset requests may fail. Error messages pass through `html/template` escaping.
 
-### Token-based Login
+### Use an existing session token
 
 If you already have a session token:
 
 ```bash
-echopoint auth login --token "<SESSION_JWT>"
+echopoint flow list --profile dev --token "<SESSION_JWT>" -o json
 ```
+
+`--token` supplies a session for the requested API command; `auth login --token`
+does not store it. Avoid putting real credentials in shell history; the
+environment variable below is suitable for a token supplied by your environment.
+
+Product administration belongs to the browser administration panel. CLI login
+supports ordinary product workflows and has no administrator mode. See
+[product administration scope](technical/administration-scope.md).
 
 ### Environment Variable
 
