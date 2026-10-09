@@ -58,7 +58,6 @@ func TestGetAndShowStayAsAliasesOfView(t *testing.T) {
 		{[]string{"flow", "env", "view"}, []string{"get"}},
 		{[]string{"org", "env", "view"}, []string{"get"}},
 		{[]string{"config", "view"}, []string{"show"}},
-		{[]string{"admin", "cloud-fleet", "view"}, []string{"get", "show"}},
 	} {
 		view := find(t, root, tc.view...)
 		for _, alias := range tc.aliases {
@@ -112,7 +111,7 @@ func TestRootCommandsAreGroupedUnderTheirHeadings(t *testing.T) {
 	want := map[string][]string{
 		"Resources":         {"collection", "flow", "org", "spec", "status-page"},
 		"Account and setup": {"auth", "config", "profile"},
-		"Tools":             {"admin", "completion", "help", "mcp", "update", "version"},
+		"Tools":             {"completion", "help", "mcp", "update", "version"},
 	}
 	for heading, names := range want {
 		if !slices.Equal(sections[heading], names) {

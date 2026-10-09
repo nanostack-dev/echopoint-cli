@@ -18,7 +18,6 @@ const (
 )
 
 var rootCommandGroups = map[string]string{
-	adminCommandName:      toolsGroupID,
 	flowCommandName:       resourcesGroupID,
 	specCommandName:       resourcesGroupID,
 	collectionCommandName: resourcesGroupID,

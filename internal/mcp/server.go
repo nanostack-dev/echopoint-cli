@@ -18,9 +18,10 @@ import (
 
 const serverName = "echopoint"
 
-// NewServer builds an MCP server exposing every x-ai-tool annotated operation,
-// each dispatched through the authenticated API client. The returned server is
-// run by the caller over a transport (stdio for the CLI).
+// NewServer builds an MCP server exposing eligible x-ai-tool annotated
+// operations, excluding administration routes and x-ai-danger operations. Each
+// tool uses the authenticated API client; the caller runs the server over a
+// transport (stdio for the CLI).
 func NewServer(cli *client.Client, version string) (*mcpsdk.Server, error) {
 	tools, err := buildCatalog(api.OpenAPISpec)
 	if err != nil {

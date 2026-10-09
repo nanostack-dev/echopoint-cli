@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -34,7 +33,6 @@ func newAuthCmd(state *AppState) *cobra.Command {
 func newAuthLoginCmd(state *AppState) *cobra.Command {
 	var debug bool
 	var local bool
-	var admin bool
 	var apiKey string
 	var organizationID string
 	var setDefault bool
@@ -46,32 +44,22 @@ func newAuthLoginCmd(state *AppState) *cobra.Command {
 
 By default this opens your browser and stores a session (Bearer) token.
 
-Pass --admin for product administration. This requests a session with the
-existing platform administrator claim; it does not grant an administrator role.
-
 Pass --api-key to store an organization API key instead. A session and an API
 key can both be stored; the session is preferred when both are present. Use
 --default with --api-key to prefer the API key instead.`,
 		Example: `  echopoint auth login
-  echopoint auth login --admin --profile dev
   echopoint auth login --api-key <key>
   echopoint auth login --api-key <key> --org <organization-id> --default`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if admin && apiKey != "" {
-				return errors.New(
-					"--admin cannot be combined with --api-key; product administration requires a session",
-				)
-			}
 			if apiKey != "" {
 				return storeAPIKeyCredential(state, apiKey, organizationID, setDefault)
 			}
-			return browserLogin(cmd, state, local, debug, admin)
+			return browserLogin(cmd, state, local, debug)
 		},
 	}
 
 	cmd.Flags().BoolVar(&debug, "debug", false, "Print debug information")
 	cmd.Flags().BoolVar(&local, "local", false, "Use localhost:3001 for authentication")
-	cmd.Flags().BoolVar(&admin, "admin", false, "Request a product administrator session through browser sign-in")
 	cmd.Flags().StringVar(&apiKey, "api-key", "",
 		"Store an organization API key instead of signing in via browser")
 	addOrganizationFlag(cmd.Flags(), &organizationID)
@@ -130,7 +118,7 @@ func storeAPIKeyCredential(state *AppState, apiKey, organizationID string, setDe
 	return nil
 }
 
-func browserLogin(cmd *cobra.Command, state *AppState, local, debug, admin bool) error {
+func browserLogin(cmd *cobra.Command, state *AppState, local, debug bool) error {
 	// Frontend URL comes from the active profile; --local and the legacy
 	// localhost API both fall back to the local frontend.
 	frontendURL := state.Config.FrontendURL
@@ -141,10 +129,7 @@ func browserLogin(cmd *cobra.Command, state *AppState, local, debug, admin bool)
 		frontendURL = "http://localhost:3001"
 	}
 
-	creds, err := auth.BrowserLoginWithOptions(cmd.Context(), frontendURL, auth.BrowserLoginOptions{
-		Debug: debug,
-		Admin: admin,
-	})
+	creds, err := auth.BrowserLogin(cmd.Context(), frontendURL, debug)
 	if err != nil {
 		return err
 	}

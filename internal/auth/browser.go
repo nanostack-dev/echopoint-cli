@@ -44,21 +44,8 @@ const (
 	localServerPort = "8765"
 )
 
-type BrowserLoginOptions struct {
-	Debug bool
-	Admin bool
-}
-
 // BrowserLogin opens the browser for authentication and waits for the callback
 func BrowserLogin(ctx context.Context, frontendURL string, debug bool) (Credentials, error) {
-	return BrowserLoginWithOptions(ctx, frontendURL, BrowserLoginOptions{Debug: debug})
-}
-
-func BrowserLoginWithOptions(
-	ctx context.Context,
-	frontendURL string,
-	options BrowserLoginOptions,
-) (Credentials, error) {
 	// Start local server to receive the callback
 	listener, err := net.Listen("tcp", "127.0.0.1:"+localServerPort)
 	if err != nil {
@@ -99,12 +86,9 @@ func BrowserLoginWithOptions(
 	}()
 
 	// Build the auth URL - redirect to frontend's standalone CLI auth page
-	authURL, err := browserAuthURL(frontendURL, callbackURL, options.Admin)
-	if err != nil {
-		return Credentials{}, err
-	}
+	authURL := fmt.Sprintf("%s/cli/auth?callback=%s", frontendURL, url.QueryEscape(callbackURL))
 
-	if options.Debug {
+	if debug {
 		fmt.Fprintf(os.Stderr, "Debug: Auth URL: %s\n", authURL)
 		fmt.Fprintf(os.Stderr, "Debug: Callback URL: %s\n", callbackURL)
 	}
@@ -117,7 +101,7 @@ func BrowserLoginWithOptions(
 	fmt.Fprintln(os.Stderr, "")
 
 	if err := openBrowser(authURL); err != nil {
-		if options.Debug {
+		if debug {
 			fmt.Fprintf(os.Stderr, "Debug: Failed to open browser: %v\n", err)
 		}
 	}
@@ -147,23 +131,6 @@ func BrowserLoginWithOptions(
 		_ = server.Shutdown(context.Background())
 		return Credentials{}, fmt.Errorf("authentication timed out")
 	}
-}
-
-func browserAuthURL(frontendURL, callbackURL string, admin bool) (string, error) {
-	parsed, err := url.Parse(frontendURL)
-	if err != nil {
-		return "", fmt.Errorf("parse authentication frontend URL: %w", err)
-	}
-	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/cli/auth"
-	query := parsed.Query()
-	query.Set("callback", callbackURL)
-	if admin {
-		query.Set("admin", "true")
-	} else {
-		query.Del("admin")
-	}
-	parsed.RawQuery = query.Encode()
-	return parsed.String(), nil
 }
 
 func openBrowser(url string) error {

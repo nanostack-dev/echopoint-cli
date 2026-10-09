@@ -35,8 +35,6 @@ type AppState struct {
 	Configure func(cmd *cobra.Command) error
 }
 
-var errStoredCredentialsExpired = errors.New("stored credentials have expired; run 'echopoint auth login' again")
-
 func NewRootCmd() *cobra.Command {
 	state := &AppState{}
 
@@ -86,12 +84,6 @@ func NewRootCmd() *cobra.Command {
 		if apiKey == "" && requiresToken(cmd) {
 			token, err = resolveToken(flagToken, cfg.Profile)
 			if err != nil {
-				if errors.Is(err, errStoredCredentialsExpired) && isProductAdminCommand(cmd) {
-					return fmt.Errorf(
-						"stored credentials have expired; run 'echopoint auth login --admin --profile %q' again",
-						cfg.Profile,
-					)
-				}
 				return err
 			}
 			// Fall back to a stored API key per the profile's preference: a
@@ -165,7 +157,6 @@ operates: 'echopoint flow run' makes this CLI one).`,
 	_ = cmd.RegisterFlagCompletionFunc("profile", completeProfiles(true, false))
 
 	cmd.AddCommand(
-		newAdminCmd(state),
 		newFlowCmd(state),
 		newSpecCmd(state),
 		newCollectionCmd(state),
@@ -269,7 +260,7 @@ func resolveToken(flagToken, profile string) (string, error) {
 	}
 	if creds != nil {
 		if creds.ExpiresAt != nil && creds.ExpiresAt.Before(time.Now()) {
-			return "", errStoredCredentialsExpired
+			return "", errors.New("stored credentials have expired; run 'echopoint auth login' again")
 		}
 		return creds.AccessToken, nil
 	}

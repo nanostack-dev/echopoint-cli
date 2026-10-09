@@ -11,7 +11,7 @@ python3 scripts/strip_gotype.py /path/to/approved/openapi.yaml internal/api/open
 
 The script removes `x-go-type` and `x-go-type-import` references to server-private Go types. The generation directive and config live in [gen.go](../../internal/api/gen.go) and [oapi-codegen.yaml](../../internal/api/oapi-codegen.yaml); edit those owners and the schema, then regenerate `client.gen.go` rather than editing generated code.
 
-MCP exposes `x-ai-tool: true` operations and excludes `x-ai-danger`. Calls preserve API authentication, tenant scope and permissions. Verify parameter names, exposure and a representative configuration workflow when syncing the contract. Implement command help/docs/tests alongside generated methods; preserve explicit organization/environment selection where applicable.
+MCP exposes `x-ai-tool: true` operations and excludes `x-ai-danger`. It also always excludes `/administrations` and every descendant path, regardless of annotations. Product administration, including Cloud fleet settings, belongs only to the browser administration panel: do not add CLI commands or administrator login modes for these routes. The generated client still mirrors the complete contract internally. Calls for supported tools preserve API authentication, tenant scope and permissions. Verify parameter names, exposure and a representative configuration workflow when syncing ordinary product capabilities; preserve explicit organization/environment selection where applicable.
 
 ## Embedded libraries and Action
 

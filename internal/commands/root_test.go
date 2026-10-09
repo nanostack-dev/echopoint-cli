@@ -50,8 +50,6 @@ func TestRequiresToken(t *testing.T) {
 		{"flow run", []string{"flow", "run"}, true},
 		{"flow create", []string{"flow", "create"}, true},
 		{"flow list", []string{"flow", "list"}, true},
-		{"admin cloud-fleet view", []string{"admin", "cloud-fleet", "view"}, true},
-		{"admin cloud-fleet update", []string{"admin", "cloud-fleet", "update"}, true},
 
 		{"status-page view", []string{"status-page", "view"}, true},
 		{"status-page save", []string{"status-page", "save"}, true},

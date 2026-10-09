@@ -3,48 +3,9 @@ package auth
 import (
 	"encoding/base64"
 	"encoding/json"
-	"net/url"
 	"testing"
 	"time"
 )
-
-func TestBrowserAuthURLKeepsAdministratorLoginExplicit(t *testing.T) {
-	const callback = "http://127.0.0.1:8765/callback"
-	for _, admin := range []bool{false, true} {
-		authURL, err := browserAuthURL("https://dev.echopoint.dev/", callback, admin)
-		if err != nil {
-			t.Fatal(err)
-		}
-		parsed, err := url.Parse(authURL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if parsed.Host != "dev.echopoint.dev" || parsed.Path != "/cli/auth" ||
-			parsed.Query().Get("callback") != callback {
-			t.Errorf("invalid browser authentication target: %s", authURL)
-		}
-		if admin && parsed.Query().Get("admin") != "true" {
-			t.Error("administrator login did not request the explicit browser exchange")
-		}
-		if !admin && parsed.Query().Has("admin") {
-			t.Error("ordinary login broadened its requested token mode")
-		}
-	}
-}
-
-func TestBrowserAuthURLDoesNotInheritAdminModeFromFrontendURL(t *testing.T) {
-	value, err := browserAuthURL("https://dev.echopoint.dev?admin=true", "http://127.0.0.1:8765/callback", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parsed, err := url.Parse(value)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if parsed.Query().Has("admin") {
-		t.Error("configured frontend query selected administrator mode without --admin")
-	}
-}
 
 func makeJWT(t *testing.T, exp int64) string {
 	t.Helper()
