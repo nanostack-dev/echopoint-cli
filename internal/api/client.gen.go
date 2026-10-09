@@ -136,6 +136,24 @@ func (e BranchFlowNodeType) Valid() bool {
 	}
 }
 
+// Defines values for CloudFleetSettingsSource.
+const (
+	AdminOverride      CloudFleetSettingsSource = "admin_override"
+	DeploymentDefaults CloudFleetSettingsSource = "deployment_defaults"
+)
+
+// Valid indicates whether the value is a known member of the CloudFleetSettingsSource enum.
+func (e CloudFleetSettingsSource) Valid() bool {
+	switch e {
+	case AdminOverride:
+		return true
+	case DeploymentDefaults:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CollectionRequestAuthApiKeyLocation.
 const (
 	CollectionRequestAuthApiKeyLocationCookie CollectionRequestAuthApiKeyLocation = "cookie"
@@ -1924,6 +1942,51 @@ type BulkMoveFlowsRequest struct {
 type BulkMoveFlowsResult struct {
 	// MovedFlows Number of flows whose folder actually changed. Flows already in the destination are not counted.
 	MovedFlows int `json:"moved_flows"`
+}
+
+// CloudFleetSettingsSource Whether the effective settings come from deployment configuration or a saved platform administrator override.
+type CloudFleetSettingsSource string
+
+// CloudFleetStatus Cloud execution safety capacity across every organization in the current deployment.
+type CloudFleetStatus struct {
+	// ClaimedJobs Claimed Cloud jobs across all organizations, including jobs awaiting delivery to a container.
+	ClaimedJobs int64 `json:"claimed_jobs"`
+
+	// DailyLaunchLimit Maximum accepted Cloud launches across the deployment in a rolling 24-hour window. Zero pauses new Cloud launches.
+	DailyLaunchLimit int32 `json:"daily_launch_limit"`
+
+	// GeneratedAt Time the capacity report was generated.
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// GlobalCap Maximum claimed Cloud jobs across the deployment. Accepted jobs wait while this cap is reached.
+	GlobalCap int32 `json:"global_cap"`
+
+	// LaunchesLast24h Accepted Cloud launch reservations since window_start, including queued and subsequently deleted executions.
+	LaunchesLast24h int64 `json:"launches_last_24h"`
+
+	// LaunchesRemaining Additional Cloud launches the fleet budget currently permits, clamped to zero when paused or exhausted. Organization license checks also apply.
+	LaunchesRemaining int64 `json:"launches_remaining"`
+
+	// NextLaunchAvailableAt When existing reservations will free a launch slot if the fleet budget is exhausted, assuming no settings changes. Null when paused or a slot is already available.
+	NextLaunchAvailableAt *time.Time `json:"next_launch_available_at"`
+
+	// Paused True when daily_launch_limit is zero.
+	Paused bool `json:"paused"`
+
+	// QueuedJobs Accepted Cloud jobs waiting for a dispatch claim across all organizations.
+	QueuedJobs int64 `json:"queued_jobs"`
+
+	// Revision Settings revision for optimistic concurrency. Zero means deployment defaults with no saved override.
+	Revision int64 `json:"revision"`
+
+	// SettingsSource Whether the effective settings come from deployment configuration or a saved platform administrator override.
+	SettingsSource CloudFleetSettingsSource `json:"settings_source"`
+
+	// SettingsUpdatedAt Database timestamp of the latest saved override, or null when deployment defaults are in use.
+	SettingsUpdatedAt *time.Time `json:"settings_updated_at"`
+
+	// WindowStart Start of the rolling 24-hour launch window used for this report.
+	WindowStart time.Time `json:"window_start"`
 }
 
 // CloudJobPayload Runnable payload for a Cloud job. Returned only to a caller that presents
@@ -5326,6 +5389,18 @@ type UnpublishStatusPageRequest struct {
 	ExpectedIntentVersion int64 `json:"expected_intent_version"`
 }
 
+// UpdateCloudFleetRequest Both replacement fleet limits and the revision being edited.
+type UpdateCloudFleetRequest struct {
+	// DailyLaunchLimit Rolling 24-hour accepted Cloud launch cap. Zero pauses new Cloud launches.
+	DailyLaunchLimit int32 `json:"daily_launch_limit"`
+
+	// ExpectedRevision Settings revision returned by the last fleet read. A mismatch returns 409 without saving changes.
+	ExpectedRevision int64 `json:"expected_revision"`
+
+	// GlobalCap Positive fleet-wide cap on claimed Cloud jobs.
+	GlobalCap int32 `json:"global_cap"`
+}
+
 // UpdateCollectionRequest defines model for UpdateCollectionRequest.
 type UpdateCollectionRequest struct {
 	// Description Optional description
@@ -6732,6 +6807,9 @@ type StreamWebhookRequestsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// UpdateCloudFleetJSONRequestBody defines body for UpdateCloudFleet for application/json ContentType.
+type UpdateCloudFleetJSONRequestBody = UpdateCloudFleetRequest
+
 // CreateAPIKeyJSONRequestBody defines body for CreateAPIKey for application/json ContentType.
 type CreateAPIKeyJSONRequestBody = ApiKeyCreateRequest
 
@@ -7979,6 +8057,36 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
+	// GetCloudFleet Get Cloud Fleet Capacity
+	//
+	// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
+	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	//
+	// Corresponds with GET /administrations/cloud-fleet (the `GetCloudFleet` operationId).
+	GetCloudFleet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateCloudFleetWithBody Update Cloud Fleet Settings
+	//
+	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+	UpdateCloudFleetWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateCloudFleet Update Cloud Fleet Settings
+	//
+	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+	UpdateCloudFleet(ctx context.Context, body UpdateCloudFleetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RunFlowScheduleNow Run Flow Schedule Now
 	//
 	// Runs a single flow schedule immediately instead of waiting for its next cron tick.
@@ -8721,6 +8829,12 @@ type ClientInterface interface {
 	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 	// earlier launch does not count.
 	//
+	// Cloud launches additionally share an operator-configured fleet budget in
+	// any 24 hours. Exhausting it also answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+	// survives deletion of flows and executions, excludes self-hosted and
+	// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -8737,6 +8851,12 @@ type ClientInterface interface {
 	// executions in any 24 hours, counting every trigger and runner. A launch past
 	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 	// earlier launch does not count.
+	//
+	// Cloud launches additionally share an operator-configured fleet budget in
+	// any 24 hours. Exhausting it also answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+	// survives deletion of flows and executions, excludes self-hosted and
+	// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -9691,6 +9811,66 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /webhooks/{id}/stream (the `StreamWebhookRequests` operationId).
 	StreamWebhookRequests(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// GetCloudFleet Get Cloud Fleet Capacity
+//
+// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
+// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+//
+// Corresponds with GET /administrations/cloud-fleet (the `GetCloudFleet` operationId).
+func (c *Client) GetCloudFleet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCloudFleetRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateCloudFleetWithBody Update Cloud Fleet Settings
+//
+// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+func (c *Client) UpdateCloudFleetWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateCloudFleetRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateCloudFleet Update Cloud Fleet Settings
+//
+// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+func (c *Client) UpdateCloudFleet(ctx context.Context, body UpdateCloudFleetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateCloudFleetRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // RunFlowScheduleNow Run Flow Schedule Now
@@ -11315,6 +11495,12 @@ func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *
 // it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 // earlier launch does not count.
 //
+// Cloud launches additionally share an operator-configured fleet budget in
+// any 24 hours. Exhausting it also answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+// survives deletion of flows and executions, excludes self-hosted and
+// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -11341,6 +11527,12 @@ func (c *Client) LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 // executions in any 24 hours, counting every trigger and runner. A launch past
 // it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 // earlier launch does not count.
+//
+// Cloud launches additionally share an operator-configured fleet budget in
+// any 24 hours. Exhausting it also answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+// survives deletion of flows and executions, excludes self-hosted and
+// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -13224,6 +13416,73 @@ func (c *Client) StreamWebhookRequests(ctx context.Context, id WebhookIdParamete
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewGetCloudFleetRequest constructs an http.Request for the GetCloudFleet method
+func NewGetCloudFleetRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/administrations/cloud-fleet")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateCloudFleetRequest calls the generic UpdateCloudFleet builder with application/json body
+func NewUpdateCloudFleetRequest(server string, body UpdateCloudFleetJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateCloudFleetRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUpdateCloudFleetRequestWithBody constructs an http.Request for the UpdateCloudFleet method, with any body, and a specified content type
+func NewUpdateCloudFleetRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/administrations/cloud-fleet")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewRunFlowScheduleNowRequest constructs an http.Request for the RunFlowScheduleNow method
@@ -20661,6 +20920,38 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// GetCloudFleetWithResponse Get Cloud Fleet Capacity
+	//
+	// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
+	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /administrations/cloud-fleet (the `GetCloudFleet` operationId).
+	GetCloudFleetWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCloudFleetResponse, error)
+
+	// UpdateCloudFleetWithBodyWithResponse Update Cloud Fleet Settings
+	//
+	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+	UpdateCloudFleetWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateCloudFleetResponse, error)
+
+	// UpdateCloudFleetWithResponse Update Cloud Fleet Settings
+	//
+	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+	UpdateCloudFleetWithResponse(ctx context.Context, body UpdateCloudFleetJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateCloudFleetResponse, error)
+
 	// RunFlowScheduleNowWithResponse Run Flow Schedule Now
 	//
 	// Runs a single flow schedule immediately instead of waiting for its next cron tick.
@@ -21483,6 +21774,12 @@ type ClientWithResponsesInterface interface {
 	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 	// earlier launch does not count.
 	//
+	// Cloud launches additionally share an operator-configured fleet budget in
+	// any 24 hours. Exhausting it also answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+	// survives deletion of flows and executions, excludes self-hosted and
+	// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -21499,6 +21796,12 @@ type ClientWithResponsesInterface interface {
 	// executions in any 24 hours, counting every trigger and runner. A launch past
 	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 	// earlier launch does not count.
+	//
+	// Cloud launches additionally share an operator-configured fleet budget in
+	// any 24 hours. Exhausting it also answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+	// survives deletion of flows and executions, excludes self-hosted and
+	// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22539,6 +22842,144 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /webhooks/{id}/stream (the `StreamWebhookRequests` operationId).
 	StreamWebhookRequestsWithResponse(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*StreamWebhookRequestsResponse, error)
+}
+
+type GetCloudFleetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CloudFleetStatus
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetCloudFleetResponse) GetJSON200() *CloudFleetStatus {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetCloudFleetResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetCloudFleetResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetCloudFleetResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetCloudFleetResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetCloudFleetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetCloudFleetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetCloudFleetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateCloudFleetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CloudFleetStatus
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateCloudFleetResponse) GetJSON200() *CloudFleetStatus {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateCloudFleetResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateCloudFleetResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateCloudFleetResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateCloudFleetResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateCloudFleetResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateCloudFleetResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateCloudFleetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateCloudFleetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateCloudFleetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 type RunFlowScheduleNowResponse struct {
@@ -30955,6 +31396,56 @@ func (r StreamWebhookRequestsResponse) ContentType() string {
 	return ""
 }
 
+// GetCloudFleetWithResponse Get Cloud Fleet Capacity
+//
+// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
+// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /administrations/cloud-fleet (the `GetCloudFleet` operationId).
+func (c *ClientWithResponses) GetCloudFleetWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetCloudFleetResponse, error) {
+	rsp, err := c.GetCloudFleet(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetCloudFleetResponse(rsp)
+}
+
+// UpdateCloudFleetWithBodyWithResponse Update Cloud Fleet Settings
+//
+// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+func (c *ClientWithResponses) UpdateCloudFleetWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateCloudFleetResponse, error) {
+	rsp, err := c.UpdateCloudFleetWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateCloudFleetResponse(rsp)
+}
+
+// UpdateCloudFleetWithResponse Update Cloud Fleet Settings
+//
+// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
+// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
+// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /administrations/cloud-fleet (the `UpdateCloudFleet` operationId).
+func (c *ClientWithResponses) UpdateCloudFleetWithResponse(ctx context.Context, body UpdateCloudFleetJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateCloudFleetResponse, error) {
+	rsp, err := c.UpdateCloudFleet(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateCloudFleetResponse(rsp)
+}
+
 // RunFlowScheduleNowWithResponse Run Flow Schedule Now
 //
 // Runs a single flow schedule immediately instead of waiting for its next cron tick.
@@ -32305,6 +32796,12 @@ func (c *ClientWithResponses) ExportFlowWithResponse(ctx context.Context, id ope
 // it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 // earlier launch does not count.
 //
+// Cloud launches additionally share an operator-configured fleet budget in
+// any 24 hours. Exhausting it also answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+// survives deletion of flows and executions, excludes self-hosted and
+// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
@@ -32327,6 +32824,12 @@ func (c *ClientWithResponses) LaunchFlowWithBodyWithResponse(ctx context.Context
 // executions in any 24 hours, counting every trigger and runner. A launch past
 // it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
 // earlier launch does not count.
+//
+// Cloud launches additionally share an operator-configured fleet budget in
+// any 24 hours. Exhausting it also answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
+// survives deletion of flows and executions, excludes self-hosted and
+// ephemeral launches, and leaves accepted jobs and idempotent replays valid.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -33924,6 +34427,114 @@ func (c *ClientWithResponses) StreamWebhookRequestsWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseStreamWebhookRequestsResponse(rsp)
+}
+
+// ParseGetCloudFleetResponse parses an HTTP response from a GetCloudFleetWithResponse call
+func ParseGetCloudFleetResponse(rsp *http.Response) (*GetCloudFleetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetCloudFleetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CloudFleetStatus
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateCloudFleetResponse parses an HTTP response from a UpdateCloudFleetWithResponse call
+func ParseUpdateCloudFleetResponse(rsp *http.Response) (*UpdateCloudFleetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateCloudFleetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CloudFleetStatus
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseRunFlowScheduleNowResponse parses an HTTP response from a RunFlowScheduleNowWithResponse call

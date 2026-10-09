@@ -8,10 +8,11 @@ API client, so the AI can do only what you can do.
 
 ## How tools are defined
 
-Tools are not hand-written. They are derived from the OpenAPI contract: any
-operation annotated with `x-ai-tool: true` becomes a tool, and its parameters and
-JSON request body are merged into a single argument schema. Adding a tool is a
-spec annotation — nothing in the CLI changes.
+Tools are derived from eligible operations in the OpenAPI contract. An operation
+annotated with `x-ai-tool: true` becomes a tool unless it is marked `x-ai-danger`
+or its path is `/administrations` or a descendant. Its parameters and JSON request
+body are merged into a single argument schema. Eligible tools need only a spec
+annotation and contract resync.
 
 ```yaml
 # in openapi.yaml
@@ -90,8 +91,16 @@ set:
 - **SSE streams** — long-lived, incompatible with request/response tools
 - **Public webhook ingestion**, **admin routes**, `/me`, `/init`
 
-The tool set tracks the contract: annotate an operation `x-ai-tool` (and resync)
-to expose it.
+Product administration, including Cloud fleet settings, belongs only to the
+browser administration panel. MCP always excludes `/administrations` and
+`/administrations/*`, even if an operation is accidentally annotated as safe.
+`get_cloud_fleet` and `update_cloud_fleet` are not tools and there are no matching
+CLI administration commands. The complete API schema and generated client are
+retained internally; they do not grant tool exposure. See
+[product administration scope](technical/administration-scope.md).
+
+The ordinary tool set tracks the contract: annotate an eligible operation
+`x-ai-tool` (and resync) to expose it. Administration routes remain excluded.
 
 ## Status pages
 
