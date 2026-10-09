@@ -15,7 +15,7 @@ func newProbeEstimateCmd(state *AppState) *cobra.Command {
 	cmd := quietOnError(&cobra.Command{
 		Use:     "estimate",
 		Short:   "Preview matching flows and forecast executions and HTTP requests without creating a probe",
-		Long:    "Resolve a tag selector or explicit flow set and forecast its requested cadence. Static request estimates can be incomplete for branches, retries or modules; the response includes estimate notes and remaining monthly executions.",
+		Long:    "Resolve a tag selector or explicit flow set and forecast its requested cadence. The response reports planned executions through the end of the UTC calendar month, not remaining license allowance. HTTP request totals are omitted when dynamic flow behavior prevents a safe bound; inspect estimate notes.",
 		Example: "  echopoint --org <organization-id> probe estimate --tag production --interval 60 --environment production -o json\n  echopoint probe estimate --flow-id <flow-id> --flow-id <other-flow-id> -o json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

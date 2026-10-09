@@ -29,9 +29,12 @@ Tags resolve at each occurrence. The estimate is read-only and includes matching
 flow IDs, executions and static HTTP requests per occurrence/day/30 days, forecast
 executions from now until the calendar month ends, and notes about uncertain
 request counts. The month-end forecast is expected usage, not the execution
-allowance left on the license. Branches, retries
-and modules can make request counts approximate; an estimate is not a promise of
-throughput. Each selected flow is a separate execution. Two flows requested every
+allowance left on the license. Request totals are omitted when branches, modules,
+loops, polling, streams, webhook waits or unknown node types prevent a safe bound
+(`requests_exact: false`); that request volume is Variable, and no total is guessed.
+Static request counts assume each request node runs once; early failure can reduce
+actual calls. An estimate is not a promise of throughput. Each selected flow is a
+separate execution. Two flows requested every
 60 seconds forecast 2,880 executions per day and 86,400 over 30 days, before
 capacity, pauses and execution limits.
 
