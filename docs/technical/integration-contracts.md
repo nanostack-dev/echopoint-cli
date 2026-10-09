@@ -18,3 +18,10 @@ MCP exposes `x-ai-tool: true` operations and excludes `x-ai-danger`. It also alw
 Upgrade runner behavior with `go get github.com/nanostack-dev/echopoint-runner@vX.Y.0` and `go mod tidy`, then use `feat:` or `fix:` so the CLI release ships it. Kit updates similarly pin `github.com/nanostack-dev/echopoint-kit` and require spec regression verification.
 
 The Action invokes `echopoint flows run <ids> -o json ...`. Its flags, stdout result JSON and exit codes `0/1/2/3/4` are compatibility contracts pinned by [flow-run goldens](../../internal/commands/flow_run_golden_test.go). `flows` remains a permanent alias of `flow`. Every CLI release repoints Action `v1` to the released commit; changing the Action's breaking input contract requires an intentional `ACTION_MAJOR_TAG` change in the release workflow.
+
+Local flow-run summaries project each node and its assertions in one pass through
+the generic execution envelope. Keep the runner result's JSON marshal/unmarshal
+roundtrip: its custom marshaler is the secret-redaction boundary. Status uses
+non-null skip/error field presence, while displayed error text requires a string.
+Legacy non-object nodes and malformed assertion lists remain ignored; node IDs
+remain sorted and an absent node map yields a non-null empty list.

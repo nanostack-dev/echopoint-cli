@@ -637,12 +637,13 @@ func buildRunResultFromJob(flowID, executionID string, runnerResult jobrunner.Re
 	if err := json.Unmarshal(encoded, &payload); err != nil {
 		return report
 	}
-	report.Nodes = buildJobNodeList(payload)
-	attachAssertions(report.Nodes, payload)
+	report.Nodes = buildJobNodeReport(payload)
 	return report
 }
 
-func buildJobNodeList(result map[string]any) []FlowRunNode {
+// buildJobNodeReport projects the redacted generic envelope once. Presence of
+// skip/error fields keeps legacy status semantics even for non-string values.
+func buildJobNodeReport(result map[string]any) []FlowRunNode {
 	raw, ok := result["execution_results"].(map[string]any)
 	if !ok {
 		return []FlowRunNode{}
@@ -673,6 +674,7 @@ func buildJobNodeList(result map[string]any) []FlowRunNode {
 		nodes = append(nodes, FlowRunNode{
 			NodeID: nodeID, DisplayName: name, NodeType: nodeType,
 			Status: status, DurationMs: durationMs, ErrorMsg: errorMessage,
+			Assertions: decodeNodeAssertions(node["assertion_results"]),
 		})
 	}
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].NodeID < nodes[j].NodeID })
@@ -707,44 +709,18 @@ func buildRunResultFromExecution(flowID, executionID string, execution api.FlowE
 	}
 }
 
-// attachAssertions adds the runner's per-assertion outcomes to local node summaries.
-func attachAssertions(nodes []FlowRunNode, result map[string]any) {
-	if result == nil {
-		return
-	}
-	byNode := extractAssertionsByNode(result)
-	for i := range nodes {
-		if assertions, ok := byNode[nodes[i].NodeID]; ok {
-			nodes[i].Assertions = assertions
-		}
-	}
-}
-
-func extractAssertionsByNode(result map[string]any) map[string][]AssertionSummary {
-	executionResults, ok := result["execution_results"].(map[string]any)
-	if !ok {
+// decodeNodeAssertions tolerates absent or malformed legacy assertion data.
+// Invalid lists are omitted as a whole, matching the original report behavior.
+func decodeNodeAssertions(value any) []AssertionSummary {
+	encoded, err := json.Marshal(value)
+	if err != nil {
 		return nil
 	}
-	out := make(map[string][]AssertionSummary, len(executionResults))
-	for nodeID, raw := range executionResults {
-		nodeMap, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		rawAssertions, ok := nodeMap["assertion_results"]
-		if !ok {
-			continue
-		}
-		encoded, err := json.Marshal(rawAssertions)
-		if err != nil {
-			continue
-		}
-		var summaries []AssertionSummary
-		if json.Unmarshal(encoded, &summaries) == nil && len(summaries) > 0 {
-			out[nodeID] = summaries
-		}
+	var summaries []AssertionSummary
+	if json.Unmarshal(encoded, &summaries) != nil || len(summaries) == 0 {
+		return nil
 	}
-	return out
+	return summaries
 }
 
 func aggregateExitCode(results []FlowRunResult) int {
