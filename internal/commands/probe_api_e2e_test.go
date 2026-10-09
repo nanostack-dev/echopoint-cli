@@ -442,10 +442,12 @@ func awaitProbeE2ERun(t *testing.T, cli func(...string) string, probe, run strin
 func awaitProbeE2EPublicHealth(t *testing.T, cli func(...string) string, slug string, messages *api.StatusPageServiceMessages) {
 	t.Helper()
 	deadline := time.Now().Add(165 * time.Second)
+	var last api.PublicStatusView
 	for time.Now().Before(deadline) {
 		result := cli("status-page", "public", slug)
 		var value api.PublicStatusView
 		decodeProbeE2E(t, result, &value)
+		last = value
 		assertProbeE2EPublicPrivacy(t, result)
 		if len(value.Services) != 1 || !reflect.DeepEqual(value.Services[0].Messages, messages) {
 			t.Fatal("published service messages changed before publication or did not round trip")
@@ -456,7 +458,10 @@ func awaitProbeE2EPublicHealth(t *testing.T, cli func(...string) string, slug st
 		}
 		time.Sleep(2 * time.Second)
 	}
-	t.Fatal("scheduled probe evidence did not establish public Operational health within 165 seconds")
+	if len(last.Services) == 1 {
+		t.Fatalf("scheduled probe evidence did not establish public Operational health within 165 seconds: page=%s/%s service=%s/%s", last.Health.State, last.Health.Reason, last.Services[0].Health.State, last.Services[0].Health.Reason)
+	}
+	t.Fatalf("scheduled probe evidence did not establish public Operational health within 165 seconds: page=%s/%s service_count=%d", last.Health.State, last.Health.Reason, len(last.Services))
 }
 
 func awaitProbeE2EPausedPublicHealth(t *testing.T, cli func(...string) string, slug string) {
