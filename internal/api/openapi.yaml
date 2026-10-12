@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 5.0.0
+  version: 8.0.0
 paths:
   /webhooks:
     parameters:
@@ -179,11 +179,11 @@ paths:
         Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
       operationId: updateCloudFleet
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateCloudFleetRequest'
+        required: true
       responses:
         "200":
           description: Persisted settings and current aggregate capacity.
@@ -222,6 +222,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResourceSearchResyncReport'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth: []
+      x-ai-danger: Admin route - requires a privileged session.
+  /administrations/analytics/rebuild:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Administration
+      summary: Rebuild Execution Analytics
+      description: |-
+        Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+        Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+      operationId: rebuildExecutionAnalytics
+      responses:
+        "202":
+          description: Rebuild accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionAnalyticsRebuild'
         "401":
           $ref: '#/components/responses/Unauthorized'
         "403":
@@ -386,7 +411,7 @@ paths:
             type: string
             format: date-time
             examples:
-              - 2023-01-01T00:00:00Z
+              - 2023-01-01 00:00:00+00:00
         - name: to
           in: query
           description: End datetime for analytics data (ISO 8601 format).
@@ -395,7 +420,7 @@ paths:
             type: string
             format: date-time
             examples:
-              - 2023-01-02T00:00:00Z
+              - 2023-01-02 00:00:00+00:00
       responses:
         "200":
           description: Request volumes time series retrieved successfully.
@@ -436,7 +461,7 @@ paths:
             type: string
             format: date-time
             examples:
-              - 2023-01-01T00:00:00Z
+              - 2023-01-01 00:00:00+00:00
         - name: to
           in: query
           description: End datetime for analytics data (ISO 8601 format).
@@ -445,7 +470,7 @@ paths:
             type: string
             format: date-time
             examples:
-              - 2023-01-02T00:00:00Z
+              - 2023-01-02 00:00:00+00:00
       responses:
         "200":
           description: Method distribution retrieved successfully.
@@ -3189,6 +3214,123 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+  /analytics/summary:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Analytics
+      summary: Get Execution Analytics Summary
+      description: |
+        Totals and a time series over the organization's finished runs in the
+        window: runs, failures by error code, run time, and the HTTP calls the
+        runs sent with their failures by class.
+
+        A run counts in the window its completion time falls in, and reaches
+        analytics a few seconds after it finishes. Runs whose runner predates
+        HTTP call recording count in `runs` but not in `measured_runs`, so their
+        calls are missing from the call totals.
+      operationId: getExecutionAnalyticsSummary
+      parameters:
+        - $ref: '#/components/parameters/AnalyticsWindowQuery'
+      responses:
+        "200":
+          description: Execution analytics summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionAnalyticsSummary'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /analytics/flows:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Analytics
+      summary: List Flow Analytics
+      description: |
+        One row per flow that finished a run in the window, most runs first:
+        how often it ran and failed, how long its runs took, and how many HTTP
+        calls they sent. A deleted flow keeps its row with an empty name.
+      operationId: listFlowAnalytics
+      parameters:
+        - $ref: '#/components/parameters/AnalyticsWindowQuery'
+      responses:
+        "200":
+          description: Per-flow analytics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowAnalyticsList'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /analytics/endpoints:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Analytics
+      summary: List Endpoint Analytics
+      description: |
+        The HTTP calls of the window's runs, grouped by method, host and path
+        template, most calls first: how many failed, by status class or
+        transport error, and how long they took. `flow_id` keeps the calls of
+        one flow. At most 100 endpoints are returned; `truncated` says more
+        exist.
+
+        An endpoint is the request's URL template before resolution, so
+        `/users/{{userId}}` stays one endpoint whatever the user id, and no
+        resolved URL, query string or body is kept.
+      operationId: listEndpointAnalytics
+      parameters:
+        - $ref: '#/components/parameters/AnalyticsWindowQuery'
+        - name: flow_id
+          in: query
+          description: Keep only the calls this flow's runs sent.
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Per-endpoint HTTP call analytics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EndpointAnalyticsList'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
   /executions:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4786,14 +4928,14 @@ paths:
 components:
   schemas:
     CloudFleetSettingsSource:
-      type: string
       description: Whether the effective settings come from deployment configuration or a saved platform administrator override.
+      type: string
       enum:
         - deployment_defaults
         - admin_override
     CloudFleetStatus:
-      type: object
       description: Cloud execution safety capacity across every organization in the current deployment.
+      type: object
       required:
         - daily_launch_limit
         - global_cap
@@ -4810,88 +4952,88 @@ components:
         - next_launch_available_at
       properties:
         daily_launch_limit:
+          description: Maximum accepted Cloud launches across the deployment in a rolling 24-hour window. Zero pauses new Cloud launches.
           type: integer
           format: int32
           minimum: 0
-          description: Maximum accepted Cloud launches across the deployment in a rolling 24-hour window. Zero pauses new Cloud launches.
         global_cap:
+          description: Maximum claimed Cloud jobs across the deployment. Accepted jobs wait while this cap is reached.
           type: integer
           format: int32
           minimum: 1
-          description: Maximum claimed Cloud jobs across the deployment. Accepted jobs wait while this cap is reached.
         revision:
+          description: Settings revision for optimistic concurrency. Zero means deployment defaults with no saved override.
           type: integer
           format: int64
           minimum: 0
-          description: Settings revision for optimistic concurrency. Zero means deployment defaults with no saved override.
         settings_source:
           $ref: '#/components/schemas/CloudFleetSettingsSource'
         settings_updated_at:
-          type:
-            - string
-            - "null"
-          format: date-time
           description: Database timestamp of the latest saved override, or null when deployment defaults are in use.
-        launches_last_24h:
-          type: integer
-          format: int64
-          minimum: 0
-          description: Accepted Cloud launch reservations since window_start, including queued and subsequently deleted executions.
-        launches_remaining:
-          type: integer
-          format: int64
-          minimum: 0
-          description: Additional Cloud launches the fleet budget currently permits, clamped to zero when paused or exhausted. Organization license checks also apply.
-        claimed_jobs:
-          type: integer
-          format: int64
-          minimum: 0
-          description: Claimed Cloud jobs across all organizations, including jobs awaiting delivery to a container.
-        queued_jobs:
-          type: integer
-          format: int64
-          minimum: 0
-          description: Accepted Cloud jobs waiting for a dispatch claim across all organizations.
-        paused:
-          type: boolean
-          description: True when daily_launch_limit is zero.
-        window_start:
-          type: string
-          format: date-time
-          description: Start of the rolling 24-hour launch window used for this report.
-        generated_at:
-          type: string
-          format: date-time
-          description: Time the capacity report was generated.
-        next_launch_available_at:
           type:
             - string
             - "null"
           format: date-time
+        launches_last_24h:
+          description: Accepted Cloud launch reservations since window_start, including queued and subsequently deleted executions.
+          type: integer
+          format: int64
+          minimum: 0
+        launches_remaining:
+          description: Additional Cloud launches the fleet budget currently permits, clamped to zero when paused or exhausted. Organization license checks also apply.
+          type: integer
+          format: int64
+          minimum: 0
+        claimed_jobs:
+          description: Claimed Cloud jobs across all organizations, including jobs awaiting delivery to a container.
+          type: integer
+          format: int64
+          minimum: 0
+        queued_jobs:
+          description: Accepted Cloud jobs waiting for a dispatch claim across all organizations.
+          type: integer
+          format: int64
+          minimum: 0
+        paused:
+          description: True when daily_launch_limit is zero.
+          type: boolean
+        window_start:
+          description: Start of the rolling 24-hour launch window used for this report.
+          type: string
+          format: date-time
+        generated_at:
+          description: Time the capacity report was generated.
+          type: string
+          format: date-time
+        next_launch_available_at:
           description: When existing reservations will free a launch slot if the fleet budget is exhausted, assuming no settings changes. Null when paused or a slot is already available.
+          type:
+            - string
+            - "null"
+          format: date-time
     UpdateCloudFleetRequest:
-      type: object
       description: Both replacement fleet limits and the revision being edited.
+      type: object
       required:
         - daily_launch_limit
         - global_cap
         - expected_revision
       properties:
         daily_launch_limit:
+          description: Rolling 24-hour accepted Cloud launch cap. Zero pauses new Cloud launches.
           type: integer
           format: int32
           minimum: 0
-          description: Rolling 24-hour accepted Cloud launch cap. Zero pauses new Cloud launches.
         global_cap:
+          description: Positive fleet-wide cap on claimed Cloud jobs.
           type: integer
           format: int32
           minimum: 1
-          description: Positive fleet-wide cap on claimed Cloud jobs.
         expected_revision:
+          description: Settings revision returned by the last fleet read. A mismatch returns 409 without saving changes.
           type: integer
           format: int64
           minimum: 0
-          description: Settings revision returned by the last fleet read. A mismatch returns 409 without saving changes.
     AssistantChatScope:
       description: |
         Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.
@@ -6523,6 +6665,10 @@ components:
               type: string
               examples:
                 - x-custom-id
+        secret:
+          description: Marks the extracted value as secret. From the moment the node extracts it, the value is replaced by `***` in every execution result, progress event and error, wherever it appears, including module outputs and downstream node inputs and requests that carry it. Downstream nodes still receive the real value. Use it for credentials and tokens; a short or common value masks every occurrence of that text.
+          type: boolean
+          default: false
     CompositeAssertion:
       type: object
       required:
@@ -7632,6 +7778,7 @@ components:
         the matching job token. The raw token is never stored or echoed.
       type: object
       required:
+        - max_http_calls_per_execution
         - job_id
         - execution_id
         - flow_id
@@ -7639,6 +7786,11 @@ components:
         - runner_inputs
         - cloud_duration_seconds
       properties:
+        max_http_calls_per_execution:
+          description: Organization license cap for outbound HTTP calls across the whole execution, including nested bodies, retries and followed redirects. The next call is refused with HTTP_CALL_LIMIT_EXCEEDED.
+          type: integer
+          format: int32
+          minimum: 1
         job_id:
           type: string
           format: uuid
@@ -7666,6 +7818,7 @@ components:
     RunnerJobPayload:
       type: object
       required:
+        - max_http_calls_per_execution
         - job_id
         - execution_id
         - flow_id
@@ -7673,6 +7826,11 @@ components:
         - flow_definition
         - inputs
       properties:
+        max_http_calls_per_execution:
+          description: Organization license cap for outbound HTTP calls across the whole execution, including nested bodies, retries and followed redirects. The next call is refused with HTTP_CALL_LIMIT_EXCEEDED.
+          type: integer
+          format: int32
+          minimum: 1
         job_id:
           description: Claimed runner job identifier.
           type: string
@@ -7706,6 +7864,7 @@ components:
     RunnerJobProgressEventPayload:
       description: |
         Progress payload mirroring the execution SSE event body for the given event type.
+        Node results may include grouped `http_calls` for every outbound call, including nested bodies and retries.
         For a node-completed event, `result.response.assertion_results` is an array of
         AssertionResult (every assertion evaluated, with expected/actual/passed).
       type: object
@@ -8055,7 +8214,11 @@ components:
           description: |
             Complete polymorphic result from flow engine.
             Contains RequestExecutionResult, DelayExecutionResult, or ModuleExecutionResult based on node_type.
-            Includes all data: request/response, extracted outputs, etc. For request nodes,
+            Includes request/response, extracted outputs and optional grouped `http_calls`.
+            Each top-level result holds its own calls plus nested body and retry calls; groups
+            share sending node, method, host and unresolved path template, with parallel
+            offsets_ms, durations_ms, status_codes (0 = no response), response_bytes
+            (absent for SSE), and sparse transport_errors. For request nodes,
             `assertion_results` is an array of AssertionResult recording every assertion
             evaluated (expected/actual/passed), present whether the node passed or failed.
           type:
@@ -8213,6 +8376,7 @@ components:
         - webhooks
         - members
         - active_cloud_jobs
+        - http_calls
         - rules
       properties:
         generated_at:
@@ -8233,8 +8397,83 @@ components:
           $ref: '#/components/schemas/LicenseMemberUsage'
         active_cloud_jobs:
           $ref: '#/components/schemas/LicenseGauge'
+        http_calls:
+          $ref: '#/components/schemas/HTTPCallUsage'
         rules:
           $ref: '#/components/schemas/LicenseRules'
+    HTTPCallUsage:
+      description: |
+        How close the organization's runs came to the per-execution HTTP call
+        limit in the 7 days before `generated_at`. Only runs whose runner
+        records HTTP calls are measured; a run reaches the window once its
+        analytics record is written, a few seconds after it finishes.
+      type: object
+      required:
+        - limit
+        - window_start
+        - measured_runs
+        - runs_near_limit
+        - runs_at_limit
+        - top_flows
+      properties:
+        limit:
+          description: The license `max_http_calls_per_execution`.
+          type: integer
+          format: int64
+          minimum: 1
+        window_start:
+          type: string
+          format: date-time
+        measured_runs:
+          description: Finished runs in the window with a recorded HTTP call count.
+          type: integer
+          format: int64
+          minimum: 0
+        peak:
+          description: The most HTTP calls one run sent in the window. Absent when no run was measured.
+          type: integer
+          format: int32
+          minimum: 0
+        runs_near_limit:
+          description: Runs that sent at least 75% of `limit` calls, those at the limit included.
+          type: integer
+          format: int64
+          minimum: 0
+        runs_at_limit:
+          description: Runs that reached `limit`; the call past it was refused and its node failed.
+          type: integer
+          format: int64
+          minimum: 0
+        top_flows:
+          description: Up to 5 flows ordered by their most HTTP calls in one run.
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowHTTPCallPeak'
+          maxItems: 5
+    FlowHTTPCallPeak:
+      description: One flow's most HTTP calls in a single run within the window.
+      type: object
+      required:
+        - flow_id
+        - flow_name
+        - peak
+        - runs
+      properties:
+        flow_id:
+          type: string
+          format: uuid
+        flow_name:
+          description: The flow's current name; empty when the flow was deleted.
+          type: string
+        peak:
+          type: integer
+          format: int32
+          minimum: 0
+        runs:
+          description: The flow's measured runs in the window.
+          type: integer
+          format: int64
+          minimum: 1
     LicenseGauge:
       description: |
         A count the license caps. A create past `limit` is refused, except
@@ -8344,10 +8583,16 @@ components:
       description: License limits that shape a single run or schedule rather than a count.
       type: object
       required:
+        - max_http_calls_per_execution
         - min_scheduled_run_interval_seconds
         - max_cloud_execution_duration_seconds
         - max_flows_per_scheduled_run
       properties:
+        max_http_calls_per_execution:
+          description: Outbound HTTP calls one execution may send across every node, nested body, retry and followed redirect. The next call is refused and the sending node fails.
+          type: integer
+          format: int64
+          minimum: 1
         min_scheduled_run_interval_seconds:
           description: A schedule that would run more often is rejected on save.
           type: integer
@@ -9761,13 +10006,13 @@ components:
             - API_KEY:
                 value: secret123
                 organization_id: org_123
-                created_at: 2025-11-09T10:00:00Z
-                updated_at: 2025-11-09T10:00:00Z
+                created_at: 2025-11-09 10:00:00+00:00
+                updated_at: 2025-11-09 10:00:00+00:00
               BASE_URL:
                 value: https://api.example.com
                 organization_id: org_123
-                created_at: 2025-11-09T10:05:00Z
-                updated_at: 2025-11-09T10:05:00Z
+                created_at: 2025-11-09 10:05:00+00:00
+                updated_at: 2025-11-09 10:05:00+00:00
         environments:
           $ref: '#/components/schemas/EnvironmentLayers'
           description: Named environment overlays owned by this variable set.
@@ -11285,6 +11530,454 @@ components:
             $ref: '#/components/schemas/StatusPageCheckOption'
           maxItems: 500
       additionalProperties: false
+    AnalyticsWindow:
+      description: |
+        How far back analytics look. `24h` covers the current hour and the 23
+        before it, in hourly buckets; `7d` and `30d` cover the current UTC day
+        and the 6 or 29 before it, in daily buckets.
+      type: string
+      enum:
+        - 24h
+        - 7d
+        - 30d
+      default: 7d
+    AnalyticsBucketSize:
+      description: The width of one time series bucket.
+      type: string
+      enum:
+        - hour
+        - day
+    ExecutionAnalyticsSummary:
+      description: The organization's finished runs in the window and the HTTP calls they sent.
+      type: object
+      required:
+        - window
+        - window_start
+        - window_end
+        - bucket_size
+        - runs
+        - failed_runs
+        - cancelled_runs
+        - run_ms_total
+        - cloud_run_ms_total
+        - measured_runs
+        - http_calls
+        - failed_http_calls
+        - run_failures
+        - call_failures
+        - runners
+        - triggers
+        - series
+      properties:
+        window:
+          $ref: '#/components/schemas/AnalyticsWindow'
+        window_start:
+          description: Inclusive start of the window, on a bucket boundary.
+          type: string
+          format: date-time
+        window_end:
+          description: Exclusive end of the window, the end of the current bucket.
+          type: string
+          format: date-time
+        bucket_size:
+          $ref: '#/components/schemas/AnalyticsBucketSize'
+        runs:
+          description: Runs that finished in the window, whatever their status.
+          type: integer
+          format: int64
+          minimum: 0
+        failed_runs:
+          type: integer
+          format: int64
+          minimum: 0
+        cancelled_runs:
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_total:
+          description: Summed run time, from when an executor started each run to when it finished. Queue wait is excluded.
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_average:
+          description: Mean run time. Absent when no run finished in the window.
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_p95:
+          description: 95th percentile run time. Absent when no run finished in the window.
+          type: integer
+          format: int64
+          minimum: 0
+        cloud_run_ms_total:
+          description: Summed run time of Cloud runs, the time EchoPoint's own runners spent.
+          type: integer
+          format: int64
+          minimum: 0
+        measured_runs:
+          description: Runs with a recorded HTTP call count. The call totals cover these runs only.
+          type: integer
+          format: int64
+          minimum: 0
+        http_calls:
+          type: integer
+          format: int64
+          minimum: 0
+        failed_http_calls:
+          description: Calls that got no response or a status of 400 or more.
+          type: integer
+          format: int64
+          minimum: 0
+        run_failures:
+          description: Failed runs grouped by error code, most frequent first.
+          type: array
+          items:
+            $ref: '#/components/schemas/RunFailureCount'
+        call_failures:
+          $ref: '#/components/schemas/HTTPCallFailureCounts'
+        runners:
+          description: The window's runs per runner type, most runs first.
+          type: array
+          items:
+            $ref: '#/components/schemas/RunnerRunCount'
+        triggers:
+          description: The window's runs per trigger, most runs first. Runs launched before trigger types were recorded have none.
+          type: array
+          items:
+            $ref: '#/components/schemas/TriggerRunCount'
+        series:
+          description: One point per bucket from `window_start` to `window_end`, empty buckets included.
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionAnalyticsPoint'
+    RunnerRunCount:
+      description: The runs one runner type finished in the window.
+      type: object
+      required:
+        - runner_type
+        - runs
+        - failed_runs
+        - run_ms_total
+      properties:
+        runner_type:
+          $ref: '#/components/schemas/RunnerType'
+        runs:
+          type: integer
+          format: int64
+          minimum: 1
+        failed_runs:
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_total:
+          type: integer
+          format: int64
+          minimum: 0
+    TriggerRunCount:
+      description: The runs one trigger launched that finished in the window.
+      type: object
+      required:
+        - runs
+        - failed_runs
+      properties:
+        trigger_type:
+          description: Absent for runs launched before trigger types were recorded.
+          allOf:
+            - $ref: '#/components/schemas/TriggerType'
+        runs:
+          type: integer
+          format: int64
+          minimum: 1
+        failed_runs:
+          type: integer
+          format: int64
+          minimum: 0
+    RunFailureCount:
+      description: How many failed runs reported one error code.
+      type: object
+      required:
+        - runs
+      properties:
+        error_code:
+          description: The run's error code, or that of its first failed step. Absent when neither reported one.
+          type: string
+        runs:
+          type: integer
+          format: int64
+          minimum: 1
+    HTTPCallFailureCounts:
+      description: |
+        Failed HTTP calls by class. A call with a response fails on a status of
+        400 or more; one without a response fails with the transport error the
+        runner classified, or `no_response` when it could not.
+      type: object
+      required:
+        - status_4xx
+        - status_5xx
+        - dns
+        - connect
+        - tls
+        - timeout
+        - no_response
+      properties:
+        status_4xx:
+          type: integer
+          format: int64
+          minimum: 0
+        status_5xx:
+          type: integer
+          format: int64
+          minimum: 0
+        dns:
+          description: The host name did not resolve.
+          type: integer
+          format: int64
+          minimum: 0
+        connect:
+          description: The connection was refused or reset before a response.
+          type: integer
+          format: int64
+          minimum: 0
+        tls:
+          description: The TLS handshake failed.
+          type: integer
+          format: int64
+          minimum: 0
+        timeout:
+          description: The call timed out before a response.
+          type: integer
+          format: int64
+          minimum: 0
+        no_response:
+          description: No response, for a reason the runner did not classify.
+          type: integer
+          format: int64
+          minimum: 0
+    ExecutionAnalyticsPoint:
+      description: The runs that finished in one bucket and the HTTP calls they sent.
+      type: object
+      required:
+        - bucket_start
+        - runs
+        - failed_runs
+        - run_ms_total
+        - http_calls
+        - failed_http_calls
+      properties:
+        bucket_start:
+          type: string
+          format: date-time
+        run_ms_total:
+          description: Summed run time of the bucket's runs.
+          type: integer
+          format: int64
+          minimum: 0
+        runs:
+          type: integer
+          format: int64
+          minimum: 0
+        failed_runs:
+          type: integer
+          format: int64
+          minimum: 0
+        http_calls:
+          type: integer
+          format: int64
+          minimum: 0
+        failed_http_calls:
+          type: integer
+          format: int64
+          minimum: 0
+    FlowAnalyticsList:
+      description: Per-flow analytics over the window.
+      type: object
+      required:
+        - window
+        - window_start
+        - window_end
+        - flows
+      properties:
+        window:
+          $ref: '#/components/schemas/AnalyticsWindow'
+        window_start:
+          type: string
+          format: date-time
+        window_end:
+          type: string
+          format: date-time
+        flows:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowAnalytics'
+    FlowAnalytics:
+      description: One flow's finished runs in the window.
+      type: object
+      required:
+        - flow_id
+        - flow_name
+        - runs
+        - failed_runs
+        - run_ms_total
+        - run_ms_average
+        - run_ms_p95
+        - cloud_run_ms_total
+        - measured_runs
+        - http_calls
+        - failed_http_calls
+        - last_completed_at
+        - last_status
+      properties:
+        flow_id:
+          type: string
+          format: uuid
+        flow_name:
+          description: The flow's current name; empty when the flow was deleted.
+          type: string
+        runs:
+          type: integer
+          format: int64
+          minimum: 1
+        failed_runs:
+          type: integer
+          format: int64
+          minimum: 0
+        top_error_code:
+          description: The error code its failed runs reported most. Absent when none failed with a code.
+          type: string
+        run_ms_total:
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_average:
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_p95:
+          type: integer
+          format: int64
+          minimum: 0
+        cloud_run_ms_total:
+          type: integer
+          format: int64
+          minimum: 0
+        measured_runs:
+          description: Runs with a recorded HTTP call count.
+          type: integer
+          format: int64
+          minimum: 0
+        http_calls:
+          type: integer
+          format: int64
+          minimum: 0
+        failed_http_calls:
+          type: integer
+          format: int64
+          minimum: 0
+        http_call_peak:
+          description: The most HTTP calls one run sent. Absent when no run was measured.
+          type: integer
+          format: int32
+          minimum: 0
+        last_completed_at:
+          type: string
+          format: date-time
+        last_status:
+          $ref: '#/components/schemas/ExecutionStatus'
+    EndpointAnalyticsList:
+      description: Per-endpoint HTTP call analytics over the window.
+      type: object
+      required:
+        - window
+        - window_start
+        - window_end
+        - endpoints
+        - truncated
+      properties:
+        window:
+          $ref: '#/components/schemas/AnalyticsWindow'
+        window_start:
+          type: string
+          format: date-time
+        window_end:
+          type: string
+          format: date-time
+        flow_id:
+          description: The flow the calls were kept for, when the request named one.
+          type: string
+          format: uuid
+        endpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/EndpointAnalytics'
+          maxItems: 100
+        truncated:
+          description: More endpoints had calls in the window than were returned.
+          type: boolean
+    EndpointAnalytics:
+      description: The HTTP calls sent to one method, host and path template.
+      type: object
+      required:
+        - method
+        - host
+        - path_template
+        - flows
+        - calls
+        - failed_calls
+        - failures
+        - duration_ms_average
+        - duration_ms_max
+      properties:
+        method:
+          type: string
+        host:
+          type: string
+        path_template:
+          description: The path of the request's URL template before resolution.
+          type: string
+        flows:
+          description: How many flows sent these calls.
+          type: integer
+          format: int64
+          minimum: 1
+        calls:
+          type: integer
+          format: int64
+          minimum: 1
+        failed_calls:
+          type: integer
+          format: int64
+          minimum: 0
+        failures:
+          $ref: '#/components/schemas/HTTPCallFailureCounts'
+        duration_ms_average:
+          type: integer
+          format: int64
+          minimum: 0
+        duration_ms_max:
+          type: integer
+          format: int64
+          minimum: 0
+        duration_ms_p95_at_most:
+          description: |
+            An upper bound on the 95th percentile duration: the smallest of 100,
+            250, 500, 1000, 2500, 5000 and 10000 ms that 95% of the calls took
+            at most. Absent when more than 5% took longer than 10000 ms.
+          type: integer
+          format: int64
+          minimum: 0
+    ExecutionAnalyticsRebuild:
+      description: An accepted execution analytics rebuild.
+      type: object
+      required:
+        - organization_id
+        - since
+      properties:
+        organization_id:
+          type: string
+        since:
+          description: Executions finished from this time on are recorded again.
+          type: string
+          format: date-time
   responses:
     BadRequest:
       description: The request is well-formed HTTP but the server will not process it. An entity named in the request body or the query string does not resolve, a field failed validation, or a non-credential header is absent or malformed. The `code` field says which.
@@ -11379,6 +12072,13 @@ components:
         default: 0
         minimum: 0
       x-go-type-skip-optional-pointer: true
+    AnalyticsWindowQuery:
+      name: window
+      in: query
+      description: How far back to look. Defaults to 7d.
+      required: false
+      schema:
+        $ref: '#/components/schemas/AnalyticsWindow'
     RequiredOrganizationIDHeader:
       name: X-Organization-ID
       in: header
@@ -11467,7 +12167,7 @@ tags:
   - name: Webhook
     description: Manage webhook endpoints and capture requests.
   - name: Analytics
-    description: Webhook analytics and metrics operations.
+    description: Webhook and execution analytics.
   - name: Flows
     description: Manage Requests flows
   - name: Schedules

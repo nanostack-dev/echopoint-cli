@@ -4,6 +4,7 @@
 Every command follows these rules; `internal/commands` tests enforce most of them.
 
 - Nouns are singular with a permanent plural alias: `flow` (`flows`), `collection` (`collections`), `status-page` (`status-pages`). `spec`, `org`, `profile`, `config` and `auth` have none.
+- `analytics` has no plural alias. Its leaves name the report they read, `summary`, `flows` and `endpoints`, not a resource, so `flows` is allowed there and only there (`TestTheRetiredVerbsAndNounsAreGone`).
 - One read verb: `view`, with `get` and `show` kept as aliases. `list` is for many.
 - A file is always `-f/--file` (`addFileFlag` registers the extensions for completion), and the command's `Args` is `fileFlagArgs(n)`, so a file typed as an argument fails with `pass the file with -f`. Never add a positional file.
 - A flow argument is `<flow-id>` and goes through `resolveFlowID` (`resolve_flow.go`), the one place that turns it into an id. It reads an id and makes no request; anything else fails with `"x" is not a flow id; list the flows with: echopoint flow list`. Do not call `uuid.Parse` on a flow argument. `flow run` keeps its own words for a bad id (`invalid flow id "x": ...`) and the argument as typed in its result, because the Action reads them. `--flow-id` on `node add` and `status-page binding-options` goes through the resolver too.
