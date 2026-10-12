@@ -2840,7 +2840,10 @@ type ExecutionAnalyticsPoint struct {
 	FailedHttpCalls int64     `json:"failed_http_calls"`
 	FailedRuns      int64     `json:"failed_runs"`
 	HttpCalls       int64     `json:"http_calls"`
-	Runs            int64     `json:"runs"`
+
+	// RunMsTotal Summed run time of the bucket's runs.
+	RunMsTotal int64 `json:"run_ms_total"`
+	Runs       int64 `json:"runs"`
 }
 
 // ExecutionAnalyticsRebuild An accepted execution analytics rebuild.
@@ -2885,11 +2888,17 @@ type ExecutionAnalyticsSummary struct {
 	// RunMsTotal Summed run time, from when an executor started each run to when it finished. Queue wait is excluded.
 	RunMsTotal int64 `json:"run_ms_total"`
 
+	// Runners The window's runs per runner type, most runs first.
+	Runners []RunnerRunCount `json:"runners"`
+
 	// Runs Runs that finished in the window, whatever their status.
 	Runs int64 `json:"runs"`
 
 	// Series One point per bucket from `window_start` to `window_end`, empty buckets included.
 	Series []ExecutionAnalyticsPoint `json:"series"`
+
+	// Triggers The window's runs per trigger, most runs first. Runs launched before trigger types were recorded have none.
+	Triggers []TriggerRunCount `json:"triggers"`
 
 	// Window How far back analytics look. `24h` covers the current hour and the 23
 	// before it, in hourly buckets; `7d` and `30d` cover the current UTC day
@@ -3012,7 +3021,6 @@ type Flow struct {
 
 // FlowAnalytics One flow's finished runs in the window.
 type FlowAnalytics struct {
-	CancelledRuns   int64              `json:"cancelled_runs"`
 	CloudRunMsTotal int64              `json:"cloud_run_ms_total"`
 	FailedHttpCalls int64              `json:"failed_http_calls"`
 	FailedRuns      int64              `json:"failed_runs"`
@@ -3032,7 +3040,6 @@ type FlowAnalytics struct {
 	// MeasuredRuns Runs with a recorded HTTP call count.
 	MeasuredRuns int64 `json:"measured_runs"`
 	RunMsAverage int64 `json:"run_ms_average"`
-	RunMsMax     int64 `json:"run_ms_max"`
 	RunMsP95     int64 `json:"run_ms_p95"`
 	RunMsTotal   int64 `json:"run_ms_total"`
 	Runs         int64 `json:"runs"`
@@ -4395,6 +4402,9 @@ type Output struct {
 	//
 	// Examples: userId
 	Name string `json:"name"`
+
+	// Secret Marks the extracted value as secret. From the moment the node extracts it, the value is replaced by `***` in every execution result, progress event and error, wherever it appears, including module outputs and downstream node inputs and requests that carry it. Downstream nodes still receive the real value. Use it for credentials and tokens; a short or common value masks every occurrence of that text.
+	Secret *bool `json:"secret,omitempty"`
 }
 
 // PagedListResponse defines model for PagedListResponse.
@@ -5019,6 +5029,18 @@ type RunnerJobProgressEventType string
 
 // RunnerJobTerminalStatus Terminal status reported by a runner for a claimed job
 type RunnerJobTerminalStatus string
+
+// RunnerRunCount The runs one runner type finished in the window.
+type RunnerRunCount struct {
+	FailedRuns int64 `json:"failed_runs"`
+	RunMsTotal int64 `json:"run_ms_total"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
+	RunnerType RunnerType `json:"runner_type"`
+	Runs       int64      `json:"runs"`
+}
 
 // RunnerType Execution backend used to run a flow.
 // `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
@@ -5668,6 +5690,15 @@ type TriggerMetadata struct {
 	union json.RawMessage
 }
 
+// TriggerRunCount The runs one trigger launched that finished in the window.
+type TriggerRunCount struct {
+	FailedRuns int64 `json:"failed_runs"`
+	Runs       int64 `json:"runs"`
+
+	// TriggerType Absent for runs launched before trigger types were recorded.
+	TriggerType *TriggerType `json:"trigger_type,omitempty"`
+}
+
 // TriggerType How a flow execution was triggered. `manual` is a UI/API launch; `git` is a CI/CD launch
 // (e.g. GitHub Actions) carrying source-control provenance; `scheduled` is an app-owned flow
 // schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
@@ -5868,7 +5899,7 @@ type VariableLayer map[string]Variable
 type VariableSet struct {
 	// Base The base layer, applied before any environment overlay.
 	//
-	// Examples: {"API_KEY":{"created_at":"2025-11-09T10:00:00Z","organization_id":"org_123","updated_at":"2025-11-09T10:00:00Z","value":"secret123"},"BASE_URL":{"created_at":"2025-11-09T10:05:00Z","organization_id":"org_123","updated_at":"2025-11-09T10:05:00Z","value":"https://api.example.com"}}
+	// Examples: {"API_KEY":{"created_at":"2025-11-09 10:00:00+00:00","organization_id":"org_123","updated_at":"2025-11-09 10:00:00+00:00","value":"secret123"},"BASE_URL":{"created_at":"2025-11-09 10:05:00+00:00","organization_id":"org_123","updated_at":"2025-11-09 10:05:00+00:00","value":"https://api.example.com"}}
 	Base VariableLayer `json:"base"`
 
 	// CreatedAt When the variable set was created
@@ -8390,7 +8421,7 @@ type ClientInterface interface {
 
 	// RebuildExecutionAnalytics Rebuild Execution Analytics
 	//
-	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
 	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
 	//
 	// Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
@@ -10192,7 +10223,7 @@ type ClientInterface interface {
 
 // RebuildExecutionAnalytics Rebuild Execution Analytics
 //
-// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
 // Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
 //
 // Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
@@ -21638,7 +21669,7 @@ type ClientWithResponsesInterface interface {
 
 	// RebuildExecutionAnalyticsWithResponse Rebuild Execution Analytics
 	//
-	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
 	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
 	//
 	// Returns a wrapper object for the known response body format(s).
@@ -32409,7 +32440,7 @@ func (r StreamWebhookRequestsResponse) ContentType() string {
 
 // RebuildExecutionAnalyticsWithResponse Rebuild Execution Analytics
 //
-// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
 // Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
 //
 // Returns a wrapper object for the known response body format(s).
