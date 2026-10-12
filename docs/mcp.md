@@ -79,8 +79,10 @@ client at a non-default environment, add them to `args` (e.g.
 ## Tools
 
 Most echopoint operations are exposed — flows, collections, webhooks, requests,
-folders, environments, schedules, executions, generation, plus
-`get_current_api_key` (the authenticating key's org + permissions).
+folders, environments, schedules, executions, generation, execution analytics
+(`get_execution_analytics_summary`, `list_flow_analytics`,
+`list_endpoint_analytics`), plus `get_current_api_key` (the authenticating key's
+org + permissions).
 
 Every operation in the contract declares its intent explicitly: `x-ai-tool`
 (exposed) or `x-ai-danger` with a reason (deliberately excluded). The excluded

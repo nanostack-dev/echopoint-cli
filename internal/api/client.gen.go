@@ -19,6 +19,45 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AnalyticsBucketSize.
+const (
+	Day  AnalyticsBucketSize = "day"
+	Hour AnalyticsBucketSize = "hour"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsBucketSize enum.
+func (e AnalyticsBucketSize) Valid() bool {
+	switch e {
+	case Day:
+		return true
+	case Hour:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsWindow.
+const (
+	AnalyticsWindowN24h AnalyticsWindow = "24h"
+	AnalyticsWindowN30d AnalyticsWindow = "30d"
+	AnalyticsWindowN7d  AnalyticsWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsWindow enum.
+func (e AnalyticsWindow) Valid() bool {
+	switch e {
+	case AnalyticsWindowN24h:
+		return true
+	case AnalyticsWindowN30d:
+		return true
+	case AnalyticsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApiKeyPermissionType.
 const (
 	Ci     ApiKeyPermissionType = "ci"
@@ -291,19 +330,19 @@ func (e ExecutionStatus) Valid() bool {
 
 // Defines values for ExecutionSummaryWindow.
 const (
-	N1h  ExecutionSummaryWindow = "1h"
-	N24h ExecutionSummaryWindow = "24h"
-	N7d  ExecutionSummaryWindow = "7d"
+	ExecutionSummaryWindowN1h  ExecutionSummaryWindow = "1h"
+	ExecutionSummaryWindowN24h ExecutionSummaryWindow = "24h"
+	ExecutionSummaryWindowN7d  ExecutionSummaryWindow = "7d"
 )
 
 // Valid indicates whether the value is a known member of the ExecutionSummaryWindow enum.
 func (e ExecutionSummaryWindow) Valid() bool {
 	switch e {
-	case N1h:
+	case ExecutionSummaryWindowN1h:
 		return true
-	case N24h:
+	case ExecutionSummaryWindowN24h:
 		return true
-	case N7d:
+	case ExecutionSummaryWindowN7d:
 		return true
 	default:
 		return false
@@ -1585,6 +1624,14 @@ type AcceptedInvitationResponse struct {
 	OrganizationName string `json:"organization_name"`
 }
 
+// AnalyticsBucketSize The width of one time series bucket.
+type AnalyticsBucketSize string
+
+// AnalyticsWindow How far back analytics look. `24h` covers the current hour and the 23
+// before it, in hourly buckets; `7d` and `30d` cover the current UTC day
+// and the 6 or 29 before it, in daily buckets.
+type AnalyticsWindow string
+
 // ApiError defines model for ApiError.
 type ApiError struct {
 	// Code A machine-readable error code.
@@ -1999,6 +2046,9 @@ type CloudJobPayload struct {
 	FlowId               openapi_types.UUID `json:"flow_id"`
 	FlowSnapshot         FlowDefinition     `json:"flow_snapshot"`
 	JobId                openapi_types.UUID `json:"job_id"`
+
+	// MaxHttpCallsPerExecution Organization license cap for outbound HTTP calls across the whole execution, including nested bodies, retries and followed redirects. The next call is refused with HTTP_CALL_LIMIT_EXCEEDED.
+	MaxHttpCallsPerExecution int32 `json:"max_http_calls_per_execution"`
 
 	// ReferencedFlows Additional flow snapshots available to module nodes during execution.
 	ReferencedFlows *ReferencedFlows `json:"referenced_flows,omitempty"`
@@ -2596,6 +2646,50 @@ type DelayNodeData struct {
 	Duration int `json:"duration"`
 }
 
+// EndpointAnalytics The HTTP calls sent to one method, host and path template.
+type EndpointAnalytics struct {
+	Calls             int64 `json:"calls"`
+	DurationMsAverage int64 `json:"duration_ms_average"`
+	DurationMsMax     int64 `json:"duration_ms_max"`
+
+	// DurationMsP95AtMost An upper bound on the 95th percentile duration: the smallest of 100,
+	// 250, 500, 1000, 2500, 5000 and 10000 ms that 95% of the calls took
+	// at most. Absent when more than 5% took longer than 10000 ms.
+	DurationMsP95AtMost *int64 `json:"duration_ms_p95_at_most,omitempty"`
+	FailedCalls         int64  `json:"failed_calls"`
+
+	// Failures Failed HTTP calls by class. A call with a response fails on a status of
+	// 400 or more; one without a response fails with the transport error the
+	// runner classified, or `no_response` when it could not.
+	Failures HTTPCallFailureCounts `json:"failures"`
+
+	// Flows How many flows sent these calls.
+	Flows  int64  `json:"flows"`
+	Host   string `json:"host"`
+	Method string `json:"method"`
+
+	// PathTemplate The path of the request's URL template before resolution.
+	PathTemplate string `json:"path_template"`
+}
+
+// EndpointAnalyticsList Per-endpoint HTTP call analytics over the window.
+type EndpointAnalyticsList struct {
+	Endpoints []EndpointAnalytics `json:"endpoints"`
+
+	// FlowId The flow the calls were kept for, when the request named one.
+	FlowId *openapi_types.UUID `json:"flow_id,omitempty"`
+
+	// Truncated More endpoints had calls in the window than were returned.
+	Truncated bool `json:"truncated"`
+
+	// Window How far back analytics look. `24h` covers the current hour and the 23
+	// before it, in hourly buckets; `7d` and `30d` cover the current UTC day
+	// and the 6 or 29 before it, in daily buckets.
+	Window      AnalyticsWindow `json:"window"`
+	WindowEnd   time.Time       `json:"window_end"`
+	WindowStart time.Time       `json:"window_start"`
+}
+
 // Environment One named environment. It exists on its own, so an environment with no variables is a real environment and survives a round trip.
 type Environment struct {
 	// CreatedAt When the environment was created
@@ -2740,6 +2834,75 @@ type ExecutedRequestResponse struct {
 	ResponseStatusCode int `json:"response_status_code"`
 }
 
+// ExecutionAnalyticsPoint The runs that finished in one bucket and the HTTP calls they sent.
+type ExecutionAnalyticsPoint struct {
+	BucketStart     time.Time `json:"bucket_start"`
+	FailedHttpCalls int64     `json:"failed_http_calls"`
+	FailedRuns      int64     `json:"failed_runs"`
+	HttpCalls       int64     `json:"http_calls"`
+	Runs            int64     `json:"runs"`
+}
+
+// ExecutionAnalyticsRebuild An accepted execution analytics rebuild.
+type ExecutionAnalyticsRebuild struct {
+	OrganizationId string `json:"organization_id"`
+
+	// Since Executions finished from this time on are recorded again.
+	Since time.Time `json:"since"`
+}
+
+// ExecutionAnalyticsSummary The organization's finished runs in the window and the HTTP calls they sent.
+type ExecutionAnalyticsSummary struct {
+	// BucketSize The width of one time series bucket.
+	BucketSize AnalyticsBucketSize `json:"bucket_size"`
+
+	// CallFailures Failed HTTP calls by class. A call with a response fails on a status of
+	// 400 or more; one without a response fails with the transport error the
+	// runner classified, or `no_response` when it could not.
+	CallFailures  HTTPCallFailureCounts `json:"call_failures"`
+	CancelledRuns int64                 `json:"cancelled_runs"`
+
+	// CloudRunMsTotal Summed run time of Cloud runs, the time EchoPoint's own runners spent.
+	CloudRunMsTotal int64 `json:"cloud_run_ms_total"`
+
+	// FailedHttpCalls Calls that got no response or a status of 400 or more.
+	FailedHttpCalls int64 `json:"failed_http_calls"`
+	FailedRuns      int64 `json:"failed_runs"`
+	HttpCalls       int64 `json:"http_calls"`
+
+	// MeasuredRuns Runs with a recorded HTTP call count. The call totals cover these runs only.
+	MeasuredRuns int64 `json:"measured_runs"`
+
+	// RunFailures Failed runs grouped by error code, most frequent first.
+	RunFailures []RunFailureCount `json:"run_failures"`
+
+	// RunMsAverage Mean run time. Absent when no run finished in the window.
+	RunMsAverage *int64 `json:"run_ms_average,omitempty"`
+
+	// RunMsP95 95th percentile run time. Absent when no run finished in the window.
+	RunMsP95 *int64 `json:"run_ms_p95,omitempty"`
+
+	// RunMsTotal Summed run time, from when an executor started each run to when it finished. Queue wait is excluded.
+	RunMsTotal int64 `json:"run_ms_total"`
+
+	// Runs Runs that finished in the window, whatever their status.
+	Runs int64 `json:"runs"`
+
+	// Series One point per bucket from `window_start` to `window_end`, empty buckets included.
+	Series []ExecutionAnalyticsPoint `json:"series"`
+
+	// Window How far back analytics look. `24h` covers the current hour and the 23
+	// before it, in hourly buckets; `7d` and `30d` cover the current UTC day
+	// and the 6 or 29 before it, in daily buckets.
+	Window AnalyticsWindow `json:"window"`
+
+	// WindowEnd Exclusive end of the window, the end of the current bucket.
+	WindowEnd time.Time `json:"window_end"`
+
+	// WindowStart Inclusive start of the window, on a bucket boundary.
+	WindowStart time.Time `json:"window_start"`
+}
+
 // ExecutionStatus Status of a flow execution
 type ExecutionStatus string
 
@@ -2845,6 +3008,49 @@ type Flow struct {
 	//
 	// Examples: 1.0
 	Version string `json:"version"`
+}
+
+// FlowAnalytics One flow's finished runs in the window.
+type FlowAnalytics struct {
+	CancelledRuns   int64              `json:"cancelled_runs"`
+	CloudRunMsTotal int64              `json:"cloud_run_ms_total"`
+	FailedHttpCalls int64              `json:"failed_http_calls"`
+	FailedRuns      int64              `json:"failed_runs"`
+	FlowId          openapi_types.UUID `json:"flow_id"`
+
+	// FlowName The flow's current name; empty when the flow was deleted.
+	FlowName string `json:"flow_name"`
+
+	// HttpCallPeak The most HTTP calls one run sent. Absent when no run was measured.
+	HttpCallPeak    *int32    `json:"http_call_peak,omitempty"`
+	HttpCalls       int64     `json:"http_calls"`
+	LastCompletedAt time.Time `json:"last_completed_at"`
+
+	// LastStatus Status of a flow execution
+	LastStatus ExecutionStatus `json:"last_status"`
+
+	// MeasuredRuns Runs with a recorded HTTP call count.
+	MeasuredRuns int64 `json:"measured_runs"`
+	RunMsAverage int64 `json:"run_ms_average"`
+	RunMsMax     int64 `json:"run_ms_max"`
+	RunMsP95     int64 `json:"run_ms_p95"`
+	RunMsTotal   int64 `json:"run_ms_total"`
+	Runs         int64 `json:"runs"`
+
+	// TopErrorCode The error code its failed runs reported most. Absent when none failed with a code.
+	TopErrorCode *string `json:"top_error_code,omitempty"`
+}
+
+// FlowAnalyticsList Per-flow analytics over the window.
+type FlowAnalyticsList struct {
+	Flows []FlowAnalytics `json:"flows"`
+
+	// Window How far back analytics look. `24h` covers the current hour and the 23
+	// before it, in hourly buckets; `7d` and `30d` cover the current UTC day
+	// and the 6 or 29 before it, in daily buckets.
+	Window      AnalyticsWindow `json:"window"`
+	WindowEnd   time.Time       `json:"window_end"`
+	WindowStart time.Time       `json:"window_start"`
 }
 
 // FlowDefinition defines model for FlowDefinition.
@@ -3079,6 +3285,18 @@ type FlowFolderListResponse struct {
 
 	// Total Total number of matching items.
 	Total int64 `json:"total"`
+}
+
+// FlowHTTPCallPeak One flow's most HTTP calls in a single run within the window.
+type FlowHTTPCallPeak struct {
+	FlowId openapi_types.UUID `json:"flow_id"`
+
+	// FlowName The flow's current name; empty when the flow was deleted.
+	FlowName string `json:"flow_name"`
+	Peak     int32  `json:"peak"`
+
+	// Runs The flow's measured runs in the window.
+	Runs int64 `json:"runs"`
 }
 
 // FlowListResponse defines model for FlowListResponse.
@@ -3351,6 +3569,53 @@ type GitTriggerMetadata struct {
 	Workflow *string `json:"workflow,omitempty"`
 }
 
+// HTTPCallFailureCounts Failed HTTP calls by class. A call with a response fails on a status of
+// 400 or more; one without a response fails with the transport error the
+// runner classified, or `no_response` when it could not.
+type HTTPCallFailureCounts struct {
+	// Connect The connection was refused or reset before a response.
+	Connect int64 `json:"connect"`
+
+	// Dns The host name did not resolve.
+	Dns int64 `json:"dns"`
+
+	// NoResponse No response, for a reason the runner did not classify.
+	NoResponse int64 `json:"no_response"`
+	Status4xx  int64 `json:"status_4xx"`
+	Status5xx  int64 `json:"status_5xx"`
+
+	// Timeout The call timed out before a response.
+	Timeout int64 `json:"timeout"`
+
+	// Tls The TLS handshake failed.
+	Tls int64 `json:"tls"`
+}
+
+// HTTPCallUsage How close the organization's runs came to the per-execution HTTP call
+// limit in the 7 days before `generated_at`. Only runs whose runner
+// records HTTP calls are measured; a run reaches the window once its
+// analytics record is written, a few seconds after it finishes.
+type HTTPCallUsage struct {
+	// Limit The license `max_http_calls_per_execution`.
+	Limit int64 `json:"limit"`
+
+	// MeasuredRuns Finished runs in the window with a recorded HTTP call count.
+	MeasuredRuns int64 `json:"measured_runs"`
+
+	// Peak The most HTTP calls one run sent in the window. Absent when no run was measured.
+	Peak *int32 `json:"peak,omitempty"`
+
+	// RunsAtLimit Runs that reached `limit`; the call past it was refused and its node failed.
+	RunsAtLimit int64 `json:"runs_at_limit"`
+
+	// RunsNearLimit Runs that sent at least 75% of `limit` calls, those at the limit included.
+	RunsNearLimit int64 `json:"runs_near_limit"`
+
+	// TopFlows Up to 5 flows ordered by their most HTTP calls in one run.
+	TopFlows    []FlowHTTPCallPeak `json:"top_flows"`
+	WindowStart time.Time          `json:"window_start"`
+}
+
 // HeaderExtractorConfig defines model for HeaderExtractorConfig.
 type HeaderExtractorConfig struct {
 	// DefaultValue Default value if header not found
@@ -3460,6 +3725,9 @@ type LicenseRules struct {
 	// MaxFlowsPerScheduledRun A tag suite matching more flows runs the first ones only.
 	MaxFlowsPerScheduledRun int64 `json:"max_flows_per_scheduled_run"`
 
+	// MaxHttpCallsPerExecution Outbound HTTP calls one execution may send across every node, nested body, retry and followed redirect. The next call is refused and the sending node fails.
+	MaxHttpCallsPerExecution int64 `json:"max_http_calls_per_execution"`
+
 	// MinScheduledRunIntervalSeconds A schedule that would run more often is rejected on save.
 	MinScheduledRunIntervalSeconds int64 `json:"min_scheduled_run_interval_seconds"`
 }
@@ -3486,6 +3754,12 @@ type LicenseUsage struct {
 
 	// GeneratedAt The instant every window in this response ends at.
 	GeneratedAt time.Time `json:"generated_at"`
+
+	// HttpCalls How close the organization's runs came to the per-execution HTTP call
+	// limit in the 7 days before `generated_at`. Only runs whose runner
+	// records HTTP calls are measured; a run reaches the window once its
+	// analytics record is written, a few seconds after it finishes.
+	HttpCalls HTTPCallUsage `json:"http_calls"`
 
 	// Members Seats in use. An invitation is refused when `members` plus
 	// `pending_invitations` would pass `limit`.
@@ -3780,7 +4054,11 @@ type NodeExecutionResult struct {
 
 	// Result Complete polymorphic result from flow engine.
 	// Contains RequestExecutionResult, DelayExecutionResult, or ModuleExecutionResult based on node_type.
-	// Includes all data: request/response, extracted outputs, etc. For request nodes,
+	// Includes request/response, extracted outputs and optional grouped `http_calls`.
+	// Each top-level result holds its own calls plus nested body and retry calls; groups
+	// share sending node, method, host and unresolved path template, with parallel
+	// offsets_ms, durations_ms, status_codes (0 = no response), response_bytes
+	// (absent for SSE), and sparse transport_errors. For request nodes,
 	// `assertion_results` is an array of AssertionResult recording every assertion
 	// evaluated (expected/actual/passed), present whether the node passed or failed.
 	Result *map[string]interface{} `json:"result,omitempty"`
@@ -4562,6 +4840,13 @@ type RollingExecutionUsage struct {
 	WindowStart time.Time `json:"window_start"`
 }
 
+// RunFailureCount How many failed runs reported one error code.
+type RunFailureCount struct {
+	// ErrorCode The run's error code, or that of its first failed step. Absent when neither reported one.
+	ErrorCode *string `json:"error_code,omitempty"`
+	Runs      int64   `json:"runs"`
+}
+
 // RunOpenAPISyncNowRequest defines model for RunOpenAPISyncNowRequest.
 type RunOpenAPISyncNowRequest struct {
 	// ForceReset Reapply the current upstream OpenAPI import shape to the collection, overwriting previously skipped user-modified requests and ignoring prior sync hash shortcuts.
@@ -4696,6 +4981,9 @@ type RunnerJobPayload struct {
 	// LeaseExpiresAt Time when the current claim lease expires unless renewed.
 	LeaseExpiresAt time.Time `json:"lease_expires_at"`
 
+	// MaxHttpCallsPerExecution Organization license cap for outbound HTTP calls across the whole execution, including nested bodies, retries and followed redirects. The next call is refused with HTTP_CALL_LIMIT_EXCEEDED.
+	MaxHttpCallsPerExecution int32 `json:"max_http_calls_per_execution"`
+
 	// ReferencedFlows Additional flow snapshots available to module nodes during execution.
 	ReferencedFlows *ReferencedFlows `json:"referenced_flows,omitempty"`
 
@@ -4708,6 +4996,7 @@ type RunnerJobPayload struct {
 // RunnerJobProgressEvent defines model for RunnerJobProgressEvent.
 type RunnerJobProgressEvent struct {
 	// Payload Progress payload mirroring the execution SSE event body for the given event type.
+	// Node results may include grouped `http_calls` for every outbound call, including nested bodies and retries.
 	// For a node-completed event, `result.response.assertion_results` is an array of
 	// AssertionResult (every assertion evaluated, with expected/actual/passed).
 	Payload RunnerJobProgressEventPayload `json:"payload"`
@@ -4720,6 +5009,7 @@ type RunnerJobProgressEvent struct {
 }
 
 // RunnerJobProgressEventPayload Progress payload mirroring the execution SSE event body for the given event type.
+// Node results may include grouped `http_calls` for every outbound call, including nested bodies and retries.
 // For a node-completed event, `result.response.assertion_results` is an array of
 // AssertionResult (every assertion evaluated, with expected/actual/passed).
 type RunnerJobProgressEventPayload map[string]interface{}
@@ -5890,6 +6180,11 @@ type XMLPathExtractorConfig struct {
 	Path string `json:"path"`
 }
 
+// AnalyticsWindowQuery How far back analytics look. `24h` covers the current hour and the 23
+// before it, in hourly buckets; `7d` and `30d` cover the current UTC day
+// and the 6 or 29 before it, in daily buckets.
+type AnalyticsWindowQuery = AnalyticsWindow
+
 // ApiKeyIdParameter Examples: organization_apikey_abc123def456
 type ApiKeyIdParameter = string
 
@@ -5944,6 +6239,12 @@ type TooManyRequests = ApiErrorResponse
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ApiErrorResponse
 
+// RebuildExecutionAnalyticsParams defines parameters for RebuildExecutionAnalytics.
+type RebuildExecutionAnalyticsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // RunFlowScheduleNowParams defines parameters for RunFlowScheduleNow.
 type RunFlowScheduleNowParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -5952,6 +6253,36 @@ type RunFlowScheduleNowParams struct {
 
 // ResyncResourceSearchParams defines parameters for ResyncResourceSearch.
 type ResyncResourceSearchParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListEndpointAnalyticsParams defines parameters for ListEndpointAnalytics.
+type ListEndpointAnalyticsParams struct {
+	// Window How far back to look. Defaults to 7d.
+	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
+
+	// FlowId Keep only the calls this flow's runs sent.
+	FlowId *openapi_types.UUID `form:"flow_id,omitempty" json:"flow_id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListFlowAnalyticsParams defines parameters for ListFlowAnalytics.
+type ListFlowAnalyticsParams struct {
+	// Window How far back to look. Defaults to 7d.
+	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetExecutionAnalyticsSummaryParams defines parameters for GetExecutionAnalyticsSummary.
+type GetExecutionAnalyticsSummaryParams struct {
+	// Window How far back to look. Defaults to 7d.
+	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8057,6 +8388,14 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
+	// RebuildExecutionAnalytics Rebuild Execution Analytics
+	//
+	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+	//
+	// Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
+	RebuildExecutionAnalytics(ctx context.Context, params *RebuildExecutionAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetCloudFleet Get Cloud Fleet Capacity
 	//
 	// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
@@ -8105,6 +8444,44 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /administrations/resource-search/resync (the `ResyncResourceSearch` operationId).
 	ResyncResourceSearch(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListEndpointAnalytics List Endpoint Analytics
+	//
+	// The HTTP calls of the window's runs, grouped by method, host and path
+	// template, most calls first: how many failed, by status class or
+	// transport error, and how long they took. `flow_id` keeps the calls of
+	// one flow. At most 100 endpoints are returned; `truncated` says more
+	// exist.
+	//
+	// An endpoint is the request's URL template before resolution, so
+	// `/users/{{userId}}` stays one endpoint whatever the user id, and no
+	// resolved URL, query string or body is kept.
+	//
+	// Corresponds with GET /analytics/endpoints (the `ListEndpointAnalytics` operationId).
+	ListEndpointAnalytics(ctx context.Context, params *ListEndpointAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListFlowAnalytics List Flow Analytics
+	//
+	// One row per flow that finished a run in the window, most runs first:
+	// how often it ran and failed, how long its runs took, and how many HTTP
+	// calls they sent. A deleted flow keeps its row with an empty name.
+	//
+	// Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
+	ListFlowAnalytics(ctx context.Context, params *ListFlowAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetExecutionAnalyticsSummary Get Execution Analytics Summary
+	//
+	// Totals and a time series over the organization's finished runs in the
+	// window: runs, failures by error code, run time, and the HTTP calls the
+	// runs sent with their failures by class.
+	//
+	// A run counts in the window its completion time falls in, and reaches
+	// analytics a few seconds after it finishes. Runs whose runner predates
+	// HTTP call recording count in `runs` but not in `measured_runs`, so their
+	// calls are missing from the call totals.
+	//
+	// Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
+	GetExecutionAnalyticsSummary(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListAPIKeys List API Keys
 	//
@@ -9813,6 +10190,24 @@ type ClientInterface interface {
 	StreamWebhookRequests(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
+// RebuildExecutionAnalytics Rebuild Execution Analytics
+//
+// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+//
+// Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
+func (c *Client) RebuildExecutionAnalytics(ctx context.Context, params *RebuildExecutionAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRebuildExecutionAnalyticsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetCloudFleet Get Cloud Fleet Capacity
 //
 // Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
@@ -9902,6 +10297,74 @@ func (c *Client) RunFlowScheduleNow(ctx context.Context, scheduleId openapi_type
 // Corresponds with POST /administrations/resource-search/resync (the `ResyncResourceSearch` operationId).
 func (c *Client) ResyncResourceSearch(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewResyncResourceSearchRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListEndpointAnalytics List Endpoint Analytics
+//
+// The HTTP calls of the window's runs, grouped by method, host and path
+// template, most calls first: how many failed, by status class or
+// transport error, and how long they took. `flow_id` keeps the calls of
+// one flow. At most 100 endpoints are returned; `truncated` says more
+// exist.
+//
+// An endpoint is the request's URL template before resolution, so
+// `/users/{{userId}}` stays one endpoint whatever the user id, and no
+// resolved URL, query string or body is kept.
+//
+// Corresponds with GET /analytics/endpoints (the `ListEndpointAnalytics` operationId).
+func (c *Client) ListEndpointAnalytics(ctx context.Context, params *ListEndpointAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListEndpointAnalyticsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListFlowAnalytics List Flow Analytics
+//
+// One row per flow that finished a run in the window, most runs first:
+// how often it ran and failed, how long its runs took, and how many HTTP
+// calls they sent. A deleted flow keeps its row with an empty name.
+//
+// Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
+func (c *Client) ListFlowAnalytics(ctx context.Context, params *ListFlowAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlowAnalyticsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetExecutionAnalyticsSummary Get Execution Analytics Summary
+//
+// Totals and a time series over the organization's finished runs in the
+// window: runs, failures by error code, run time, and the HTTP calls the
+// runs sent with their failures by class.
+//
+// A run counts in the window its completion time falls in, and reaches
+// analytics a few seconds after it finishes. Runs whose runner predates
+// HTTP call recording count in `runs` but not in `measured_runs`, so their
+// calls are missing from the call totals.
+//
+// Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
+func (c *Client) GetExecutionAnalyticsSummary(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetExecutionAnalyticsSummaryRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -13418,6 +13881,46 @@ func (c *Client) StreamWebhookRequests(ctx context.Context, id WebhookIdParamete
 	return c.Client.Do(req)
 }
 
+// NewRebuildExecutionAnalyticsRequest constructs an http.Request for the RebuildExecutionAnalytics method
+func NewRebuildExecutionAnalyticsRequest(server string, params *RebuildExecutionAnalyticsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/administrations/analytics/rebuild")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetCloudFleetRequest constructs an http.Request for the GetCloudFleet method
 func NewGetCloudFleetRequest(server string) (*http.Request, error) {
 	var err error
@@ -13552,6 +14055,219 @@ func NewResyncResourceSearchRequest(server string, params *ResyncResourceSearchP
 	}
 
 	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListEndpointAnalyticsRequest constructs an http.Request for the ListEndpointAnalytics method
+func NewListEndpointAnalyticsRequest(server string, params *ListEndpointAnalyticsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/analytics/endpoints")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.FlowId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_id", *params.FlowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListFlowAnalyticsRequest constructs an http.Request for the ListFlowAnalytics method
+func NewListFlowAnalyticsRequest(server string, params *ListFlowAnalyticsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/analytics/flows")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetExecutionAnalyticsSummaryRequest constructs an http.Request for the GetExecutionAnalyticsSummary method
+func NewGetExecutionAnalyticsSummaryRequest(server string, params *GetExecutionAnalyticsSummaryParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/analytics/summary")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -20920,6 +21636,16 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// RebuildExecutionAnalyticsWithResponse Rebuild Execution Analytics
+	//
+	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
+	RebuildExecutionAnalyticsWithResponse(ctx context.Context, params *RebuildExecutionAnalyticsParams, reqEditors ...RequestEditorFn) (*RebuildExecutionAnalyticsResponse, error)
+
 	// GetCloudFleetWithResponse Get Cloud Fleet Capacity
 	//
 	// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
@@ -20974,6 +21700,50 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /administrations/resource-search/resync (the `ResyncResourceSearch` operationId).
 	ResyncResourceSearchWithResponse(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*ResyncResourceSearchResponse, error)
+
+	// ListEndpointAnalyticsWithResponse List Endpoint Analytics
+	//
+	// The HTTP calls of the window's runs, grouped by method, host and path
+	// template, most calls first: how many failed, by status class or
+	// transport error, and how long they took. `flow_id` keeps the calls of
+	// one flow. At most 100 endpoints are returned; `truncated` says more
+	// exist.
+	//
+	// An endpoint is the request's URL template before resolution, so
+	// `/users/{{userId}}` stays one endpoint whatever the user id, and no
+	// resolved URL, query string or body is kept.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /analytics/endpoints (the `ListEndpointAnalytics` operationId).
+	ListEndpointAnalyticsWithResponse(ctx context.Context, params *ListEndpointAnalyticsParams, reqEditors ...RequestEditorFn) (*ListEndpointAnalyticsResponse, error)
+
+	// ListFlowAnalyticsWithResponse List Flow Analytics
+	//
+	// One row per flow that finished a run in the window, most runs first:
+	// how often it ran and failed, how long its runs took, and how many HTTP
+	// calls they sent. A deleted flow keeps its row with an empty name.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
+	ListFlowAnalyticsWithResponse(ctx context.Context, params *ListFlowAnalyticsParams, reqEditors ...RequestEditorFn) (*ListFlowAnalyticsResponse, error)
+
+	// GetExecutionAnalyticsSummaryWithResponse Get Execution Analytics Summary
+	//
+	// Totals and a time series over the organization's finished runs in the
+	// window: runs, failures by error code, run time, and the HTTP calls the
+	// runs sent with their failures by class.
+	//
+	// A run counts in the window its completion time falls in, and reaches
+	// analytics a few seconds after it finishes. Runs whose runner predates
+	// HTTP call recording count in `runs` but not in `measured_runs`, so their
+	// calls are missing from the call totals.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
+	GetExecutionAnalyticsSummaryWithResponse(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*GetExecutionAnalyticsSummaryResponse, error)
 
 	// ListAPIKeysWithResponse List API Keys
 	//
@@ -22844,6 +23614,61 @@ type ClientWithResponsesInterface interface {
 	StreamWebhookRequestsWithResponse(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*StreamWebhookRequestsResponse, error)
 }
 
+type RebuildExecutionAnalyticsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ExecutionAnalyticsRebuild
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r RebuildExecutionAnalyticsResponse) GetJSON202() *ExecutionAnalyticsRebuild {
+	return r.JSON202
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RebuildExecutionAnalyticsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RebuildExecutionAnalyticsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r RebuildExecutionAnalyticsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RebuildExecutionAnalyticsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RebuildExecutionAnalyticsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RebuildExecutionAnalyticsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetCloudFleetResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -23093,6 +23918,192 @@ func (r ResyncResourceSearchResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ResyncResourceSearchResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListEndpointAnalyticsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *EndpointAnalyticsList
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListEndpointAnalyticsResponse) GetJSON200() *EndpointAnalyticsList {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListEndpointAnalyticsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListEndpointAnalyticsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListEndpointAnalyticsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListEndpointAnalyticsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListEndpointAnalyticsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListEndpointAnalyticsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListEndpointAnalyticsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListFlowAnalyticsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FlowAnalyticsList
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListFlowAnalyticsResponse) GetJSON200() *FlowAnalyticsList {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListFlowAnalyticsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListFlowAnalyticsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListFlowAnalyticsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListFlowAnalyticsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFlowAnalyticsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFlowAnalyticsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListFlowAnalyticsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetExecutionAnalyticsSummaryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ExecutionAnalyticsSummary
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetExecutionAnalyticsSummaryResponse) GetJSON200() *ExecutionAnalyticsSummary {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetExecutionAnalyticsSummaryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetExecutionAnalyticsSummaryResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetExecutionAnalyticsSummaryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r GetExecutionAnalyticsSummaryResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetExecutionAnalyticsSummaryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetExecutionAnalyticsSummaryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetExecutionAnalyticsSummaryResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -31396,6 +32407,22 @@ func (r StreamWebhookRequestsResponse) ContentType() string {
 	return ""
 }
 
+// RebuildExecutionAnalyticsWithResponse Rebuild Execution Analytics
+//
+// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 28 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
+// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
+func (c *ClientWithResponses) RebuildExecutionAnalyticsWithResponse(ctx context.Context, params *RebuildExecutionAnalyticsParams, reqEditors ...RequestEditorFn) (*RebuildExecutionAnalyticsResponse, error) {
+	rsp, err := c.RebuildExecutionAnalytics(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRebuildExecutionAnalyticsResponse(rsp)
+}
+
 // GetCloudFleetWithResponse Get Cloud Fleet Capacity
 //
 // Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
@@ -31479,6 +32506,68 @@ func (c *ClientWithResponses) ResyncResourceSearchWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseResyncResourceSearchResponse(rsp)
+}
+
+// ListEndpointAnalyticsWithResponse List Endpoint Analytics
+//
+// The HTTP calls of the window's runs, grouped by method, host and path
+// template, most calls first: how many failed, by status class or
+// transport error, and how long they took. `flow_id` keeps the calls of
+// one flow. At most 100 endpoints are returned; `truncated` says more
+// exist.
+//
+// An endpoint is the request's URL template before resolution, so
+// `/users/{{userId}}` stays one endpoint whatever the user id, and no
+// resolved URL, query string or body is kept.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /analytics/endpoints (the `ListEndpointAnalytics` operationId).
+func (c *ClientWithResponses) ListEndpointAnalyticsWithResponse(ctx context.Context, params *ListEndpointAnalyticsParams, reqEditors ...RequestEditorFn) (*ListEndpointAnalyticsResponse, error) {
+	rsp, err := c.ListEndpointAnalytics(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListEndpointAnalyticsResponse(rsp)
+}
+
+// ListFlowAnalyticsWithResponse List Flow Analytics
+//
+// One row per flow that finished a run in the window, most runs first:
+// how often it ran and failed, how long its runs took, and how many HTTP
+// calls they sent. A deleted flow keeps its row with an empty name.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
+func (c *ClientWithResponses) ListFlowAnalyticsWithResponse(ctx context.Context, params *ListFlowAnalyticsParams, reqEditors ...RequestEditorFn) (*ListFlowAnalyticsResponse, error) {
+	rsp, err := c.ListFlowAnalytics(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFlowAnalyticsResponse(rsp)
+}
+
+// GetExecutionAnalyticsSummaryWithResponse Get Execution Analytics Summary
+//
+// Totals and a time series over the organization's finished runs in the
+// window: runs, failures by error code, run time, and the HTTP calls the
+// runs sent with their failures by class.
+//
+// A run counts in the window its completion time falls in, and reaches
+// analytics a few seconds after it finishes. Runs whose runner predates
+// HTTP call recording count in `runs` but not in `measured_runs`, so their
+// calls are missing from the call totals.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
+func (c *ClientWithResponses) GetExecutionAnalyticsSummaryWithResponse(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*GetExecutionAnalyticsSummaryResponse, error) {
+	rsp, err := c.GetExecutionAnalyticsSummary(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetExecutionAnalyticsSummaryResponse(rsp)
 }
 
 // ListAPIKeysWithResponse List API Keys
@@ -34429,6 +35518,46 @@ func (c *ClientWithResponses) StreamWebhookRequestsWithResponse(ctx context.Cont
 	return ParseStreamWebhookRequestsResponse(rsp)
 }
 
+// ParseRebuildExecutionAnalyticsResponse parses an HTTP response from a RebuildExecutionAnalyticsWithResponse call
+func ParseRebuildExecutionAnalyticsResponse(rsp *http.Response) (*RebuildExecutionAnalyticsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RebuildExecutionAnalyticsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest ExecutionAnalyticsRebuild
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetCloudFleetResponse parses an HTTP response from a GetCloudFleetWithResponse call
 func ParseGetCloudFleetResponse(rsp *http.Response) (*GetCloudFleetResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -34607,6 +35736,147 @@ func ParseResyncResourceSearchResponse(rsp *http.Response) (*ResyncResourceSearc
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListEndpointAnalyticsResponse parses an HTTP response from a ListEndpointAnalyticsWithResponse call
+func ParseListEndpointAnalyticsResponse(rsp *http.Response) (*ListEndpointAnalyticsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListEndpointAnalyticsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EndpointAnalyticsList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListFlowAnalyticsResponse parses an HTTP response from a ListFlowAnalyticsWithResponse call
+func ParseListFlowAnalyticsResponse(rsp *http.Response) (*ListFlowAnalyticsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFlowAnalyticsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowAnalyticsList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetExecutionAnalyticsSummaryResponse parses an HTTP response from a GetExecutionAnalyticsSummaryWithResponse call
+func ParseGetExecutionAnalyticsSummaryResponse(rsp *http.Response) (*GetExecutionAnalyticsSummaryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetExecutionAnalyticsSummaryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExecutionAnalyticsSummary
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized

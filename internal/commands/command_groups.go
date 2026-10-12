@@ -18,6 +18,7 @@ const (
 )
 
 var rootCommandGroups = map[string]string{
+	analyticsCommandName:  resourcesGroupID,
 	flowCommandName:       resourcesGroupID,
 	specCommandName:       resourcesGroupID,
 	collectionCommandName: resourcesGroupID,

@@ -75,6 +75,7 @@ latest release.
 - Organize flows into folders, and bulk-move them by id, search, or tag
 - Keep [OpenAPI specs](docs/specs.md) in EchoPoint: create, push, pull, check, lint, diff, and edit them by slug
 - Configure and publish [public status pages](docs/status-pages.md), including anonymous verification
+- Read [execution analytics](docs/technical/analytics.md): runs, failures, run time and HTTP calls per organization, flow and endpoint
 - Manage collections with OpenAPI import support
 - Variables for an organization, its environments, and each flow
 - Flow reuse via module nodes (run a flow inside another flow)
@@ -211,7 +212,7 @@ Nouns are singular and the plural stays as an alias: `flow` (`flows`), `collecti
 
 | Group | Commands |
 |-------|----------|
-| Resources | `flow`, `spec`, `collection`, `status-page`, `org` |
+| Resources | `analytics`, `flow`, `spec`, `collection`, `status-page`, `org` |
 | Account and setup | `auth`, `profile`, `config` |
 | Tools | `mcp`, `completion`, `update`, `version` |
 
@@ -481,6 +482,16 @@ echopoint status-page unpublish --expected-intent-version 1
 
 See [docs/status-pages.md](docs/status-pages.md).
 
+### Execution Analytics
+
+```bash
+echopoint analytics summary                    # --window 24h, 7d (default) or 30d
+echopoint analytics flows --window 30d
+echopoint analytics endpoints --flow-id <flow-id> -o json
+```
+
+See [docs/technical/analytics.md](docs/technical/analytics.md).
+
 ### Configuration
 
 ```bash
@@ -571,6 +582,7 @@ See the [docs/](./docs/) directory for detailed documentation:
 - [Flow Management](./docs/flows.md) - Comprehensive guide to managing and running flows
 - [Running flows in CI](./docs/github-action.md) - `flow run` and the GitHub Action
 - [OpenAPI specs](./docs/specs.md) - Keep OpenAPI specs in EchoPoint: create, push, pull, check, lint, diff, and edit them by slug
+- [Execution analytics](./docs/technical/analytics.md) - Runs, failures, run time and HTTP calls of the organization's finished runs
 
 ## License
 
