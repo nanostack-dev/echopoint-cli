@@ -384,6 +384,7 @@ func newFlowNodeOutputCmd(state *AppState) *cobra.Command {
 // newFlowNodeOutputAddCmd adds an output to a node
 func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 	var name, extractorType, path, headerName string
+	var secret bool
 
 	cmd := &cobra.Command{
 		Use:   addToNodeUse,
@@ -400,7 +401,10 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
   echopoint flow node output add <flow-id> <node-id> --name "response" --extractor body
 
   # Add a header extractor
-  echopoint flow node output add <flow-id> <node-id> --name "contentType" --extractor header --header-name "Content-Type"`,
+  echopoint flow node output add <flow-id> <node-id> --name "contentType" --extractor header --header-name "Content-Type"
+
+  # Add a secret output: its value is replaced by *** in every result and event after extraction
+  echopoint flow node output add <flow-id> <node-id> --name "jwt" --extractor json_path --path "$.jwt" --secret`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -427,6 +431,8 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
+			newOutput := buildNodeOutput(name, extractorType, path, headerName, secret)
+
 			// Find node and add output
 			found := false
 			for i, node := range definition.Nodes {
@@ -434,61 +440,13 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 				switch n := nodeData.(type) {
 				case api.RequestFlowNode:
 					if n.Id == nodeID {
-						newOutput := api.Output{
-							Name: name,
-							Extractor: struct {
-								HeaderName *string           `json:"header_name,omitempty"`
-								Path       *string           `json:"path,omitempty"`
-								Type       api.ExtractorType `json:"type"`
-							}{
-								Type: api.ExtractorType(extractorType),
-							},
-						}
-
-						if path != "" {
-							newOutput.Extractor.Path = &path
-						}
-						if headerName != "" {
-							newOutput.Extractor.HeaderName = &headerName
-						}
-
-						if n.Outputs == nil {
-							outputs := []api.Output{newOutput}
-							n.Outputs = &outputs
-						} else {
-							*n.Outputs = append(*n.Outputs, newOutput)
-						}
-
+						n.Outputs = appendNodeOutput(n.Outputs, newOutput)
 						definition.Nodes[i].FromRequestFlowNode(n)
 						found = true
 					}
 				case api.DelayFlowNode:
 					if n.Id == nodeID {
-						newOutput := api.Output{
-							Name: name,
-							Extractor: struct {
-								HeaderName *string           `json:"header_name,omitempty"`
-								Path       *string           `json:"path,omitempty"`
-								Type       api.ExtractorType `json:"type"`
-							}{
-								Type: api.ExtractorType(extractorType),
-							},
-						}
-
-						if path != "" {
-							newOutput.Extractor.Path = &path
-						}
-						if headerName != "" {
-							newOutput.Extractor.HeaderName = &headerName
-						}
-
-						if n.Outputs == nil {
-							outputs := []api.Output{newOutput}
-							n.Outputs = &outputs
-						} else {
-							*n.Outputs = append(*n.Outputs, newOutput)
-						}
-
+						n.Outputs = appendNodeOutput(n.Outputs, newOutput)
 						definition.Nodes[i].FromDelayFlowNode(n)
 						found = true
 					}
@@ -514,11 +472,36 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 	cmd.Flags().StringVar(&extractorType, "extractor", "", "Extractor type (json_path, status_code, body, header)")
 	cmd.Flags().StringVar(&path, "path", "", "Path for json_path extractor")
 	cmd.Flags().StringVar(&headerName, "header-name", "", "Header name for header extractor")
+	cmd.Flags().BoolVar(&secret, "secret", false,
+		"Redact the extracted value (***) in every execution result and event after extraction")
 
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("extractor")
 
 	return cmd
+}
+
+func buildNodeOutput(name, extractorType, path, headerName string, secret bool) api.Output {
+	output := api.Output{Name: name}
+	output.Extractor.Type = api.ExtractorType(extractorType)
+	if path != "" {
+		output.Extractor.Path = &path
+	}
+	if headerName != "" {
+		output.Extractor.HeaderName = &headerName
+	}
+	if secret {
+		output.Secret = &secret
+	}
+	return output
+}
+
+func appendNodeOutput(outputs *[]api.Output, output api.Output) *[]api.Output {
+	if outputs == nil {
+		return &[]api.Output{output}
+	}
+	appended := append(*outputs, output)
+	return &appended
 }
 
 // newFlowNodeOutputRemoveCmd removes an output from a node
