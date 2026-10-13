@@ -60,7 +60,7 @@ func TestFlowViewShowsTheSummaryAndWithAnOutputFormatTheWholeFlow(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, line := range []string{"Name: Checkout", "ID: " + idFor("1").String(), "Version: 1.0", "  Nodes: 0", "  Edges: 0"} {
+	for _, line := range []string{"Name: Checkout", "ID: " + idFor("1").String(), "Role: standalone", "Version: 1.0", "  Nodes: 0", "  Edges: 0"} {
 		if !strings.Contains(summary, line+"\n") {
 			t.Errorf("the summary lacks %q:\n%s", line, summary)
 		}

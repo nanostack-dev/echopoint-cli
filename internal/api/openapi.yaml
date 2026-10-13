@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 8.0.0
+  version: 9.1.0
 paths:
   /webhooks:
     parameters:
@@ -5454,6 +5454,16 @@ components:
         - any
         - all
       default: any
+    FlowRole:
+      description: |
+        How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
+        reusable building block that other flows call through a module node: you can still
+        launch it directly to test it, but schedules skip it when their tags match it unless
+        the schedule sets `ignore_modules` to false.
+      type: string
+      enum:
+        - standalone
+        - module
     SearchRequest:
       description: Generic search request template
       type: object
@@ -6956,6 +6966,7 @@ components:
         - flow_definition
         - metadata
         - tags
+        - role
         - created_at
         - updated_at
       properties:
@@ -6999,6 +7010,8 @@ components:
           examples:
             - - production
               - monitoring
+        role:
+          $ref: '#/components/schemas/FlowRole'
         folder_id:
           description: The flow's folder, or null when it is uncategorized.
           type:
@@ -7055,6 +7068,9 @@ components:
           examples:
             - - production
               - monitoring
+        role:
+          $ref: '#/components/schemas/FlowRole'
+          description: How the flow may be run. Omitted defaults to `standalone`.
         folder_id:
           description: Folder to create the flow in. Omit or send null to leave it uncategorized. A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
           type:
@@ -7101,6 +7117,9 @@ components:
             type: string
           examples:
             - - staging
+        role:
+          $ref: '#/components/schemas/FlowRole'
+          description: How the flow may be run. Omit to preserve the current role.
     FlowFolder:
       description: A folder in the organization's flow tree. One home per flow.
       type: object
@@ -7301,6 +7320,7 @@ components:
         - name
         - version
         - tags
+        - role
         - node_count
         - last_run_status
         - created_at
@@ -7323,6 +7343,8 @@ components:
           type: array
           items:
             type: string
+        role:
+          $ref: '#/components/schemas/FlowRole'
         folder_id:
           description: The flow's folder, or null when it is uncategorized.
           type:
@@ -7460,6 +7482,13 @@ components:
         - request
         - delay
         - module
+        - set_variable
+        - loop
+        - poll
+        - assert
+        - branch
+        - sse
+        - webhook_wait
     FlowNodeRunWhen:
       description: Controls whether a node runs only in the normal success path or also after the main flow has already failed.
       type: string
@@ -10198,6 +10227,7 @@ components:
         - organization_id
         - tags
         - tag_match_mode
+        - ignore_modules
         - name
         - enabled
         - cron_expression
@@ -10223,6 +10253,9 @@ components:
             type: string
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
+        ignore_modules:
+          description: Whether the tag selector skips flows whose role is `module`.
+          type: boolean
         name:
           type: string
         description:
@@ -10290,6 +10323,10 @@ components:
           minItems: 1
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
+        ignore_modules:
+          description: Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+          type: boolean
+          default: true
         name:
           type: string
           minLength: 1
@@ -10344,6 +10381,9 @@ components:
           minItems: 1
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
+        ignore_modules:
+          description: Skip flows whose role is `module` when resolving the tag selector. Omit to keep the current value.
+          type: boolean
         name:
           type: string
           minLength: 1
@@ -10534,6 +10574,10 @@ components:
           minItems: 1
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
+        ignore_modules:
+          description: Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+          type: boolean
+          default: true
     ScheduleTagPreviewResponse:
       description: Flows currently matching a tag selector.
       type: object

@@ -105,13 +105,13 @@ func (e ApiKeySortField) Valid() bool {
 
 // Defines values for AssertFlowNodeType.
 const (
-	Assert AssertFlowNodeType = "assert"
+	AssertFlowNodeTypeAssert AssertFlowNodeType = "assert"
 )
 
 // Valid indicates whether the value is a known member of the AssertFlowNodeType enum.
 func (e AssertFlowNodeType) Valid() bool {
 	switch e {
-	case Assert:
+	case AssertFlowNodeTypeAssert:
 		return true
 	default:
 		return false
@@ -162,13 +162,13 @@ func (e BodyExtractorConfigFormat) Valid() bool {
 
 // Defines values for BranchFlowNodeType.
 const (
-	Branch BranchFlowNodeType = "branch"
+	BranchFlowNodeTypeBranch BranchFlowNodeType = "branch"
 )
 
 // Valid indicates whether the value is a known member of the BranchFlowNodeType enum.
 func (e BranchFlowNodeType) Valid() bool {
 	switch e {
-	case Branch:
+	case BranchFlowNodeTypeBranch:
 		return true
 	default:
 		return false
@@ -415,6 +415,24 @@ func (e FlowNodeRunWhen) Valid() bool {
 	}
 }
 
+// Defines values for FlowRole.
+const (
+	FlowRoleModule     FlowRole = "module"
+	FlowRoleStandalone FlowRole = "standalone"
+)
+
+// Valid indicates whether the value is a known member of the FlowRole enum.
+func (e FlowRole) Valid() bool {
+	switch e {
+	case FlowRoleModule:
+		return true
+	case FlowRoleStandalone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FlowRunStatus.
 const (
 	FlowRunStatusFailed FlowRunStatus = "failed"
@@ -486,13 +504,13 @@ func (e LaunchFlowRequestEphemeralJobVersion) Valid() bool {
 
 // Defines values for LoopFlowNodeType.
 const (
-	Loop LoopFlowNodeType = "loop"
+	LoopFlowNodeTypeLoop LoopFlowNodeType = "loop"
 )
 
 // Valid indicates whether the value is a known member of the LoopFlowNodeType enum.
 func (e LoopFlowNodeType) Valid() bool {
 	switch e {
-	case Loop:
+	case LoopFlowNodeTypeLoop:
 		return true
 	default:
 		return false
@@ -552,19 +570,40 @@ func (e ModuleFlowNodeType) Valid() bool {
 
 // Defines values for NodeExecutionResultNodeType.
 const (
-	NodeExecutionResultNodeTypeDelay   NodeExecutionResultNodeType = "delay"
-	NodeExecutionResultNodeTypeModule  NodeExecutionResultNodeType = "module"
-	NodeExecutionResultNodeTypeRequest NodeExecutionResultNodeType = "request"
+	NodeExecutionResultNodeTypeAssert      NodeExecutionResultNodeType = "assert"
+	NodeExecutionResultNodeTypeBranch      NodeExecutionResultNodeType = "branch"
+	NodeExecutionResultNodeTypeDelay       NodeExecutionResultNodeType = "delay"
+	NodeExecutionResultNodeTypeLoop        NodeExecutionResultNodeType = "loop"
+	NodeExecutionResultNodeTypeModule      NodeExecutionResultNodeType = "module"
+	NodeExecutionResultNodeTypePoll        NodeExecutionResultNodeType = "poll"
+	NodeExecutionResultNodeTypeRequest     NodeExecutionResultNodeType = "request"
+	NodeExecutionResultNodeTypeSetVariable NodeExecutionResultNodeType = "set_variable"
+	NodeExecutionResultNodeTypeSse         NodeExecutionResultNodeType = "sse"
+	NodeExecutionResultNodeTypeWebhookWait NodeExecutionResultNodeType = "webhook_wait"
 )
 
 // Valid indicates whether the value is a known member of the NodeExecutionResultNodeType enum.
 func (e NodeExecutionResultNodeType) Valid() bool {
 	switch e {
+	case NodeExecutionResultNodeTypeAssert:
+		return true
+	case NodeExecutionResultNodeTypeBranch:
+		return true
 	case NodeExecutionResultNodeTypeDelay:
+		return true
+	case NodeExecutionResultNodeTypeLoop:
 		return true
 	case NodeExecutionResultNodeTypeModule:
 		return true
+	case NodeExecutionResultNodeTypePoll:
+		return true
 	case NodeExecutionResultNodeTypeRequest:
+		return true
+	case NodeExecutionResultNodeTypeSetVariable:
+		return true
+	case NodeExecutionResultNodeTypeSse:
+		return true
+	case NodeExecutionResultNodeTypeWebhookWait:
 		return true
 	default:
 		return false
@@ -828,13 +867,13 @@ func (e OperatorType) Valid() bool {
 
 // Defines values for PollFlowNodeType.
 const (
-	Poll PollFlowNodeType = "poll"
+	PollFlowNodeTypePoll PollFlowNodeType = "poll"
 )
 
 // Valid indicates whether the value is a known member of the PollFlowNodeType enum.
 func (e PollFlowNodeType) Valid() bool {
 	switch e {
-	case Poll:
+	case PollFlowNodeTypePoll:
 		return true
 	default:
 		return false
@@ -1080,13 +1119,13 @@ func (e ScheduleOccurrenceStatus) Valid() bool {
 
 // Defines values for SetVariableFlowNodeType.
 const (
-	SetVariable SetVariableFlowNodeType = "set_variable"
+	SetVariableFlowNodeTypeSetVariable SetVariableFlowNodeType = "set_variable"
 )
 
 // Valid indicates whether the value is a known member of the SetVariableFlowNodeType enum.
 func (e SetVariableFlowNodeType) Valid() bool {
 	switch e {
-	case SetVariable:
+	case SetVariableFlowNodeTypeSetVariable:
 		return true
 	default:
 		return false
@@ -1350,13 +1389,13 @@ func (e SpecLintRule) Valid() bool {
 
 // Defines values for SseFlowNodeType.
 const (
-	Sse SseFlowNodeType = "sse"
+	SseFlowNodeTypeSse SseFlowNodeType = "sse"
 )
 
 // Valid indicates whether the value is a known member of the SseFlowNodeType enum.
 func (e SseFlowNodeType) Valid() bool {
 	switch e {
-	case Sse:
+	case SseFlowNodeTypeSse:
 		return true
 	default:
 		return false
@@ -1605,13 +1644,13 @@ func (e WebhookSortField) Valid() bool {
 
 // Defines values for WebhookWaitFlowNodeType.
 const (
-	WebhookWait WebhookWaitFlowNodeType = "webhook_wait"
+	WebhookWaitFlowNodeTypeWebhookWait WebhookWaitFlowNodeType = "webhook_wait"
 )
 
 // Valid indicates whether the value is a known member of the WebhookWaitFlowNodeType enum.
 func (e WebhookWaitFlowNodeType) Valid() bool {
 	switch e {
-	case WebhookWait:
+	case WebhookWaitFlowNodeTypeWebhookWait:
 		return true
 	default:
 		return false
@@ -2414,6 +2453,9 @@ type CreateFlowRequest struct {
 	// Examples: User API Test Flow
 	Name string `json:"name"`
 
+	// Role How the flow may be run. Omitted defaults to `standalone`.
+	Role *FlowRole `json:"role,omitempty"`
+
 	// Tags Optional flat tags for the flow. Lowercased, normalized, deduplicated, and sorted on write. Omitted defaults to an empty list.
 	//
 	// Examples: ["production","monitoring"]
@@ -2433,7 +2475,10 @@ type CreateFlowScheduleRequest struct {
 	Description    *string `json:"description,omitempty"`
 	Enabled        *bool   `json:"enabled,omitempty"`
 	EnvironmentKey *string `json:"environment_key,omitempty"`
-	Name           string  `json:"name"`
+
+	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+	IgnoreModules *bool  `json:"ignore_modules,omitempty"`
+	Name          string `json:"name"`
 
 	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
 	// ad-hoc addresses. Each must be a valid email; an empty/omitted set
@@ -3005,6 +3050,12 @@ type Flow struct {
 	// Examples: org_123
 	OrganizationId string `json:"organization_id"`
 
+	// Role How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
+	// reusable building block that other flows call through a module node: you can still
+	// launch it directly to test it, but schedules skip it when their tags match it unless
+	// the schedule sets `ignore_modules` to false.
+	Role FlowRole `json:"role"`
+
 	// Tags Flat canonical tags associated with the flow (lowercase, normalized, deduplicated, sorted).
 	//
 	// Examples: ["production","monitoring"]
@@ -3342,6 +3393,12 @@ type FlowNode struct {
 // FlowNodeRunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
 type FlowNodeRunWhen string
 
+// FlowRole How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
+// reusable building block that other flows call through a module node: you can still
+// launch it directly to test it, but schedules skip it when their tags match it unless
+// the schedule sets `ignore_modules` to false.
+type FlowRole string
+
 // FlowRunStatus Outcome of a flow's most recent terminal execution, folded to the states the Flow Library list renders: passed (completed), failed (failed), or none (no terminal run yet). In-flight and cancelled runs are ignored: they never erase the last real pass/fail badge.
 type FlowRunStatus string
 
@@ -3357,7 +3414,10 @@ type FlowSchedule struct {
 	Enabled        bool               `json:"enabled"`
 	EnvironmentKey string             `json:"environment_key"`
 	Id             openapi_types.UUID `json:"id"`
-	Name           string             `json:"name"`
+
+	// IgnoreModules Whether the tag selector skips flows whose role is `module`.
+	IgnoreModules bool   `json:"ignore_modules"`
+	Name          string `json:"name"`
 
 	// NextRunAt Next due time in UTC; null when paused with no future occurrence computed.
 	NextRunAt      *time.Time `json:"next_run_at,omitempty"`
@@ -3461,11 +3521,17 @@ type FlowSearchItem struct {
 	Name          string        `json:"name"`
 
 	// NodeCount Number of nodes in the flow definition.
-	NodeCount      int       `json:"node_count"`
-	OrganizationId string    `json:"organization_id"`
-	Tags           []string  `json:"tags"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	Version        string    `json:"version"`
+	NodeCount      int    `json:"node_count"`
+	OrganizationId string `json:"organization_id"`
+
+	// Role How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
+	// reusable building block that other flows call through a module node: you can still
+	// launch it directly to test it, but schedules skip it when their tags match it unless
+	// the schedule sets `ignore_modules` to false.
+	Role      FlowRole  `json:"role"`
+	Tags      []string  `json:"tags"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   string    `json:"version"`
 }
 
 // FlowSearchRequest defines model for FlowSearchRequest.
@@ -5087,6 +5153,9 @@ type ScheduleRunExecution struct {
 
 // ScheduleTagPreviewRequest Resolve which organization flows currently match a tag selector.
 type ScheduleTagPreviewRequest struct {
+	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+	IgnoreModules *bool `json:"ignore_modules,omitempty"`
+
 	// TagMatchMode Whether any or all of the provided tags must match.
 	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
 	Tags         []string      `json:"tags"`
@@ -5761,6 +5830,9 @@ type UpdateFlowRequest struct {
 	// Examples: User API Test Flow
 	Name *string `json:"name,omitempty"`
 
+	// Role How the flow may be run. Omit to preserve the current role.
+	Role *FlowRole `json:"role,omitempty"`
+
 	// Tags Optional flat tags for the flow. Omit to preserve the current tags;
 	// send an empty array to clear all tags; send a list to replace the tag set.
 	// Lowercased, normalized, deduplicated, and sorted on write.
@@ -5783,7 +5855,10 @@ type UpdateFlowScheduleRequest struct {
 	Description    *string `json:"description,omitempty"`
 	Enabled        *bool   `json:"enabled,omitempty"`
 	EnvironmentKey *string `json:"environment_key,omitempty"`
-	Name           string  `json:"name"`
+
+	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omit to keep the current value.
+	IgnoreModules *bool  `json:"ignore_modules,omitempty"`
+	Name          string `json:"name"`
 
 	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
 	// ad-hoc addresses. Each must be a valid email; an empty/omitted set

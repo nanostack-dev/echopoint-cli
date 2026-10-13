@@ -13,7 +13,7 @@ Every command that takes a flow takes it as `<flow-id>`: the flow's id, which `f
 ## Basic Commands
 
 ### List Flows
-The table has NAME, ID and UPDATED columns.
+The table has NAME, ID, ROLE and UPDATED columns.
 ```bash
 echopoint flow list
 echopoint flow list -o json
@@ -26,7 +26,7 @@ echopoint flow list --uncategorized
 
 ### View a Flow
 ```bash
-# a summary: name, id, version, dates, node and edge counts
+# a summary: name, id, role, version, dates, node and edge counts
 echopoint flow view <flow-id>
 
 # the whole flow, definition included
@@ -52,6 +52,19 @@ echopoint flow update <flow-id> -f updated-flow.json
 echopoint flow update <flow-id> --name "Checkout smoke test" --description "Runs after deploy"
 ```
 Only the flags given change; the other fields stay.
+
+### Flow Role
+A flow is either **standalone** (the default: a test of its own) or a **module**: a reusable building block that other flows call through a module node. A Module flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` is not affected.
+```bash
+# show the role
+echopoint flow role <flow-id>
+echopoint flow role <flow-id> -o json
+
+# change it; only the role is sent, every other field stays
+echopoint flow role <flow-id> --set module
+echopoint flow role <flow-id> --set standalone
+```
+`-o json` and `-o yaml` print `{"id": ..., "role": ...}` for both forms. An unknown role fails before any request. `flow view -o json` and `flow list -o json` carry `role`, and a `CreateFlowRequest` or `UpdateFlowRequest` file may set it.
 
 ### Run or Launch a Flow
 
