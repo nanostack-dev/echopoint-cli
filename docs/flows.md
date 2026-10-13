@@ -293,7 +293,7 @@ From the moment the node extracts it, the value is replaced by `***` in every ex
 - `--extractor` (required): Type - `json_path`, `status_code`, `body`, or `header`
 - `--path`: JSONPath expression (for json_path extractor)
 - `--header-name`: Header name (for header extractor)
-- `--secret`: Redact the extracted value in results and events
+- `--secret`: Replace the extracted value with *** in results and events
 
 ### Remove Output
 ```bash

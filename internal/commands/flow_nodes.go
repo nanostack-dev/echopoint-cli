@@ -463,6 +463,9 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 
 			fmt.Printf("✓ Output added: %s\n", name)
 			fmt.Printf("  Extractor: %s\n", extractorType)
+			if secret {
+				fmt.Println("  Secret: yes")
+			}
 
 			return nil
 		},
@@ -472,8 +475,7 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 	cmd.Flags().StringVar(&extractorType, "extractor", "", "Extractor type (json_path, status_code, body, header)")
 	cmd.Flags().StringVar(&path, "path", "", "Path for json_path extractor")
 	cmd.Flags().StringVar(&headerName, "header-name", "", "Header name for header extractor")
-	cmd.Flags().BoolVar(&secret, "secret", false,
-		"Redact the extracted value (***) in every execution result and event after extraction")
+	cmd.Flags().BoolVar(&secret, "secret", false, "Replace the extracted value with *** in results and events")
 
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("extractor")

@@ -3,13 +3,12 @@ package commands
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"testing"
 
 	"echopoint-cli/internal/api"
 )
 
-func requestNodeFlow(t *testing.T, outputs string) api.Flow {
+func flowWithMintNode(t *testing.T, outputs string) api.Flow {
 	t.Helper()
 	flow := sampleFlow(idFor("1"), "Token flow", nil)
 	var node api.FlowNode
@@ -51,7 +50,7 @@ func addOutput(t *testing.T, flow api.Flow, args ...string) []map[string]any {
 }
 
 func TestOutputAddSecretFlagMarksTheOutputSecret(t *testing.T) {
-	outputs := addOutput(t, requestNodeFlow(t, `[]`),
+	outputs := addOutput(t, flowWithMintNode(t, `[]`),
 		"--name", "jwt", "--extractor", "json_path", "--path", "$.jwt", "--secret")
 
 	if len(outputs) != 1 || outputs[0]["secret"] != true {
@@ -60,9 +59,12 @@ func TestOutputAddSecretFlagMarksTheOutputSecret(t *testing.T) {
 }
 
 func TestOutputAddWithoutSecretFlagLeavesTheOutputPlain(t *testing.T) {
-	outputs := addOutput(t, requestNodeFlow(t, `[]`),
+	outputs := addOutput(t, flowWithMintNode(t, `[]`),
 		"--name", "id", "--extractor", "json_path", "--path", "$.id")
 
+	if len(outputs) != 1 {
+		t.Fatalf("got %d outputs, want 1", len(outputs))
+	}
 	if _, present := outputs[0]["secret"]; present {
 		t.Fatalf("an output added without --secret should not carry the flag, got %v", outputs)
 	}
@@ -71,15 +73,14 @@ func TestOutputAddWithoutSecretFlagLeavesTheOutputPlain(t *testing.T) {
 // The CLI rewrites the whole definition on every node edit, so a flag its
 // client did not know would be dropped from the outputs already there.
 func TestOutputAddKeepsAnExistingSecretOutput(t *testing.T) {
-	flow := requestNodeFlow(t, `[{"name":"jwt","secret":true,"extractor":{"type":"json_path","path":"$.jwt"}}]`)
+	flow := flowWithMintNode(t, `[{"name":"jwt","secret":true,"extractor":{"type":"json_path","path":"$.jwt"}}]`)
 
 	outputs := addOutput(t, flow, "--name", "session", "--extractor", "json_path", "--path", "$.sid")
 
-	encoded, _ := json.Marshal(outputs)
 	if len(outputs) != 2 || outputs[0]["secret"] != true {
-		t.Fatalf("the existing secret output should keep its flag, got %s", encoded)
+		t.Fatalf("the existing secret output should keep its flag, got %v", outputs)
 	}
-	if strings.Count(string(encoded), `"secret"`) != 1 {
-		t.Fatalf("only the existing output should be secret, got %s", encoded)
+	if _, present := outputs[1]["secret"]; present {
+		t.Fatalf("only the existing output should be secret, got %v", outputs)
 	}
 }
