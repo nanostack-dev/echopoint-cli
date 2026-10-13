@@ -71,7 +71,10 @@ outputs:
     description: 'true if all flows completed successfully, false otherwise.'
     value: ${{ steps.parse-outputs.outputs.success }}
   results-json:
-    description: Raw JSON output from echopoint flows run.
+    description: >
+      JSON output from echopoint flows run. GitHub caps step outputs at 1 MB, so
+      a larger result drops per-node detail (`nodes`); if it is still too large
+      the output is empty.
     value: ${{ steps.parse-outputs.outputs.results-json }}
 
 runs:
@@ -379,6 +382,21 @@ runs:
 
         raw=$(cat "$json_file")
 
+        # GitHub rejects a step output or step summary over 1 MB, which fails the
+        # step even when every flow passed. Keep both well under that.
+        max_inline_bytes=512000
+        results_json="$raw"
+        if [ "${#raw}" -gt "$max_inline_bytes" ]; then
+          results_json=""
+          if command -v jq >/dev/null 2>&1; then
+            results_json=$(printf '%s' "$raw" | jq -c 'if has("results") then .results |= map(del(.nodes)) else del(.nodes) end' 2>/dev/null || true)
+          fi
+          if [ "${#results_json}" -gt "$max_inline_bytes" ]; then
+            results_json=""
+          fi
+          echo "::warning::Flow results are ${#raw} bytes; results-json carries $( [ -n "$results_json" ] && echo "them without per-node detail" || echo "nothing" ) to stay under GitHub's 1 MB output limit."
+        fi
+
         # Helper: extract the first JSON key value without grep|head, which can
         # trip GitHub's implicit bash -e -o pipefail on large one-line JSON.
         extract() {
@@ -409,7 +427,7 @@ runs:
             echo "status=${status:-error}"
             echo "success=${success:-false}"
             echo "results-json<<ECHOPOINT_EOF"
-            echo "$raw"
+            echo "$results_json"
             echo "ECHOPOINT_EOF"
           } >> "$GITHUB_OUTPUT"
         else
@@ -424,7 +442,7 @@ runs:
             echo "status=${status:-error}"
             echo "success=${success:-false}"
             echo "results-json<<ECHOPOINT_EOF"
-            echo "$raw"
+            echo "$results_json"
             echo "ECHOPOINT_EOF"
           } >> "$GITHUB_OUTPUT"
         fi
@@ -457,24 +475,33 @@ runs:
                        ) | join("\n"))
                    else "" end)
             ' >> "$GITHUB_STEP_SUMMARY" || echo "_(summary render failed; see raw JSON below)_" >> "$GITHUB_STEP_SUMMARY"
-            {
-              echo ""
-              echo "<details><summary>Raw results JSON</summary>"
-              echo ""
-              echo '```json'
-              printf '%s\n' "$raw"
-              echo '```'
-              echo "</details>"
-            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "${#raw}" -le "$max_inline_bytes" ]; then
+              {
+                echo ""
+                echo "<details><summary>Raw results JSON</summary>"
+                echo ""
+                echo '```json'
+                printf '%s\n' "$raw"
+                echo '```'
+                echo "</details>"
+              } >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "_Raw results JSON omitted: ${#raw} bytes is over the step summary limit._" >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             {
               echo "## Echopoint flow run"
               echo ""
               echo "Status: $(extract 'status') · Success: $(extract 'success')"
               echo ""
-              echo '```json'
-              echo "$raw"
-              echo '```'
+              if [ "${#raw}" -le "$max_inline_bytes" ]; then
+                echo '```json'
+                echo "$raw"
+                echo '```'
+              else
+                echo "_Raw results JSON omitted: ${#raw} bytes is over the step summary limit._"
+              fi
             } >> "$GITHUB_STEP_SUMMARY"
           fi
         fi

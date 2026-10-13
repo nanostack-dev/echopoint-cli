@@ -74,7 +74,7 @@ Exactly one of `flow-id`, `flow-ids`, or `tags` is required; `parallel >= 1` is 
 | `execution-ids` | Comma-separated execution IDs for a multi-flow run. |
 | `status` | Aggregate status: `completed`, `failed`, or `error`. |
 | `success` | `true` only if all flows completed successfully. |
-| `results-json` | Raw JSON output from `echopoint flows run`. |
+| `results-json` | JSON output from `echopoint flows run`. GitHub rejects a step output over 1 MB, so a result over 512 KB drops per-node detail (`nodes`), with a warning; if it is still too large the output is empty. The step summary leaves the raw JSON out in the same case. |
 
 The action captures the CLI exit code, parses JSON outputs, writes `$GITHUB_OUTPUT` and
 `$GITHUB_STEP_SUMMARY`, and then exits with the **original CLI exit code**.

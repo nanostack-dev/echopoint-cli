@@ -476,3 +476,88 @@ print('OK')
   run validate_inputs "" "flow-abc,flow-def" "1"
   [ "$status" -eq 0 ]
 }
+
+# -----------------------------------------------------------------------
+# Large results stay under GitHub's 1 MB step output and summary limits
+# -----------------------------------------------------------------------
+yaml_python() {
+  for candidate in \
+    "${HOME}/.pyenv/shims/python3" \
+    "$(command -v python3 2>/dev/null)"; do
+    if [ -n "$candidate" ] && "$candidate" -c "import yaml" 2>/dev/null; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Runs the action's real "Parse outputs and write summary" step against $1.
+run_parse_step() {
+  local json_file="$1" python_bin script
+  python_bin=$(yaml_python) || skip "no python3 with PyYAML found"
+  script="${BATS_TMPDIR}/parse_step.sh"
+  "$python_bin" -c "
+import yaml, sys
+steps = yaml.safe_load(open(sys.argv[1]))['runs']['steps']
+step = next(s for s in steps if s.get('id') == 'parse-outputs')
+print(step['run'].replace('\${{ steps.run-flows.outputs.json-file }}', sys.argv[2]))
+" "$ACTION_FILE" "$json_file" > "$script"
+  setup_github_env
+  run bash -o pipefail "$script"
+}
+
+large_multi_result() {
+  local out="$1" node_payload
+  node_payload=$(head -c 200000 /dev/zero | tr '\0' 'x')
+  jq -cn --arg payload "$node_payload" '{
+    status: "completed", success: true, exit_code: 0, duration_ms: 1200,
+    results: [range(10) | {
+      flow_id: "flow-\(.)", execution_id: "exec-\(.)", status: "completed",
+      success: true, duration_ms: 120,
+      nodes: [{node_id: "n1", status: "success", output: $payload}]
+    }]
+  }' > "$out"
+}
+
+@test "large results-json drops per-node detail and stays under 1 MB" {
+  command -v jq >/dev/null || skip "jq not installed"
+  large_multi_result "${BATS_TMPDIR}/large.json"
+  [ "$(wc -c < "${BATS_TMPDIR}/large.json")" -gt 1048576 ]
+
+  run_parse_step "${BATS_TMPDIR}/large.json"
+  [ "$status" -eq 0 ]
+
+  results=$(awk '/^results-json<<ECHOPOINT_EOF$/{f=1;next} /^ECHOPOINT_EOF$/{f=0} f' "$GITHUB_OUTPUT")
+  [ "${#results}" -lt 512000 ]
+  [ "$(printf '%s' "$results" | jq '.results | length')" -eq 10 ]
+  [ "$(printf '%s' "$results" | jq '[.results[] | has("nodes")] | any')" = "false" ]
+  [ "$(get_output success)" = "true" ]
+  [ "$(get_output execution-ids)" = "exec-0,exec-1,exec-2,exec-3,exec-4,exec-5,exec-6,exec-7,exec-8,exec-9" ]
+  teardown_github_env
+}
+
+@test "large results leave the raw JSON out of the step summary" {
+  command -v jq >/dev/null || skip "jq not installed"
+  large_multi_result "${BATS_TMPDIR}/large.json"
+
+  run_parse_step "${BATS_TMPDIR}/large.json"
+  [ "$status" -eq 0 ]
+
+  [ "$(wc -c < "$GITHUB_STEP_SUMMARY")" -lt 1048576 ]
+  grep -q "All 10 flow(s) passed" "$GITHUB_STEP_SUMMARY"
+  grep -q "Raw results JSON omitted" "$GITHUB_STEP_SUMMARY"
+  teardown_github_env
+}
+
+@test "small results-json is passed through unchanged" {
+  cp "$FIXTURES_DIR/multi_success.json" "${BATS_TMPDIR}/small.json"
+
+  run_parse_step "${BATS_TMPDIR}/small.json"
+  [ "$status" -eq 0 ]
+
+  results=$(awk '/^results-json<<ECHOPOINT_EOF$/{f=1;next} /^ECHOPOINT_EOF$/{f=0} f' "$GITHUB_OUTPUT")
+  [ "$(printf '%s' "$results" | jq -S .)" = "$(jq -S . "$FIXTURES_DIR/multi_success.json")" ]
+  grep -q "Raw results JSON" "$GITHUB_STEP_SUMMARY"
+  teardown_github_env
+}
