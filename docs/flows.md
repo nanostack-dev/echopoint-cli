@@ -278,11 +278,22 @@ echopoint flow node output add <flow-id> <node-id> \
   --header-name "Content-Type"
 ```
 
+**Secret output** (a credential or token the flow obtains during the run):
+```bash
+echopoint flow node output add <flow-id> <node-id> \
+  --name "jwt" \
+  --extractor json_path \
+  --path "$.jwt" \
+  --secret
+```
+From the moment the node extracts it, the value is replaced by `***` in every execution result, progress event and error, including module outputs and the inputs of later nodes. Those nodes still send the real value. Matching is by text, so flag only credentials and tokens: a short or common value is replaced everywhere it appears. A runner older than v0.77.0 ignores the flag.
+
 **Flags:**
 - `--name` (required): Output name for referencing in other nodes
 - `--extractor` (required): Type - `json_path`, `status_code`, `body`, or `header`
 - `--path`: JSONPath expression (for json_path extractor)
 - `--header-name`: Header name (for header extractor)
+- `--secret`: Replace the extracted value with *** in results and events
 
 ### Remove Output
 ```bash
