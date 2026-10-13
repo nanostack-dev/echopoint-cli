@@ -84,6 +84,8 @@ folders, environments, schedules, executions, generation, execution analytics
 `list_endpoint_analytics`), plus `get_current_api_key` (the authenticating key's
 org + permissions).
 
+`create_flow` and `update_flow` take an optional `role` (`standalone` or `module`; an update that omits it keeps the current role). `create_flow_schedule`, `update_flow_schedule` and `preview_schedule_tags` take an optional `ignore_modules` boolean: schedules skip Module flows unless it is false.
+
 Every operation in the contract declares its intent explicitly: `x-ai-tool`
 (exposed) or `x-ai-danger` with a reason (deliberately excluded). The excluded
 set:

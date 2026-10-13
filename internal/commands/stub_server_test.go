@@ -115,7 +115,7 @@ func sampleFlow(id uuid.UUID, name string, folder *uuid.UUID) api.Flow {
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
 	return api.Flow{
 		Id: id, Name: name, FolderId: folder,
-		Version: "1.0", Tags: []string{},
+		Version: "1.0", Tags: []string{}, Role: api.FlowRoleStandalone,
 		CreatedAt: now, UpdatedAt: now,
 		FlowDefinition: api.FlowDefinition{Nodes: []api.FlowNode{}, Edges: []api.FlowEdge{}},
 	}

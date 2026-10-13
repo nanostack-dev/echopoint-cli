@@ -99,9 +99,9 @@ func TestFlowUpdateRefusesBothModesAndNeither(t *testing.T) {
 }
 
 var flowRowPattern = regexp.MustCompile(
-	`^(Checkout smoke|Login)\s+550e8400-e29b-41d4-a716-0000000000\d\d\s+2026-10-05 12:00$`)
+	`^(Checkout smoke|Login)\s+550e8400-e29b-41d4-a716-0000000000\d\d\s+standalone\s+2026-10-05 12:00$`)
 
-func TestFlowListShowsNameIDAndUpdatedOnEveryPath(t *testing.T) {
+func TestFlowListShowsNameIDRoleAndUpdatedOnEveryPath(t *testing.T) {
 	folder := idFor("10")
 	stub := newAPIStub(t).onFlows(
 		sampleFlow(idFor("1"), "Checkout smoke", nil),
@@ -109,7 +109,7 @@ func TestFlowListShowsNameIDAndUpdatedOnEveryPath(t *testing.T) {
 	)
 	stub.on(http.MethodPost, "/flows/search", http.StatusOK, map[string]any{
 		"count": 1, "total": 1, "items": []map[string]any{{
-			"id": idFor("2"), "name": "Login", "updated_at": "2026-10-05T12:00:00Z",
+			"id": idFor("2"), "name": "Login", "role": "standalone", "updated_at": "2026-10-05T12:00:00Z",
 		}},
 	})
 	stub.on(http.MethodGet, "/flows/folders", http.StatusOK, api.FlowFolderListResponse{
@@ -124,11 +124,11 @@ func TestFlowListShowsNameIDAndUpdatedOnEveryPath(t *testing.T) {
 		if code != 0 || len(lines) < 3 {
 			t.Fatalf("%v: exit %d, stdout %q, stderr %q", args, code, stdout, stderr)
 		}
-		if header := strings.Join(strings.Fields(lines[1]), " "); header != "NAME ID UPDATED" {
+		if header := strings.Join(strings.Fields(lines[1]), " "); header != "NAME ID ROLE UPDATED" {
 			t.Errorf("%v: header = %q", args, header)
 		}
 		if !flowRowPattern.MatchString(lines[2]) {
-			t.Errorf("%v: the row is not name, id, updated: %q", args, lines[2])
+			t.Errorf("%v: the row is not name, id, role, updated: %q", args, lines[2])
 		}
 	}
 }
