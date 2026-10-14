@@ -127,10 +127,10 @@ func NewRootCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "echopoint",
-		Short: "Manage flows, specs, collections and status pages in EchoPoint",
+		Short: "Manage flows, probes, specs, collections and status pages in EchoPoint",
 		Long: `Manage what lives in EchoPoint: flows and their executions, OpenAPI specs,
-collections, status pages, the variables of an organization, and the analytics
-of its finished runs.
+probes, collections, status pages, the variables of an organization, and the
+analytics of its finished runs.
 
 A flow runs on Cloud (EchoPoint runs it), on a Self-hosted runner (a long-lived
 runner you operate), or on an Ephemeral runner (a short-lived runner the caller
@@ -159,6 +159,7 @@ operates: 'echopoint flow run' makes this CLI one).`,
 
 	cmd.AddCommand(
 		newFlowCmd(state),
+		newProbeCmd(state),
 		newSpecCmd(state),
 		newCollectionCmd(state),
 		newStatusPageCmd(state),

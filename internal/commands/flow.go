@@ -42,6 +42,8 @@ operates). Two commands start one:
 		newFlowCreateCmd(state),
 		newFlowUpdateCmd(state),
 		newFlowDeleteCmd(state),
+		newFlowPublishCmd(state),
+		newFlowVersionCmd(state),
 		newFlowRunCmd(state),
 		newFlowLaunchCmd(state),
 		newFlowExecutionCmd(state),

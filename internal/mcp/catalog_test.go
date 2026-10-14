@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"echopoint-cli/internal/api"
+
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
@@ -24,6 +26,8 @@ func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
 		"list_flows", "get_flow", "search_flows", "launch_flow", "create_flow",
 		"delete_flow", "list_collections", "get_collection", "list_webhooks",
 		"get_current_api_key", "get_status_page", "save_status_page", "get_status_page_binding_options",
+		"list_probes", "create_probe", "get_probe", "update_probe", "delete_probe",
+		"pause_probe", "resume_probe", "run_probe", "list_probe_runs", "get_probe_run",
 	}
 	for _, n := range want {
 		if _, ok := byName[n]; !ok {
@@ -88,6 +92,38 @@ func TestBuildCatalogFromEmbeddedSpec(t *testing.T) {
 	req, _ := gfSchema["required"].([]any)
 	if len(req) != 1 || req[0] != "id" {
 		t.Errorf("get_flow required = %v, want [id]", gfSchema["required"])
+	}
+}
+
+func TestCloudFleetIsPresentButExcludedFromMCP(t *testing.T) {
+	doc, err := openapi3.NewLoader().LoadFromData(api.OpenAPISpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := doc.Paths.Find("/administrations/cloud-fleet")
+	if item == nil {
+		t.Fatal("Cloud fleet API contract is missing")
+	}
+	for method, want := range map[string]string{
+		http.MethodGet: "getCloudFleet",
+		http.MethodPut: "updateCloudFleet",
+	} {
+		operation := item.GetOperation(method)
+		if operation == nil || operation.OperationID != want {
+			t.Fatalf("Cloud fleet %s operation does not match %s", method, want)
+		}
+		if !present(operation.Extensions[extAIDanger]) || present(operation.Extensions[extAITool]) {
+			t.Fatalf("Cloud fleet %s must keep its browser-only admin policy", method)
+		}
+	}
+	tools, err := buildCatalog(api.OpenAPISpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range tools {
+		if tool.PathTemplate == "/administrations/cloud-fleet" {
+			t.Fatalf("privileged Cloud fleet operation %s is exposed as an MCP tool", tool.Name)
+		}
 	}
 }
 

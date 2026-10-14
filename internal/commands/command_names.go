@@ -16,6 +16,7 @@ const (
 	mcpCommandName        = "mcp"
 	orgCommandName        = "org"
 	profileCommandName    = "profile"
+	probeCommandName      = "probe"
 	showVerb              = "show"
 	specCommandName       = "spec"
 	statusPageCommandName = "status-page"

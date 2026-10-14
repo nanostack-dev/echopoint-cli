@@ -6,6 +6,8 @@
 | Organization | Tenant scope selected for API operations; `--org` is the visible flag. |
 | Environment | Named overlay of organization variables. |
 | Flow | Graph identified by an ID and free-text name; it has no slug. |
+| Monitor | Recurring execution configuration selecting flows by tags or explicit IDs. |
+| Probe | A monitor of type `probe` producing one health result from all selected flows and their executed assertions, with safe status-page publication policy. |
 | Flow role | `standalone` (default) or `module`; set with `flow role <flow-id> --set`. |
 | Module flow | Flow with role `module`: a reusable building block that other flows call through a module node. It can be launched directly to test it; schedules skip it when their tags match unless the schedule sets `ignore_modules` to false. `flow run --tag` runs it unless `--ignore-modules` is passed. |
 | Collection | API request grouping identified by an ID and name. |
