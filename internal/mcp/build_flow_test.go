@@ -91,6 +91,30 @@ func TestValidateFlatFlow(t *testing.T) {
 			contains: "needs status or path",
 		},
 		{
+			name: "secret output that is not declared",
+			flow: flatFlow{Name: "n", Nodes: []flatNode{
+				{ID: "a", Method: "POST", URL: "u", Outputs: map[string]string{"id": "$.id"},
+					SecretOutputs: []string{"jwt"}},
+			}},
+			contains: `secret output "jwt" is not in its outputs`,
+		},
+		{
+			name: "secret output on a module node",
+			flow: flatFlow{Name: "n", Nodes: []flatNode{
+				{ID: "a", Kind: "module", FlowID: "abc", Outputs: map[string]string{"token": "login.token"},
+					SecretOutputs: []string{"token"}},
+			}},
+			contains: "flag it on the child node that extracts it",
+		},
+		{
+			name: "secret output that is declared",
+			flow: flatFlow{Name: "n", Nodes: []flatNode{
+				{ID: "a", Method: "POST", URL: "u", Outputs: map[string]string{"jwt": "$.jwt"},
+					SecretOutputs: []string{"jwt"}},
+			}},
+			wantOK: true,
+		},
+		{
 			name: "bare env ref is allowed",
 			flow: flatFlow{Name: "n", Nodes: []flatNode{
 				{ID: "a", Method: "GET", URL: "{{baseUrl}}/x"},
@@ -206,6 +230,42 @@ func TestBuildFlowDoc(t *testing.T) {
 	}
 	if got.FlowDef.Edges[0].Source != "setup" || got.FlowDef.Edges[0].Type != "success" {
 		t.Fatalf("edge wrong: %+v", got.FlowDef.Edges[0])
+	}
+}
+
+func TestBuildFlowDocMarksOnlyTheNamedOutputsSecret(t *testing.T) {
+	doc := buildFlowDoc(flatFlow{Name: "login", Nodes: []flatNode{
+		{ID: "login", Method: "POST", URL: "{{base}}/login",
+			Outputs:       map[string]string{"jwt": "$.jwt", "userId": "$.user.id"},
+			SecretOutputs: []string{"jwt"}},
+	}})
+
+	raw, _ := json.Marshal(doc)
+	var got struct {
+		FlowDef struct {
+			Nodes []struct {
+				Outputs []map[string]any `json:"outputs"`
+			} `json:"nodes"`
+		} `json:"flow_definition"`
+	}
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal doc: %v", err)
+	}
+	secret := map[string]any{}
+	for _, output := range got.FlowDef.Nodes[0].Outputs {
+		secret[output["name"].(string)] = output["secret"]
+	}
+	if secret["jwt"] != true {
+		t.Fatalf("jwt should be secret: %+v", got.FlowDef.Nodes[0].Outputs)
+	}
+	if _, present := secret["userId"]; !present || secret["userId"] != nil {
+		t.Fatalf("userId should carry no secret flag: %+v", got.FlowDef.Nodes[0].Outputs)
+	}
+}
+
+func TestBuildFlowInputSchemaDeclaresSecretOutputs(t *testing.T) {
+	if !strings.Contains(string(buildFlowInputSchema), `"secret_outputs"`) {
+		t.Fatal("the advertised schema must let a client set secret_outputs")
 	}
 }
 

@@ -26,6 +26,11 @@ and needs flow_id, with "outputs" mapping a local name to "childNodeId.childKey"
 run_when defaults on_success; use "always" for cleanup nodes so they run even
 after an upstream failure.
 
+Secrets: list request outputs that hold a credential or token in
+"secret_outputs" (e.g. "secret_outputs": ["jwt"]). Their values show as *** in
+results; downstream nodes still receive the real value. A module re-exporting a
+child's secret output is masked too, so only the producing node is flagged.
+
 Worked example — create a flow that calls an API and asserts the result:
 {
   "name": "demo: smoke",
@@ -78,6 +83,11 @@ var buildFlowInputSchema = []byte(`{
             "type": "object",
             "additionalProperties": {"type": "string"},
             "description": "request: outputName -> json_path (e.g. {\"id\":\"$.id\"}). module: localName -> childNodeId.childKey."
+          },
+          "secret_outputs": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "request: names from outputs whose values are credentials or tokens. The runner masks each as *** in every result, error and downstream input; the flow still uses the real value. Not for module nodes: flag the child node that extracts the value."
           },
           "asserts": {
             "type": "array",
