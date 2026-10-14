@@ -15,7 +15,7 @@ MCP exposes `x-ai-tool: true` operations and excludes `x-ai-danger`. It also alw
 
 ## Embedded libraries and Action
 
-Upgrade runner behavior with `go get github.com/nanostack-dev/echopoint-runner@vX.Y.0` and `go mod tidy`, then use `feat:` or `fix:` so the CLI release ships it. Kit updates similarly pin `github.com/nanostack-dev/echopoint-kit` and require spec regression verification.
+Upgrade runner behavior with `go get github.com/nanostack-dev/echopoint-runner@vX.Y.0` and `go mod tidy`, then use `feat:` or `fix:` so the CLI release ships it. The ephemeral claim declares the embedded runner's `capabilities` (`jobrunner.Capabilities()`); Echopoint refuses a Job whose flow declares a secret output with 409 `RUNNER_UPGRADE_REQUIRED` unless it includes `secret_outputs` (Echopoint ADR-0019). Kit updates similarly pin `github.com/nanostack-dev/echopoint-kit` and require spec regression verification.
 
 The Action invokes `echopoint flows run <ids> -o json ...`. Its flags, stdout result JSON and exit codes `0/1/2/3/4` are compatibility contracts pinned by [flow-run goldens](../../internal/commands/flow_run_golden_test.go). `flows` remains a permanent alias of `flow`. Every CLI release repoints Action `v1` to the released commit; changing the Action's breaking input contract requires an intentional `ACTION_MAJOR_TAG` change in the release workflow.
 

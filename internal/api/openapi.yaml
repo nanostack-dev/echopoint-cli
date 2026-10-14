@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 9.1.0
+  version: 9.4.0
 paths:
   /webhooks:
     parameters:
@@ -3994,16 +3994,17 @@ paths:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
     post:
-      tags: [Probes]
+      tags:
+        - Probes
       summary: EstimateProbe
       description: Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
       operationId: estimateProbe
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ProbeEstimateRequest'
+        required: true
       responses:
         "200":
           description: Success
@@ -4026,8 +4027,10 @@ paths:
         "500":
           $ref: '#/components/responses/InternalServerError'
       security:
-        - BearerAuth: [flows:read]
-        - ApiKeys: [flows:read]
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
       x-ai-tool: true
   /probes/{probeId}:
     parameters:
@@ -8255,6 +8258,17 @@ components:
           minimum: 1
           examples:
             - 4
+        capabilities:
+          description: |
+            What the claiming runner supports. A job whose flow or referenced flows declare a
+            secret output (`Output.secret`) is failed with `RUNNER_UPGRADE_REQUIRED` instead of
+            being handed to a claim that omits `secret_outputs`, because that runner would report
+            the value in clear.
+          type: array
+          items:
+            $ref: '#/components/schemas/RunnerCapability'
+          maxItems: 16
+          uniqueItems: true
     EphemeralJobClaimRequest:
       type: object
       required:
@@ -8266,6 +8280,24 @@ components:
         boot_id:
           type: string
           format: uuid
+        capabilities:
+          description: |
+            What the claiming runner supports. A job whose flow or referenced flows declare a
+            secret output (`Output.secret`) is failed with `RUNNER_UPGRADE_REQUIRED` instead of
+            being handed to a claim that omits `secret_outputs`, because that runner would report
+            the value in clear.
+          type: array
+          items:
+            $ref: '#/components/schemas/RunnerCapability'
+          maxItems: 16
+          uniqueItems: true
+    RunnerCapability:
+      description: |
+        A feature a runner build supports. `secret_outputs`: the runner masks the values of
+        node outputs declared `secret` in everything it reports (ADR-0018).
+      type: string
+      enum:
+        - secret_outputs
     EphemeralJobClaimResponse:
       description: One-time delivery of the Job credential and runnable payload.
       type: object
@@ -10970,7 +11002,10 @@ components:
       additionalProperties: false
     ProbeRunExecution:
       type: object
-      required: [flow_id, execution_id, status]
+      required:
+        - flow_id
+        - execution_id
+        - status
       properties:
         flow_id:
           type: string
@@ -10983,7 +11018,9 @@ components:
       additionalProperties: false
     ProbeEstimateRequest:
       type: object
-      required: [interval_seconds, runner_type]
+      required:
+        - interval_seconds
+        - runner_type
       properties:
         flow_ids:
           type: array
@@ -11004,15 +11041,22 @@ components:
           maximum: 86400
         runner_type:
           type: string
-          enum: [cloud, self_hosted]
-          x-enum-varnames: [ProbeEstimateCloud, ProbeEstimateSelfHosted]
+          enum:
+            - cloud
+            - self_hosted
+          x-enum-varnames:
+            - ProbeEstimateCloud
+            - ProbeEstimateSelfHosted
         environment_key:
           type: string
           maxLength: 128
       additionalProperties: false
     ProbeEstimateFlow:
       type: object
-      required: [id, name, requests_exact]
+      required:
+        - id
+        - name
+        - requests_exact
       properties:
         id:
           type: string
@@ -11027,7 +11071,16 @@ components:
       additionalProperties: false
     ProbeEstimate:
       type: object
-      required: [matched_flow_count, flows, executions_per_occurrence, executions_per_day, executions_per_30_days, executions_remaining_month, requests_exact, estimate_notes, generated_at]
+      required:
+        - matched_flow_count
+        - flows
+        - executions_per_occurrence
+        - executions_per_day
+        - executions_per_30_days
+        - executions_remaining_month
+        - requests_exact
+        - estimate_notes
+        - generated_at
       properties:
         matched_flow_count:
           type: integer
@@ -11146,7 +11199,9 @@ components:
       properties:
         type:
           type: string
-          enum: [standard, probe]
+          enum:
+            - standard
+            - probe
         probe_id:
           type: string
         flow_ids:
@@ -12068,8 +12123,8 @@ components:
           pattern: ^#[0-9a-fA-F]{6}$
       additionalProperties: false
     StatusPageServiceMessages:
-      type: object
       description: Optional plain-text public wording per measured state. Blank values use the default wording. Messages are frozen on publication and never change health or expose execution errors.
+      type: object
       properties:
         operational:
           type: string

@@ -1126,6 +1126,21 @@ func (e ResourceSearchType) Valid() bool {
 	}
 }
 
+// Defines values for RunnerCapability.
+const (
+	SecretOutputs RunnerCapability = "secret_outputs"
+)
+
+// Valid indicates whether the value is a known member of the RunnerCapability enum.
+func (e RunnerCapability) Valid() bool {
+	switch e {
+	case SecretOutputs:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RunnerJobHeartbeatStatus.
 const (
 	Rejected RunnerJobHeartbeatStatus = "rejected"
@@ -2923,8 +2938,14 @@ type EphemeralCompletionResponse struct {
 
 // EphemeralJobClaimRequest defines model for EphemeralJobClaimRequest.
 type EphemeralJobClaimRequest struct {
-	BootId   openapi_types.UUID `json:"boot_id"`
-	RunnerId string             `json:"runner_id"`
+	BootId openapi_types.UUID `json:"boot_id"`
+
+	// Capabilities What the claiming runner supports. A job whose flow or referenced flows declare a
+	// secret output (`Output.secret`) is failed with `RUNNER_UPGRADE_REQUIRED` instead of
+	// being handed to a claim that omits `secret_outputs`, because that runner would report
+	// the value in clear.
+	Capabilities *[]RunnerCapability `json:"capabilities,omitempty"`
+	RunnerId     string              `json:"runner_id"`
 }
 
 // EphemeralJobClaimResponse One-time delivery of the Job credential and runnable payload.
@@ -5240,6 +5261,10 @@ type RunOpenAPISyncNowRequest struct {
 	ForceReset *bool `json:"force_reset,omitempty"`
 }
 
+// RunnerCapability A feature a runner build supports. `secret_outputs`: the runner masks the values of
+// node outputs declared `secret` in everything it reports (ADR-0018).
+type RunnerCapability string
+
 // RunnerInputs Effective root inputs snapshot resolved for a runner execution.
 type RunnerInputs map[string]interface{}
 
@@ -5333,6 +5358,12 @@ type RunnerJobNextRequest struct {
 	//
 	// Examples: 01957d27-7c6c-7d4e-9b08-9ea5d6ab4a21
 	BootId openapi_types.UUID `json:"boot_id"`
+
+	// Capabilities What the claiming runner supports. A job whose flow or referenced flows declare a
+	// secret output (`Output.secret`) is failed with `RUNNER_UPGRADE_REQUIRED` instead of
+	// being handed to a claim that omits `secret_outputs`, because that runner would report
+	// the value in clear.
+	Capabilities *[]RunnerCapability `json:"capabilities,omitempty"`
 
 	// MaxParallelFlows Maximum number of concurrent executions this runner can accept.
 	//
