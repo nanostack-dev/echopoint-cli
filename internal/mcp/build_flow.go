@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -60,9 +61,12 @@ type flatNode struct {
 	Headers map[string]string `json:"headers,omitempty"`
 	Body    string            `json:"body,omitempty"`
 	Outputs map[string]string `json:"outputs,omitempty"` // request: name->json_path; module: name->childNode.key
-	Asserts []flatAssert      `json:"asserts,omitempty"`
-	FlowID  string            `json:"flow_id,omitempty"` // module only
-	Inputs  map[string]string `json:"inputs,omitempty"`  // module only
+	// SecretOutputs names request outputs whose values the runner masks as ***
+	// in every report (Echopoint ADR-0018).
+	SecretOutputs []string          `json:"secret_outputs,omitempty"`
+	Asserts       []flatAssert      `json:"asserts,omitempty"`
+	FlowID        string            `json:"flow_id,omitempty"` // module only
+	Inputs        map[string]string `json:"inputs,omitempty"`  // module only
 }
 
 func (n flatNode) kind() string {
@@ -187,7 +191,17 @@ func validateNodeFields(n flatNode) []string {
 		if n.FlowID == "" {
 			problems = append(problems, fmt.Sprintf("module node %q has no flow_id", n.ID))
 		}
+		if len(n.SecretOutputs) > 0 {
+			problems = append(problems, fmt.Sprintf(
+				"module node %q cannot set secret_outputs: flag it on the child node that extracts it", n.ID))
+		}
 		return problems
+	}
+	for _, name := range n.SecretOutputs {
+		if _, declared := n.Outputs[name]; !declared {
+			problems = append(problems,
+				fmt.Sprintf("node %q secret output %q is not in its outputs", n.ID, name))
+		}
 	}
 	if n.Method == "" {
 		problems = append(problems, fmt.Sprintf("request node %q has no method", n.ID))
@@ -299,7 +313,7 @@ func buildFlowDoc(f flatFlow) map[string]any {
 			}
 			node[keyType] = requestKind
 			node["data"] = data
-			if outs := buildOutputs(n.Outputs); len(outs) > 0 {
+			if outs := buildOutputs(n.Outputs, n.SecretOutputs); len(outs) > 0 {
 				node["outputs"] = outs
 			}
 			if len(n.Asserts) > 0 {
@@ -341,8 +355,9 @@ func buildFlowDoc(f flatFlow) map[string]any {
 }
 
 // buildOutputs converts name->json_path into the request node output shape, in
-// stable key order so the document is deterministic.
-func buildOutputs(m map[string]string) []map[string]any {
+// stable key order so the document is deterministic. Outputs named in secret
+// carry "secret": true.
+func buildOutputs(m map[string]string, secret []string) []map[string]any {
 	if len(m) == 0 {
 		return nil
 	}
@@ -353,10 +368,14 @@ func buildOutputs(m map[string]string) []map[string]any {
 	sort.Strings(names)
 	out := make([]map[string]any, 0, len(names))
 	for _, name := range names {
-		out = append(out, map[string]any{
+		output := map[string]any{
 			keyName:     name,
 			"extractor": map[string]any{keyType: extractorJSONPath, "path": m[name]},
-		})
+		}
+		if slices.Contains(secret, name) {
+			output["secret"] = true
+		}
+		out = append(out, output)
 	}
 	return out
 }
