@@ -7,7 +7,7 @@
 | Environment | Named overlay of organization variables. |
 | Flow | Graph identified by an ID and free-text name; it has no slug. |
 | Flow role | `standalone` (default) or `module`; set with `flow role <flow-id> --set`. |
-| Module flow | Flow with role `module`: a reusable building block that other flows call through a module node. It can be launched directly to test it; schedules skip it when their tags match unless the schedule sets `ignore_modules` to false. |
+| Module flow | Flow with role `module`: a reusable building block that other flows call through a module node. It can be launched directly to test it; schedules skip it when their tags match unless the schedule sets `ignore_modules` to false. `flow run --tag` runs it unless `--ignore-modules` is passed. |
 | Collection | API request grouping identified by an ID and name. |
 | Spec | OpenAPI document stored in Echopoint, addressed by a unique slug with a separate title. |
 | Cloud | Echopoint operates the execution runner. |

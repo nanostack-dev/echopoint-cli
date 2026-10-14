@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -42,6 +43,15 @@ const (
 // maxTagResolvedFlows caps how many flows a single --tag selection may launch, guarding
 // against an over-broad tag filter accidentally launching a huge batch from CI.
 const maxTagResolvedFlows = 50
+
+// Flow search returns at most tagSearchPageSize items per page. With --ignore-modules the CLI
+// pages through every match to drop module flows client-side, and refuses to scan more than
+// maxTagScannedFlows matches so an over-broad tag cannot turn into an unbounded crawl.
+const (
+	tagSearchPageSize   = 100
+	maxTagScannedFlows  = 1000
+	ignoreModulesNotice = "Skipped %d module flow(s) matched by the tags.\n"
+)
 
 // statusForExit maps a CLI exit code to the stable status string surfaced in JSON output and
 // to the GitHub Action. Flow failures are "failed"; launch/runner/publish/timeout problems are
@@ -119,6 +129,7 @@ func newFlowRunCmd(state *AppState) *cobra.Command {
 		flagVerbose        bool
 		flagTags           []string
 		flagMatchMode      string
+		flagIgnoreModules  bool
 	)
 
 	cmd := &cobra.Command{
@@ -148,11 +159,12 @@ Exit codes:
   4  timeout`,
 		Example: `  echopoint flow run <flow-id>
   echopoint flow run <flow-id> <flow-id> --parallel 2 -e dev
-  echopoint flow run --tag smoke --match-mode all -o json`,
+  echopoint flow run --tag smoke --match-mode all -o json
+  echopoint flow run --tag smoke --ignore-modules`,
 		Args:          cobra.ArbitraryArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			format := state.OutputFormat
 
 			// Launch and one-time claim use flows:execute. Reporting uses the
@@ -184,6 +196,10 @@ Exit codes:
 				return runError(format, nil, exitError,
 					"provide at least one flow ID, or use --tag to select flows by tag")
 			}
+			if flagIgnoreModules && len(flagTags) == 0 {
+				return runError(format, nil, exitError,
+					"--ignore-modules only applies with --tag; flows given by ID always run")
+			}
 			if flagMatchMode != string(api.Any) && flagMatchMode != string(api.All) {
 				return runError(format, nil, exitError,
 					fmt.Sprintf("invalid --match-mode %q; must be %q or %q", flagMatchMode, api.Any, api.All))
@@ -198,7 +214,9 @@ Exit codes:
 
 			flowIDs := args
 			if len(flagTags) > 0 {
-				resolved, resolveErr := resolveFlowIDsByTags(ctx, state, flagTags, flagMatchMode)
+				resolved, resolveErr := resolveTagSelection(
+					ctx, state, cmd.ErrOrStderr(), flagTags, flagMatchMode, flagIgnoreModules,
+				)
 				if resolveErr != nil {
 					return runError(format, nil, exitError, resolveErr.Error())
 				}
@@ -231,6 +249,9 @@ Exit codes:
 		"Select flows by tag instead of by ID (repeatable). Mutually exclusive with positional flow IDs.")
 	cmd.Flags().StringVar(&flagMatchMode, "match-mode", string(api.Any),
 		`Tag match mode when using --tag: "any" (default, OR) or "all" (AND)`)
+	cmd.Flags().BoolVar(&flagIgnoreModules, "ignore-modules", false,
+		"With --tag, skip module flows (reusable building blocks other flows call) among the matches. "+
+			"Mutually exclusive with positional flow IDs.")
 	cmd.ValidArgsFunction = completeFlowArgs(state, -1)
 	registerEnvironmentFlagCompletion(state, cmd)
 	_ = cmd.RegisterFlagCompletionFunc("match-mode", staticCompletion(string(api.Any), string(api.All)))
@@ -283,6 +304,113 @@ func resolveFlowIDsByTags(
 		ids = append(ids, item.Id.String())
 	}
 	return ids, nil
+}
+
+// resolveTagSelection resolves --tag into flow IDs, dropping module flows when ignoreModules
+// is set and reporting how many were skipped on notices (stderr).
+func resolveTagSelection(
+	ctx context.Context,
+	state *AppState,
+	notices io.Writer,
+	tags []string,
+	matchMode string,
+	ignoreModules bool,
+) ([]string, error) {
+	if !ignoreModules {
+		return resolveFlowIDsByTags(ctx, state, tags, matchMode)
+	}
+	ids, skipped, err := resolveStandaloneFlowIDsByTags(ctx, state, tags, matchMode)
+	if err != nil {
+		return nil, err
+	}
+	if skipped > 0 {
+		fmt.Fprintf(notices, ignoreModulesNotice, skipped)
+	}
+	return ids, nil
+}
+
+// resolveStandaloneFlowIDsByTags is resolveFlowIDsByTags for --ignore-modules. The search
+// endpoint does not filter by role, so it pages through every match, drops module flows
+// client-side and applies the safety cap to the flows that remain. It returns the number of
+// module flows skipped.
+func resolveStandaloneFlowIDsByTags(
+	ctx context.Context,
+	state *AppState,
+	tags []string,
+	matchMode string,
+) ([]string, int, error) {
+	mode := api.TagMatchMode(matchMode)
+	params := &api.SearchFlowsParams{XOrganizationID: state.OrganizationID}
+	limit := int32(tagSearchPageSize)
+
+	var (
+		ids     []string
+		skipped int
+		seen    = map[string]struct{}{}
+		total   int64
+	)
+	for offset := int32(0); ; offset += limit {
+		pageOffset := offset
+		body := api.FlowSearchRequest{
+			Tags:         &tags,
+			TagMatchMode: &mode,
+			Pagination:   &api.PaginationRequest{Limit: &limit, Offset: &pageOffset},
+		}
+		resp, err := state.Client.API().SearchFlowsWithResponse(ctx, params, body)
+		if err != nil {
+			return nil, 0, fmt.Errorf("search flows by tag: %w", err)
+		}
+		if resp.JSON200 == nil {
+			return nil, 0, fmt.Errorf(
+				"search flows by tag: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
+			)
+		}
+		page := resp.JSON200
+		total = page.Total
+		if total > int64(maxTagScannedFlows) {
+			return nil, 0, fmt.Errorf(
+				"tag search matched %d flows, too many to filter out modules (limit %d); "+
+					"narrow the tags (or use --match-mode all) before launching",
+				total, maxTagScannedFlows,
+			)
+		}
+
+		for _, item := range page.Items {
+			id := item.Id.String()
+			if _, dup := seen[id]; dup {
+				continue
+			}
+			seen[id] = struct{}{}
+			if item.Role == api.FlowRoleModule {
+				skipped++
+				continue
+			}
+			ids = append(ids, id)
+		}
+		if len(ids) > maxTagResolvedFlows {
+			return nil, 0, fmt.Errorf(
+				"tag search matched more than %d standalone flows, exceeding the CLI safety cap of %d; "+
+					"narrow the tags (or use --match-mode all) before launching",
+				maxTagResolvedFlows, maxTagResolvedFlows,
+			)
+		}
+		if len(page.Items) == 0 || int64(offset)+int64(limit) >= total {
+			break
+		}
+	}
+
+	if int64(len(seen)) < total {
+		return nil, 0, fmt.Errorf(
+			"tag search results changed while paging (saw %d of %d flows); retry", len(seen), total,
+		)
+	}
+	if len(ids) == 0 {
+		if skipped > 0 {
+			return nil, 0, fmt.Errorf("no flows matched the given tags (%d module flows skipped)", skipped)
+		}
+		return nil, 0, fmt.Errorf("no flows matched the given tags")
+	}
+	return ids, skipped, nil
 }
 
 func resolveIdempotencyKey(flagValue string, flowIDs []string) string {

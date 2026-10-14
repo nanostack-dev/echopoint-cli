@@ -54,7 +54,7 @@ echopoint flow update <flow-id> --name "Checkout smoke test" --description "Runs
 Only the flags given change; the other fields stay.
 
 ### Flow Role
-A flow is either **standalone** (the default: a test of its own) or a **module**: a reusable building block that other flows call through a module node. A Module flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` is not affected.
+A flow is either **standalone** (the default: a test of its own) or a **module**: a reusable building block that other flows call through a module node. A Module flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` runs module flows too unless you pass `--ignore-modules`.
 ```bash
 # show the role
 echopoint flow role <flow-id>
@@ -75,6 +75,7 @@ A flow runs on **Cloud** (EchoPoint runs it), on a **Self-hosted** runner (a lon
 echopoint flow run <flow-id>
 echopoint flow run <flow-id> <flow-id> --parallel 2 -e dev
 echopoint flow run --tag smoke -o json
+echopoint flow run --tag smoke --ignore-modules
 
 # EchoPoint runs it on Cloud (or a Self-hosted runner): it prints the execution id and returns
 echopoint flow launch <flow-id>
@@ -82,6 +83,8 @@ echopoint flow launch <flow-id> --runner self_hosted -e prd
 ```
 
 `flow run` exits 0 when every flow passed, 1 when a flow failed, 2 when cancelled, 3 on an API or runner error and 4 on timeout. `-o json` prints one JSON object on stdout (the GitHub Action reads it); `-o yaml` prints the same object as YAML; the default `table` prints a summary on stderr. See [Running flows in CI](github-action.md).
+
+`--ignore-modules` (with `--tag` only; combining it with flow IDs is a usage error, exit 3) drops module flows from the tag matches before launch, as schedules do. The search endpoint does not filter by role, so the CLI pages through all matches and filters client-side. The 50-flow safety cap counts only the flows that will be launched; at most 1000 matches are scanned. A match made only of modules fails like "no flows matched" (exit 3), and the skipped count (`Skipped 2 module flow(s) matched by the tags.`) goes to stderr, never into the `-o json` result.
 
 `-e/--environment` overlays a named organization environment (`dev`, `prd`) on the flow's variables, on both commands.
 

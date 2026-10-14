@@ -50,6 +50,13 @@ inputs:
     description: 'Tag match mode when using tags: any (default) or all.'
     required: false
     default: any
+  ignore-modules:
+    description: >
+      With tags, skip module flows (reusable building blocks other flows call)
+      among the matches: 'true' or 'false' (default). Ignored with flow-id /
+      flow-ids.
+    required: false
+    default: 'false'
   api-url:
     description: >
       Echopoint API base URL (e.g. https://apidev.echopoint.dev). Defaults to the
@@ -120,6 +127,15 @@ runs:
         if [ -n "$match_mode" ] && [ "$match_mode" != "any" ] && [ "$match_mode" != "all" ]; then
           echo "::error::'match-mode' must be 'any' or 'all', got: $match_mode"
           exit 3
+        fi
+
+        ignore_modules="${{ inputs.ignore-modules }}"
+        if [ -n "$ignore_modules" ] && [ "$ignore_modules" != "true" ] && [ "$ignore_modules" != "false" ]; then
+          echo "::error::'ignore-modules' must be 'true' or 'false', got: $ignore_modules"
+          exit 3
+        fi
+        if [ "$ignore_modules" = "true" ] && [ -z "$tags" ]; then
+          echo "::warning::'ignore-modules' only applies with 'tags'; flows selected by ID always run."
         fi
 
         # parallel >= 1
@@ -318,6 +334,9 @@ runs:
           match_mode="${{ inputs.match-mode }}"
           if [ -n "$match_mode" ]; then
             selector_args+=(--match-mode "$match_mode")
+          fi
+          if [ "${{ inputs.ignore-modules }}" = "true" ]; then
+            selector_args+=(--ignore-modules)
           fi
         else
           # shellcheck disable=SC2206

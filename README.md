@@ -288,6 +288,7 @@ an **Ephemeral** runner (a short-lived runner the caller operates).
 echopoint flow run <flow-id>
 echopoint flow run <flow-id> <flow-id> --parallel 2 -e dev -o json
 echopoint flow run --tag smoke
+echopoint flow run --tag smoke --ignore-modules   # skip module flows
 
 # Ask EchoPoint to run it on Cloud or a Self-hosted runner: prints the execution id and returns.
 echopoint flow launch <flow-id>
