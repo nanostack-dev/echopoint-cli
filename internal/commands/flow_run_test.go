@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -683,5 +684,36 @@ func TestIntegration_JSONOutputOnAPIError(t *testing.T) {
 	}
 	if len(results) != 1 || results[0].Success {
 		t.Errorf("expected failed result, got %+v", results)
+	}
+}
+
+// Echopoint refuses a Job whose flow declares a secret output to a claim that
+// does not declare the embedded runner can mask one (ADR-0019).
+func TestIntegration_EphemeralClaimDeclaresTheSecretOutputsCapability(t *testing.T) {
+	var capabilities []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/launch"):
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusAccepted)
+			_ = json.NewEncoder(w).Encode(launchResponse(false))
+		case strings.Contains(r.URL.Path, "/claim"):
+			var body struct {
+				Capabilities []string `json:"capabilities"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			capabilities = body.Capabilities
+			w.WriteHeader(http.StatusConflict)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	state := makeState(t, "test-api-key", "", srv.URL)
+	executeFlows(context.Background(), state, []string{flowUUID().String()}, "", "", "", 1, "")
+
+	if !slices.Contains(capabilities, "secret_outputs") {
+		t.Fatalf("the ephemeral claim must declare secret_outputs, got %v", capabilities)
 	}
 }

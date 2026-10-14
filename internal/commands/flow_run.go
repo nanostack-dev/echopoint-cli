@@ -705,9 +705,10 @@ func claimEphemeralJob(
 ) (jobrunner.Job, string, error) {
 	progressf(outputFormat, "Claiming Job for execution %s...\n", executionID)
 	params := &api.ClaimEphemeralJobParams{XOrganizationID: state.OrganizationID}
+	capabilities := runnerCapabilities()
 	response, err := state.Client.API().ClaimEphemeralJobWithResponse(
 		ctx, executionID, params,
-		api.EphemeralJobClaimRequest{RunnerId: "echopoint-cli", BootId: bootID},
+		api.EphemeralJobClaimRequest{RunnerId: "echopoint-cli", BootId: bootID, Capabilities: &capabilities},
 	)
 	if err != nil {
 		return jobrunner.Job{}, "", fmt.Errorf(
@@ -730,6 +731,18 @@ func claimEphemeralJob(
 		return jobrunner.Job{}, "", fmt.Errorf("decode claimed Job: %w", err)
 	}
 	return job, response.JSON200.JobToken, nil
+}
+
+// runnerCapabilities declares what the embedded runner supports, so Echopoint
+// can refuse a Job this build cannot run safely, such as a flow with a secret
+// output on a runner that would report it in clear.
+func runnerCapabilities() []api.RunnerCapability {
+	declared := jobrunner.Capabilities()
+	capabilities := make([]api.RunnerCapability, 0, len(declared))
+	for _, capability := range declared {
+		capabilities = append(capabilities, api.RunnerCapability(capability))
+	}
+	return capabilities
 }
 
 func buildRunResultFromJob(flowID, executionID string, runnerResult jobrunner.Result) FlowRunResult {
