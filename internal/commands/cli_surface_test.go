@@ -79,7 +79,12 @@ func TestTheRetiredVerbsAndNounsAreGone(t *testing.T) {
 	}
 
 	var names []string
-	walkCommands(NewRootCmd(), func(_ string, cmd *cobra.Command) { names = append(names, cmd.Name()) })
+	walkCommands(NewRootCmd(), func(path string, cmd *cobra.Command) {
+		// analytics names its reports after what they count: 'analytics flows' is not the retired noun
+		if !strings.HasPrefix(path, "echopoint "+analyticsCommandName+" ") {
+			names = append(names, cmd.Name())
+		}
+	})
 	for _, retired := range []string{"flows", "collections", "status-pages", "create-interactive"} {
 		if slices.Contains(names, retired) {
 			t.Errorf("%q is still the name of a command", retired)
@@ -112,7 +117,7 @@ func TestRootCommandsAreGroupedUnderTheirHeadings(t *testing.T) {
 	}
 
 	want := map[string][]string{
-		"Resources":         {"collection", "flow", "org", "probe", "spec", "status-page"},
+		"Resources":         {"analytics", "collection", "flow", "org", "probe", "spec", "status-page"},
 		"Account and setup": {"auth", "config", "profile"},
 		"Tools":             {"completion", "help", "mcp", "update", "version"},
 	}
@@ -124,7 +129,7 @@ func TestRootCommandsAreGroupedUnderTheirHeadings(t *testing.T) {
 	if strings.Contains(stdout, "Available Commands:") || strings.Contains(stdout, "Additional Commands:") {
 		t.Errorf("a root command is outside every group:\n%s", stdout)
 	}
-	if strings.Contains(stdout, "webhooks") || strings.Contains(stdout, "analytics") {
+	if strings.Contains(stdout, "webhooks") {
 		t.Errorf("the root help still describes what the CLI no longer manages:\n%s", stdout)
 	}
 	for _, vocabulary := range []string{"Cloud", "Self-hosted", "Ephemeral"} {

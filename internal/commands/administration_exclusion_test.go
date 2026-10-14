@@ -79,6 +79,7 @@ func TestMCPProcessExcludesAdministrationAndServesOrdinaryTools(t *testing.T) {
 	excluded := map[string]bool{
 		"get_cloud_fleet": true, "update_cloud_fleet": true,
 		"resync_resource_search": true, "run_flow_schedule_now": true,
+		"rebuild_execution_analytics": true,
 	}
 	ordinaryToolFound := false
 	for _, tool := range listed.Tools {

@@ -13,7 +13,7 @@ Every command that takes a flow takes it as `<flow-id>`: the flow's id, which `f
 ## Basic Commands
 
 ### List Flows
-The table has NAME, ID and UPDATED columns.
+The table has NAME, ID, ROLE and UPDATED columns.
 ```bash
 echopoint flow list
 echopoint flow list -o json
@@ -26,7 +26,7 @@ echopoint flow list --uncategorized
 
 ### View a Flow
 ```bash
-# a summary: name, id, version, dates, node and edge counts
+# a summary: name, id, role, version, dates, node and edge counts
 echopoint flow view <flow-id>
 
 # the whole flow, definition included
@@ -66,6 +66,19 @@ echopoint flow update <flow-id> --name "Checkout smoke test" --description "Runs
 ```
 Only the flags given change; the other fields stay.
 
+### Flow Role
+A flow is either **standalone** (the default: a test of its own) or a **module**: a reusable building block that other flows call through a module node. A Module flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` runs module flows too unless you pass `--ignore-modules`.
+```bash
+# show the role
+echopoint flow role <flow-id>
+echopoint flow role <flow-id> -o json
+
+# change it; only the role is sent, every other field stays
+echopoint flow role <flow-id> --set module
+echopoint flow role <flow-id> --set standalone
+```
+`-o json` and `-o yaml` print `{"id": ..., "role": ...}` for both forms. An unknown role fails before any request. `flow view -o json` and `flow list -o json` carry `role`, and a `CreateFlowRequest` or `UpdateFlowRequest` file may set it.
+
 ### Run or Launch a Flow
 
 A flow runs on **Cloud** (EchoPoint runs it), on a **Self-hosted** runner (a long-lived runner you operate), or on an **Ephemeral** runner (a short-lived runner the caller operates). Two commands start one, and they are different:
@@ -75,6 +88,7 @@ A flow runs on **Cloud** (EchoPoint runs it), on a **Self-hosted** runner (a lon
 echopoint flow run <flow-id>
 echopoint flow run <flow-id> <flow-id> --parallel 2 -e dev
 echopoint flow run --tag smoke -o json
+echopoint flow run --tag smoke --ignore-modules
 
 # EchoPoint runs it on Cloud (or a Self-hosted runner): it prints the execution id and returns
 echopoint flow launch <flow-id>
@@ -82,6 +96,8 @@ echopoint flow launch <flow-id> --runner self_hosted -e prd
 ```
 
 `flow run` exits 0 when every flow passed, 1 when a flow failed, 2 when cancelled, 3 on an API or runner error and 4 on timeout. `-o json` prints one JSON object on stdout (the GitHub Action reads it); `-o yaml` prints the same object as YAML; the default `table` prints a summary on stderr. See [Running flows in CI](github-action.md).
+
+`--ignore-modules` (with `--tag` only; combining it with flow IDs is a usage error, exit 3) drops module flows from the tag matches before launch, as schedules do. The search endpoint does not filter by role, so the CLI pages through all matches and filters client-side. The 50-flow safety cap counts only the flows that will be launched; at most 1000 matches are scanned. A match made only of modules fails like "no flows matched" (exit 3), and the skipped count (`Skipped 2 module flow(s) matched by the tags.`) goes to stderr, never into the `-o json` result.
 
 `-e/--environment` overlays a named organization environment (`dev`, `prd`) on the flow's variables, on both commands.
 
@@ -218,7 +234,9 @@ echopoint flow node add <flow-id> \
 ```bash
 echopoint flow node remove <flow-id> <node-id>
 ```
-Removes a node and all connected edges automatically.
+Removes a node and all connected edges automatically. Removal and edge endpoint
+lookup recognize all schema node types, including branch, loop, poll, SSE and
+webhook-wait nodes, and preserve the other nodes in a mixed flow.
 
 ### Update Node
 ```bash
@@ -232,6 +250,11 @@ echopoint flow node update <flow-id> <node-id> \
 - `--name`: New display name
 - `--method`: New HTTP method (request nodes only)
 - `--url`: New URL (request nodes only)
+
+Incremental `node update` supports request, delay and module nodes. Other existing
+types return an explicit unsupported-editing error; use a complete flow definition
+with `flow update -f` to edit them. Graph edits and flow-variable requests use the
+command's cancellation context, including the read and save stages of an edit.
 
 ---
 
@@ -271,11 +294,22 @@ echopoint flow node output add <flow-id> <node-id> \
   --header-name "Content-Type"
 ```
 
+**Secret output** (a credential or token the flow obtains during the run):
+```bash
+echopoint flow node output add <flow-id> <node-id> \
+  --name "jwt" \
+  --extractor json_path \
+  --path "$.jwt" \
+  --secret
+```
+From the moment the node extracts it, the value is replaced by `***` in every execution result, progress event and error, including module outputs and the inputs of later nodes. Those nodes still send the real value. Matching is by text, so flag only credentials and tokens: a short or common value is replaced everywhere it appears. A runner older than v0.77.0 ignores the flag.
+
 **Flags:**
 - `--name` (required): Output name for referencing in other nodes
 - `--extractor` (required): Type - `json_path`, `status_code`, `body`, or `header`
 - `--path`: JSONPath expression (for json_path extractor)
 - `--header-name`: Header name (for header extractor)
+- `--secret`: Replace the extracted value with *** in results and events
 
 ### Remove Output
 ```bash

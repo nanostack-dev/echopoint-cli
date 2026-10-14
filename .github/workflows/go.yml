@@ -10,7 +10,6 @@ on:
       - '.github/workflows/go.yml'
       - '.golangci.yml'
   pull_request:
-    branches: [main]
     paths:
       - '**/*.go'
       - '**/go.mod'

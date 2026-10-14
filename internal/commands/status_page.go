@@ -29,6 +29,14 @@ func offline() map[string]string {
 	return map[string]string{offlineAnnotation: annotationEnabled}
 }
 
+// draftAction routes two local CLI commands; it is not an API/domain enum.
+type draftAction int
+
+const (
+	draftSave draftAction = iota
+	draftValidate
+)
+
 func newStatusPageCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     statusPageCommandName,
@@ -37,8 +45,8 @@ func newStatusPageCmd(state *AppState) *cobra.Command {
 	}
 	cmd.AddCommand(
 		newStatusPageViewCmd(state),
-		newStatusPageSaveCmd(state, false),
-		newStatusPageSaveCmd(state, true),
+		newStatusPageDraftCmd(state, draftSave),
+		newStatusPageDraftCmd(state, draftValidate),
 		newStatusPagePublishCmd(state),
 		newStatusPageUnpublishCmd(state),
 		newStatusPageBindingCmd(state),
@@ -119,12 +127,12 @@ func readStatusPageRequest(cmd *cobra.Command, path string) (api.SaveStatusPageR
 	return request, nil
 }
 
-func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
+func newStatusPageDraftCmd(state *AppState, action draftAction) *cobra.Command {
 	var file string
 	verb, short := "save -f <file>", "Save a complete private draft from a JSON file (-f -: stdin)"
 	example := `  echopoint status-page save -f status-page.json
   cat status-page.json | echopoint status-page save -f -`
-	if validateOnly {
+	if action == draftValidate {
 		verb, short = "validate -f <file>", "Validate a draft JSON file offline against the API contract (-f -: stdin)"
 		example = `  echopoint status-page validate -f status-page.json
   cat status-page.json | echopoint status-page validate -f -`
@@ -142,7 +150,7 @@ func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if validateOnly {
+			if action == draftValidate {
 				result := struct {
 					Valid bool   `json:"valid"`
 					Scope string `json:"scope"`
@@ -162,7 +170,7 @@ func newStatusPageSaveCmd(state *AppState, validateOnly bool) *cobra.Command {
 	addFileFlag(cmd, &file, "Draft JSON file; - reads stdin", "json")
 	_ = cmd.MarkFlagRequired("file")
 	cmd.ValidArgsFunction = cobra.NoFileCompletions
-	if validateOnly {
+	if action == draftValidate {
 		cmd.Annotations = offline()
 	}
 	return cmd

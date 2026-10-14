@@ -476,3 +476,55 @@ print('OK')
   run validate_inputs "" "flow-abc,flow-def" "1"
   [ "$status" -eq 0 ]
 }
+
+# -----------------------------------------------------------------------
+# ignore-modules input
+# -----------------------------------------------------------------------
+@test "ignore-modules: input is declared with default 'false'" {
+  run python3 -c "
+import re, sys
+text = open('${ACTION_FILE}').read()
+block = re.search(r'^  ignore-modules:\n(.*?)(?=^  \S)', text, re.S | re.M)
+sys.exit(0 if block and re.search(r\"default: 'false'\", block.group(1)) else 1)
+"
+  [ "$status" -eq 0 ]
+}
+
+@test "ignore-modules: action.yml passes --ignore-modules inside the tags branch" {
+  grep -q 'selector_args+=(--ignore-modules)' "$ACTION_FILE"
+}
+
+@test "ignore-modules: tags with true append --ignore-modules" {
+  build_tag_selector_args "smoke,prod" "any" "true"
+  [ "${SELECTOR_ARGS[*]}" = "--tag smoke --tag prod --match-mode any --ignore-modules" ]
+}
+
+@test "ignore-modules: tags with false leave the arguments unchanged" {
+  build_tag_selector_args "smoke,prod" "any" "false"
+  [ "${SELECTOR_ARGS[*]}" = "--tag smoke --tag prod --match-mode any" ]
+}
+
+@test "ignore-modules: an empty value leaves the arguments unchanged" {
+  build_tag_selector_args "smoke" "all" ""
+  [ "${SELECTOR_ARGS[*]}" = "--tag smoke --match-mode all" ]
+}
+
+@test "ignore-modules: true is valid" {
+  run validate_ignore_modules "true"
+  [ "$status" -eq 0 ]
+}
+
+@test "ignore-modules: false is valid" {
+  run validate_ignore_modules "false"
+  [ "$status" -eq 0 ]
+}
+
+@test "ignore-modules: any other value fails validation with exit 3" {
+  run validate_ignore_modules "yes"
+  [ "$status" -eq 3 ]
+  echo "$output" | grep -q "ignore-modules"
+}
+
+@test "ignore-modules: action.yml validates the input before any launch" {
+  grep -q "'ignore-modules' must be 'true' or 'false'" "$ACTION_FILE"
+}

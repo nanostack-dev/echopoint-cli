@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -78,22 +77,15 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
+				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
 
 			// Node ID: a caller-provided logical id (unique within the flow) or
 			// an auto-generated UUIDv7 when --id is omitted.
@@ -127,7 +119,7 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 			}
 
 			if moduleFlowID != "" {
-				child, resolveErr := resolveFlowID(context.Background(), state, moduleFlowID)
+				child, resolveErr := resolveFlowID(cmd.Context(), state, moduleFlowID)
 				if resolveErr != nil {
 					return fmt.Errorf("--flow-id: %w", resolveErr)
 				}
@@ -178,25 +170,18 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 				})
 			}
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			// Debug: Print the request being sent
 			if state.Debug {
-				reqJSON, _ := json.MarshalIndent(updateReq, "", "  ")
-				fmt.Fprintf(os.Stderr, "[DEBUG] UpdateFlowRequest: %s\n", string(reqJSON))
+				autoLayout := true
+				request := api.UpdateFlowRequest{FlowDefinition: &definition, AutoLayout: &autoLayout}
+				encoded, err := json.MarshalIndent(request, "", "  ")
+				if err != nil {
+					return fmt.Errorf("failed to encode flow update: %w", err)
+				}
+				fmt.Fprintf(os.Stderr, "[DEBUG] UpdateFlowRequest: %s\n", encoded)
 			}
 
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Node added: %s\n", nodeID)
@@ -262,50 +247,31 @@ func newFlowNodeRemoveCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
 
 			nodeID := args[1]
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
+				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
 
 			// Find and remove node
 			found := false
 			newNodes := make([]api.FlowNode, 0, len(definition.Nodes))
 			for _, node := range definition.Nodes {
-				nodeData, _ := node.ValueByDiscriminator()
-				switch n := nodeData.(type) {
-				case api.RequestFlowNode:
-					if n.Id != nodeID {
-						newNodes = append(newNodes, node)
-					} else {
-						found = true
-					}
-				case api.DelayFlowNode:
-					if n.Id != nodeID {
-						newNodes = append(newNodes, node)
-					} else {
-						found = true
-					}
-				case api.ModuleFlowNode:
-					if n.Id != nodeID {
-						newNodes = append(newNodes, node)
-					} else {
-						found = true
-					}
+				id, readErr := flowNodeID(node)
+				if readErr != nil {
+					return readErr
 				}
+				if id == nodeID {
+					found = true
+					continue
+				}
+				newNodes = append(newNodes, node)
 			}
 
 			if !found {
@@ -323,19 +289,8 @@ func newFlowNodeRemoveCmd(state *AppState) *cobra.Command {
 			}
 			definition.Edges = newEdges
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Node removed: %s\n", nodeID)
@@ -360,80 +315,42 @@ func newFlowNodeUpdateCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
 
 			nodeID := args[1]
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
+				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
 
 			// Find and update node
 			found := false
 			for i, node := range definition.Nodes {
-				nodeData, _ := node.ValueByDiscriminator()
-				switch n := nodeData.(type) {
-				case api.RequestFlowNode:
-					if n.Id == nodeID {
-						if name != "" {
-							n.DisplayName = name
-						}
-						if method != "" {
-							n.Data.Method = api.HttpMethod(method)
-						}
-						if url != "" {
-							n.Data.Url = url
-						}
-						definition.Nodes[i].FromRequestFlowNode(n)
-						found = true
-					}
-				case api.DelayFlowNode:
-					if n.Id == nodeID {
-						if name != "" {
-							n.DisplayName = name
-						}
-						definition.Nodes[i].FromDelayFlowNode(n)
-						found = true
-					}
-				case api.ModuleFlowNode:
-					if n.Id == nodeID {
-						if name != "" {
-							n.DisplayName = name
-						}
-						definition.Nodes[i].FromModuleFlowNode(n)
-						found = true
-					}
+				id, readErr := flowNodeID(node)
+				if readErr != nil {
+					return readErr
 				}
+				if id != nodeID {
+					continue
+				}
+				updated, updateErr := updateFlowNode(node, name, method, url)
+				if updateErr != nil {
+					return updateErr
+				}
+				definition.Nodes[i] = updated
+				found = true
 			}
 
 			if !found {
 				return fmt.Errorf("node not found: %s", nodeID)
 			}
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Node updated: %s\n", nodeID)
@@ -467,6 +384,7 @@ func newFlowNodeOutputCmd(state *AppState) *cobra.Command {
 // newFlowNodeOutputAddCmd adds an output to a node
 func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 	var name, extractorType, path, headerName string
+	var secret bool
 
 	cmd := &cobra.Command{
 		Use:   addToNodeUse,
@@ -483,13 +401,16 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
   echopoint flow node output add <flow-id> <node-id> --name "response" --extractor body
 
   # Add a header extractor
-  echopoint flow node output add <flow-id> <node-id> --name "contentType" --extractor header --header-name "Content-Type"`,
+  echopoint flow node output add <flow-id> <node-id> --name "contentType" --extractor header --header-name "Content-Type"
+
+  # Add a secret output: its value is replaced by *** in every result and event after extraction
+  echopoint flow node output add <flow-id> <node-id> --name "jwt" --extractor json_path --path "$.jwt" --secret`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
@@ -505,17 +426,12 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid extractor type: %s (must be one of: %v)", extractorType, validExtractors)
 			}
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
-			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
+				return err
 			}
 
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
+			newOutput := buildNodeOutput(name, extractorType, path, headerName, secret)
 
 			// Find node and add output
 			found := false
@@ -524,61 +440,13 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 				switch n := nodeData.(type) {
 				case api.RequestFlowNode:
 					if n.Id == nodeID {
-						newOutput := api.Output{
-							Name: name,
-							Extractor: struct {
-								HeaderName *string           `json:"header_name,omitempty"`
-								Path       *string           `json:"path,omitempty"`
-								Type       api.ExtractorType `json:"type"`
-							}{
-								Type: api.ExtractorType(extractorType),
-							},
-						}
-
-						if path != "" {
-							newOutput.Extractor.Path = &path
-						}
-						if headerName != "" {
-							newOutput.Extractor.HeaderName = &headerName
-						}
-
-						if n.Outputs == nil {
-							outputs := []api.Output{newOutput}
-							n.Outputs = &outputs
-						} else {
-							*n.Outputs = append(*n.Outputs, newOutput)
-						}
-
+						n.Outputs = appendNodeOutput(n.Outputs, newOutput)
 						definition.Nodes[i].FromRequestFlowNode(n)
 						found = true
 					}
 				case api.DelayFlowNode:
 					if n.Id == nodeID {
-						newOutput := api.Output{
-							Name: name,
-							Extractor: struct {
-								HeaderName *string           `json:"header_name,omitempty"`
-								Path       *string           `json:"path,omitempty"`
-								Type       api.ExtractorType `json:"type"`
-							}{
-								Type: api.ExtractorType(extractorType),
-							},
-						}
-
-						if path != "" {
-							newOutput.Extractor.Path = &path
-						}
-						if headerName != "" {
-							newOutput.Extractor.HeaderName = &headerName
-						}
-
-						if n.Outputs == nil {
-							outputs := []api.Output{newOutput}
-							n.Outputs = &outputs
-						} else {
-							*n.Outputs = append(*n.Outputs, newOutput)
-						}
-
+						n.Outputs = appendNodeOutput(n.Outputs, newOutput)
 						definition.Nodes[i].FromDelayFlowNode(n)
 						found = true
 					}
@@ -589,23 +457,15 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("node not found: %s", nodeID)
 			}
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Output added: %s\n", name)
 			fmt.Printf("  Extractor: %s\n", extractorType)
+			if secret {
+				fmt.Println("  Secret: yes")
+			}
 
 			return nil
 		},
@@ -615,11 +475,35 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 	cmd.Flags().StringVar(&extractorType, "extractor", "", "Extractor type (json_path, status_code, body, header)")
 	cmd.Flags().StringVar(&path, "path", "", "Path for json_path extractor")
 	cmd.Flags().StringVar(&headerName, "header-name", "", "Header name for header extractor")
+	cmd.Flags().BoolVar(&secret, "secret", false, "Replace the extracted value with *** in results and events")
 
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("extractor")
 
 	return cmd
+}
+
+func buildNodeOutput(name, extractorType, path, headerName string, secret bool) api.Output {
+	output := api.Output{Name: name}
+	output.Extractor.Type = api.ExtractorType(extractorType)
+	if path != "" {
+		output.Extractor.Path = &path
+	}
+	if headerName != "" {
+		output.Extractor.HeaderName = &headerName
+	}
+	if secret {
+		output.Secret = &secret
+	}
+	return output
+}
+
+func appendNodeOutput(outputs *[]api.Output, output api.Output) *[]api.Output {
+	if outputs == nil {
+		return &[]api.Output{output}
+	}
+	appended := append(*outputs, output)
+	return &appended
 }
 
 // newFlowNodeOutputRemoveCmd removes an output from a node
@@ -634,7 +518,7 @@ func newFlowNodeOutputRemoveCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
@@ -642,17 +526,10 @@ func newFlowNodeOutputRemoveCmd(state *AppState) *cobra.Command {
 			nodeID := args[1]
 			outputName := args[2]
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
+				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
 
 			// Find node and remove output
 			found := false
@@ -696,19 +573,8 @@ func newFlowNodeOutputRemoveCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("output not found: %s", outputName)
 			}
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Output removed: %s\n", outputName)
@@ -762,7 +628,7 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
@@ -783,17 +649,10 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 				return fmt.Errorf("invalid operator type: %s (must be one of: %v)", operatorType, assertionOperators)
 			}
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
+				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
 
 			// Build extractor data
 			extractorData := make(map[string]any)
@@ -864,19 +723,8 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 				return fmt.Errorf("request or webhook wait node not found: %s", nodeID)
 			}
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Assertion added\n")
@@ -921,7 +769,7 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
@@ -933,17 +781,10 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("invalid assertion index: %s", args[2])
 			}
 
-			// Get current flow
-			resp, err := state.Client.API().GetFlowWithResponse(context.Background(), flowID, nil)
+			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
 			if err != nil {
-				return fmt.Errorf("failed to get flow: %w", err)
+				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			flow := resp.JSON200
-			definition := flow.FlowDefinition
 
 			// Find node and remove assertion
 			found := false
@@ -973,19 +814,8 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 				return fmt.Errorf("node not found or has no assertions: %s", nodeID)
 			}
 
-			// Update flow with auto-layout enabled
-			autoLayout := true
-			updateReq := api.UpdateFlowRequest{
-				FlowDefinition: &definition,
-				AutoLayout:     &autoLayout,
-			}
-
-			updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil, updateReq)
-			if err != nil {
-				return fmt.Errorf("failed to update flow: %w", err)
-			}
-			if updateResp.JSON200 == nil {
-				return formatAPIError(updateResp.HTTPResponse, updateResp.Body)
+			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
+				return err
 			}
 
 			fmt.Printf("✓ Assertion removed at index: %d\n", index)

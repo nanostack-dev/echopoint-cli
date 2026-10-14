@@ -50,6 +50,13 @@ inputs:
     description: 'Tag match mode when using tags: any (default) or all.'
     required: false
     default: any
+  ignore-modules:
+    description: >
+      With tags, skip module flows (reusable building blocks other flows call)
+      among the matches: 'true' or 'false' (default). Ignored with flow-id /
+      flow-ids.
+    required: false
+    default: 'false'
   api-url:
     description: >
       Echopoint API base URL (e.g. https://apidev.echopoint.dev). Defaults to the
@@ -70,6 +77,11 @@ outputs:
   success:
     description: 'true if all flows completed successfully, false otherwise.'
     value: ${{ steps.parse-outputs.outputs.success }}
+  results-file:
+    description: >-
+      Path to the full results JSON under RUNNER_TEMP, available for the rest of
+      the job. Use it when results-json is the compact form (see results-json).
+    value: ${{ steps.parse-outputs.outputs.results-file }}
   results-json:
     description: Raw JSON output from echopoint flows run.
     value: ${{ steps.parse-outputs.outputs.results-json }}
@@ -115,6 +127,15 @@ runs:
         if [ -n "$match_mode" ] && [ "$match_mode" != "any" ] && [ "$match_mode" != "all" ]; then
           echo "::error::'match-mode' must be 'any' or 'all', got: $match_mode"
           exit 3
+        fi
+
+        ignore_modules="${{ inputs.ignore-modules }}"
+        if [ -n "$ignore_modules" ] && [ "$ignore_modules" != "true" ] && [ "$ignore_modules" != "false" ]; then
+          echo "::error::'ignore-modules' must be 'true' or 'false', got: $ignore_modules"
+          exit 3
+        fi
+        if [ "$ignore_modules" = "true" ] && [ -z "$tags" ]; then
+          echo "::warning::'ignore-modules' only applies with 'tags'; flows selected by ID always run."
         fi
 
         # parallel >= 1
@@ -314,6 +335,9 @@ runs:
           if [ -n "$match_mode" ]; then
             selector_args+=(--match-mode "$match_mode")
           fi
+          if [ "${{ inputs.ignore-modules }}" = "true" ]; then
+            selector_args+=(--ignore-modules)
+          fi
         else
           # shellcheck disable=SC2206
           selector_args=(${{ steps.flow-ids.outputs.args }})
@@ -374,10 +398,41 @@ runs:
           echo "status=error"       >> "$GITHUB_OUTPUT"
           echo "success=false"      >> "$GITHUB_OUTPUT"
           echo "results-json="      >> "$GITHUB_OUTPUT"
+          echo "results-file="      >> "$GITHUB_OUTPUT"
           exit 0
         fi
 
         raw=$(cat "$json_file")
+
+        # GitHub rejects a step output or step summary over 1 MiB ("Maximum
+        # object size exceeded", "summary upload aborted"), which fails the job
+        # even when every flow passed. A run with many flows and node outputs
+        # goes past that, so large results are kept in a file and the output
+        # and summary get a compact form.
+        max_inline_bytes=524288
+        results_file="${RUNNER_TEMP:-/tmp}/echopoint-results-${GITHUB_RUN_ID:-local}-${GITHUB_JOB:-job}-$$.json"
+        cp "$json_file" "$results_file"
+        echo "results-file=$results_file" >> "$GITHUB_OUTPUT"
+        raw_bytes=${#raw}
+        results_inline="$raw"
+        if [ "$raw_bytes" -gt "$max_inline_bytes" ]; then
+          compact=""
+          if command -v jq >/dev/null 2>&1; then
+            compact=$(printf '%s' "$raw" | jq -c '
+              def slim: {flow_id, flow_url, execution_id, status, success, duration_ms,
+                         error_message: ((.error_message // "") | tostring | .[0:500])};
+              if has("results")
+              then {status, success, exit_code, duration_ms, truncated: true, results: [.results[] | slim]}
+              else (slim + {exit_code, truncated: true})
+              end' 2>/dev/null || true)
+          fi
+          if [ -n "$compact" ] && [ "${#compact}" -le "$max_inline_bytes" ]; then
+            results_inline="$compact"
+          else
+            results_inline='{"truncated":true}'
+          fi
+          echo "::notice::Echopoint results are $((raw_bytes / 1024)) KiB, over the inline limit: results-json holds a compact form; the full JSON is in $results_file (output results-file)."
+        fi
 
         # Helper: extract the first JSON key value without grep|head, which can
         # trip GitHub's implicit bash -e -o pipefail on large one-line JSON.
@@ -409,7 +464,7 @@ runs:
             echo "status=${status:-error}"
             echo "success=${success:-false}"
             echo "results-json<<ECHOPOINT_EOF"
-            echo "$raw"
+            echo "$results_inline"
             echo "ECHOPOINT_EOF"
           } >> "$GITHUB_OUTPUT"
         else
@@ -424,7 +479,7 @@ runs:
             echo "status=${status:-error}"
             echo "success=${success:-false}"
             echo "results-json<<ECHOPOINT_EOF"
-            echo "$raw"
+            echo "$results_inline"
             echo "ECHOPOINT_EOF"
           } >> "$GITHUB_OUTPUT"
         fi
@@ -457,15 +512,20 @@ runs:
                        ) | join("\n"))
                    else "" end)
             ' >> "$GITHUB_STEP_SUMMARY" || echo "_(summary render failed; see raw JSON below)_" >> "$GITHUB_STEP_SUMMARY"
-            {
-              echo ""
-              echo "<details><summary>Raw results JSON</summary>"
-              echo ""
-              echo '```json'
-              printf '%s\n' "$raw"
-              echo '```'
-              echo "</details>"
-            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "$raw_bytes" -le 262144 ]; then
+              {
+                echo ""
+                echo "<details><summary>Raw results JSON</summary>"
+                echo ""
+                echo '```json'
+                printf '%s\n' "$raw"
+                echo '```'
+                echo "</details>"
+              } >> "$GITHUB_STEP_SUMMARY"
+            else
+              printf '\n_Raw results JSON omitted from the summary (%s KiB); it is in the job at `%s`._\n' \
+                "$((raw_bytes / 1024))" "$results_file" >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             {
               echo "## Echopoint flow run"
@@ -473,7 +533,7 @@ runs:
               echo "Status: $(extract 'status') · Success: $(extract 'success')"
               echo ""
               echo '```json'
-              echo "$raw"
+              echo "$results_inline"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi

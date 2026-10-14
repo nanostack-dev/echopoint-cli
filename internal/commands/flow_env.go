@@ -38,8 +38,8 @@ exports.`,
 }
 
 // fetchFlowVariables reads one flow's variable set.
-func fetchFlowVariables(state *AppState, flowID uuid.UUID) (*api.VariableSet, error) {
-	resp, err := state.Client.API().GetFlowVariablesWithResponse(context.Background(), flowID, nil)
+func fetchFlowVariables(ctx context.Context, state *AppState, flowID uuid.UUID) (*api.VariableSet, error) {
+	resp, err := state.Client.API().GetFlowVariablesWithResponse(ctx, flowID, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get flow variables: %w", err)
 	}
@@ -50,14 +50,14 @@ func fetchFlowVariables(state *AppState, flowID uuid.UUID) (*api.VariableSet, er
 }
 
 // setFlowVariable writes one variable into a flow's base layer.
-func setFlowVariable(state *AppState, flowID uuid.UUID, key, value string, secret bool) error {
+func setFlowVariable(ctx context.Context, state *AppState, flowID uuid.UUID, key, value string, secret bool) error {
 	body := api.SetVariableRequest{Value: value}
 	if secret {
 		body.Secret = &secret
 	}
 
 	resp, err := state.Client.API().SetFlowVariableWithResponse(
-		context.Background(), flowID, key, nil, api.SetFlowVariableJSONRequestBody(body),
+		ctx, flowID, key, nil, api.SetFlowVariableJSONRequestBody(body),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to set %s: %w", key, err)
@@ -87,12 +87,12 @@ reveal them. A secret has no value to reveal: a read never returns one.`,
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
 
-			set, err := fetchFlowVariables(state, flowID)
+			set, err := fetchFlowVariables(cmd.Context(), state, flowID)
 			if err != nil {
 				return err
 			}
@@ -141,7 +141,7 @@ become a secret; the reverse is refused, so delete it and set it again.`,
 				return err
 			}
 
-			flowID, flowErr := resolveFlowID(context.Background(), state, args[0])
+			flowID, flowErr := resolveFlowID(cmd.Context(), state, args[0])
 			if flowErr != nil {
 				return flowErr
 			}
@@ -158,7 +158,7 @@ become a secret; the reverse is refused, so delete it and set it again.`,
 			}
 
 			for _, key := range sortedKeys(updates) {
-				if err := setFlowVariable(state, flowID, key, updates[key], secret); err != nil {
+				if err := setFlowVariable(cmd.Context(), state, flowID, key, updates[key], secret); err != nil {
 					return err
 				}
 			}
@@ -189,7 +189,7 @@ func newFlowEnvUnsetCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
@@ -197,7 +197,7 @@ func newFlowEnvUnsetCmd(state *AppState) *cobra.Command {
 			keys := args[1:]
 			for _, key := range keys {
 				resp, delErr := state.Client.API().DeleteFlowVariableWithResponse(
-					context.Background(), flowID, key, nil,
+					cmd.Context(), flowID, key, nil,
 				)
 				if delErr != nil {
 					return fmt.Errorf("failed to delete %s: %w", key, delErr)
@@ -225,7 +225,7 @@ func newFlowEnvDeleteCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
@@ -234,7 +234,7 @@ func newFlowEnvDeleteCmd(state *AppState) *cobra.Command {
 			}
 
 			resp, err := state.Client.API().DeleteFlowVariablesWithResponse(
-				context.Background(), flowID, nil,
+				cmd.Context(), flowID, nil,
 			)
 			if err != nil {
 				return fmt.Errorf("failed to delete flow variables: %w", err)

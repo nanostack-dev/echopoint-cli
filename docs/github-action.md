@@ -55,6 +55,7 @@ Use a dedicated, least-privilege organization API key for CI and store it as a r
 | `flow-ids` | one of | — | Comma- or newline-separated flow IDs. Mutually exclusive with `flow-id` / `tags`. |
 | `tags` | one of | — | Comma- or newline-separated flow tags; flows are selected via flow search. Mutually exclusive with `flow-id` / `flow-ids`. Also requires `flows:read`. |
 | `match-mode` | no | `any` | Tag match mode when using `tags`: `any` or `all`. |
+| `ignore-modules` | no | `false` | With `tags`, skip module flows among the matches (passes `--ignore-modules`). `true` or `false`; ignored, with a warning, when selecting by `flow-id` / `flow-ids`. |
 | `api-url` | no | CLI default | Echopoint API base URL, e.g. `https://apidev.echopoint.dev`. |
 | `environment` | no | — | Environment key for resolved inputs/env. |
 | `version-id` | no | current | Immutable flow version to run. Applies to every requested flow. |
@@ -116,6 +117,17 @@ Run a tagged suite against a specific environment (e.g. a post-deploy smoke gate
     tags: anchor
     match-mode: any
     parallel: '3'
+```
+
+Skip module flows (reusable building blocks other flows call) among the tag matches, as schedules do:
+
+```yaml
+- uses: nanostack-dev/echopoint-cli@v1
+  with:
+    api-key: ${{ secrets.ECHOPOINT_API_KEY }}
+    organization-id: ${{ secrets.ECHOPOINT_ORG_ID }}
+    tags: smoke
+    ignore-modules: 'true'
 ```
 
 Pin an environment and an immutable version:

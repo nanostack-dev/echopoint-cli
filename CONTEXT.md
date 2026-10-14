@@ -8,12 +8,17 @@
 | Flow | Graph identified by an ID and free-text name; it has no slug. |
 | Monitor | Recurring execution configuration selecting flows by tags or explicit IDs. |
 | Probe | A monitor of type `probe` producing one health result from all selected flows and their executed assertions, with safe status-page publication policy. |
+| Flow role | `standalone` (default) or `module`; set with `flow role <flow-id> --set`. |
+| Module flow | Flow with role `module`: a reusable building block that other flows call through a module node. It can be launched directly to test it; schedules skip it when their tags match unless the schedule sets `ignore_modules` to false. `flow run --tag` runs it unless `--ignore-modules` is passed. |
 | Collection | API request grouping identified by an ID and name. |
 | Spec | OpenAPI document stored in Echopoint, addressed by a unique slug with a separate title. |
 | Cloud | Echopoint operates the execution runner. |
 | Self-hosted | Customer operates a long-lived runner. |
 | Ephemeral | Caller operates a short-lived runner; `flow run` embeds this mode locally. |
 | Launch | `flow launch` asks the API to execute; it is distinct from local `flow run`. |
+| Analytics window | `24h`, `7d` or `30d` lookback of execution analytics; a run counts in the window its completion time falls in. |
+| Measured run | Finished run whose runner recorded its HTTP call count; analytics call totals cover measured runs only. |
+| Endpoint | Analytics grouping of HTTP calls by method, host and unresolved path template, such as `/users/{{userId}}`. |
 | MCP tool | OpenAPI operation exposed through the stdio MCP server under the contract's exposure rules. |
 | Action version | Floating Action contract tag such as `v1`; independent from the CLI's semantic release version. |
 

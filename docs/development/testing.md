@@ -17,3 +17,7 @@ calls, and a successful ordinary flow call. Catalogue tests also cover incorrect
 safe annotations and the exact `/administrations` path boundary.
 
 The [CI workflow](../../.github/workflows/go.yml) uses path filters, so documentation-only PRs may have no Go checks. Check local Markdown links, command provenance and `git diff --check` for documentation changes.
+
+Pull-request checks run for every target branch, including intermediate `gh stack`
+branches. This validates each stack entry before it is ready for review; publishing
+and deployment remain restricted by their existing workflow conditions.

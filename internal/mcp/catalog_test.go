@@ -150,3 +150,100 @@ func TestToSnake(t *testing.T) {
 		}
 	}
 }
+
+func TestExecutionAnalyticsReadsAreToolsAndTheRebuildIsNot(t *testing.T) {
+	tools, err := buildCatalog(api.OpenAPISpec)
+	if err != nil {
+		t.Fatalf("buildCatalog: %v", err)
+	}
+	byName := make(map[string]toolDef, len(tools))
+	for _, td := range tools {
+		byName[td.Name] = td
+	}
+
+	for name, want := range map[string]struct {
+		path  string
+		query []string
+	}{
+		"get_execution_analytics_summary": {"/analytics/summary", []string{"window"}},
+		"list_flow_analytics":             {"/analytics/flows", []string{"window"}},
+		"list_endpoint_analytics":         {"/analytics/endpoints", []string{"window", "flow_id"}},
+	} {
+		td, ok := byName[name]
+		if !ok {
+			t.Errorf("missing analytics tool %q", name)
+			continue
+		}
+		if td.Method != http.MethodGet || td.PathTemplate != want.path {
+			t.Errorf("%s = %s %s, want GET %s", name, td.Method, td.PathTemplate, want.path)
+		}
+		if len(td.Locations) != len(want.query) {
+			t.Errorf("%s arguments = %v, want the query %v", name, td.Locations, want.query)
+		}
+		for _, arg := range want.query {
+			if td.Locations[arg] != locQuery {
+				t.Errorf("%s argument %q location = %q, want query", name, arg, td.Locations[arg])
+			}
+		}
+		var schema struct {
+			Properties map[string]map[string]any `json:"properties"`
+			Required   []string                  `json:"required"`
+		}
+		if err := json.Unmarshal(td.InputSchema, &schema); err != nil {
+			t.Fatalf("%s schema: %v", name, err)
+		}
+		if len(schema.Required) != 0 {
+			t.Errorf("%s requires %v; every analytics argument is optional", name, schema.Required)
+		}
+		if enum, _ := schema.Properties["window"]["enum"].([]any); len(enum) != 3 {
+			t.Errorf("%s window enum = %v, want 24h, 7d and 30d", name, schema.Properties["window"]["enum"])
+		}
+	}
+
+	if _, ok := byName["rebuild_execution_analytics"]; ok {
+		t.Error("the administration analytics rebuild must not be a tool")
+	}
+}
+
+func TestFlowRoleAndIgnoreModulesAreToolArguments(t *testing.T) {
+	tools, err := buildCatalog(api.OpenAPISpec)
+	if err != nil {
+		t.Fatalf("buildCatalog: %v", err)
+	}
+	byName := make(map[string]toolDef, len(tools))
+	for _, td := range tools {
+		byName[td.Name] = td
+	}
+
+	for name, argument := range map[string]string{
+		"create_flow":           "role",
+		"update_flow":           "role",
+		"create_flow_schedule":  "ignore_modules",
+		"update_flow_schedule":  "ignore_modules",
+		"preview_schedule_tags": "ignore_modules",
+	} {
+		td, ok := byName[name]
+		if !ok {
+			t.Errorf("missing tool %q", name)
+			continue
+		}
+		if td.Locations[argument] != locBody {
+			t.Errorf("%s argument %q location = %q, want body", name, argument, td.Locations[argument])
+		}
+		var schema struct {
+			Properties map[string]map[string]any `json:"properties"`
+			Required   []string                  `json:"required"`
+		}
+		if err := json.Unmarshal(td.InputSchema, &schema); err != nil {
+			t.Fatalf("%s schema: %v", name, err)
+		}
+		if _, ok := schema.Properties[argument]; !ok {
+			t.Errorf("%s schema has no %q property", name, argument)
+		}
+		for _, required := range schema.Required {
+			if required == argument {
+				t.Errorf("%s requires %q; it is optional", name, argument)
+			}
+		}
+	}
+}

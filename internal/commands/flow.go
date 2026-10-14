@@ -48,6 +48,7 @@ operates). Two commands start one:
 		newFlowLaunchCmd(state),
 		newFlowExecutionCmd(state),
 		newFlowTagCmd(state),
+		newFlowRoleCmd(state),
 		newFlowMoveCmd(state),
 		newFlowFolderCmd(state),
 		newFlowNodeCmd(state),
@@ -332,7 +333,11 @@ const (
 
 // flowListColumns are the columns every `flow list` variant renders, whether
 // the rows come from the list endpoint or from a folder-scoped search.
-var flowListColumns = []string{"NAME", "ID", "UPDATED"}
+var flowListColumns = []string{"NAME", "ID", "ROLE", "UPDATED"}
+
+func flowListRow(name string, id uuid.UUID, role api.FlowRole, updatedAt time.Time) []string {
+	return []string{name, id.String(), string(role), formatWhen(updatedAt)}
+}
 
 func newFlowListCmd(state *AppState) *cobra.Command {
 	var limit int32 = 20
@@ -383,7 +388,7 @@ folder tree; --folder includes the folder's descendants.`,
 			default:
 				rows := make([][]string, 0, len(resp.JSON200.Items))
 				for _, flow := range resp.JSON200.Items {
-					rows = append(rows, []string{flow.Name, flow.Id.String(), formatWhen(flow.UpdatedAt)})
+					rows = append(rows, flowListRow(flow.Name, flow.Id, flow.Role, flow.UpdatedAt))
 				}
 				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
 				return output.PrintTable(flowListColumns, rows)
@@ -443,7 +448,7 @@ func listFlowsInFolder(state *AppState, folderRef string, uncategorized bool, li
 	default:
 		rows := make([][]string, 0, len(resp.JSON200.Items))
 		for _, flow := range resp.JSON200.Items {
-			rows = append(rows, []string{flow.Name, flow.Id.String(), formatWhen(flow.UpdatedAt)})
+			rows = append(rows, flowListRow(flow.Name, flow.Id, flow.Role, flow.UpdatedAt))
 		}
 		fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
 		return output.PrintTable(flowListColumns, rows)
@@ -455,7 +460,7 @@ func newFlowViewCmd(state *AppState) *cobra.Command {
 		Use:     "view <flow-id>",
 		Aliases: []string{getVerb, showVerb},
 		Short:   "Show a flow: a summary, or with -o json or yaml the whole flow",
-		Long: `Show a flow: its name, id,
+		Long: `Show a flow: its name, id, role,
 version, dates, and how many nodes and edges it has. With -o json or -o yaml it
 shows the whole flow, definition included.`,
 		Example: `  echopoint flow view <flow-id>
@@ -496,6 +501,7 @@ func printFlowSummary(w io.Writer, flow api.Flow) {
 	if flow.Description != nil {
 		fmt.Fprintf(w, "Description: %s\n", *flow.Description)
 	}
+	fmt.Fprintf(w, "Role: %s\n", flow.Role)
 	fmt.Fprintf(w, "Version: %s\n", flow.Version)
 	fmt.Fprintf(w, "Created: %s\n", flow.CreatedAt)
 	fmt.Fprintf(w, "Updated: %s\n", flow.UpdatedAt)

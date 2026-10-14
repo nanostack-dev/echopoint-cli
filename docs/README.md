@@ -1,7 +1,7 @@
 # Documentation
 
 - [Domain vocabulary](../CONTEXT.md)
-- [Architecture](technical/architecture.md), [integration contracts](technical/integration-contracts.md)
+- [Architecture](technical/architecture.md), [integration contracts](technical/integration-contracts.md), [execution analytics](technical/analytics.md)
 - [Authentication](auth.md), [flows](flows.md), [probes](probes.md), [environment management](environment-management.md), [specs](specs.md), [status pages](status-pages.md), [MCP](mcp.md), [GitHub Action](github-action.md)
 - [Product administration scope](technical/administration-scope.md)
 - [Setup](development/setup.md), [testing](development/testing.md), [command conventions](development/command-conventions.md), [troubleshooting](development/troubleshooting.md), [agent workflow](development/agent-workflow.md)

@@ -162,3 +162,37 @@ extract_json_value() {
   fi
   printf '%s\n' "$first" | sed -E 's/"[^"]+": *"?([^",}]*)"?.*/\1/' | tr -d '[:space:]'
 }
+
+# Mirrors the tag branch of the "Run echopoint flows run" step in action.yml: builds the
+# selector arguments into SELECTOR_ARGS from the tags, match-mode and ignore-modules inputs.
+# Usage: build_tag_selector_args <tags> <match_mode> <ignore_modules>
+build_tag_selector_args() {
+  local tags="$1"
+  local match_mode="$2"
+  local ignore_modules="$3"
+  local tag
+
+  SELECTOR_ARGS=()
+  while IFS= read -r tag; do
+    tag="$(echo "$tag" | tr -d '[:space:]')"
+    [ -z "$tag" ] && continue
+    SELECTOR_ARGS+=(--tag "$tag")
+  done < <(echo "$tags" | tr ',' '\n')
+  if [ -n "$match_mode" ]; then
+    SELECTOR_ARGS+=(--match-mode "$match_mode")
+  fi
+  if [ "$ignore_modules" = "true" ]; then
+    SELECTOR_ARGS+=(--ignore-modules)
+  fi
+}
+
+# Mirrors the ignore-modules check of the "Validate inputs" step in action.yml.
+# Usage: validate_ignore_modules <ignore_modules>
+validate_ignore_modules() {
+  local ignore_modules="$1"
+  if [ -n "$ignore_modules" ] && [ "$ignore_modules" != "true" ] && [ "$ignore_modules" != "false" ]; then
+    echo "error: 'ignore-modules' must be 'true' or 'false', got: $ignore_modules"
+    return 3
+  fi
+  return 0
+}
