@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
   description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 11.0.0
+  version: 11.0.1
 paths:
   /webhooks:
     parameters:
@@ -3924,7 +3924,7 @@ paths:
       tags:
         - Monitors
       summary: List Monitors
-      description: 'Lists the organization''s monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.'
+      description: Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
       operationId: listFlowSchedules
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
@@ -3943,7 +3943,7 @@ paths:
             type: boolean
       responses:
         "200":
-          description: 'Monitors retrieved successfully.'
+          description: Monitors retrieved successfully.
           content:
             application/json:
               schema:
@@ -3974,7 +3974,7 @@ paths:
         required: true
       responses:
         "201":
-          description: 'Monitor created successfully.'
+          description: Monitor created successfully.
           content:
             application/json:
               schema:
@@ -4002,7 +4002,7 @@ paths:
       tags:
         - Monitors
       summary: Estimate Monitor
-      description: 'Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization''s daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.'
+      description: Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
       operationId: estimateMonitor
       requestBody:
         content:
@@ -4012,7 +4012,7 @@ paths:
         required: true
       responses:
         "200":
-          description: 'Estimate computed successfully.'
+          description: Estimate computed successfully.
           content:
             application/json:
               schema:
@@ -4038,11 +4038,11 @@ paths:
       tags:
         - Monitors
       summary: Get Monitor Cloud Budget
-      description: 'Returns the Cloud executions per day planned by the organization''s enabled Cloud monitors against the license limit, largest monitor first. Used by the web app to warn when the plan passes the limit; it never blocks a save. Callable by bearer users and API keys scoped with flows:read.'
+      description: Returns the Cloud executions per day planned by the organization's enabled Cloud monitors against the license limit, largest monitor first. Used by the web app to warn when the plan passes the limit; it never blocks a save. Callable by bearer users and API keys scoped with flows:read.
       operationId: getMonitorCloudBudget
       responses:
         "200":
-          description: 'Cloud budget plan computed successfully.'
+          description: Cloud budget plan computed successfully.
           content:
             application/json:
               schema:
@@ -4056,6 +4056,7 @@ paths:
             - flows:read
         - ApiKeys:
             - flows:read
+      x-ai-danger: Web app only - agents read the Cloud plan from POST /monitors/estimate.
   /monitors/preview-tags:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4063,7 +4064,7 @@ paths:
       tags:
         - Monitors
       summary: Preview Tag-Suite Flows
-      description: 'Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.'
+      description: Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
       operationId: previewScheduleTags
       requestBody:
         content:
@@ -4073,7 +4074,7 @@ paths:
         required: true
       responses:
         "200":
-          description: 'Matching flows resolved successfully.'
+          description: Matching flows resolved successfully.
           content:
             application/json:
               schema:
@@ -4110,7 +4111,7 @@ paths:
       operationId: getFlowSchedule
       responses:
         "200":
-          description: 'Monitor retrieved successfully.'
+          description: Monitor retrieved successfully.
           content:
             application/json:
               schema:
@@ -4131,7 +4132,7 @@ paths:
       tags:
         - Monitors
       summary: Update Monitor
-      description: 'Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.'
+      description: Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
       operationId: updateFlowSchedule
       requestBody:
         content:
@@ -4141,7 +4142,7 @@ paths:
         required: true
       responses:
         "200":
-          description: 'Monitor updated successfully.'
+          description: Monitor updated successfully.
           content:
             application/json:
               schema:
@@ -4166,11 +4167,11 @@ paths:
       tags:
         - Monitors
       summary: Delete Monitor
-      description: 'Deletes a monitor and prevents future launches; prior execution history is preserved.'
+      description: Deletes a monitor and prevents future launches; prior execution history is preserved.
       operationId: deleteFlowSchedule
       responses:
         "204":
-          description: 'Monitor deleted successfully or already deleted.'
+          description: Monitor deleted successfully or already deleted.
         "401":
           $ref: '#/components/responses/Unauthorized'
         "403":
@@ -4195,11 +4196,11 @@ paths:
       tags:
         - Monitors
       summary: Pause Monitor
-      description: 'Disables a monitor so the scheduler stops launching future occurrences.'
+      description: Disables a monitor so the scheduler stops launching future occurrences.
       operationId: pauseFlowSchedule
       responses:
         "200":
-          description: 'Monitor paused successfully.'
+          description: Monitor paused successfully.
           content:
             application/json:
               schema:
@@ -4232,11 +4233,11 @@ paths:
       tags:
         - Monitors
       summary: Resume Monitor
-      description: 'Enables a paused monitor and recomputes next_run_at so the next occurrence is in the future.'
+      description: Enables a paused monitor and recomputes next_run_at so the next occurrence is in the future.
       operationId: resumeFlowSchedule
       responses:
         "200":
-          description: 'Monitor resumed successfully.'
+          description: Monitor resumed successfully.
           content:
             application/json:
               schema:
@@ -4269,11 +4270,11 @@ paths:
       tags:
         - Monitors
       summary: Run Monitor
-      description: 'Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.'
+      description: Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
       operationId: runMonitor
       responses:
         "202":
-          description: 'Diagnostic occurrence started.'
+          description: Diagnostic occurrence started.
           content:
             application/json:
               schema:
@@ -4308,14 +4309,14 @@ paths:
       tags:
         - Monitors
       summary: List Monitor Runs
-      description: 'Lists a monitor''s occurrences (scheduled and diagnostic), most recent first.'
+      description: Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
       operationId: listFlowScheduleRuns
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
         "200":
-          description: 'Monitor runs retrieved successfully.'
+          description: Monitor runs retrieved successfully.
           content:
             application/json:
               schema:
@@ -4353,11 +4354,11 @@ paths:
       tags:
         - Monitors
       summary: Get Monitor Run
-      description: 'Returns a monitor run together with the executions it launched.'
+      description: Returns a monitor run together with the executions it launched.
       operationId: getFlowScheduleRun
       responses:
         "200":
-          description: 'Monitor run retrieved successfully.'
+          description: Monitor run retrieved successfully.
           content:
             application/json:
               schema:
