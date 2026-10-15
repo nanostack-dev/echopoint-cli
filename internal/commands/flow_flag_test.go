@@ -78,9 +78,9 @@ func TestNodeAddRefusesASubflowThatIsNotAnIDOrIsMissing(t *testing.T) {
 	}
 }
 
-func TestFlowIDIsTheVisibleFlagOnBothCommandsAndThereIsNoFlowFlag(t *testing.T) {
+func TestFlowIDIsTheVisibleFlagOnNodeAddAndThereIsNoFlowFlag(t *testing.T) {
 	root := NewRootCmd()
-	for _, path := range [][]string{{"flow", "node", "add"}, {"status-page", "binding-options"}} {
+	for _, path := range [][]string{{"flow", "node", "add"}} {
 		cmd := find(t, root, path...)
 		flowID := cmd.Flags().Lookup("flow-id")
 		if flowID == nil || flowID.Hidden || cmd.Flags().Lookup("flow") != nil {
@@ -89,52 +89,6 @@ func TestFlowIDIsTheVisibleFlagOnBothCommandsAndThereIsNoFlowFlag(t *testing.T) 
 		if !strings.Contains(cmd.UsageString(), "--flow-id ") {
 			t.Errorf("%v: the help lacks --flow-id:\n%s", path, cmd.UsageString())
 		}
-	}
-}
-
-func TestBindingOptionsTakesTheFlowIDAndRefusesAnythingElse(t *testing.T) {
-	flow, schedule := idFor("1"), idFor("5").String()
-	stub := newAPIStub(t)
-	stub.on(http.MethodGet, "/status-pages/binding-options", http.StatusOK, map[string]any{"checks": []any{}})
-
-	_, _, err := execute(
-		t,
-		newStatusPageCmd(stub.state(t)),
-		"",
-		"binding-options",
-		"--schedule-id",
-		schedule,
-		"--flow-id",
-		flow.String(),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sent := stub.requestsTo(http.MethodGet, "/status-pages/binding-options")
-	if len(sent) != 1 || !strings.Contains(sent[0].query, "flow_id="+flow.String()) {
-		t.Errorf("sent %+v", sent)
-	}
-
-	_, _, err = execute(
-		t,
-		newStatusPageCmd(stub.state(t)),
-		"",
-		"binding-options",
-		"--schedule-id",
-		schedule,
-		"--flow-id",
-		"Not A Flow",
-	)
-	if err == nil ||
-		err.Error() != `--flow-id: "Not A Flow" is not a flow id; list the flows with: echopoint flow list` {
-		t.Errorf("not an id: err = %v", err)
-	}
-	_, _, err = execute(t, newStatusPageCmd(stub.state(t)), "", "binding-options", "--schedule-id", schedule)
-	if err == nil || err.Error() != `required flag(s) "flow-id" not set` {
-		t.Errorf("without a flow: err = %v", err)
-	}
-	if len(stub.requestsTo(http.MethodGet, "/status-pages/binding-options")) != 1 {
-		t.Error("a request was made for input that is not a flow id")
 	}
 }
 
@@ -147,7 +101,6 @@ func TestTheFlowIDFlagCompletesLikeAFlowArgument(t *testing.T) {
 
 	for _, args := range [][]string{
 		{"flow", "node", "add", idFor("1").String(), "--flow-id", ""},
-		{"status-page", "binding-options", "--flow-id", ""},
 	} {
 		if got := completeCLI(t, args...); !slices.Equal(got, want) {
 			t.Errorf("%v = %q, want %q", args, got, want)

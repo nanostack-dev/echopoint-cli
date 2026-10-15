@@ -79,12 +79,12 @@ client at a non-default environment, add them to `args` (e.g.
 ## Tools
 
 Most echopoint operations are exposed — flows, collections, webhooks, requests,
-folders, environments, schedules, executions, generation, execution analytics
+folders, environments, monitors, executions, generation, execution analytics
 (`get_execution_analytics_summary`, `list_flow_analytics`,
 `list_endpoint_analytics`), plus `get_current_api_key` (the authenticating key's
 org + permissions).
 
-`create_flow` and `update_flow` take an optional `role` (`standalone` or `module`; an update that omits it keeps the current role). `create_flow_schedule`, `update_flow_schedule` and `preview_schedule_tags` take an optional `ignore_modules` boolean: schedules skip Module flows unless it is false.
+`create_flow` and `update_flow` take an optional `role` (`standalone` or `module`; an update that omits it keeps the current role). `create_flow_schedule`, `update_flow_schedule` and `preview_schedule_tags` take an optional `ignore_modules` boolean: monitors skip Module flows unless it is false.
 
 Every operation in the contract declares its intent explicitly: `x-ai-tool`
 (exposed) or `x-ai-danger` with a reason (deliberately excluded). The excluded
@@ -106,34 +106,34 @@ retained internally; they do not grant tool exposure. See
 The ordinary tool set tracks the contract: annotate an eligible operation
 `x-ai-tool` (and resync) to expose it. Administration routes remain excluded.
 
-## Probes
+## Monitors
 
-The contract exposes `list_probes`, `get_probe`, `create_probe`, `update_probe`,
-`delete_probe`, `pause_probe`, `resume_probe`, `run_probe`, `list_probe_runs`,
-`get_probe_run` and `estimate_probe`. Path arguments
-use `probeId` and `runId`. Updates, pause/resume, delete and run require the current
-`expected_revision`. Create/update accept a nested `config`. Probe configuration uses
-exactly one of `flow_ids` or `tags` (with `tag_match_mode`); `estimate_probe` accepts
-the same selector, `interval_seconds`, `runner_type` and optional environment.
-Every call retains the selected
-organization and authenticated API permissions.
+The contract exposes the monitor operations under their unchanged operation names:
+`list_flow_schedules`, `create_flow_schedule`, `get_flow_schedule`, `update_flow_schedule`,
+`delete_flow_schedule`, `pause_flow_schedule`, `resume_flow_schedule`,
+`list_flow_schedule_runs`, `get_flow_schedule_run` and `preview_schedule_tags`, plus
+`run_monitor` and `estimate_monitor`. Their paths are `/monitors/...`; path arguments
+use `monitorId` and `runId`. Create/update take the monitor fields at the top level:
+exactly one of `flow_ids` or `tags` (with `tag_match_mode`), a `cron_expression`, or
+`interval_seconds` with a `health_policy`. There is no `expected_revision`: the last
+write wins.
 
-`run_probe` is diagnostic only and never establishes public health. Scheduled
-occurrences are owned by the durable scheduler. [`docs/probes.md`](probes.md)
-describes the complete monitor-backed configuration workflow and forecast. Each
-probe reports one `health` result from all selected flows and their executed
-assertions. Separate outcomes use separate probes with dedicated flows.
+`run_monitor` is a diagnostic run, only for a monitor with a health policy, and never
+confirms health; scheduled runs do. `estimate_monitor` forecasts executions before a
+save. `get_monitor_cloud_budget` serves the web app only and is not a tool, and the
+probe tools no longer exist. [`docs/monitors.md`](monitors.md) describes the workflow.
+Every call retains the selected organization and authenticated API permissions.
 
 ## Status pages
 
-`get_status_page`, `save_status_page` and `get_status_page_binding_options`
-manage the private draft and discover monitor checks. Publication and withdrawal
-remain excluded by the API contract; use the explicit
+`get_status_page` and `save_status_page` manage the private draft. Publication and
+withdrawal remain excluded by the API contract; use the explicit
 [`status-page` CLI commands](status-pages.md) for those actions and anonymous
 public verification.
 
-`save_status_page` also accepts direct `probe_bindings` using `service_id` and
-`probe_id`. Optional `config.services[].messages` supplies plain public text for
-`operational`, `outage` and `unknown` states. The server freezes messages and probe
-revisions when publishing; raw diagnostic evidence is not part of the anonymous
-projection.
+`save_status_page` also accepts `monitor_bindings` using `service_id` and
+`monitor_id`; only an enabled monitor with a health policy can be bound. Find one with
+`list_flow_schedules` (`has_health_policy`). Optional `config.services[].messages`
+supplies plain public text for `operational`, `outage` and `unknown` states. The server
+freezes messages and monitor revisions when publishing; raw diagnostic evidence is not
+part of the anonymous projection. `get_status_page_binding_options` no longer exists.

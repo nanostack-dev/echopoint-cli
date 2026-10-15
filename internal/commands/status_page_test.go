@@ -40,19 +40,6 @@ func TestStatusPageCommandsPreserveScopeAndVersions(t *testing.T) {
 			`{"expected_intent_version":4}`,
 			[]string{"unpublish", "--expected-intent-version", "4"},
 		},
-		{
-			"binding",
-			"GET",
-			"/status-pages/binding-options",
-			"",
-			[]string{
-				"binding-options",
-				"--schedule-id",
-				"550e8400-e29b-41d4-a716-446655440001",
-				"--flow-id",
-				"550e8400-e29b-41d4-a716-446655440002",
-			},
-		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -63,10 +50,6 @@ func TestStatusPageCommandsPreserveScopeAndVersions(t *testing.T) {
 				}
 				if r.Header.Get("X-Api-Key") != "test-key" || r.Header.Get("X-Organization-Id") != "org_test" {
 					t.Error("missing tenant authentication")
-				}
-				if tc.name == "binding" &&
-					(r.URL.Query().Get("schedule_id") != tc.args[2] || r.URL.Query().Get("flow_id") != tc.args[4]) {
-					t.Error("missing binding query")
 				}
 				received, _ = io.ReadAll(r.Body)
 				w.Header().Set("Content-Type", "application/json")

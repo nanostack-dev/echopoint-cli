@@ -20,7 +20,7 @@ const (
 var rootCommandGroups = map[string]string{
 	analyticsCommandName:  resourcesGroupID,
 	flowCommandName:       resourcesGroupID,
-	probeCommandName:      resourcesGroupID,
+	monitorCommandName:    resourcesGroupID,
 	specCommandName:       resourcesGroupID,
 	collectionCommandName: resourcesGroupID,
 	statusPageCommandName: resourcesGroupID,

@@ -13,6 +13,8 @@ The script removes `x-go-type` and `x-go-type-import` references to server-priva
 
 MCP exposes `x-ai-tool: true` operations and excludes `x-ai-danger`. It also always excludes `/administrations` and every descendant path, regardless of annotations. Product administration, including Cloud fleet settings, belongs only to the browser administration panel: do not add CLI commands or administrator login modes for these routes. The generated client still mirrors the complete contract internally. Calls for supported tools preserve API authentication, tenant scope and permissions. Verify parameter names, exposure and a representative configuration workflow when syncing ordinary product capabilities; preserve explicit organization/environment selection where applicable.
 
+An operation the contract serves to the web app only, with no `x-ai-tool`, such as `getMonitorCloudBudget` (`GET /monitors/cloud-budget`), gets no CLI command and no MCP tool; the generated client still has its method. The `/monitors` operations keep the `FlowSchedule` operation IDs of the former `/flow-schedules` paths, so generated names and MCP tool names (`list_flow_schedules`, ...) differ from the CLI noun `monitor`.
+
 ## Embedded libraries and Action
 
 Upgrade runner behavior with `go get github.com/nanostack-dev/echopoint-runner@vX.Y.0` and `go mod tidy`, then use `feat:` or `fix:` so the CLI release ships it. The ephemeral claim declares the embedded runner's `capabilities` (`jobrunner.Capabilities()`); Echopoint refuses a Job whose flow declares a secret output with 409 `RUNNER_UPGRADE_REQUIRED` unless it includes `secret_outputs` (Echopoint ADR-0019). Kit updates similarly pin `github.com/nanostack-dev/echopoint-kit` and require spec regression verification.

@@ -1,0 +1,18 @@
+{
+  "name": "Checkout health",
+  "description": "Checkout flows every five minutes",
+  "tags": ["checkout"],
+  "tag_match_mode": "any",
+  "ignore_modules": true,
+  "runner_type": "cloud",
+  "environment_key": "production",
+  "enabled": true,
+  "interval_seconds": 300,
+  "timeout_seconds": 30,
+  "health_policy": {
+    "confirmation_runs": 2,
+    "recovery_runs": 2,
+    "freshness_seconds": 900
+  },
+  "recipient_emails": ["oncall@example.com"]
+}

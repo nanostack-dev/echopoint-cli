@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"echopoint-cli/internal/api"
@@ -49,7 +48,6 @@ func newStatusPageCmd(state *AppState) *cobra.Command {
 		newStatusPageDraftCmd(state, draftValidate),
 		newStatusPagePublishCmd(state),
 		newStatusPageUnpublishCmd(state),
-		newStatusPageBindingCmd(state),
 		newStatusPagePublicCmd(state),
 	)
 	return cmd
@@ -154,7 +152,7 @@ func newStatusPageDraftCmd(state *AppState, action draftAction) *cobra.Command {
 				result := struct {
 					Valid bool   `json:"valid"`
 					Scope string `json:"scope"`
-				}{true, "schema; server checks binding and policy on save/publish"}
+				}{true, "schema; server checks monitor bindings and policy on save/publish"}
 				return printStatusResponse(cmd, state, &result, nil, nil)
 			}
 			if err := requireToken(state); err != nil {
@@ -238,45 +236,6 @@ func newStatusPageUnpublishCmd(state *AppState) *cobra.Command {
 	}
 	cmd.Flags().Int64Var(&intent, "expected-intent-version", 0, "Current publication intent version")
 	_ = cmd.MarkFlagRequired("expected-intent-version")
-	return cmd
-}
-
-func newStatusPageBindingCmd(state *AppState) *cobra.Command {
-	var schedule, flow string
-	cmd := &cobra.Command{
-		Use:           "binding-options",
-		Short:         "Resolve a monitor's published flow and available checks",
-		Example:       `  echopoint status-page binding-options --schedule-id <schedule-id> --flow-id <flow-id>`,
-		Args:          cobra.NoArgs,
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			scheduleID, err := uuid.Parse(schedule)
-			if err != nil {
-				return fmt.Errorf("invalid schedule ID: %w", err)
-			}
-			flowID, err := resolveFlowID(cmd.Context(), state, flow)
-			if err != nil {
-				return fmt.Errorf("--flow-id: %w", err)
-			}
-			resp, err := state.Client.API().
-				GetStatusPageBindingOptionsWithResponse(cmd.Context(), &api.GetStatusPageBindingOptionsParams{
-					ScheduleId: scheduleID, FlowId: flowID,
-				})
-			if err != nil {
-				return err
-			}
-			return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
-		},
-	}
-	cmd.Flags().StringVar(&schedule, "schedule-id", "", "Enabled monitor ID")
-	cmd.Flags().StringVar(&flow, "flow-id", "", "Flow selected by the monitor")
-	_ = cmd.RegisterFlagCompletionFunc("flow-id", completeFlowFlag(state))
-	_ = cmd.MarkFlagRequired("schedule-id")
-	_ = cmd.MarkFlagRequired("flow-id")
 	return cmd
 }
 
