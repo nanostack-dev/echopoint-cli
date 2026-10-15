@@ -45,7 +45,7 @@ const (
 const maxTagResolvedFlows = 50
 
 // Flow search returns at most tagSearchPageSize items per page. With --ignore-modules the CLI
-// pages through every match to drop module flows client-side, and refuses to scan more than
+// walks next_cursor through every match to drop module flows client-side, and refuses to scan more than
 // maxTagScannedFlows matches so an over-broad tag cannot turn into an unbounded crawl.
 const (
 	tagSearchPageSize   = 100
@@ -330,9 +330,9 @@ func resolveTagSelection(
 }
 
 // resolveStandaloneFlowIDsByTags is resolveFlowIDsByTags for --ignore-modules. The search
-// endpoint does not filter by role, so it pages through every match, drops module flows
-// client-side and applies the safety cap to the flows that remain. It returns the number of
-// module flows skipped.
+// endpoint does not filter by role, so it walks next_cursor through every match, drops module
+// flows client-side and applies the safety cap to the flows that remain. It returns the number
+// of module flows skipped.
 func resolveStandaloneFlowIDsByTags(
 	ctx context.Context,
 	state *AppState,
@@ -340,68 +340,46 @@ func resolveStandaloneFlowIDsByTags(
 	matchMode string,
 ) ([]string, int, error) {
 	mode := api.TagMatchMode(matchMode)
-	params := &api.SearchFlowsParams{XOrganizationID: state.OrganizationID}
+	searchPageOfFlows := searchFlows(state, api.FlowSearchRequest{Tags: &tags, TagMatchMode: &mode})
 	limit := int32(tagSearchPageSize)
+
+	// The total is independent of the cursor, so the first page decides whether the walk is
+	// worth starting.
+	scanBounded := func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.FlowSearchItem], error) {
+		page, err := searchPageOfFlows(ctx, pagination)
+		if err != nil {
+			return page, fmt.Errorf("search flows by tag: %w", err)
+		}
+		if page.Total > int64(maxTagScannedFlows) {
+			return page, fmt.Errorf(
+				"tag search matched %d flows, too many to filter out modules (limit %d); "+
+					"narrow the tags (or use --match-mode all) before launching",
+				page.Total, maxTagScannedFlows,
+			)
+		}
+		return page, nil
+	}
+	matches, _, err := walkSearch(ctx, &api.PaginationRequest{Limit: &limit}, 0, scanBounded)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	var (
 		ids     []string
 		skipped int
-		seen    = map[string]struct{}{}
-		total   int64
 	)
-	for offset := int32(0); ; offset += limit {
-		pageOffset := offset
-		body := api.FlowSearchRequest{
-			Tags:         &tags,
-			TagMatchMode: &mode,
-			Pagination:   &api.PaginationRequest{Limit: &limit, Offset: &pageOffset},
+	for _, item := range matches.Items {
+		if item.Role == api.FlowRoleModule {
+			skipped++
+			continue
 		}
-		resp, err := state.Client.API().SearchFlowsWithResponse(ctx, params, body)
-		if err != nil {
-			return nil, 0, fmt.Errorf("search flows by tag: %w", err)
-		}
-		if resp.JSON200 == nil {
-			return nil, 0, fmt.Errorf(
-				"search flows by tag: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
-			)
-		}
-		page := resp.JSON200
-		total = page.Total
-		if total > int64(maxTagScannedFlows) {
-			return nil, 0, fmt.Errorf(
-				"tag search matched %d flows, too many to filter out modules (limit %d); "+
-					"narrow the tags (or use --match-mode all) before launching",
-				total, maxTagScannedFlows,
-			)
-		}
-
-		for _, item := range page.Items {
-			id := item.Id.String()
-			if _, dup := seen[id]; dup {
-				continue
-			}
-			seen[id] = struct{}{}
-			if item.Role == api.FlowRoleModule {
-				skipped++
-				continue
-			}
-			ids = append(ids, id)
-		}
-		if len(ids) > maxTagResolvedFlows {
-			return nil, 0, fmt.Errorf(
-				"tag search matched more than %d standalone flows, exceeding the CLI safety cap of %d; "+
-					"narrow the tags (or use --match-mode all) before launching",
-				maxTagResolvedFlows, maxTagResolvedFlows,
-			)
-		}
-		if len(page.Items) == 0 || int64(offset)+int64(limit) >= total {
-			break
-		}
+		ids = append(ids, item.Id.String())
 	}
-
-	if int64(len(seen)) < total {
+	if len(ids) > maxTagResolvedFlows {
 		return nil, 0, fmt.Errorf(
-			"tag search results changed while paging (saw %d of %d flows); retry", len(seen), total,
+			"tag search matched more than %d standalone flows, exceeding the CLI safety cap of %d; "+
+				"narrow the tags (or use --match-mode all) before launching",
+			maxTagResolvedFlows, maxTagResolvedFlows,
 		)
 	}
 	if len(ids) == 0 {

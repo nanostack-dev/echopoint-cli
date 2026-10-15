@@ -511,36 +511,50 @@ func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			resp, err := state.Client.API().ListEnvironmentsWithResponse(context.Background(), nil)
+			// the list is the names of every environment: walk the search to its end
+			environments, err := walkAll(cmd.Context(), searchEnvironments(state))
 			if err != nil {
 				return fmt.Errorf("failed to list environments: %w", err)
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
 
-			names := make([]string, 0, len(resp.JSON200.Items))
-			for _, environment := range resp.JSON200.Items {
+			names := make([]string, 0, len(environments))
+			for _, environment := range environments {
 				names = append(names, environment.Name)
 			}
 			sort.Strings(names)
 
 			switch state.OutputFormat {
 			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, names)
+				return output.PrintJSON(cmd.OutOrStdout(), names)
 			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, names)
+				return output.PrintYAML(cmd.OutOrStdout(), names)
 			}
 
 			if len(names) == 0 {
-				fmt.Println("No environments")
+				fmt.Fprintln(cmd.OutOrStdout(), "No environments")
 				return nil
 			}
 			for _, name := range names {
-				fmt.Printf("  %s\n", name)
+				fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", name)
 			}
 			return nil
 		},
+	}
+}
+
+// searchEnvironments reads one page of the organization's environments by name.
+func searchEnvironments(state *AppState) pageFetcher[api.Environment] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.Environment], error) {
+		resp, err := state.Client.API().SearchEnvironmentsWithResponse(
+			ctx, nil, api.EnvironmentSearchRequest{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.Environment]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.Environment]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
 	}
 }
 

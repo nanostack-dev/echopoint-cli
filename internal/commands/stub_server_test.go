@@ -30,18 +30,23 @@ type stubRoute struct {
 	body   any
 }
 
+// stubHandler answers a request itself, given the body it carried, for a route whose
+// answer depends on the request, such as a page of a cursor search.
+type stubHandler func(w http.ResponseWriter, body []byte)
+
 // apiStub answers the API with the responses registered per "METHOD path" and
 // records every request, so a test can tell what a command sent and what it did not.
 type apiStub struct {
 	mu       sync.Mutex
 	routes   map[string]stubRoute
+	handlers map[string]stubHandler
 	requests []stubRequest
 	server   *httptest.Server
 }
 
 func newAPIStub(t *testing.T) *apiStub {
 	t.Helper()
-	stub := &apiStub{routes: map[string]stubRoute{}}
+	stub := &apiStub{routes: map[string]stubRoute{}, handlers: map[string]stubHandler{}}
 	stub.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		stub.mu.Lock()
@@ -49,8 +54,13 @@ func newAPIStub(t *testing.T) *apiStub {
 			method: r.Method, path: r.URL.Path, query: r.URL.RawQuery, header: r.Header.Clone(), body: body,
 		})
 		route, ok := stub.routes[r.Method+" "+r.URL.Path]
+		handler := stub.handlers[r.Method+" "+r.URL.Path]
 		stub.mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
+		if handler != nil {
+			handler(w, body)
+			return
+		}
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = io.WriteString(
@@ -75,10 +85,53 @@ func (stub *apiStub) on(method, path string, status int, body any) *apiStub {
 	return stub
 }
 
-// onFlows answers GET /flows with the flows.
+// onHandler answers "METHOD path" with the handler.
+func (stub *apiStub) onHandler(method, path string, handler stubHandler) *apiStub {
+	stub.mu.Lock()
+	defer stub.mu.Unlock()
+	stub.handlers[method+" "+path] = handler
+	return stub
+}
+
+// onSearch answers POST path with one page holding every item and no next_cursor.
+func (stub *apiStub) onSearch(path string, items ...any) *apiStub {
+	if items == nil {
+		items = []any{}
+	}
+	return stub.on(http.MethodPost, path, http.StatusOK,
+		map[string]any{"count": len(items), "total": len(items), "items": items})
+}
+
+// flowSearchPath is where the flow search is served.
+const flowSearchPath = "/flows/search"
+
+// onFlows answers the flow search, which every CLI listing reads, and the deprecated
+// GET /flows, which the MCP list_flows tool still calls, with the flows.
 func (stub *apiStub) onFlows(flows ...api.Flow) *apiStub {
+	items := make([]any, 0, len(flows))
+	for _, flow := range flows {
+		items = append(items, searchItemOf(flow))
+	}
+	stub.onSearch(flowSearchPath, items...)
 	return stub.on(http.MethodGet, "/flows", http.StatusOK,
 		api.FlowListResponse{Count: len(flows), Total: int64(len(flows)), Items: flows})
+}
+
+// onFolders answers the flow folder search with the folders.
+func (stub *apiStub) onFolders(folders ...api.FlowFolder) *apiStub {
+	items := make([]any, 0, len(folders))
+	for _, folder := range folders {
+		items = append(items, folder)
+	}
+	return stub.onSearch("/flows/folders/search", items...)
+}
+
+// searchItemOf is the slim row the flow search returns for a flow.
+func searchItemOf(flow api.Flow) api.FlowSearchItem {
+	return api.FlowSearchItem{
+		Id: flow.Id, Name: flow.Name, FolderId: flow.FolderId, Role: flow.Role, Tags: flow.Tags,
+		Version: flow.Version, CreatedAt: flow.CreatedAt, UpdatedAt: flow.UpdatedAt,
+	}
 }
 
 func (stub *apiStub) requestsTo(method, path string) []stubRequest {

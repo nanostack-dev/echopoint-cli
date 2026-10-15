@@ -53,7 +53,7 @@ func TestAdministrationCommandsAreUnavailableWithoutRequests(t *testing.T) {
 	if code != 0 || !json.Valid([]byte(stdout)) {
 		t.Fatalf("ordinary flow list failed: exit %d, stdout %q, stderr %q", code, stdout, stderr)
 	}
-	if len(stub.requestsTo(http.MethodGet, "/flows")) != 1 || stub.requestCount() != 1 {
+	if len(stub.requestsTo(http.MethodPost, flowSearchPath)) != 1 || stub.requestCount() != 1 {
 		t.Fatal("ordinary flow list did not make exactly its expected request")
 	}
 }

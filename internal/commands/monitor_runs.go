@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"echopoint-cli/internal/api"
@@ -53,36 +55,38 @@ func printMonitorRun(
 }
 
 func newMonitorRunsCmd(state *AppState) *cobra.Command {
-	var limit, offset int
+	var pages pageFlags
 	cmd := quietOnError(&cobra.Command{
 		Use:   "runs <monitor-id>",
 		Short: "List a monitor's scheduled and diagnostic runs, newest first",
+		Long: `List a monitor's scheduled and diagnostic runs, newest first.
+
+A page ends with the cursor that continues the listing: -o json carries it as
+next_cursor, and the table says how to pass it with --cursor. --all follows it to
+the oldest run.`,
 		Example: `  echopoint monitor runs <monitor-id>
-  echopoint monitor runs <monitor-id> --limit 50 -o json`,
+  echopoint monitor runs <monitor-id> --limit 50 -o json
+  echopoint monitor runs <monitor-id> --cursor <next_cursor> -o json`,
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeMonitorArgs(state),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			if err := validateAPIPagination(limit, offset); err != nil {
+			if err := pages.validate(); err != nil {
 				return err
 			}
 			id, err := parseMonitorID(args[0])
 			if err != nil {
 				return err
 			}
-			resp, err := state.Client.API().ListFlowScheduleRunsWithResponse(cmd.Context(), id,
-				&api.ListFlowScheduleRunsParams{Limit: api.LimitParameter(limit), Offset: api.OffsetParameter(offset)})
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchMonitorRuns(state, id))
 			if err != nil {
 				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-			return printMonitorResult(cmd, state, resp.JSON200, func(w io.Writer) error {
-				rows := make([][]string, 0, len(resp.JSON200.Items))
-				for _, run := range resp.JSON200.Items {
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for _, run := range page.Items {
 					observation := noValue
 					if run.Observation != nil {
 						observation = string(run.Observation.State)
@@ -92,7 +96,7 @@ func newMonitorRunsCmd(state *AppState) *cobra.Command {
 						fmt.Sprint(run.MatchedFlowCount), observation,
 					})
 				}
-				fmt.Fprintf(w, "Total: %d\n", resp.JSON200.Total)
+				fmt.Fprintf(w, "Total: %d\n", page.Total)
 				return output.PrintTableTo(
 					w,
 					[]string{columnID, "Origin", columnStatus, "Due", "Flows", "Observation"},
@@ -101,8 +105,24 @@ func newMonitorRunsCmd(state *AppState) *cobra.Command {
 			})
 		},
 	})
-	addMonitorPagination(cmd, &limit, &offset)
+	pages.bind(cmd, defaultListLimit)
 	return cmd
+}
+
+// searchMonitorRuns reads one page of a monitor's runs, newest first.
+func searchMonitorRuns(state *AppState, monitorID uuid.UUID) pageFetcher[api.MonitorRun] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.MonitorRun], error) {
+		resp, err := state.Client.API().SearchFlowScheduleRunsWithResponse(
+			ctx, monitorID, nil, api.MonitorRunSearchRequest{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.MonitorRun]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.MonitorRun]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
+	}
 }
 
 func newMonitorRunViewCmd(state *AppState) *cobra.Command {

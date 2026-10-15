@@ -42,7 +42,10 @@ echopoint monitor estimate -f estimate.yaml
 echopoint monitor preview-tags --tag checkout --tag smoke --match-mode all
 ```
 
-`list` takes `--limit` (1 to 100, default 20), `--offset`, `--enabled` (`--enabled=false`
+`list` and `runs` page by cursor: `--limit` (1 to 100, default 20), `--cursor <next_cursor>`
+(`-o json` carries `next_cursor`, the table hints it on stderr), `--all` to follow it to the
+end, and `--offset`, which still skips by count but cannot be combined with `--cursor`.
+`list` also takes `--enabled` (`--enabled=false`
 lists the paused ones) and `--has-health-policy` (`=false` lists the others). A monitor
 or run argument is a UUID; anything else fails before any request.
 `delete` removes a whole resource, so it asks `Delete monitor <id>? [y/N]` on a

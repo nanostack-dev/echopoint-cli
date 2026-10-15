@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -43,12 +44,15 @@ func makeRoleFlows(modules, standalones int) []roleFlow {
 }
 
 // searchStub serves POST /flows/search from flows, honouring pagination.limit and
-// pagination.offset like the server does, and counts launches per flow id.
+// pagination.cursor like the server does (the cursor is opaque to the CLI; here it
+// is the position after the last item), and counts launches per flow id. It
+// refuses an offset, as the CLI must walk by cursor.
 type searchStub struct {
 	*httptest.Server
 	mu       sync.Mutex
 	launched map[string]int
 	pages    int
+	offsets  int
 }
 
 func newSearchStub(t *testing.T, flows []roleFlow) *searchStub {
@@ -59,28 +63,37 @@ func newSearchStub(t *testing.T, flows []roleFlow) *searchStub {
 		case strings.HasSuffix(r.URL.Path, "/flows/search") && r.Method == http.MethodPost:
 			var req api.FlowSearchRequest
 			_ = json.NewDecoder(r.Body).Decode(&req)
-			limit, offset := 20, 0
+			limit, start := 20, 0
 			if req.Pagination != nil {
 				if req.Pagination.Limit != nil {
 					limit = int(*req.Pagination.Limit)
 				}
-				if req.Pagination.Offset != nil {
-					offset = int(*req.Pagination.Offset)
+				if req.Pagination.Offset != nil && *req.Pagination.Offset != 0 {
+					stub.mu.Lock()
+					stub.offsets++
+					stub.mu.Unlock()
+				}
+				if req.Pagination.Cursor != nil {
+					start, _ = strconv.Atoi(strings.TrimPrefix(*req.Pagination.Cursor, "after:"))
 				}
 			}
-			end := min(offset+limit, len(flows))
+			end := min(start+limit, len(flows))
 			items := []api.FlowSearchItem{}
-			if offset < len(flows) {
-				for _, f := range flows[offset:end] {
+			if start < len(flows) {
+				for _, f := range flows[start:end] {
 					items = append(items, api.FlowSearchItem{Id: f.id, Role: f.role, Tags: []string{}})
 				}
+			}
+			var next *string
+			if end < len(flows) {
+				next = new("after:" + strconv.Itoa(end))
 			}
 			stub.mu.Lock()
 			stub.pages++
 			stub.mu.Unlock()
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(api.FlowSearchResponse{
-				Count: len(items), Items: items, Total: int64(len(flows)),
+				Count: len(items), Items: items, Total: int64(len(flows)), NextCursor: next,
 			})
 		case strings.Contains(r.URL.Path, "/launch") && r.Method == http.MethodPost:
 			stub.mu.Lock()
@@ -217,6 +230,9 @@ func TestResolveStandaloneFlowIDsByTags_CapCountsOnlyLaunchedFlows(t *testing.T)
 	}
 	if stub.pages != 2 {
 		t.Errorf("search pages = %d, want 2", stub.pages)
+	}
+	if stub.offsets != 0 {
+		t.Errorf("%d search pages were requested by offset, want cursors only", stub.offsets)
 	}
 }
 

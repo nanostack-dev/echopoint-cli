@@ -19,10 +19,19 @@ echopoint flow list
 echopoint flow list -o json
 echopoint flow list --limit 50
 
+# page by cursor: -o json carries next_cursor, the table hints it on stderr
+echopoint flow list --limit 50 -o json
+echopoint flow list --limit 50 --cursor <next_cursor> -o json
+
+# every flow, following next_cursor to the end
+echopoint flow list --all -o json
+
 # scope the listing to one branch of the folder tree
 echopoint flow list --folder "Anchor/Identity"
 echopoint flow list --uncategorized
 ```
+
+Listings in the CLI page by cursor (`--limit`, `--cursor`, `--all`; `--offset` still skips by count but cannot be combined with `--cursor`). `flow list -o json` prints `{count, items, next_cursor, total}` with the search's slim rows, which carry no `flow_definition`; see [cursor-paginated listings](technical/pagination.md).
 
 ### View a Flow
 ```bash
@@ -40,6 +49,7 @@ echopoint flow view <flow-id> -o yaml
 ```bash
 echopoint --org <organization-id> flow publish <flow-id> -o json
 echopoint --org <organization-id> flow version list <flow-id> --limit 20 -o json
+echopoint --org <organization-id> flow version list <flow-id> --cursor <next_cursor>
 echopoint --org <organization-id> flow version view <flow-id> <version-id> -o json
 ```
 
@@ -103,9 +113,11 @@ echopoint flow launch <flow-id> --runner self_hosted -e prd
 ### Executions
 ```bash
 echopoint flow execution list <flow-id>
+echopoint flow execution list <flow-id> --limit 100 --cursor <next_cursor> -o json
 echopoint flow execution view <flow-id> <execution-id>
 echopoint flow execution view <flow-id> <execution-id> -o json
 ```
+`execution list` is newest first and pages like `flow list`.
 `get` is an alias of `view`.
 
 ### Tag Flows

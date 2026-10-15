@@ -54,12 +54,13 @@ echopoint spec check pets-api -f openapi.yaml          # exit 1 when the file di
 echopoint spec list                  # slug, title, Live version, bump, when
 echopoint spec view pets-api         # one spec in full
 echopoint spec versions pets-api     # the history, newest first
-echopoint spec versions pets-api --limit 100 --offset 100
+echopoint spec versions pets-api --limit 100 --cursor <next_cursor>
+echopoint spec versions pets-api --all
 ```
 
 `view` shows the title, the slug, the Live version and its bump, the OpenAPI version, how many convention findings Live has, what Live changed against the version before it (counts by severity), when the spec was created and last updated, who published Live, and the spec's page in EchoPoint (`frontend_url` of the profile, then `/api/specs/<slug>`).
 
-`versions` shows each version with its bump, change counts, findings, who published it, and when. The first line is Live. It pages like the other list commands: `--limit` (default 20; the API allows at most 100) and `--offset`. `-o json` and `-o yaml` print what the API returned.
+`versions` shows each version with its bump, change counts, findings, who published it, and when. The first line is Live. It pages by cursor like the other list commands: `--limit` (default 20; the API allows at most 100), `--cursor` with the `next_cursor` of the previous page, `--all` to follow it to the first version, and `--offset`, which still skips by count but cannot be combined with `--cursor`. Only the first page marks a version Live. `-o json` and `-o yaml` print `{count, items, next_cursor, total}`. `spec list` pages the same way (100 specs a page by default).
 
 In CI, fail the build when the repository copy drifts from Live, or when a change adds convention findings:
 

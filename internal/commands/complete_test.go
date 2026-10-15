@@ -47,38 +47,24 @@ func completionStub(t *testing.T) *apiStub {
 		sampleFlow(idFor("1"), "Checkout", &identity),
 		sampleFlow(idFor("2"), "Login\n  page", nil),
 	)
-	stub.on(
-		http.MethodGet,
-		"/flows/folders",
-		http.StatusOK,
-		api.FlowFolderListResponse{Count: 2, Total: 2, Items: []api.FlowFolder{
-			sampleFolder(identity, "Identity", &anchor),
-			sampleFolder(anchor, "Anchor", nil),
-		}},
+	stub.onFolders(
+		sampleFolder(identity, "Identity", &anchor),
+		sampleFolder(anchor, "Anchor", nil),
 	)
 	started := time.Date(2026, 10, 5, 14, 30, 0, 0, time.UTC)
-	stub.on(http.MethodGet, "/flows/"+idFor("1").String()+"/executions", http.StatusOK, api.FlowExecutionListResponse{
-		Count: 2, Total: 2, Items: []api.FlowExecution{
-			{Id: idFor("20"), FlowId: idFor("1"), Status: "completed", StartedAt: started},
-			{Id: idFor("21"), FlowId: idFor("1"), Status: "failed", StartedAt: started.Add(-time.Hour)},
+	stub.onSearch(
+		"/executions/search",
+		api.FlowExecutionActivity{Id: idFor("20"), FlowId: idFor("1"), Status: "completed", StartedAt: started},
+		api.FlowExecutionActivity{
+			Id:        idFor("21"),
+			FlowId:    idFor("1"),
+			Status:    "failed",
+			StartedAt: started.Add(-time.Hour),
 		},
-	})
-	stub.on(
-		http.MethodGet,
-		"/collections",
-		http.StatusOK,
-		api.CollectionListResponse{Count: 1, Total: 1, Items: []api.Collection{
-			{Id: idFor("30"), Name: "Payments API"},
-		}},
 	)
-	stub.on(
-		http.MethodGet,
-		"/organization/environments",
-		http.StatusOK,
-		api.EnvironmentListResponse{Items: []api.Environment{
-			{Id: idFor("40"), Name: "dev"}, {Id: idFor("41"), Name: "prd"},
-		}},
-	)
+	stub.onSearch("/collections/search", api.Collection{Id: idFor("30"), Name: "Payments API"})
+	stub.onSearch("/organization/environments/search",
+		api.Environment{Id: idFor("40"), Name: "dev"}, api.Environment{Id: idFor("41"), Name: "prd"})
 	isolateCLIEnvironment(t, stub.server.URL)
 	return stub
 }
@@ -277,7 +263,7 @@ func TestTheProfileFlagCompletesFromTheConfigAFlagOrTheEnvironmentNames(t *testi
 
 func TestCompletionStaysSilentWhenTheAPIFails(t *testing.T) {
 	stub := newAPIStub(t)
-	stub.on(http.MethodGet, "/flows", http.StatusInternalServerError, map[string]any{
+	stub.on(http.MethodPost, flowSearchPath, http.StatusInternalServerError, map[string]any{
 		"errors": []map[string]string{{"code": "INTERNAL", "message": "boom"}},
 	})
 	isolateCLIEnvironment(t, stub.server.URL)
@@ -343,9 +329,7 @@ func TestFormatCompletionsKeepsOnlyWhatStartsWithWhatIsTyped(t *testing.T) {
 func folderCompletionStub(t *testing.T, folders ...api.FlowFolder) {
 	t.Helper()
 	stub := newAPIStub(t)
-	stub.on(http.MethodGet, "/flows/folders", http.StatusOK, api.FlowFolderListResponse{
-		Count: len(folders), Total: int64(len(folders)), Items: folders,
-	})
+	stub.onFolders(folders...)
 	isolateCLIEnvironment(t, stub.server.URL)
 }
 

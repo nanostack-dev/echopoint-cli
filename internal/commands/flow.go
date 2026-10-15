@@ -216,61 +216,75 @@ func newFlowExecutionViewCmd(state *AppState) *cobra.Command {
 }
 
 func newFlowExecutionListCmd(state *AppState) *cobra.Command {
-	var limit int32 = 20
-	var offset int32
+	var pages pageFlags
 
 	cmd := &cobra.Command{
 		Use:   "list <flow-id>",
-		Short: "List the executions of a flow",
+		Short: "List the executions of a flow, newest first",
+		Long: `List the executions of a flow, newest first.
+
+A page ends with the cursor that continues the listing: -o json carries it as
+next_cursor, and the table says how to pass it with --cursor. --all follows it to
+the last execution.`,
 		Example: `  echopoint flow execution list <flow-id>
-  echopoint flow execution list <flow-id> --limit 100`,
+  echopoint flow execution list <flow-id> --limit 100
+  echopoint flow execution list <flow-id> --cursor <next_cursor> -o json
+  echopoint flow execution list <flow-id> --all -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
+			if err := pages.validate(); err != nil {
+				return err
+			}
 
-			flowID, err := resolveFlowID(context.Background(), state, args[0])
+			flowID, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
 
-			resp, err := state.Client.API().
-				ListFlowExecutionsWithResponse(context.Background(), flowID, &api.ListFlowExecutionsParams{
-					Limit:  api.LimitParameter(limit),
-					Offset: api.OffsetParameter(offset),
-				})
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchFlowExecutions(state, flowID))
 			if err != nil {
 				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			switch state.OutputFormat {
-			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, resp.JSON200)
-			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, resp.JSON200)
-			default:
-				rows := make([][]string, 0, len(resp.JSON200.Items))
-				for _, execution := range resp.JSON200.Items {
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for _, execution := range page.Items {
 					rows = append(rows, []string{
 						execution.Id.String(),
 						string(execution.Status),
-						runnerTypeDisplay(execution.RunnerType),
+						string(execution.RunnerType),
 						formatWhen(execution.StartedAt),
 					})
 				}
-				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
-				return output.PrintTable([]string{"Execution ID", "Status", "Runner", columnStarted}, rows)
-			}
+				fmt.Fprintf(w, "Total: %d\n", page.Total)
+				return output.PrintTableTo(w, []string{"Execution ID", "Status", "Runner", columnStarted}, rows)
+			})
 		},
 	}
 
-	cmd.Flags().Int32Var(&limit, "limit", 20, "Number of results to return")
-	cmd.Flags().Int32Var(&offset, "offset", 0, "Offset for pagination")
+	pages.bind(cmd, defaultListLimit)
 	return cmd
+}
+
+// searchFlowExecutions reads one page of the executions of a flow, newest first.
+func searchFlowExecutions(
+	state *AppState, flowID uuid.UUID,
+) pageFetcher[api.FlowExecutionActivity] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.FlowExecutionActivity], error) {
+		resp, err := state.Client.API().SearchExecutionsWithResponse(ctx, nil, api.ExecutionSearchRequest{
+			Filter:     &api.ExecutionSearchFilter{FlowIds: []uuid.UUID{flowID}},
+			Pagination: pagination,
+		})
+		if err != nil {
+			return searchPage[api.FlowExecutionActivity]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.FlowExecutionActivity]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
+	}
 }
 
 func parseExecutionID(arg string) (uuid.UUID, error) {
@@ -333,8 +347,7 @@ const (
 	columnStarted = "Started"
 )
 
-// flowListColumns are the columns every `flow list` variant renders, whether
-// the rows come from the list endpoint or from a folder-scoped search.
+// flowListColumns are the columns `flow list` renders.
 var flowListColumns = []string{"NAME", "ID", "ROLE", "UPDATED"}
 
 func flowListRow(name string, id uuid.UUID, role api.FlowRole, updatedAt time.Time) []string {
@@ -342,64 +355,71 @@ func flowListRow(name string, id uuid.UUID, role api.FlowRole, updatedAt time.Ti
 }
 
 func newFlowListCmd(state *AppState) *cobra.Command {
-	var limit int32 = 20
-	var offset int32
+	var pages pageFlags
 	var folderRef string
 	var uncategorized bool
 
 	cmd := &cobra.Command{
 		Use:   listVerb,
 		Short: "List flows",
-		Long: `List flows.
+		Long: `List flows, newest first.
 
 The ID column is what a <flow-id> argument takes.
 
 With --folder or --uncategorized the listing is scoped to one branch of the flow
-folder tree; --folder includes the folder's descendants.`,
+folder tree; --folder includes the folder's descendants.
+
+A page ends with the cursor that continues the listing: -o json carries it as
+next_cursor, and the table says how to pass it with --cursor. --all follows it to
+the last flow. --offset still skips results by count, but a cursor is the way to
+continue a listing: it stays correct while flows are created.`,
 		Example: `  echopoint flow list
   echopoint flow list --folder "Anchor/Identity" -o json
-  echopoint flow list --uncategorized`,
+  echopoint flow list --uncategorized
+  echopoint flow list --limit 50 --cursor <next_cursor> -o json
+  echopoint flow list --all -o json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-
-			if folderRef != "" || uncategorized {
-				return listFlowsInFolder(state, folderRef, uncategorized, limit, offset)
+			if err := pages.validate(); err != nil {
+				return err
+			}
+			if folderRef != "" && uncategorized {
+				return fmt.Errorf("--folder cannot be combined with --uncategorized")
 			}
 
-			params := &api.ListFlowsParams{
-				Limit:  api.LimitParameter(limit),
-				Offset: api.OffsetParameter(offset),
+			request := api.FlowSearchRequest{}
+			if uncategorized {
+				request.Uncategorized = &uncategorized
+			} else if folderRef != "" {
+				idx, err := loadFolderIndex(cmd.Context(), state)
+				if err != nil {
+					return err
+				}
+				folderID, err := idx.resolve(folderRef)
+				if err != nil {
+					return err
+				}
+				request.FolderId = &folderID
 			}
 
-			resp, err := state.Client.API().ListFlowsWithResponse(context.Background(), params)
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchFlows(state, request))
 			if err != nil {
 				return err
 			}
-
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			switch state.OutputFormat {
-			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, resp.JSON200)
-			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, resp.JSON200)
-			default:
-				rows := make([][]string, 0, len(resp.JSON200.Items))
-				for _, flow := range resp.JSON200.Items {
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for _, flow := range page.Items {
 					rows = append(rows, flowListRow(flow.Name, flow.Id, flow.Role, flow.UpdatedAt))
 				}
-				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
-				return output.PrintTable(flowListColumns, rows)
-			}
+				fmt.Fprintf(w, "Total: %d\n", page.Total)
+				return output.PrintTableTo(w, flowListColumns, rows)
+			})
 		},
 	}
 
-	cmd.Flags().Int32Var(&limit, "limit", 20, "Number of results to return")
-	cmd.Flags().Int32Var(&offset, "offset", 0, "Offset for pagination")
+	pages.bind(cmd, defaultListLimit)
 	cmd.Flags().StringVar(&folderRef, "folder", "", "Only list flows in this folder and its descendants (id or path)")
 	cmd.Flags().BoolVar(&uncategorized, "uncategorized", false, "Only list flows that are in no folder")
 	cmd.ValidArgsFunction = cobra.NoFileCompletions
@@ -408,52 +428,19 @@ folder tree; --folder includes the folder's descendants.`,
 	return cmd
 }
 
-// listFlowsInFolder backs the folder-scoped variants of `flow list`. Folder
-// scoping lives on flow search rather than the plain list endpoint, so the two
-// paths render the same columns from different responses.
-func listFlowsInFolder(state *AppState, folderRef string, uncategorized bool, limit, offset int32) error {
-	if folderRef != "" && uncategorized {
-		return fmt.Errorf("--folder cannot be combined with --uncategorized")
-	}
-
-	ctx := context.Background()
-	body := api.FlowSearchRequest{
-		Pagination: &api.PaginationRequest{Limit: &limit, Offset: &offset},
-	}
-	if uncategorized {
-		body.Uncategorized = &uncategorized
-	} else {
-		idx, err := loadFolderIndex(ctx, state)
+// searchFlows reads one page of the flows the request selects; the request's own
+// pagination is replaced by the page asked for.
+func searchFlows(state *AppState, request api.FlowSearchRequest) pageFetcher[api.FlowSearchItem] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.FlowSearchItem], error) {
+		request.Pagination = pagination
+		resp, err := state.Client.API().SearchFlowsWithResponse(ctx, nil, request)
 		if err != nil {
-			return err
+			return searchPage[api.FlowSearchItem]{}, err
 		}
-		folderID, err := idx.resolve(folderRef)
-		if err != nil {
-			return err
+		if resp.JSON200 == nil {
+			return searchPage[api.FlowSearchItem]{}, formatAPIError(resp.HTTPResponse, resp.Body)
 		}
-		body.FolderId = &folderID
-	}
-
-	resp, err := state.Client.API().SearchFlowsWithResponse(ctx, nil, body)
-	if err != nil {
-		return err
-	}
-	if resp.JSON200 == nil {
-		return formatAPIError(resp.HTTPResponse, resp.Body)
-	}
-
-	switch state.OutputFormat {
-	case output.FormatJSON:
-		return output.PrintJSON(os.Stdout, resp.JSON200)
-	case output.FormatYAML:
-		return output.PrintYAML(os.Stdout, resp.JSON200)
-	default:
-		rows := make([][]string, 0, len(resp.JSON200.Items))
-		for _, flow := range resp.JSON200.Items {
-			rows = append(rows, flowListRow(flow.Name, flow.Id, flow.Role, flow.UpdatedAt))
-		}
-		fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
-		return output.PrintTable(flowListColumns, rows)
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
 	}
 }
 

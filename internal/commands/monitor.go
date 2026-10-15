@@ -76,23 +76,19 @@ func completeMonitorArgs(state *AppState) completionFunc {
 		if len(args) != 0 {
 			return noCompletion()
 		}
-		return completeFromAPI(state, cmd, toComplete, fetchMonitorCandidates)
+		return completeFromAPI(state, cmd, toComplete, fetchMonitorCandidates(state))
 	}
 }
 
-func fetchMonitorCandidates(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-	resp, err := client.ListFlowSchedulesWithResponse(
-		ctx,
-		&api.ListFlowSchedulesParams{Limit: api.LimitParameter(completionPageSize)},
-	)
-	if err != nil || resp.JSON200 == nil {
-		return nil
+func fetchMonitorCandidates(state *AppState) func(context.Context, *api.ClientWithResponses) []completionCandidate {
+	return func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+		monitors := walkSome(ctx, completionMaxPages, searchMonitors(state, nil))
+		candidates := make([]completionCandidate, 0, len(monitors))
+		for _, monitor := range monitors {
+			candidates = append(candidates, completionCandidate{monitor.Id.String(), oneLine(monitor.Name)})
+		}
+		return candidates
 	}
-	candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-	for _, monitor := range resp.JSON200.Items {
-		candidates = append(candidates, completionCandidate{monitor.Id.String(), oneLine(monitor.Name)})
-	}
-	return candidates
 }
 
 // completeMonitorRunArgs completes a monitor, then one of its recent runs as
@@ -101,21 +97,22 @@ func completeMonitorRunArgs(state *AppState) completionFunc {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		switch len(args) {
 		case 0:
-			return completeFromAPI(state, cmd, toComplete, fetchMonitorCandidates)
+			return completeFromAPI(state, cmd, toComplete, fetchMonitorCandidates(state))
 		case 1:
 			monitorID, err := parseMonitorID(args[0])
 			if err != nil {
 				return noCompletion()
 			}
 			return completeFromAPI(state, cmd, toComplete,
-				func(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-					resp, err := client.ListFlowScheduleRunsWithResponse(ctx, monitorID,
-						&api.ListFlowScheduleRunsParams{Limit: recentExecutionsComplete})
-					if err != nil || resp.JSON200 == nil {
+				func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+					// the recent runs are the first page: a completion never walks a long history
+					limit := int32(recentExecutionsComplete)
+					page, err := searchMonitorRuns(state, monitorID)(ctx, &api.PaginationRequest{Limit: &limit})
+					if err != nil {
 						return nil
 					}
-					candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-					for _, run := range resp.JSON200.Items {
+					candidates := make([]completionCandidate, 0, len(page.Items))
+					for _, run := range page.Items {
 						candidates = append(candidates, completionCandidate{
 							run.Id.String(),
 							fmt.Sprintf("%s · %s · %s", run.Origin, run.Status, formatWhen(run.DueAt)),
@@ -231,63 +228,78 @@ func printMonitor(
 	return printMonitorResult(cmd, state, monitor, func(w io.Writer) error { return printMonitorTable(w, *monitor) })
 }
 
-func addMonitorPagination(cmd *cobra.Command, limit, offset *int) {
-	cmd.Flags().IntVar(limit, "limit", 20, "Maximum results (1-100)")
-	cmd.Flags().IntVar(offset, "offset", 0, "Results to skip")
-}
-
 func newMonitorListCmd(state *AppState) *cobra.Command {
-	var limit, offset int
+	var pages pageFlags
 	var enabled, healthPolicy bool
 	cmd := quietOnError(&cobra.Command{
 		Use:   listVerb,
 		Short: "List monitors with their cadence and current health",
+		Long: `List monitors, newest first, with their cadence and current health.
+
+A page ends with the cursor that continues the listing: -o json carries it as
+next_cursor, and the table says how to pass it with --cursor. --all follows it to
+the last monitor.`,
 		Example: `  echopoint monitor list
-  echopoint --org <organization-id> monitor list --enabled --has-health-policy -o json`,
+  echopoint --org <organization-id> monitor list --enabled --has-health-policy -o json
+  echopoint monitor list --cursor <next_cursor> -o json
+  echopoint monitor list --all`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			if err := validateAPIPagination(limit, offset); err != nil {
+			if err := pages.validate(); err != nil {
 				return err
 			}
-			params := &api.ListFlowSchedulesParams{
-				Limit:  api.LimitParameter(limit),
-				Offset: api.OffsetParameter(offset),
+			var filter *api.MonitorSearchFilter
+			if cmd.Flags().Changed("enabled") || cmd.Flags().Changed("has-health-policy") {
+				filter = &api.MonitorSearchFilter{}
+				if cmd.Flags().Changed("enabled") {
+					filter.Enabled = &enabled
+				}
+				if cmd.Flags().Changed("has-health-policy") {
+					filter.HasHealthPolicy = &healthPolicy
+				}
 			}
-			if cmd.Flags().Changed("enabled") {
-				params.Enabled = &enabled
-			}
-			if cmd.Flags().Changed("has-health-policy") {
-				params.HasHealthPolicy = &healthPolicy
-			}
-			resp, err := state.Client.API().ListFlowSchedulesWithResponse(cmd.Context(), params)
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchMonitors(state, filter))
 			if err != nil {
 				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-			return printMonitorResult(cmd, state, resp.JSON200, func(w io.Writer) error {
-				rows := make([][]string, 0, len(resp.JSON200.Items))
-				for _, monitor := range resp.JSON200.Items {
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for _, monitor := range page.Items {
 					rows = append(rows, []string{
 						monitor.Id.String(), monitor.Name, monitorState(monitor), monitorCadence(monitor),
 						string(monitor.RunnerType), monitorHealthLabel(monitor), formatOptionalWhen(monitor.NextRunAt),
 					})
 				}
-				fmt.Fprintf(w, "Total: %d\n", resp.JSON200.Total)
+				fmt.Fprintf(w, "Total: %d\n", page.Total)
 				return output.PrintTableTo(w,
 					[]string{columnID, columnName, "State", "Cadence", columnRunner, columnHealth, "Next run"}, rows)
 			})
 		},
 	})
-	addMonitorPagination(cmd, &limit, &offset)
+	pages.bind(cmd, defaultListLimit)
 	cmd.Flags().BoolVar(&enabled, "enabled", false, "Only enabled monitors; --enabled=false lists the paused ones")
 	cmd.Flags().BoolVar(&healthPolicy, "has-health-policy", false,
 		"Only monitors with a health policy; --has-health-policy=false lists the others")
 	return cmd
+}
+
+// searchMonitors reads one page of the organization's monitors, newest first.
+func searchMonitors(state *AppState, filter *api.MonitorSearchFilter) pageFetcher[api.Monitor] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.Monitor], error) {
+		resp, err := state.Client.API().SearchFlowSchedulesWithResponse(
+			ctx, nil, api.MonitorSearchRequest{Filter: filter, Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.Monitor]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.Monitor]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
+	}
 }
 
 func newMonitorViewCmd(state *AppState) *cobra.Command {

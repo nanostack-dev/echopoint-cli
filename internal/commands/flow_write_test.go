@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-
-	"echopoint-cli/internal/api"
 )
 
 func TestFlowCreateHasNoSlugAndSendsOnlyTheName(t *testing.T) {
@@ -107,28 +105,42 @@ func TestFlowListShowsNameIDRoleAndUpdatedOnEveryPath(t *testing.T) {
 		sampleFlow(idFor("1"), "Checkout smoke", nil),
 		sampleFlow(idFor("2"), "Login", &folder),
 	)
-	stub.on(http.MethodPost, "/flows/search", http.StatusOK, map[string]any{
-		"count": 1, "total": 1, "items": []map[string]any{{
-			"id": idFor("2"), "name": "Login", "role": "standalone", "updated_at": "2026-10-05T12:00:00Z",
-		}},
-	})
-	stub.on(http.MethodGet, "/flows/folders", http.StatusOK, api.FlowFolderListResponse{
-		Count: 1, Total: 1, Items: []api.FlowFolder{sampleFolder(folder, "Anchor", nil)},
-	})
+	stub.onFolders(sampleFolder(folder, "Anchor", nil))
 	isolateCLIEnvironment(t, stub.server.URL)
 
-	for _, args := range [][]string{{"flow", "list"}, {"flow", "list", "--folder", "Anchor"}, {"flow", "list", "--uncategorized"}} {
-		stdout, stderr, code := runCLI(t, args...)
+	for _, tc := range []struct {
+		args []string
+		want map[string]any
+	}{
+		{[]string{"flow", "list"}, map[string]any{}},
+		{[]string{"flow", "list", "--folder", "Anchor"}, map[string]any{"folder_id": folder.String()}},
+		{[]string{"flow", "list", "--uncategorized"}, map[string]any{"uncategorized": true}},
+	} {
+		before := len(stub.requestsTo(http.MethodPost, flowSearchPath))
+		stdout, stderr, code := runCLI(t, tc.args...)
 
 		lines := strings.Split(strings.TrimSpace(stdout), "\n")
 		if code != 0 || len(lines) < 3 {
-			t.Fatalf("%v: exit %d, stdout %q, stderr %q", args, code, stdout, stderr)
+			t.Fatalf("%v: exit %d, stdout %q, stderr %q", tc.args, code, stdout, stderr)
 		}
 		if header := strings.Join(strings.Fields(lines[1]), " "); header != "NAME ID ROLE UPDATED" {
-			t.Errorf("%v: header = %q", args, header)
+			t.Errorf("%v: header = %q", tc.args, header)
 		}
 		if !flowRowPattern.MatchString(lines[2]) {
-			t.Errorf("%v: the row is not name, id, role, updated: %q", args, lines[2])
+			t.Errorf("%v: the row is not name, id, role, updated: %q", tc.args, lines[2])
+		}
+		sent := stub.requestsTo(http.MethodPost, flowSearchPath)
+		if len(sent) != before+1 {
+			t.Fatalf("%v: %d searches, want one more than %d", tc.args, len(sent), before)
+		}
+		body := bodyOf(t, sent[before])
+		for key, want := range tc.want {
+			if body[key] != want {
+				t.Errorf("%v: the search sent %s = %v, want %v (body %v)", tc.args, key, body[key], want, body)
+			}
+		}
+		if len(tc.want) == 0 && (body["folder_id"] != nil || body["uncategorized"] != nil) {
+			t.Errorf("%v: the plain listing scoped the search: %v", tc.args, body)
 		}
 	}
 }

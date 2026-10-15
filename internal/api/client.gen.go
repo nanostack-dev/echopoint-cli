@@ -193,6 +193,24 @@ func (e CloudFleetSettingsSource) Valid() bool {
 	}
 }
 
+// Defines values for CollectionFolderSortField.
+const (
+	CollectionFolderSortFieldCreatedAt CollectionFolderSortField = "created_at"
+	CollectionFolderSortFieldName      CollectionFolderSortField = "name"
+)
+
+// Valid indicates whether the value is a known member of the CollectionFolderSortField enum.
+func (e CollectionFolderSortField) Valid() bool {
+	switch e {
+	case CollectionFolderSortFieldCreatedAt:
+		return true
+	case CollectionFolderSortFieldName:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CollectionRequestAuthApiKeyLocation.
 const (
 	CollectionRequestAuthApiKeyLocationCookie CollectionRequestAuthApiKeyLocation = "cookie"
@@ -268,6 +286,51 @@ func (e CollectionRequestResponseBodyKind) Valid() bool {
 	}
 }
 
+// Defines values for CollectionRequestSortField.
+const (
+	CollectionRequestSortFieldCreatedAt CollectionRequestSortField = "created_at"
+	CollectionRequestSortFieldMethod    CollectionRequestSortField = "method"
+	CollectionRequestSortFieldName      CollectionRequestSortField = "name"
+	CollectionRequestSortFieldUpdatedAt CollectionRequestSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the CollectionRequestSortField enum.
+func (e CollectionRequestSortField) Valid() bool {
+	switch e {
+	case CollectionRequestSortFieldCreatedAt:
+		return true
+	case CollectionRequestSortFieldMethod:
+		return true
+	case CollectionRequestSortFieldName:
+		return true
+	case CollectionRequestSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CollectionSortField.
+const (
+	CollectionSortFieldCreatedAt CollectionSortField = "created_at"
+	CollectionSortFieldName      CollectionSortField = "name"
+	CollectionSortFieldUpdatedAt CollectionSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the CollectionSortField enum.
+func (e CollectionSortField) Valid() bool {
+	switch e {
+	case CollectionSortFieldCreatedAt:
+		return true
+	case CollectionSortFieldName:
+		return true
+	case CollectionSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CollectionSource.
 const (
 	CollectionSourceManual  CollectionSource = "manual"
@@ -295,6 +358,39 @@ const (
 func (e DelayFlowNodeType) Valid() bool {
 	switch e {
 	case DelayFlowNodeTypeDelay:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnvironmentSortField.
+const (
+	EnvironmentSortFieldCreatedAt EnvironmentSortField = "created_at"
+	EnvironmentSortFieldName      EnvironmentSortField = "name"
+)
+
+// Valid indicates whether the value is a known member of the EnvironmentSortField enum.
+func (e EnvironmentSortField) Valid() bool {
+	switch e {
+	case EnvironmentSortFieldCreatedAt:
+		return true
+	case EnvironmentSortFieldName:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExecutionSortField.
+const (
+	StartedAt ExecutionSortField = "started_at"
+)
+
+// Valid indicates whether the value is a known member of the ExecutionSortField enum.
+func (e ExecutionSortField) Valid() bool {
+	switch e {
+	case StartedAt:
 		return true
 	default:
 		return false
@@ -397,6 +493,24 @@ func (e FlowEdgeType) Valid() bool {
 	}
 }
 
+// Defines values for FlowFolderSortField.
+const (
+	FlowFolderSortFieldCreatedAt FlowFolderSortField = "created_at"
+	FlowFolderSortFieldName      FlowFolderSortField = "name"
+)
+
+// Valid indicates whether the value is a known member of the FlowFolderSortField enum.
+func (e FlowFolderSortField) Valid() bool {
+	switch e {
+	case FlowFolderSortFieldCreatedAt:
+		return true
+	case FlowFolderSortFieldName:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FlowNodeRunWhen.
 const (
 	Always    FlowNodeRunWhen = "always"
@@ -448,6 +562,21 @@ func (e FlowRunStatus) Valid() bool {
 	case FlowRunStatusNone:
 		return true
 	case FlowRunStatusPassed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FlowVersionSortField.
+const (
+	PublishedAt FlowVersionSortField = "published_at"
+)
+
+// Valid indicates whether the value is a known member of the FlowVersionSortField enum.
+func (e FlowVersionSortField) Valid() bool {
+	switch e {
+	case PublishedAt:
 		return true
 	default:
 		return false
@@ -610,6 +739,60 @@ func (e MonitorRunOrigin) Valid() bool {
 	}
 }
 
+// Defines values for MonitorRunSortField.
+const (
+	DueAt MonitorRunSortField = "due_at"
+)
+
+// Valid indicates whether the value is a known member of the MonitorRunSortField enum.
+func (e MonitorRunSortField) Valid() bool {
+	switch e {
+	case DueAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MonitorSortField.
+const (
+	MonitorSortFieldCreatedAt MonitorSortField = "created_at"
+	MonitorSortFieldName      MonitorSortField = "name"
+	MonitorSortFieldNextRunAt MonitorSortField = "next_run_at"
+	MonitorSortFieldUpdatedAt MonitorSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the MonitorSortField enum.
+func (e MonitorSortField) Valid() bool {
+	switch e {
+	case MonitorSortFieldCreatedAt:
+		return true
+	case MonitorSortFieldName:
+		return true
+	case MonitorSortFieldNextRunAt:
+		return true
+	case MonitorSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NodeExecutionHistorySortField.
+const (
+	NodeExecutionHistorySortFieldCreatedAt NodeExecutionHistorySortField = "created_at"
+)
+
+// Valid indicates whether the value is a known member of the NodeExecutionHistorySortField enum.
+func (e NodeExecutionHistorySortField) Valid() bool {
+	switch e {
+	case NodeExecutionHistorySortFieldCreatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NodeExecutionResultNodeType.
 const (
 	NodeExecutionResultNodeTypeAssert      NodeExecutionResultNodeType = "assert"
@@ -712,6 +895,21 @@ func (e OpenAPIGroupingStrategy) Valid() bool {
 	case OpenAPIGroupingStrategyPath:
 		return true
 	case OpenAPIGroupingStrategyTags:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OpenAPISyncChangeSortField.
+const (
+	OpenAPISyncChangeSortFieldCreatedAt OpenAPISyncChangeSortField = "created_at"
+)
+
+// Valid indicates whether the value is a known member of the OpenAPISyncChangeSortField enum.
+func (e OpenAPISyncChangeSortField) Valid() bool {
+	switch e {
+	case OpenAPISyncChangeSortFieldCreatedAt:
 		return true
 	default:
 		return false
@@ -1444,6 +1642,45 @@ func (e SpecLintRule) Valid() bool {
 	}
 }
 
+// Defines values for SpecSortField.
+const (
+	SpecSortFieldCreatedAt SpecSortField = "created_at"
+	SpecSortFieldSlug      SpecSortField = "slug"
+	SpecSortFieldUpdatedAt SpecSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the SpecSortField enum.
+func (e SpecSortField) Valid() bool {
+	switch e {
+	case SpecSortFieldCreatedAt:
+		return true
+	case SpecSortFieldSlug:
+		return true
+	case SpecSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpecVersionSortField.
+const (
+	SpecVersionSortFieldCreatedAt SpecVersionSortField = "created_at"
+	SpecVersionSortFieldNumber    SpecVersionSortField = "number"
+)
+
+// Valid indicates whether the value is a known member of the SpecVersionSortField enum.
+func (e SpecVersionSortField) Valid() bool {
+	switch e {
+	case SpecVersionSortFieldCreatedAt:
+		return true
+	case SpecVersionSortFieldNumber:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SseFlowNodeType.
 const (
 	SseFlowNodeTypeSse SseFlowNodeType = "sse"
@@ -1860,7 +2097,10 @@ type ApiKeyListResponse struct {
 	Count int      `json:"count"`
 	Items []ApiKey `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -1879,7 +2119,7 @@ type ApiKeySearchRequest struct {
 	// SortBy Field to sort by.
 	SortBy *ApiKeySortField `json:"sort_by,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
@@ -2249,9 +2489,28 @@ type CollectionFolderListResponse struct {
 	Count int                `json:"count"`
 	Items []CollectionFolder `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
+
+// CollectionFolderSearchRequest defines model for CollectionFolderSearchRequest.
+type CollectionFolderSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *CollectionFolderSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// CollectionFolderSortField Field to sort collection folder search results by.
+type CollectionFolderSortField string
 
 // CollectionListResponse defines model for CollectionListResponse.
 type CollectionListResponse struct {
@@ -2259,7 +2518,10 @@ type CollectionListResponse struct {
 	Count int          `json:"count"`
 	Items []Collection `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -2385,13 +2647,25 @@ type CollectionRequestAuthOption struct {
 // CollectionRequestAuthType Dedicated authentication mode for a saved collection request.
 type CollectionRequestAuthType string
 
+// CollectionRequestFilter defines model for CollectionRequestFilter.
+type CollectionRequestFilter struct {
+	// FolderId Restrict results to a specific folder. Omit to search root-level requests only.
+	FolderId *openapi_types.UUID `json:"folder_id,omitempty"`
+
+	// IncludeNested When true and folder_id is omitted, include requests nested in folders as well as root-level requests.
+	IncludeNested *bool `json:"include_nested,omitempty"`
+}
+
 // CollectionRequestListResponse defines model for CollectionRequestListResponse.
 type CollectionRequestListResponse struct {
 	// Count The number of items returned in this response.
 	Count int                 `json:"count"`
 	Items []CollectionRequest `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -2426,6 +2700,41 @@ type CollectionRequestResponseSpec struct {
 	// Examples: [200,400,404]
 	StatusCodes *[]int `json:"status_codes,omitempty"`
 }
+
+// CollectionRequestSearchRequest defines model for CollectionRequestSearchRequest.
+type CollectionRequestSearchRequest struct {
+	// Filter Filter criteria.
+	Filter *CollectionRequestFilter `json:"filter,omitempty"`
+
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *CollectionRequestSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// CollectionRequestSortField Field to sort collection request search results by.
+type CollectionRequestSortField string
+
+// CollectionSearchRequest defines model for CollectionSearchRequest.
+type CollectionSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *CollectionSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// CollectionSortField Field to sort collection search results by.
+type CollectionSortField string
 
 // CollectionSource Source of the collection
 type CollectionSource string
@@ -2824,6 +3133,35 @@ type EnvironmentListResponse struct {
 	Items []Environment `json:"items"`
 }
 
+// EnvironmentSearchRequest defines model for EnvironmentSearchRequest.
+type EnvironmentSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *EnvironmentSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// EnvironmentSearchResponse defines model for EnvironmentSearchResponse.
+type EnvironmentSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int           `json:"count"`
+	Items []Environment `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
+// EnvironmentSortField Field to sort environment search results by.
+type EnvironmentSortField string
+
 // EphemeralCompletionRequest Terminal result for an ephemeral execution, published by a caller-owned runner via the
 // CLI. Mirrors the self-hosted runner completion payload without claim/lease/identity
 // fields (an ephemeral runner never claims a job and holds no lease).
@@ -3023,6 +3361,40 @@ type ExecutionAnalyticsSummary struct {
 	// WindowStart Inclusive start of the window, on a bucket boundary.
 	WindowStart time.Time `json:"window_start"`
 }
+
+// ExecutionSearchFilter defines model for ExecutionSearchFilter.
+type ExecutionSearchFilter struct {
+	// FlowIds Keep the executions of these flows. Omit or leave empty for every flow of the organization.
+	FlowIds []openapi_types.UUID `json:"flow_ids,omitempty"`
+
+	// Since Inclusive lower bound on started_at (RFC3339).
+	Since *time.Time `json:"since,omitempty"`
+
+	// Status Keep the executions in this status.
+	Status *ExecutionStatus `json:"status,omitempty"`
+
+	// TriggerType Keep the executions started by this trigger.
+	TriggerType *TriggerType `json:"trigger_type,omitempty"`
+}
+
+// ExecutionSearchRequest defines model for ExecutionSearchRequest.
+type ExecutionSearchRequest struct {
+	// Filter Filter criteria.
+	Filter *ExecutionSearchFilter `json:"filter,omitempty"`
+
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *ExecutionSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// ExecutionSortField Field to sort execution search results by.
+type ExecutionSortField string
 
 // ExecutionStatus Status of a flow execution
 type ExecutionStatus string
@@ -3359,7 +3731,10 @@ type FlowExecutionActivityListResponse struct {
 	Count int                     `json:"count"`
 	Items []FlowExecutionActivity `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -3369,7 +3744,10 @@ type FlowExecutionListResponse struct {
 	Count int             `json:"count"`
 	Items []FlowExecution `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -3408,9 +3786,28 @@ type FlowFolderListResponse struct {
 	Count int          `json:"count"`
 	Items []FlowFolder `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
+
+// FlowFolderSearchRequest defines model for FlowFolderSearchRequest.
+type FlowFolderSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *FlowFolderSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// FlowFolderSortField Field to sort flow folder search results by.
+type FlowFolderSortField string
 
 // FlowHTTPCallPeak One flow's most HTTP calls in a single run within the window.
 type FlowHTTPCallPeak struct {
@@ -3430,7 +3827,10 @@ type FlowListResponse struct {
 	Count int    `json:"count"`
 	Items []Flow `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -3509,7 +3909,7 @@ type FlowSearchRequest struct {
 	IncludeDefinition *bool              `json:"include_definition,omitempty"`
 	Pagination        *PaginationRequest `json:"pagination,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 
 	// TagMatchMode Whether any or all of the provided tags must match.
@@ -3530,7 +3930,10 @@ type FlowSearchResponse struct {
 	Count int              `json:"count"`
 	Items []FlowSearchItem `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -3578,9 +3981,28 @@ type FlowVersionListResponse struct {
 	Count int           `json:"count"`
 	Items []FlowVersion `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
+
+// FlowVersionSearchRequest defines model for FlowVersionSearchRequest.
+type FlowVersionSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *FlowVersionSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// FlowVersionSortField Field to sort flow version search results by.
+type FlowVersionSortField string
 
 // GitTriggerMetadata Source-control provenance for a `git` (CI/CD) launch. Fields mirror the common CI
 // environment absent values are omitted.
@@ -4156,7 +4578,10 @@ type MonitorListResponse struct {
 	Count int       `json:"count"`
 	Items []Monitor `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -4218,12 +4643,59 @@ type MonitorRunListResponse struct {
 	Count int          `json:"count"`
 	Items []MonitorRun `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
 // MonitorRunOrigin defines model for MonitorRunOrigin.
 type MonitorRunOrigin string
+
+// MonitorRunSearchRequest defines model for MonitorRunSearchRequest.
+type MonitorRunSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *MonitorRunSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// MonitorRunSortField Field to sort monitor run search results by.
+type MonitorRunSortField string
+
+// MonitorSearchFilter defines model for MonitorSearchFilter.
+type MonitorSearchFilter struct {
+	// Enabled Only enabled (true) or paused (false) monitors.
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// HasHealthPolicy Only monitors with (true) or without (false) a health policy.
+	HasHealthPolicy *bool `json:"has_health_policy,omitempty"`
+}
+
+// MonitorSearchRequest defines model for MonitorSearchRequest.
+type MonitorSearchRequest struct {
+	// Filter Filter criteria.
+	Filter *MonitorSearchFilter `json:"filter,omitempty"`
+
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *MonitorSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// MonitorSortField Field to sort monitor search results by.
+type MonitorSortField string
 
 // MonthlyExecutionUsage Cloud executions launched since the first of the month, UTC.
 // Self-hosted and ephemeral runs never count. Reported to the license for
@@ -4278,9 +4750,28 @@ type NodeExecutionHistoryResponse struct {
 	Count int                   `json:"count"`
 	Items []NodeExecutionResult `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
+
+// NodeExecutionHistorySearchRequest defines model for NodeExecutionHistorySearchRequest.
+type NodeExecutionHistorySearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *NodeExecutionHistorySortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// NodeExecutionHistorySortField Field to sort node execution history by.
+type NodeExecutionHistorySortField string
 
 // NodeExecutionResult Node execution result with hybrid design: single source of truth (result) + promoted columns.
 // The `result` field contains the complete polymorphic result from the flow engine.
@@ -4423,9 +4914,15 @@ type OpenAPISyncChangeListResponse struct {
 	Count int                 `json:"count"`
 	Items []OpenAPISyncChange `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
+
+// OpenAPISyncChangeSortField Field to sort OpenAPI sync history by.
+type OpenAPISyncChangeSortField string
 
 // OpenAPISyncChangeType defines model for OpenAPISyncChangeType.
 type OpenAPISyncChangeType string
@@ -4471,7 +4968,10 @@ type OpenAPISyncConfigListResponse struct {
 	Count int                 `json:"count"`
 	Items []OpenAPISyncConfig `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -4484,12 +4984,25 @@ type OpenAPISyncConfigSearchRequest struct {
 	// SortBy Field to sort by.
 	SortBy *OpenAPISyncConfigSortField `json:"sort_by,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
 // OpenAPISyncConfigSortField Field to sort top-level OpenAPI sync config results by.
 type OpenAPISyncConfigSortField string
+
+// OpenAPISyncHistorySearchRequest defines model for OpenAPISyncHistorySearchRequest.
+type OpenAPISyncHistorySearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *OpenAPISyncChangeSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
 
 // OpenAPISyncOperation defines model for OpenAPISyncOperation.
 type OpenAPISyncOperation struct {
@@ -4520,7 +5033,10 @@ type OpenAPISyncOperationListResponse struct {
 	Count int                    `json:"count"`
 	Items []OpenAPISyncOperation `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -4533,11 +5049,11 @@ type OpenAPISyncOperationSearchRequest struct {
 	// SortBy Field to sort by
 	SortBy *OpenAPISyncOperationSortField `json:"sort_by,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
-// OpenAPISyncOperationSortField defines model for OpenAPISyncOperationSortField.
+// OpenAPISyncOperationSortField Field to sort OpenAPI sync operations by. route_name, operation_key and source_operation_id order by their first 255 characters, so a cursor stays small however long a path or key is.
 type OpenAPISyncOperationSortField string
 
 // OperationDefinition defines model for OperationDefinition.
@@ -4674,16 +5190,22 @@ type PagedListResponse struct {
 	// Count The number of items returned in this response.
 	Count int `json:"count"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
 // PaginationRequest defines model for PaginationRequest.
 type PaginationRequest struct {
+	// Cursor Opaque cursor from the previous page's `next_cursor`. Continues the search after the last item of that page, with the same filter and sort. Omit to start at the first item. Cannot be combined with a non-zero `offset`. An invalid cursor answers 400 INVALID_CURSOR.
+	Cursor *string `json:"cursor,omitempty"`
+
 	// Limit Maximum number of items per page.
 	Limit *int32 `json:"limit,omitempty"`
 
-	// Offset Number of items to skip.
+	// Offset Number of items to skip. Use for page-number navigation only; iterate with `cursor`.
 	Offset *int32 `json:"offset,omitempty"`
 }
 
@@ -4707,7 +5229,10 @@ type PermissionListResponse struct {
 	Count int          `json:"count"`
 	Items []Permission `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -5024,7 +5549,7 @@ type ResourceSearchRequest struct {
 	Preset *ResourceSearchPreset `json:"preset,omitempty"`
 	Scope  *ResourceSearchScope  `json:"scope,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
@@ -5042,7 +5567,10 @@ type ResourceSearchResultGroup struct {
 	Domain ResourceSearchDomain       `json:"domain"`
 	Items  []ResourceSearchResultItem `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -5402,7 +5930,7 @@ type SearchRequest struct {
 	FullTextSearch *string            `json:"full_text_search,omitempty"`
 	Pagination     *PaginationRequest `json:"pagination,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
@@ -5461,7 +5989,7 @@ type SetVariableRequest struct {
 	Value string `json:"value"`
 }
 
-// SortDirection defines model for SortDirection.
+// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 type SortDirection string
 
 // Spec One API's OpenAPI document as EchoPoint keeps it.
@@ -5681,8 +6209,27 @@ type SpecLintRule string
 type SpecListResponse struct {
 	Count int    `json:"count"`
 	Items []Spec `json:"items"`
-	Total int64  `json:"total"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+	Total      int64   `json:"total"`
 }
+
+// SpecSearchRequest defines model for SpecSearchRequest.
+type SpecSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *SpecSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// SpecSortField Field to sort spec search results by.
+type SpecSortField string
 
 // SpecVersion A Live version of a spec with what changed from the version before it.
 type SpecVersion struct {
@@ -5722,8 +6269,27 @@ type SpecVersionListResponse struct {
 
 	// Items Live versions, newest first.
 	Items []SpecVersionSummary `json:"items"`
-	Total int64                `json:"total"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+	Total      int64   `json:"total"`
 }
+
+// SpecVersionSearchRequest defines model for SpecVersionSearchRequest.
+type SpecVersionSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *SpecVersionSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// SpecVersionSortField Field to sort spec version search results by.
+type SpecVersionSortField string
 
 // SpecVersionSummary A Live version of a spec, without its document and its changes.
 type SpecVersionSummary struct {
@@ -6269,7 +6835,10 @@ type WebhookListResponse struct {
 	Count int       `json:"count"`
 	Items []Webhook `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -6303,7 +6872,10 @@ type WebhookRequestListResponse struct {
 	Count int                      `json:"count"`
 	Items []WebhookRequestResponse `json:"items"`
 
-	// Total Total number of matching items.
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
 	Total int64 `json:"total"`
 }
 
@@ -6370,7 +6942,7 @@ type WebhookRequestSearchRequest struct {
 	// SortBy Field to sort by
 	SortBy *WebhookRequestSearchRequestSortBy `json:"sort_by,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
@@ -6405,7 +6977,7 @@ type WebhookSearchRequest struct {
 	// SortBy Field to sort by.
 	SortBy *WebhookSortField `json:"sort_by,omitempty"`
 
-	// SortDirection Sorting direction
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
@@ -6656,6 +7228,12 @@ type ImportFromOpenAPIParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchCollectionsParams defines parameters for SearchCollections.
+type SearchCollectionsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // DeleteFolderParams defines parameters for DeleteFolder.
 type DeleteFolderParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -6704,6 +7282,12 @@ type ListCollectionRequestOpenAPISyncHistoryParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchCollectionRequestOpenAPISyncHistoryParams defines parameters for SearchCollectionRequestOpenAPISyncHistory.
+type SearchCollectionRequestOpenAPISyncHistoryParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // DeleteCollectionParams defines parameters for DeleteCollection.
 type DeleteCollectionParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -6734,6 +7318,12 @@ type AddFolderParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchCollectionFoldersParams defines parameters for SearchCollectionFolders.
+type SearchCollectionFoldersParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetOpenAPISyncConfigParams defines parameters for GetOpenAPISyncConfig.
 type GetOpenAPISyncConfigParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -6760,6 +7350,12 @@ type ListOpenAPISyncHistoryParams struct {
 
 // CreateOrUpdateOpenAPISyncConfigParams defines parameters for CreateOrUpdateOpenAPISyncConfig.
 type CreateOrUpdateOpenAPISyncConfigParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchOpenAPISyncHistoryParams defines parameters for SearchOpenAPISyncHistory.
+type SearchOpenAPISyncHistoryParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -6803,6 +7399,12 @@ type AddRequestParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchCollectionRequestsParams defines parameters for SearchCollectionRequests.
+type SearchCollectionRequestsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListExecutionsParams defines parameters for ListExecutions.
 type ListExecutionsParams struct {
 	// Limit Maximum number of items per page.
@@ -6823,6 +7425,12 @@ type ListExecutionsParams struct {
 	// Since Inclusive lower bound on started_at (RFC3339).
 	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
 
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchExecutionsParams defines parameters for SearchExecutions.
+type SearchExecutionsParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -6868,6 +7476,12 @@ type CreateFlowFolderParams struct {
 
 // BulkMoveFlowsParams defines parameters for BulkMoveFlows.
 type BulkMoveFlowsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchFlowFoldersParams defines parameters for SearchFlowFolders.
+type SearchFlowFoldersParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -6937,6 +7551,12 @@ type GetNodeExecutionHistoryParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchNodeExecutionHistoryParams defines parameters for SearchNodeExecutionHistory.
+type SearchNodeExecutionHistoryParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7030,6 +7650,12 @@ type ListFlowVersionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchFlowVersionsParams defines parameters for SearchFlowVersions.
+type SearchFlowVersionsParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7139,6 +7765,12 @@ type PreviewScheduleTagsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchFlowSchedulesParams defines parameters for SearchFlowSchedules.
+type SearchFlowSchedulesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // DeleteFlowScheduleParams defines parameters for DeleteFlowSchedule.
 type DeleteFlowScheduleParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -7187,6 +7819,12 @@ type ListFlowScheduleRunsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchFlowScheduleRunsParams defines parameters for SearchFlowScheduleRuns.
+type SearchFlowScheduleRunsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetFlowScheduleRunParams defines parameters for GetFlowScheduleRun.
 type GetFlowScheduleRunParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -7219,6 +7857,12 @@ type ListEnvironmentsParams struct {
 
 // CreateEnvironmentParams defines parameters for CreateEnvironment.
 type CreateEnvironmentParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchEnvironmentsParams defines parameters for SearchEnvironments.
+type SearchEnvironmentsParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7316,6 +7960,12 @@ type CreateSpecParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchSpecsParams defines parameters for SearchSpecs.
+type SearchSpecsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetSpecParams defines parameters for GetSpec.
 type GetSpecParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -7351,6 +8001,12 @@ type ListSpecVersionsParams struct {
 
 // PushSpecVersionParams defines parameters for PushSpecVersion.
 type PushSpecVersionParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchSpecVersionsParams defines parameters for SearchSpecVersions.
+type SearchSpecVersionsParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7471,6 +8127,9 @@ type CreateCollectionJSONRequestBody = CreateCollectionRequest
 // ImportFromOpenAPIJSONRequestBody defines body for ImportFromOpenAPI for application/json ContentType.
 type ImportFromOpenAPIJSONRequestBody = ImportOpenAPIRequest
 
+// SearchCollectionsJSONRequestBody defines body for SearchCollections for application/json ContentType.
+type SearchCollectionsJSONRequestBody = CollectionSearchRequest
+
 // UpdateFolderJSONRequestBody defines body for UpdateFolder for application/json ContentType.
 type UpdateFolderJSONRequestBody = UpdateFolderRequest
 
@@ -7480,14 +8139,23 @@ type UpdateRequestJSONRequestBody = UpdateRequestRequest
 // ExecuteCollectionRequestJSONRequestBody defines body for ExecuteCollectionRequest for application/json ContentType.
 type ExecuteCollectionRequestJSONRequestBody = ExecuteRequestRequest
 
+// SearchCollectionRequestOpenAPISyncHistoryJSONRequestBody defines body for SearchCollectionRequestOpenAPISyncHistory for application/json ContentType.
+type SearchCollectionRequestOpenAPISyncHistoryJSONRequestBody = OpenAPISyncHistorySearchRequest
+
 // UpdateCollectionJSONRequestBody defines body for UpdateCollection for application/json ContentType.
 type UpdateCollectionJSONRequestBody = UpdateCollectionRequest
 
 // AddFolderJSONRequestBody defines body for AddFolder for application/json ContentType.
 type AddFolderJSONRequestBody = CreateFolderRequest
 
+// SearchCollectionFoldersJSONRequestBody defines body for SearchCollectionFolders for application/json ContentType.
+type SearchCollectionFoldersJSONRequestBody = CollectionFolderSearchRequest
+
 // CreateOrUpdateOpenAPISyncConfigJSONRequestBody defines body for CreateOrUpdateOpenAPISyncConfig for application/json ContentType.
 type CreateOrUpdateOpenAPISyncConfigJSONRequestBody = UpsertOpenAPISyncConfigRequest
+
+// SearchOpenAPISyncHistoryJSONRequestBody defines body for SearchOpenAPISyncHistory for application/json ContentType.
+type SearchOpenAPISyncHistoryJSONRequestBody = OpenAPISyncHistorySearchRequest
 
 // SearchOpenAPISyncOperationsJSONRequestBody defines body for SearchOpenAPISyncOperations for application/json ContentType.
 type SearchOpenAPISyncOperationsJSONRequestBody = OpenAPISyncOperationSearchRequest
@@ -7498,6 +8166,12 @@ type RunOpenAPISyncNowJSONRequestBody = RunOpenAPISyncNowRequest
 // AddRequestJSONRequestBody defines body for AddRequest for application/json ContentType.
 type AddRequestJSONRequestBody = CreateRequestRequest
 
+// SearchCollectionRequestsJSONRequestBody defines body for SearchCollectionRequests for application/json ContentType.
+type SearchCollectionRequestsJSONRequestBody = CollectionRequestSearchRequest
+
+// SearchExecutionsJSONRequestBody defines body for SearchExecutions for application/json ContentType.
+type SearchExecutionsJSONRequestBody = ExecutionSearchRequest
+
 // CreateFlowJSONRequestBody defines body for CreateFlow for application/json ContentType.
 type CreateFlowJSONRequestBody = CreateFlowRequest
 
@@ -7506,6 +8180,9 @@ type CreateFlowFolderJSONRequestBody = CreateFlowFolderRequest
 
 // BulkMoveFlowsJSONRequestBody defines body for BulkMoveFlows for application/json ContentType.
 type BulkMoveFlowsJSONRequestBody = BulkMoveFlowsRequest
+
+// SearchFlowFoldersJSONRequestBody defines body for SearchFlowFolders for application/json ContentType.
+type SearchFlowFoldersJSONRequestBody = FlowFolderSearchRequest
 
 // UpdateFlowFolderJSONRequestBody defines body for UpdateFlowFolder for application/json ContentType.
 type UpdateFlowFolderJSONRequestBody = UpdateFlowFolderRequest
@@ -7516,6 +8193,9 @@ type MoveFlowFolderJSONRequestBody = MoveFlowFolderRequest
 // SearchFlowsJSONRequestBody defines body for SearchFlows for application/json ContentType.
 type SearchFlowsJSONRequestBody = FlowSearchRequest
 
+// SearchNodeExecutionHistoryJSONRequestBody defines body for SearchNodeExecutionHistory for application/json ContentType.
+type SearchNodeExecutionHistoryJSONRequestBody = NodeExecutionHistorySearchRequest
+
 // UpdateFlowJSONRequestBody defines body for UpdateFlow for application/json ContentType.
 type UpdateFlowJSONRequestBody = UpdateFlowRequest
 
@@ -7524,6 +8204,9 @@ type LaunchFlowJSONRequestBody = LaunchFlowRequest
 
 // SetFlowVariableJSONRequestBody defines body for SetFlowVariable for application/json ContentType.
 type SetFlowVariableJSONRequestBody = SetVariableRequest
+
+// SearchFlowVersionsJSONRequestBody defines body for SearchFlowVersions for application/json ContentType.
+type SearchFlowVersionsJSONRequestBody = FlowVersionSearchRequest
 
 // CreateOrganizationInvitationJSONRequestBody defines body for CreateOrganizationInvitation for application/json ContentType.
 type CreateOrganizationInvitationJSONRequestBody = CreateOrganizationInvitationRequest
@@ -7537,14 +8220,23 @@ type EstimateMonitorJSONRequestBody = MonitorEstimateRequest
 // PreviewScheduleTagsJSONRequestBody defines body for PreviewScheduleTags for application/json ContentType.
 type PreviewScheduleTagsJSONRequestBody = ScheduleTagPreviewRequest
 
+// SearchFlowSchedulesJSONRequestBody defines body for SearchFlowSchedules for application/json ContentType.
+type SearchFlowSchedulesJSONRequestBody = MonitorSearchRequest
+
 // UpdateFlowScheduleJSONRequestBody defines body for UpdateFlowSchedule for application/json ContentType.
 type UpdateFlowScheduleJSONRequestBody = UpdateMonitorRequest
+
+// SearchFlowScheduleRunsJSONRequestBody defines body for SearchFlowScheduleRuns for application/json ContentType.
+type SearchFlowScheduleRunsJSONRequestBody = MonitorRunSearchRequest
 
 // SearchOpenAPISyncConfigsJSONRequestBody defines body for SearchOpenAPISyncConfigs for application/json ContentType.
 type SearchOpenAPISyncConfigsJSONRequestBody = OpenAPISyncConfigSearchRequest
 
 // CreateEnvironmentJSONRequestBody defines body for CreateEnvironment for application/json ContentType.
 type CreateEnvironmentJSONRequestBody = CreateEnvironmentRequest
+
+// SearchEnvironmentsJSONRequestBody defines body for SearchEnvironments for application/json ContentType.
+type SearchEnvironmentsJSONRequestBody = EnvironmentSearchRequest
 
 // SetEnvironmentVariableJSONRequestBody defines body for SetEnvironmentVariable for application/json ContentType.
 type SetEnvironmentVariableJSONRequestBody = SetVariableRequest
@@ -7576,11 +8268,17 @@ type SendRunnerJobEventsJSONRequestBody = RunnerJobEventsRequest
 // CreateSpecJSONRequestBody defines body for CreateSpec for application/json ContentType.
 type CreateSpecJSONRequestBody = CreateSpecRequest
 
+// SearchSpecsJSONRequestBody defines body for SearchSpecs for application/json ContentType.
+type SearchSpecsJSONRequestBody = SpecSearchRequest
+
 // ApplySpecCommandsJSONRequestBody defines body for ApplySpecCommands for application/json ContentType.
 type ApplySpecCommandsJSONRequestBody = ApplySpecCommandsRequest
 
 // PushSpecVersionJSONRequestBody defines body for PushSpecVersion for application/json ContentType.
 type PushSpecVersionJSONRequestBody = PushSpecVersionRequest
+
+// SearchSpecVersionsJSONRequestBody defines body for SearchSpecVersions for application/json ContentType.
+type SearchSpecVersionsJSONRequestBody = SpecVersionSearchRequest
 
 // SaveStatusPageJSONRequestBody defines body for SaveStatusPage for application/json ContentType.
 type SaveStatusPageJSONRequestBody = SaveStatusPageRequest
@@ -8774,6 +9472,7 @@ type ClientInterface interface {
 	// An endpoint is the request's URL template before resolution, so
 	// `/users/{{userId}}` stays one endpoint whatever the user id, and no
 	// resolved URL, query string or body is kept.
+	// Not paginated: an aggregate computed per request over the window and capped, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /analytics/endpoints (the `ListEndpointAnalytics` operationId).
 	ListEndpointAnalytics(ctx context.Context, params *ListEndpointAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8783,6 +9482,7 @@ type ClientInterface interface {
 	// One row per flow that finished a run in the window, most runs first:
 	// how often it ran and failed, how long its runs took, and how many HTTP
 	// calls they sent. A deleted flow keeps its row with an empty name.
+	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
 	ListFlowAnalytics(ctx context.Context, params *ListFlowAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8797,6 +9497,7 @@ type ClientInterface interface {
 	// analytics a few seconds after it finishes. Runs whose runner predates
 	// HTTP call recording count in `runs` but not in `measured_runs`, so their
 	// calls are missing from the call totals.
+	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
 	GetExecutionAnalyticsSummary(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8885,9 +9586,11 @@ type ClientInterface interface {
 
 	// ListCollections List Collections
 	//
-	// Retrieves a paginated list of collections for the authenticated user.
+	// Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.
 	//
 	// Corresponds with GET /collections (the `ListCollections` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollections(ctx context.Context, params *ListCollectionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateCollectionWithBody Create Collection
@@ -8925,6 +9628,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /collections/import/openapi (the `ImportFromOpenAPI` operationId).
 	ImportFromOpenAPI(ctx context.Context, params *ImportFromOpenAPIParams, body ImportFromOpenAPIJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchCollectionsWithBody Search Collections
+	//
+	// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+	SearchCollectionsWithBody(ctx context.Context, params *SearchCollectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchCollections Search Collections
+	//
+	// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+	SearchCollections(ctx context.Context, params *SearchCollectionsParams, body SearchCollectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteFolder Delete Folder
 	//
@@ -9003,10 +9724,30 @@ type ClientInterface interface {
 
 	// ListCollectionRequestOpenAPISyncHistory List Request OpenAPI Sync History
 	//
-	// Lists OpenAPI sync changes for the upstream binding currently associated with a request.
+	// Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 	//
 	// Corresponds with GET /collections/{collectionId}/requests/{requestId}/openapi-sync-history (the `ListCollectionRequestOpenAPISyncHistory` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollectionRequestOpenAPISyncHistory(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *ListCollectionRequestOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchCollectionRequestOpenAPISyncHistoryWithBody Search Request OpenAPI Sync History
+	//
+	// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+	SearchCollectionRequestOpenAPISyncHistoryWithBody(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchCollectionRequestOpenAPISyncHistory Search Request OpenAPI Sync History
+	//
+	// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+	SearchCollectionRequestOpenAPISyncHistory(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, body SearchCollectionRequestOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteCollection Delete Collection
 	//
@@ -9042,9 +9783,11 @@ type ClientInterface interface {
 
 	// ListCollectionFolders List Collection Folders
 	//
-	// Returns all folders for a collection so clients can build the tree lazily.
+	// Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 	//
 	// Corresponds with GET /collections/{id}/folders (the `ListCollectionFolders` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollectionFolders(ctx context.Context, id openapi_types.UUID, params *ListCollectionFoldersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AddFolderWithBody Add Folder
@@ -9065,6 +9808,24 @@ type ClientInterface interface {
 	// Corresponds with POST /collections/{id}/folders (the `AddFolder` operationId).
 	AddFolder(ctx context.Context, id openapi_types.UUID, params *AddFolderParams, body AddFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchCollectionFoldersWithBody Search Collection Folders
+	//
+	// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+	SearchCollectionFoldersWithBody(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchCollectionFolders Search Collection Folders
+	//
+	// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+	SearchCollectionFolders(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, body SearchCollectionFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetOpenAPISyncConfig Get OpenAPI Sync Config
 	//
 	// Retrieves the OpenAPI sync config for a collection.
@@ -9081,9 +9842,11 @@ type ClientInterface interface {
 
 	// ListOpenAPISyncHistory List OpenAPI Sync History
 	//
-	// Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
+	// Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 	//
 	// Corresponds with GET /collections/{id}/openapi-sync/history (the `ListOpenAPISyncHistory` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListOpenAPISyncHistory(ctx context.Context, id openapi_types.UUID, params *ListOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateOrUpdateOpenAPISyncConfigWithBody Create or Update OpenAPI Sync Config
@@ -9104,9 +9867,27 @@ type ClientInterface interface {
 	// Corresponds with PUT /collections/{id}/openapi-sync/history (the `CreateOrUpdateOpenAPISyncConfig` operationId).
 	CreateOrUpdateOpenAPISyncConfig(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateOpenAPISyncConfigParams, body CreateOrUpdateOpenAPISyncConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchOpenAPISyncHistoryWithBody Search OpenAPI Sync History
+	//
+	// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+	SearchOpenAPISyncHistoryWithBody(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchOpenAPISyncHistory Search OpenAPI Sync History
+	//
+	// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+	SearchOpenAPISyncHistory(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, body SearchOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SearchOpenAPISyncOperationsWithBody Search OpenAPI Sync Operations
 	//
-	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9115,7 +9896,7 @@ type ClientInterface interface {
 
 	// SearchOpenAPISyncOperations Search OpenAPI Sync Operations
 	//
-	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -9142,9 +9923,11 @@ type ClientInterface interface {
 
 	// ListCollectionRequests List Collection Requests
 	//
-	// Returns paginated requests for a collection, optionally filtered by folder and search query.
+	// Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 	//
 	// Corresponds with GET /collections/{id}/requests (the `ListCollectionRequests` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollectionRequests(ctx context.Context, id openapi_types.UUID, params *ListCollectionRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AddRequestWithBody Add Request
@@ -9165,13 +9948,52 @@ type ClientInterface interface {
 	// Corresponds with POST /collections/{id}/requests (the `AddRequest` operationId).
 	AddRequest(ctx context.Context, id openapi_types.UUID, params *AddRequestParams, body AddRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchCollectionRequestsWithBody Search Collection Requests
+	//
+	// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+	SearchCollectionRequestsWithBody(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchCollectionRequests Search Collection Requests
+	//
+	// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+	SearchCollectionRequests(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, body SearchCollectionRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListExecutions List Organization Executions
 	//
+	// Deprecated: use `searchExecutions`, which pages with a cursor.
 	// Retrieves org-wide execution activity, newest first. Rows are slim
 	// activity records and do not include flow snapshots.
 	//
 	// Corresponds with GET /executions (the `ListExecutions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListExecutions(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchExecutionsWithBody Search Executions
+	//
+	// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+	SearchExecutionsWithBody(ctx context.Context, params *SearchExecutionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchExecutions Search Executions
+	//
+	// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+	SearchExecutions(ctx context.Context, params *SearchExecutionsParams, body SearchExecutionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetExecutionsSummary Get Organization Execution Summary
 	//
@@ -9183,9 +10005,11 @@ type ClientInterface interface {
 
 	// ListFlows List Flows
 	//
-	// Retrieves a paginated list of flows for the authenticated user.
+	// Deprecated: use `searchFlows`, which pages with a cursor. Retrieves a paginated list of flows for the authenticated user.
 	//
 	// Corresponds with GET /flows (the `ListFlows` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlows(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateFlowWithBody Create Flow
@@ -9208,9 +10032,11 @@ type ClientInterface interface {
 
 	// ListFlowFolders List Flow Folders
 	//
-	// Returns every flow folder for the organization so clients can build the tree.
+	// Deprecated: use `searchFlowFolders`, which pages with a cursor. Returns every flow folder for the organization so clients can build the tree.
 	//
 	// Corresponds with GET /flows/folders (the `ListFlowFolders` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowFolders(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateFlowFolderWithBody Create Flow Folder
@@ -9248,6 +10074,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /flows/folders/move (the `BulkMoveFlows` operationId).
 	BulkMoveFlows(ctx context.Context, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchFlowFoldersWithBody Search Flow Folders
+	//
+	// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+	SearchFlowFoldersWithBody(ctx context.Context, params *SearchFlowFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchFlowFolders Search Flow Folders
+	//
+	// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+	SearchFlowFolders(ctx context.Context, params *SearchFlowFoldersParams, body SearchFlowFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteFlowFolder Delete Flow Folder
 	//
@@ -9294,10 +10138,7 @@ type ClientInterface interface {
 
 	// SearchFlowsWithBody Search Flows
 	//
-	// Dedicated flow-domain search against canonical flows with pagination, sorting,
-	// full-text search, and exact tag filtering. Returns lightweight flow items;
-	// flow_definition is omitted unless requested via `include_definition`.
-	// Callable by bearer users and API keys scoped with flows:read.
+	// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9306,10 +10147,7 @@ type ClientInterface interface {
 
 	// SearchFlows Search Flows
 	//
-	// Dedicated flow-domain search against canonical flows with pagination, sorting,
-	// full-text search, and exact tag filtering. Returns lightweight flow items;
-	// flow_definition is omitted unless requested via `include_definition`.
-	// Callable by bearer users and API keys scoped with flows:read.
+	// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -9318,7 +10156,7 @@ type ClientInterface interface {
 
 	// ListFlowTags List Flow Tags
 	//
-	// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete.
+	// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete. Not paginated: aggregated tag suggestions capped at 100, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /flows/tags (the `ListFlowTags` operationId).
 	ListFlowTags(ctx context.Context, params *ListFlowTagsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9332,7 +10170,7 @@ type ClientInterface interface {
 
 	// GetExecutionNodeResults Get All Node Results
 	//
-	// Retrieves execution results for all nodes in a flow execution.
+	// Retrieves execution results for all nodes in a flow execution. Not paginated: bounded by the nodes of one execution, so it has no search.
 	//
 	// Corresponds with GET /flows/{flowId}/executions/{executionId}/nodes (the `GetExecutionNodeResults` operationId).
 	GetExecutionNodeResults(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *GetExecutionNodeResultsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9353,10 +10191,30 @@ type ClientInterface interface {
 
 	// GetNodeExecutionHistory Get Node Execution History
 	//
-	// Retrieves execution history for a specific node across all flow executions with pagination.
+	// Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 	//
 	// Corresponds with GET /flows/{flowId}/nodes/{nodeId}/executions (the `GetNodeExecutionHistory` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GetNodeExecutionHistory(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *GetNodeExecutionHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchNodeExecutionHistoryWithBody Search Node Execution History
+	//
+	// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+	SearchNodeExecutionHistoryWithBody(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchNodeExecutionHistory Search Node Execution History
+	//
+	// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+	SearchNodeExecutionHistory(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, body SearchNodeExecutionHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteFlow Delete Flow
 	//
@@ -9392,9 +10250,11 @@ type ClientInterface interface {
 
 	// ListFlowExecutions List Flow Executions
 	//
-	// Retrieves execution history for a specific flow with pagination.
+	// Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 	//
 	// Corresponds with GET /flows/{id}/executions (the `ListFlowExecutions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowExecutions(ctx context.Context, id openapi_types.UUID, params *ListFlowExecutionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ExportFlow Export Flow
@@ -9512,10 +10372,30 @@ type ClientInterface interface {
 
 	// ListFlowVersions List Flow Versions
 	//
-	// Retrieves a paginated list of saved versions for a flow.
+	// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 	//
 	// Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowVersions(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchFlowVersionsWithBody Search Flow Versions
+	//
+	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+	SearchFlowVersionsWithBody(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchFlowVersions Search Flow Versions
+	//
+	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+	SearchFlowVersions(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, body SearchFlowVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetFlowVersion Get Flow Version
 	//
@@ -9705,9 +10585,11 @@ type ClientInterface interface {
 
 	// ListFlowSchedules List Monitors
 	//
-	// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+	// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 	//
 	// Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateFlowScheduleWithBody Create Monitor
@@ -9771,6 +10653,24 @@ type ClientInterface interface {
 	// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
 	PreviewScheduleTags(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchFlowSchedulesWithBody Search Monitors
+	//
+	// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+	SearchFlowSchedulesWithBody(ctx context.Context, params *SearchFlowSchedulesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchFlowSchedules Search Monitors
+	//
+	// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+	SearchFlowSchedules(ctx context.Context, params *SearchFlowSchedulesParams, body SearchFlowSchedulesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteFlowSchedule Delete Monitor
 	//
 	// Deletes a monitor and prevents future launches; prior execution history is preserved.
@@ -9826,10 +10726,30 @@ type ClientInterface interface {
 
 	// ListFlowScheduleRuns List Monitor Runs
 	//
-	// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+	// Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 	//
 	// Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowScheduleRuns(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchFlowScheduleRunsWithBody Search Monitor Runs
+	//
+	// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+	SearchFlowScheduleRunsWithBody(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchFlowScheduleRuns Search Monitor Runs
+	//
+	// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+	SearchFlowScheduleRuns(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, body SearchFlowScheduleRunsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetFlowScheduleRun Get Monitor Run
 	//
@@ -9840,14 +10760,14 @@ type ClientInterface interface {
 
 	// ListNodes List Available Nodes
 	//
-	// Retrieves all available special nodes for flow control (delay, etc.).
+	// Retrieves all available special nodes for flow control (delay, etc.). Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /nodes (the `ListNodes` operationId).
 	ListNodes(ctx context.Context, params *ListNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SearchOpenAPISyncConfigsWithBody Search OpenAPI Sync Configs
 	//
-	// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+	// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9856,7 +10776,7 @@ type ClientInterface interface {
 
 	// SearchOpenAPISyncConfigs Search OpenAPI Sync Configs
 	//
-	// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+	// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -9865,16 +10785,18 @@ type ClientInterface interface {
 
 	// ListOperations List Available Operations
 	//
-	// Retrieves all available operations (extractors and assertions) for flow data processing.
+	// Retrieves all available operations (extractors and assertions) for flow data processing. Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListEnvironments List Environments
 	//
-	// Lists the organization's environments. Variables are not included; read them from the organization variable set.
+	// Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 	//
 	// Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListEnvironments(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateEnvironmentWithBody Create Environment
@@ -9894,6 +10816,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
 	CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchEnvironmentsWithBody Search Environments
+	//
+	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+	SearchEnvironmentsWithBody(ctx context.Context, params *SearchEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchEnvironments Search Environments
+	//
+	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+	SearchEnvironments(ctx context.Context, params *SearchEnvironmentsParams, body SearchEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteEnvironment Delete Environment
 	//
@@ -9968,7 +10908,7 @@ type ClientInterface interface {
 
 	// ListPermissions List Available Permissions
 	//
-	// Lists product permissions that can be assigned to Echopoint API keys for the requested type.
+	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9989,7 +10929,7 @@ type ClientInterface interface {
 
 	// SearchResourcesWithBody Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9998,7 +10938,7 @@ type ClientInterface interface {
 
 	// SearchResources Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -10162,6 +11102,7 @@ type ClientInterface interface {
 	// Returns the requests captured by the run webhook of this job's execution,
 	// oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
 	// with the job token. The request is refused once the execution is terminal.
+	// Not paginated: runner protocol authenticated by a job token that returns the newest requests of the run webhook, so it has no search.
 	//
 	// Corresponds with GET /runner/jobs/{jobId}/webhook-requests (the `ListRunnerJobWebhookRequests` operationId).
 	ListRunnerJobWebhookRequests(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -10172,15 +11113,18 @@ type ClientInterface interface {
 	// based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
 	// Cloud workers are never listed: a Cloud container is a transient worker of the
 	// shared pool, not a runner that the organization operates.
+	// Not paginated: this is a live view over Redis presence keys, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /runners (the `ListLiveRunners` operationId).
 	ListLiveRunners(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSpecs List Specs
 	//
-	// Lists the organization's specs with their Live version, by slug.
+	// Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 	//
 	// Corresponds with GET /specs (the `ListSpecs` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListSpecs(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateSpecWithBody Create Spec
@@ -10218,6 +11162,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /specs (the `CreateSpec` operationId).
 	CreateSpec(ctx context.Context, params *CreateSpecParams, body CreateSpecJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchSpecsWithBody Search Specs
+	//
+	// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+	SearchSpecsWithBody(ctx context.Context, params *SearchSpecsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchSpecs Search Specs
+	//
+	// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+	SearchSpecs(ctx context.Context, params *SearchSpecsParams, body SearchSpecsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSpec Get Spec
 	//
@@ -10287,9 +11249,11 @@ type ClientInterface interface {
 
 	// ListSpecVersions List Spec Versions
 	//
-	// Lists a spec's Live versions, newest first. The first item is the current Live version.
+	// Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 	//
 	// Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListSpecVersions(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PushSpecVersionWithBody Push Spec Version
@@ -10331,6 +11295,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
 	PushSpecVersion(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchSpecVersionsWithBody Search Spec Versions
+	//
+	// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+	SearchSpecVersionsWithBody(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchSpecVersions Search Spec Versions
+	//
+	// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+	SearchSpecVersions(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, body SearchSpecVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSpecVersion Get Spec Version
 	//
@@ -10447,9 +11429,11 @@ type ClientInterface interface {
 
 	// ListWebhooks List Webhook Endpoints
 	//
-	// Lists webhook endpoints for the current organization.
+	// Deprecated: use `searchWebhooks`, which pages with a cursor. Lists webhook endpoints for the current organization.
 	//
 	// Corresponds with GET /webhooks (the `ListWebhooks` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListWebhooks(ctx context.Context, params *ListWebhooksParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateWebhookWithBody Create Webhook Endpoint
@@ -10472,7 +11456,7 @@ type ClientInterface interface {
 
 	// SearchWebhooksWithBody Search Webhook Endpoints
 	//
-	// Server-side search with pagination, filtering and sorting for webhook endpoints.
+	// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -10481,7 +11465,7 @@ type ClientInterface interface {
 
 	// SearchWebhooks Search Webhook Endpoints
 	//
-	// Server-side search with pagination, filtering and sorting for webhook endpoints.
+	// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -10518,7 +11502,7 @@ type ClientInterface interface {
 
 	// SearchWebhookRequestsWithBody Search Webhook Requests
 	//
-	// Server-side search with pagination, filtering and sorting for a webhook's requests.
+	// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -10527,7 +11511,7 @@ type ClientInterface interface {
 
 	// SearchWebhookRequests Search Webhook Requests
 	//
-	// Server-side search with pagination, filtering and sorting for a webhook's requests.
+	// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -10670,6 +11654,7 @@ func (c *Client) ResyncResourceSearch(ctx context.Context, params *ResyncResourc
 // An endpoint is the request's URL template before resolution, so
 // `/users/{{userId}}` stays one endpoint whatever the user id, and no
 // resolved URL, query string or body is kept.
+// Not paginated: an aggregate computed per request over the window and capped, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /analytics/endpoints (the `ListEndpointAnalytics` operationId).
 func (c *Client) ListEndpointAnalytics(ctx context.Context, params *ListEndpointAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -10689,6 +11674,7 @@ func (c *Client) ListEndpointAnalytics(ctx context.Context, params *ListEndpoint
 // One row per flow that finished a run in the window, most runs first:
 // how often it ran and failed, how long its runs took, and how many HTTP
 // calls they sent. A deleted flow keeps its row with an empty name.
+// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
 func (c *Client) ListFlowAnalytics(ctx context.Context, params *ListFlowAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -10713,6 +11699,7 @@ func (c *Client) ListFlowAnalytics(ctx context.Context, params *ListFlowAnalytic
 // analytics a few seconds after it finishes. Runs whose runner predates
 // HTTP call recording count in `runs` but not in `measured_runs`, so their
 // calls are missing from the call totals.
+// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
 func (c *Client) GetExecutionAnalyticsSummary(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -10911,9 +11898,10 @@ func (c *Client) ChatWithAssistant(ctx context.Context, params *ChatWithAssistan
 
 // ListCollections List Collections
 //
-// Retrieves a paginated list of collections for the authenticated user.
+// Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.
 //
 // Corresponds with GET /collections (the `ListCollections` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListCollections(ctx context.Context, params *ListCollectionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListCollectionsRequest(c.Server, params)
 	if err != nil {
@@ -10992,6 +11980,44 @@ func (c *Client) ImportFromOpenAPIWithBody(ctx context.Context, params *ImportFr
 // Corresponds with POST /collections/import/openapi (the `ImportFromOpenAPI` operationId).
 func (c *Client) ImportFromOpenAPI(ctx context.Context, params *ImportFromOpenAPIParams, body ImportFromOpenAPIJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewImportFromOpenAPIRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchCollectionsWithBody Search Collections
+//
+// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+func (c *Client) SearchCollectionsWithBody(ctx context.Context, params *SearchCollectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchCollections Search Collections
+//
+// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+func (c *Client) SearchCollections(ctx context.Context, params *SearchCollectionsParams, body SearchCollectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionsRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -11169,11 +12195,50 @@ func (c *Client) ExecuteCollectionRequest(ctx context.Context, collectionId open
 
 // ListCollectionRequestOpenAPISyncHistory List Request OpenAPI Sync History
 //
-// Lists OpenAPI sync changes for the upstream binding currently associated with a request.
+// Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 //
 // Corresponds with GET /collections/{collectionId}/requests/{requestId}/openapi-sync-history (the `ListCollectionRequestOpenAPISyncHistory` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListCollectionRequestOpenAPISyncHistory(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *ListCollectionRequestOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListCollectionRequestOpenAPISyncHistoryRequest(c.Server, collectionId, requestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchCollectionRequestOpenAPISyncHistoryWithBody Search Request OpenAPI Sync History
+//
+// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+func (c *Client) SearchCollectionRequestOpenAPISyncHistoryWithBody(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionRequestOpenAPISyncHistoryRequestWithBody(c.Server, collectionId, requestId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchCollectionRequestOpenAPISyncHistory Search Request OpenAPI Sync History
+//
+// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+func (c *Client) SearchCollectionRequestOpenAPISyncHistory(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, body SearchCollectionRequestOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionRequestOpenAPISyncHistoryRequest(c.Server, collectionId, requestId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -11258,9 +12323,10 @@ func (c *Client) UpdateCollection(ctx context.Context, id openapi_types.UUID, pa
 
 // ListCollectionFolders List Collection Folders
 //
-// Returns all folders for a collection so clients can build the tree lazily.
+// Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 //
 // Corresponds with GET /collections/{id}/folders (the `ListCollectionFolders` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListCollectionFolders(ctx context.Context, id openapi_types.UUID, params *ListCollectionFoldersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListCollectionFoldersRequest(c.Server, id, params)
 	if err != nil {
@@ -11311,6 +12377,44 @@ func (c *Client) AddFolder(ctx context.Context, id openapi_types.UUID, params *A
 	return c.Client.Do(req)
 }
 
+// SearchCollectionFoldersWithBody Search Collection Folders
+//
+// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+func (c *Client) SearchCollectionFoldersWithBody(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionFoldersRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchCollectionFolders Search Collection Folders
+//
+// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+func (c *Client) SearchCollectionFolders(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, body SearchCollectionFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionFoldersRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetOpenAPISyncConfig Get OpenAPI Sync Config
 //
 // Retrieves the OpenAPI sync config for a collection.
@@ -11347,9 +12451,10 @@ func (c *Client) DeleteOpenAPISyncConfig(ctx context.Context, id openapi_types.U
 
 // ListOpenAPISyncHistory List OpenAPI Sync History
 //
-// Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
+// Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 //
 // Corresponds with GET /collections/{id}/openapi-sync/history (the `ListOpenAPISyncHistory` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListOpenAPISyncHistory(ctx context.Context, id openapi_types.UUID, params *ListOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListOpenAPISyncHistoryRequest(c.Server, id, params)
 	if err != nil {
@@ -11400,9 +12505,47 @@ func (c *Client) CreateOrUpdateOpenAPISyncConfig(ctx context.Context, id openapi
 	return c.Client.Do(req)
 }
 
+// SearchOpenAPISyncHistoryWithBody Search OpenAPI Sync History
+//
+// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+func (c *Client) SearchOpenAPISyncHistoryWithBody(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchOpenAPISyncHistoryRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchOpenAPISyncHistory Search OpenAPI Sync History
+//
+// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+func (c *Client) SearchOpenAPISyncHistory(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, body SearchOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchOpenAPISyncHistoryRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // SearchOpenAPISyncOperationsWithBody Search OpenAPI Sync Operations
 //
-// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type.
 //
@@ -11421,7 +12564,7 @@ func (c *Client) SearchOpenAPISyncOperationsWithBody(ctx context.Context, id ope
 
 // SearchOpenAPISyncOperations Search OpenAPI Sync Operations
 //
-// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -11478,9 +12621,10 @@ func (c *Client) RunOpenAPISyncNow(ctx context.Context, id openapi_types.UUID, p
 
 // ListCollectionRequests List Collection Requests
 //
-// Returns paginated requests for a collection, optionally filtered by folder and search query.
+// Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 //
 // Corresponds with GET /collections/{id}/requests (the `ListCollectionRequests` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListCollectionRequests(ctx context.Context, id openapi_types.UUID, params *ListCollectionRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListCollectionRequestsRequest(c.Server, id, params)
 	if err != nil {
@@ -11531,14 +12675,92 @@ func (c *Client) AddRequest(ctx context.Context, id openapi_types.UUID, params *
 	return c.Client.Do(req)
 }
 
+// SearchCollectionRequestsWithBody Search Collection Requests
+//
+// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+func (c *Client) SearchCollectionRequestsWithBody(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionRequestsRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchCollectionRequests Search Collection Requests
+//
+// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+func (c *Client) SearchCollectionRequests(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, body SearchCollectionRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchCollectionRequestsRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListExecutions List Organization Executions
 //
+// Deprecated: use `searchExecutions`, which pages with a cursor.
 // Retrieves org-wide execution activity, newest first. Rows are slim
 // activity records and do not include flow snapshots.
 //
 // Corresponds with GET /executions (the `ListExecutions` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListExecutions(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListExecutionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchExecutionsWithBody Search Executions
+//
+// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+func (c *Client) SearchExecutionsWithBody(ctx context.Context, params *SearchExecutionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchExecutionsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchExecutions Search Executions
+//
+// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+func (c *Client) SearchExecutions(ctx context.Context, params *SearchExecutionsParams, body SearchExecutionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchExecutionsRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -11569,9 +12791,10 @@ func (c *Client) GetExecutionsSummary(ctx context.Context, params *GetExecutions
 
 // ListFlows List Flows
 //
-// Retrieves a paginated list of flows for the authenticated user.
+// Deprecated: use `searchFlows`, which pages with a cursor. Retrieves a paginated list of flows for the authenticated user.
 //
 // Corresponds with GET /flows (the `ListFlows` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListFlows(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowsRequest(c.Server, params)
 	if err != nil {
@@ -11624,9 +12847,10 @@ func (c *Client) CreateFlow(ctx context.Context, params *CreateFlowParams, body 
 
 // ListFlowFolders List Flow Folders
 //
-// Returns every flow folder for the organization so clients can build the tree.
+// Deprecated: use `searchFlowFolders`, which pages with a cursor. Returns every flow folder for the organization so clients can build the tree.
 //
 // Corresponds with GET /flows/folders (the `ListFlowFolders` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListFlowFolders(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowFoldersRequest(c.Server, params)
 	if err != nil {
@@ -11705,6 +12929,44 @@ func (c *Client) BulkMoveFlowsWithBody(ctx context.Context, params *BulkMoveFlow
 // Corresponds with POST /flows/folders/move (the `BulkMoveFlows` operationId).
 func (c *Client) BulkMoveFlows(ctx context.Context, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewBulkMoveFlowsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchFlowFoldersWithBody Search Flow Folders
+//
+// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+func (c *Client) SearchFlowFoldersWithBody(ctx context.Context, params *SearchFlowFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowFoldersRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchFlowFolders Search Flow Folders
+//
+// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+func (c *Client) SearchFlowFolders(ctx context.Context, params *SearchFlowFoldersParams, body SearchFlowFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowFoldersRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -11810,10 +13072,7 @@ func (c *Client) MoveFlowFolder(ctx context.Context, folderId openapi_types.UUID
 
 // SearchFlowsWithBody Search Flows
 //
-// Dedicated flow-domain search against canonical flows with pagination, sorting,
-// full-text search, and exact tag filtering. Returns lightweight flow items;
-// flow_definition is omitted unless requested via `include_definition`.
-// Callable by bearer users and API keys scoped with flows:read.
+// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 //
 // Takes any type of body and a specified content type.
 //
@@ -11832,10 +13091,7 @@ func (c *Client) SearchFlowsWithBody(ctx context.Context, params *SearchFlowsPar
 
 // SearchFlows Search Flows
 //
-// Dedicated flow-domain search against canonical flows with pagination, sorting,
-// full-text search, and exact tag filtering. Returns lightweight flow items;
-// flow_definition is omitted unless requested via `include_definition`.
-// Callable by bearer users and API keys scoped with flows:read.
+// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -11854,7 +13110,7 @@ func (c *Client) SearchFlows(ctx context.Context, params *SearchFlowsParams, bod
 
 // ListFlowTags List Flow Tags
 //
-// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete.
+// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete. Not paginated: aggregated tag suggestions capped at 100, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /flows/tags (the `ListFlowTags` operationId).
 func (c *Client) ListFlowTags(ctx context.Context, params *ListFlowTagsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -11888,7 +13144,7 @@ func (c *Client) GetExecution(ctx context.Context, flowId openapi_types.UUID, ex
 
 // GetExecutionNodeResults Get All Node Results
 //
-// Retrieves execution results for all nodes in a flow execution.
+// Retrieves execution results for all nodes in a flow execution. Not paginated: bounded by the nodes of one execution, so it has no search.
 //
 // Corresponds with GET /flows/{flowId}/executions/{executionId}/nodes (the `GetExecutionNodeResults` operationId).
 func (c *Client) GetExecutionNodeResults(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *GetExecutionNodeResultsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -11939,11 +13195,50 @@ func (c *Client) StreamExecution(ctx context.Context, flowId openapi_types.UUID,
 
 // GetNodeExecutionHistory Get Node Execution History
 //
-// Retrieves execution history for a specific node across all flow executions with pagination.
+// Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 //
 // Corresponds with GET /flows/{flowId}/nodes/{nodeId}/executions (the `GetNodeExecutionHistory` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) GetNodeExecutionHistory(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *GetNodeExecutionHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetNodeExecutionHistoryRequest(c.Server, flowId, nodeId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchNodeExecutionHistoryWithBody Search Node Execution History
+//
+// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+func (c *Client) SearchNodeExecutionHistoryWithBody(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchNodeExecutionHistoryRequestWithBody(c.Server, flowId, nodeId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchNodeExecutionHistory Search Node Execution History
+//
+// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+func (c *Client) SearchNodeExecutionHistory(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, body SearchNodeExecutionHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchNodeExecutionHistoryRequest(c.Server, flowId, nodeId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -12028,9 +13323,10 @@ func (c *Client) UpdateFlow(ctx context.Context, id openapi_types.UUID, params *
 
 // ListFlowExecutions List Flow Executions
 //
-// Retrieves execution history for a specific flow with pagination.
+// Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 //
 // Corresponds with GET /flows/{id}/executions (the `ListFlowExecutions` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListFlowExecutions(ctx context.Context, id openapi_types.UUID, params *ListFlowExecutionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowExecutionsRequest(c.Server, id, params)
 	if err != nil {
@@ -12248,11 +13544,50 @@ func (c *Client) SetFlowVariable(ctx context.Context, id openapi_types.UUID, key
 
 // ListFlowVersions List Flow Versions
 //
-// Retrieves a paginated list of saved versions for a flow.
+// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 //
 // Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListFlowVersions(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowVersionsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchFlowVersionsWithBody Search Flow Versions
+//
+// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+func (c *Client) SearchFlowVersionsWithBody(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowVersionsRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchFlowVersions Search Flow Versions
+//
+// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+func (c *Client) SearchFlowVersions(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, body SearchFlowVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowVersionsRequest(c.Server, id, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -12581,9 +13916,10 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, params *ListOrgani
 
 // ListFlowSchedules List Monitors
 //
-// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 //
 // Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowSchedulesRequest(c.Server, params)
 	if err != nil {
@@ -12727,6 +14063,44 @@ func (c *Client) PreviewScheduleTags(ctx context.Context, params *PreviewSchedul
 	return c.Client.Do(req)
 }
 
+// SearchFlowSchedulesWithBody Search Monitors
+//
+// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+func (c *Client) SearchFlowSchedulesWithBody(ctx context.Context, params *SearchFlowSchedulesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowSchedulesRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchFlowSchedules Search Monitors
+//
+// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+func (c *Client) SearchFlowSchedules(ctx context.Context, params *SearchFlowSchedulesParams, body SearchFlowSchedulesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowSchedulesRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // DeleteFlowSchedule Delete Monitor
 //
 // Deletes a monitor and prevents future launches; prior execution history is preserved.
@@ -12852,11 +14226,50 @@ func (c *Client) RunMonitor(ctx context.Context, monitorId openapi_types.UUID, p
 
 // ListFlowScheduleRuns List Monitor Runs
 //
-// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+// Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 //
 // Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListFlowScheduleRuns(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowScheduleRunsRequest(c.Server, monitorId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchFlowScheduleRunsWithBody Search Monitor Runs
+//
+// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+func (c *Client) SearchFlowScheduleRunsWithBody(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowScheduleRunsRequestWithBody(c.Server, monitorId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchFlowScheduleRuns Search Monitor Runs
+//
+// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+func (c *Client) SearchFlowScheduleRuns(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, body SearchFlowScheduleRunsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchFlowScheduleRunsRequest(c.Server, monitorId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -12886,7 +14299,7 @@ func (c *Client) GetFlowScheduleRun(ctx context.Context, monitorId openapi_types
 
 // ListNodes List Available Nodes
 //
-// Retrieves all available special nodes for flow control (delay, etc.).
+// Retrieves all available special nodes for flow control (delay, etc.). Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /nodes (the `ListNodes` operationId).
 func (c *Client) ListNodes(ctx context.Context, params *ListNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -12903,7 +14316,7 @@ func (c *Client) ListNodes(ctx context.Context, params *ListNodesParams, reqEdit
 
 // SearchOpenAPISyncConfigsWithBody Search OpenAPI Sync Configs
 //
-// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type.
 //
@@ -12922,7 +14335,7 @@ func (c *Client) SearchOpenAPISyncConfigsWithBody(ctx context.Context, params *S
 
 // SearchOpenAPISyncConfigs Search OpenAPI Sync Configs
 //
-// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -12941,7 +14354,7 @@ func (c *Client) SearchOpenAPISyncConfigs(ctx context.Context, params *SearchOpe
 
 // ListOperations List Available Operations
 //
-// Retrieves all available operations (extractors and assertions) for flow data processing.
+// Retrieves all available operations (extractors and assertions) for flow data processing. Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /operations (the `ListOperations` operationId).
 func (c *Client) ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -12958,9 +14371,10 @@ func (c *Client) ListOperations(ctx context.Context, params *ListOperationsParam
 
 // ListEnvironments List Environments
 //
-// Lists the organization's environments. Variables are not included; read them from the organization variable set.
+// Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 //
 // Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListEnvironments(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListEnvironmentsRequest(c.Server, params)
 	if err != nil {
@@ -13001,6 +14415,44 @@ func (c *Client) CreateEnvironmentWithBody(ctx context.Context, params *CreateEn
 // Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
 func (c *Client) CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateEnvironmentRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchEnvironmentsWithBody Search Environments
+//
+// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+func (c *Client) SearchEnvironmentsWithBody(ctx context.Context, params *SearchEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchEnvironmentsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchEnvironments Search Environments
+//
+// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+func (c *Client) SearchEnvironments(ctx context.Context, params *SearchEnvironmentsParams, body SearchEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchEnvironmentsRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -13174,7 +14626,7 @@ func (c *Client) SetOrganizationVariable(ctx context.Context, key VariableKey, p
 
 // ListPermissions List Available Permissions
 //
-// Lists product permissions that can be assigned to Echopoint API keys for the requested type.
+// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /permissions (the `ListPermissions` operationId).
 func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13225,7 +14677,7 @@ func (c *Client) GetPublicStatusPage(ctx context.Context, slug string, reqEditor
 
 // SearchResourcesWithBody Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 //
 // Takes any type of body and a specified content type.
 //
@@ -13244,7 +14696,7 @@ func (c *Client) SearchResourcesWithBody(ctx context.Context, params *SearchReso
 
 // SearchResources Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -13548,6 +15000,7 @@ func (c *Client) GetCloudJobPayload(ctx context.Context, jobId RunnerJobIDParame
 // Returns the requests captured by the run webhook of this job's execution,
 // oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
 // with the job token. The request is refused once the execution is terminal.
+// Not paginated: runner protocol authenticated by a job token that returns the newest requests of the run webhook, so it has no search.
 //
 // Corresponds with GET /runner/jobs/{jobId}/webhook-requests (the `ListRunnerJobWebhookRequests` operationId).
 func (c *Client) ListRunnerJobWebhookRequests(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13568,6 +15021,7 @@ func (c *Client) ListRunnerJobWebhookRequests(ctx context.Context, jobId RunnerJ
 // based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
 // Cloud workers are never listed: a Cloud container is a transient worker of the
 // shared pool, not a runner that the organization operates.
+// Not paginated: this is a live view over Redis presence keys, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /runners (the `ListLiveRunners` operationId).
 func (c *Client) ListLiveRunners(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13584,9 +15038,10 @@ func (c *Client) ListLiveRunners(ctx context.Context, params *ListLiveRunnersPar
 
 // ListSpecs List Specs
 //
-// Lists the organization's specs with their Live version, by slug.
+// Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 //
 // Corresponds with GET /specs (the `ListSpecs` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListSpecs(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListSpecsRequest(c.Server, params)
 	if err != nil {
@@ -13645,6 +15100,44 @@ func (c *Client) CreateSpecWithBody(ctx context.Context, params *CreateSpecParam
 // Corresponds with POST /specs (the `CreateSpec` operationId).
 func (c *Client) CreateSpec(ctx context.Context, params *CreateSpecParams, body CreateSpecJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateSpecRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchSpecsWithBody Search Specs
+//
+// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+func (c *Client) SearchSpecsWithBody(ctx context.Context, params *SearchSpecsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchSpecsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchSpecs Search Specs
+//
+// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+func (c *Client) SearchSpecs(ctx context.Context, params *SearchSpecsParams, body SearchSpecsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchSpecsRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -13763,9 +15256,10 @@ func (c *Client) PullSpec(ctx context.Context, slug SpecSlugParameter, params *P
 
 // ListSpecVersions List Spec Versions
 //
-// Lists a spec's Live versions, newest first. The first item is the current Live version.
+// Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 //
 // Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListSpecVersions(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListSpecVersionsRequest(c.Server, slug, params)
 	if err != nil {
@@ -13828,6 +15322,44 @@ func (c *Client) PushSpecVersionWithBody(ctx context.Context, slug SpecSlugParam
 // Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
 func (c *Client) PushSpecVersion(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPushSpecVersionRequest(c.Server, slug, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchSpecVersionsWithBody Search Spec Versions
+//
+// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+func (c *Client) SearchSpecVersionsWithBody(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchSpecVersionsRequestWithBody(c.Server, slug, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchSpecVersions Search Spec Versions
+//
+// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+func (c *Client) SearchSpecVersions(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, body SearchSpecVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchSpecVersionsRequest(c.Server, slug, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -14083,9 +15615,10 @@ func (c *Client) ReceiveWebhookPutWithBody(ctx context.Context, id WebhookIdPara
 
 // ListWebhooks List Webhook Endpoints
 //
-// Lists webhook endpoints for the current organization.
+// Deprecated: use `searchWebhooks`, which pages with a cursor. Lists webhook endpoints for the current organization.
 //
 // Corresponds with GET /webhooks (the `ListWebhooks` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListWebhooks(ctx context.Context, params *ListWebhooksParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListWebhooksRequest(c.Server, params)
 	if err != nil {
@@ -14138,7 +15671,7 @@ func (c *Client) CreateWebhook(ctx context.Context, params *CreateWebhookParams,
 
 // SearchWebhooksWithBody Search Webhook Endpoints
 //
-// Server-side search with pagination, filtering and sorting for webhook endpoints.
+// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type.
 //
@@ -14157,7 +15690,7 @@ func (c *Client) SearchWebhooksWithBody(ctx context.Context, params *SearchWebho
 
 // SearchWebhooks Search Webhook Endpoints
 //
-// Server-side search with pagination, filtering and sorting for webhook endpoints.
+// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -14244,7 +15777,7 @@ func (c *Client) GetWebhookRequestVolumes(ctx context.Context, id WebhookIdParam
 
 // SearchWebhookRequestsWithBody Search Webhook Requests
 //
-// Server-side search with pagination, filtering and sorting for a webhook's requests.
+// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type.
 //
@@ -14263,7 +15796,7 @@ func (c *Client) SearchWebhookRequestsWithBody(ctx context.Context, id WebhookId
 
 // SearchWebhookRequests Search Webhook Requests
 //
-// Server-side search with pagination, filtering and sorting for a webhook's requests.
+// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -15232,6 +16765,59 @@ func NewImportFromOpenAPIRequestWithBody(server string, params *ImportFromOpenAP
 	return req, nil
 }
 
+// NewSearchCollectionsRequest calls the generic SearchCollections builder with application/json body
+func NewSearchCollectionsRequest(server string, params *SearchCollectionsParams, body SearchCollectionsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchCollectionsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchCollectionsRequestWithBody constructs an http.Request for the SearchCollections method, with any body, and a specified content type
+func NewSearchCollectionsRequestWithBody(server string, params *SearchCollectionsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/collections/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewDeleteFolderRequest constructs an http.Request for the DeleteFolder method
 func NewDeleteFolderRequest(server string, collectionId openapi_types.UUID, folderId openapi_types.UUID, params *DeleteFolderParams) (*http.Request, error) {
 	var err error
@@ -15680,6 +17266,73 @@ func NewListCollectionRequestOpenAPISyncHistoryRequest(server string, collection
 	return req, nil
 }
 
+// NewSearchCollectionRequestOpenAPISyncHistoryRequest calls the generic SearchCollectionRequestOpenAPISyncHistory builder with application/json body
+func NewSearchCollectionRequestOpenAPISyncHistoryRequest(server string, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, body SearchCollectionRequestOpenAPISyncHistoryJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchCollectionRequestOpenAPISyncHistoryRequestWithBody(server, collectionId, requestId, params, "application/json", bodyReader)
+}
+
+// NewSearchCollectionRequestOpenAPISyncHistoryRequestWithBody constructs an http.Request for the SearchCollectionRequestOpenAPISyncHistory method, with any body, and a specified content type
+func NewSearchCollectionRequestOpenAPISyncHistoryRequestWithBody(server string, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "collectionId", collectionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "requestId", requestId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/collections/%s/requests/%s/openapi-sync-history/search", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewDeleteCollectionRequest constructs an http.Request for the DeleteCollection method
 func NewDeleteCollectionRequest(server string, id openapi_types.UUID, params *DeleteCollectionParams) (*http.Request, error) {
 	var err error
@@ -15941,6 +17594,66 @@ func NewAddFolderRequestWithBody(server string, id openapi_types.UUID, params *A
 	return req, nil
 }
 
+// NewSearchCollectionFoldersRequest calls the generic SearchCollectionFolders builder with application/json body
+func NewSearchCollectionFoldersRequest(server string, id openapi_types.UUID, params *SearchCollectionFoldersParams, body SearchCollectionFoldersJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchCollectionFoldersRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewSearchCollectionFoldersRequestWithBody constructs an http.Request for the SearchCollectionFolders method, with any body, and a specified content type
+func NewSearchCollectionFoldersRequestWithBody(server string, id openapi_types.UUID, params *SearchCollectionFoldersParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/collections/%s/folders/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetOpenAPISyncConfigRequest constructs an http.Request for the GetOpenAPISyncConfig method
 func NewGetOpenAPISyncConfigRequest(server string, id openapi_types.UUID, params *GetOpenAPISyncConfigParams) (*http.Request, error) {
 	var err error
@@ -16151,6 +17864,66 @@ func NewCreateOrUpdateOpenAPISyncConfigRequestWithBody(server string, id openapi
 	}
 
 	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchOpenAPISyncHistoryRequest calls the generic SearchOpenAPISyncHistory builder with application/json body
+func NewSearchOpenAPISyncHistoryRequest(server string, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, body SearchOpenAPISyncHistoryJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchOpenAPISyncHistoryRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewSearchOpenAPISyncHistoryRequestWithBody constructs an http.Request for the SearchOpenAPISyncHistory method, with any body, and a specified content type
+func NewSearchOpenAPISyncHistoryRequestWithBody(server string, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/collections/%s/openapi-sync/history/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -16467,6 +18240,66 @@ func NewAddRequestRequestWithBody(server string, id openapi_types.UUID, params *
 	return req, nil
 }
 
+// NewSearchCollectionRequestsRequest calls the generic SearchCollectionRequests builder with application/json body
+func NewSearchCollectionRequestsRequest(server string, id openapi_types.UUID, params *SearchCollectionRequestsParams, body SearchCollectionRequestsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchCollectionRequestsRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewSearchCollectionRequestsRequestWithBody constructs an http.Request for the SearchCollectionRequests method, with any body, and a specified content type
+func NewSearchCollectionRequestsRequestWithBody(server string, id openapi_types.UUID, params *SearchCollectionRequestsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/collections/%s/requests/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewListExecutionsRequest constructs an http.Request for the ListExecutions method
 func NewListExecutionsRequest(server string, params *ListExecutionsParams) (*http.Request, error) {
 	var err error
@@ -16569,6 +18402,59 @@ func NewListExecutionsRequest(server string, params *ListExecutionsParams) (*htt
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchExecutionsRequest calls the generic SearchExecutions builder with application/json body
+func NewSearchExecutionsRequest(server string, params *SearchExecutionsParams, body SearchExecutionsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchExecutionsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchExecutionsRequestWithBody constructs an http.Request for the SearchExecutions method, with any body, and a specified content type
+func NewSearchExecutionsRequestWithBody(server string, params *SearchExecutionsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/executions/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -16891,6 +18777,59 @@ func NewBulkMoveFlowsRequestWithBody(server string, params *BulkMoveFlowsParams,
 	}
 
 	operationPath := fmt.Sprintf("/flows/folders/move")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchFlowFoldersRequest calls the generic SearchFlowFolders builder with application/json body
+func NewSearchFlowFoldersRequest(server string, params *SearchFlowFoldersParams, body SearchFlowFoldersJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchFlowFoldersRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchFlowFoldersRequestWithBody constructs an http.Request for the SearchFlowFolders method, with any body, and a specified content type
+func NewSearchFlowFoldersRequestWithBody(server string, params *SearchFlowFoldersParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/folders/search")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -17501,6 +19440,73 @@ func NewGetNodeExecutionHistoryRequest(server string, flowId openapi_types.UUID,
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchNodeExecutionHistoryRequest calls the generic SearchNodeExecutionHistory builder with application/json body
+func NewSearchNodeExecutionHistoryRequest(server string, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, body SearchNodeExecutionHistoryJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchNodeExecutionHistoryRequestWithBody(server, flowId, nodeId, params, "application/json", bodyReader)
+}
+
+// NewSearchNodeExecutionHistoryRequestWithBody constructs an http.Request for the SearchNodeExecutionHistory method, with any body, and a specified content type
+func NewSearchNodeExecutionHistoryRequestWithBody(server string, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "flowId", flowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "nodeId", nodeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/%s/nodes/%s/executions/search", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -18218,6 +20224,66 @@ func NewListFlowVersionsRequest(server string, id openapi_types.UUID, params *Li
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchFlowVersionsRequest calls the generic SearchFlowVersions builder with application/json body
+func NewSearchFlowVersionsRequest(server string, id openapi_types.UUID, params *SearchFlowVersionsParams, body SearchFlowVersionsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchFlowVersionsRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewSearchFlowVersionsRequestWithBody constructs an http.Request for the SearchFlowVersions method, with any body, and a specified content type
+func NewSearchFlowVersionsRequestWithBody(server string, id openapi_types.UUID, params *SearchFlowVersionsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/%s/versions/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -19093,6 +21159,59 @@ func NewPreviewScheduleTagsRequestWithBody(server string, params *PreviewSchedul
 	return req, nil
 }
 
+// NewSearchFlowSchedulesRequest calls the generic SearchFlowSchedules builder with application/json body
+func NewSearchFlowSchedulesRequest(server string, params *SearchFlowSchedulesParams, body SearchFlowSchedulesJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchFlowSchedulesRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchFlowSchedulesRequestWithBody constructs an http.Request for the SearchFlowSchedules method, with any body, and a specified content type
+func NewSearchFlowSchedulesRequestWithBody(server string, params *SearchFlowSchedulesParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewDeleteFlowScheduleRequest constructs an http.Request for the DeleteFlowSchedule method
 func NewDeleteFlowScheduleRequest(server string, monitorId openapi_types.UUID, params *DeleteFlowScheduleParams) (*http.Request, error) {
 	var err error
@@ -19466,6 +21585,66 @@ func NewListFlowScheduleRunsRequest(server string, monitorId openapi_types.UUID,
 	return req, nil
 }
 
+// NewSearchFlowScheduleRunsRequest calls the generic SearchFlowScheduleRuns builder with application/json body
+func NewSearchFlowScheduleRunsRequest(server string, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, body SearchFlowScheduleRunsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchFlowScheduleRunsRequestWithBody(server, monitorId, params, "application/json", bodyReader)
+}
+
+// NewSearchFlowScheduleRunsRequestWithBody constructs an http.Request for the SearchFlowScheduleRuns method, with any body, and a specified content type
+func NewSearchFlowScheduleRunsRequestWithBody(server string, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s/runs/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetFlowScheduleRunRequest constructs an http.Request for the GetFlowScheduleRun method
 func NewGetFlowScheduleRunRequest(server string, monitorId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams) (*http.Request, error) {
 	var err error
@@ -19714,6 +21893,59 @@ func NewCreateEnvironmentRequestWithBody(server string, params *CreateEnvironmen
 	}
 
 	operationPath := fmt.Sprintf("/organization/environments")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchEnvironmentsRequest calls the generic SearchEnvironments builder with application/json body
+func NewSearchEnvironmentsRequest(server string, params *SearchEnvironmentsParams, body SearchEnvironmentsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchEnvironmentsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchEnvironmentsRequestWithBody constructs an http.Request for the SearchEnvironments method, with any body, and a specified content type
+func NewSearchEnvironmentsRequestWithBody(server string, params *SearchEnvironmentsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/environments/search")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -20811,6 +23043,59 @@ func NewCreateSpecRequestWithBody(server string, params *CreateSpecParams, conte
 	return req, nil
 }
 
+// NewSearchSpecsRequest calls the generic SearchSpecs builder with application/json body
+func NewSearchSpecsRequest(server string, params *SearchSpecsParams, body SearchSpecsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchSpecsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchSpecsRequestWithBody constructs an http.Request for the SearchSpecs method, with any body, and a specified content type
+func NewSearchSpecsRequestWithBody(server string, params *SearchSpecsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetSpecRequest constructs an http.Request for the GetSpec method
 func NewGetSpecRequest(server string, slug SpecSlugParameter, params *GetSpecParams) (*http.Request, error) {
 	var err error
@@ -21098,6 +23383,66 @@ func NewPushSpecVersionRequestWithBody(server string, slug SpecSlugParameter, pa
 	}
 
 	operationPath := fmt.Sprintf("/specs/%s/versions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchSpecVersionsRequest calls the generic SearchSpecVersions builder with application/json body
+func NewSearchSpecVersionsRequest(server string, slug SpecSlugParameter, params *SearchSpecVersionsParams, body SearchSpecVersionsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchSpecVersionsRequestWithBody(server, slug, params, "application/json", bodyReader)
+}
+
+// NewSearchSpecVersionsRequestWithBody constructs an http.Request for the SearchSpecVersions method, with any body, and a specified content type
+func NewSearchSpecVersionsRequestWithBody(server string, slug SpecSlugParameter, params *SearchSpecVersionsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s/versions/search", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -22209,6 +24554,7 @@ type ClientWithResponsesInterface interface {
 	// An endpoint is the request's URL template before resolution, so
 	// `/users/{{userId}}` stays one endpoint whatever the user id, and no
 	// resolved URL, query string or body is kept.
+	// Not paginated: an aggregate computed per request over the window and capped, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22220,6 +24566,7 @@ type ClientWithResponsesInterface interface {
 	// One row per flow that finished a run in the window, most runs first:
 	// how often it ran and failed, how long its runs took, and how many HTTP
 	// calls they sent. A deleted flow keeps its row with an empty name.
+	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22236,6 +24583,7 @@ type ClientWithResponsesInterface interface {
 	// analytics a few seconds after it finishes. Runs whose runner predates
 	// HTTP call recording count in `runs` but not in `measured_runs`, so their
 	// calls are missing from the call totals.
+	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22334,11 +24682,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListCollectionsWithResponse List Collections
 	//
-	// Retrieves a paginated list of collections for the authenticated user.
+	// Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /collections (the `ListCollections` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollectionsWithResponse(ctx context.Context, params *ListCollectionsParams, reqEditors ...RequestEditorFn) (*ListCollectionsResponse, error)
 
 	// CreateCollectionWithBodyWithResponse Create Collection
@@ -22376,6 +24726,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /collections/import/openapi (the `ImportFromOpenAPI` operationId).
 	ImportFromOpenAPIWithResponse(ctx context.Context, params *ImportFromOpenAPIParams, body ImportFromOpenAPIJSONRequestBody, reqEditors ...RequestEditorFn) (*ImportFromOpenAPIResponse, error)
+
+	// SearchCollectionsWithBodyWithResponse Search Collections
+	//
+	// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+	SearchCollectionsWithBodyWithResponse(ctx context.Context, params *SearchCollectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionsResponse, error)
+
+	// SearchCollectionsWithResponse Search Collections
+	//
+	// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+	SearchCollectionsWithResponse(ctx context.Context, params *SearchCollectionsParams, body SearchCollectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionsResponse, error)
 
 	// DeleteFolderWithResponse Delete Folder
 	//
@@ -22460,12 +24828,32 @@ type ClientWithResponsesInterface interface {
 
 	// ListCollectionRequestOpenAPISyncHistoryWithResponse List Request OpenAPI Sync History
 	//
-	// Lists OpenAPI sync changes for the upstream binding currently associated with a request.
+	// Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /collections/{collectionId}/requests/{requestId}/openapi-sync-history (the `ListCollectionRequestOpenAPISyncHistory` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollectionRequestOpenAPISyncHistoryWithResponse(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *ListCollectionRequestOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*ListCollectionRequestOpenAPISyncHistoryResponse, error)
+
+	// SearchCollectionRequestOpenAPISyncHistoryWithBodyWithResponse Search Request OpenAPI Sync History
+	//
+	// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+	SearchCollectionRequestOpenAPISyncHistoryWithBodyWithResponse(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionRequestOpenAPISyncHistoryResponse, error)
+
+	// SearchCollectionRequestOpenAPISyncHistoryWithResponse Search Request OpenAPI Sync History
+	//
+	// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+	SearchCollectionRequestOpenAPISyncHistoryWithResponse(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, body SearchCollectionRequestOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionRequestOpenAPISyncHistoryResponse, error)
 
 	// DeleteCollectionWithResponse Delete Collection
 	//
@@ -22505,11 +24893,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListCollectionFoldersWithResponse List Collection Folders
 	//
-	// Returns all folders for a collection so clients can build the tree lazily.
+	// Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /collections/{id}/folders (the `ListCollectionFolders` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollectionFoldersWithResponse(ctx context.Context, id openapi_types.UUID, params *ListCollectionFoldersParams, reqEditors ...RequestEditorFn) (*ListCollectionFoldersResponse, error)
 
 	// AddFolderWithBodyWithResponse Add Folder
@@ -22529,6 +24919,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /collections/{id}/folders (the `AddFolder` operationId).
 	AddFolderWithResponse(ctx context.Context, id openapi_types.UUID, params *AddFolderParams, body AddFolderJSONRequestBody, reqEditors ...RequestEditorFn) (*AddFolderResponse, error)
+
+	// SearchCollectionFoldersWithBodyWithResponse Search Collection Folders
+	//
+	// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+	SearchCollectionFoldersWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionFoldersResponse, error)
+
+	// SearchCollectionFoldersWithResponse Search Collection Folders
+	//
+	// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+	SearchCollectionFoldersWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, body SearchCollectionFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionFoldersResponse, error)
 
 	// GetOpenAPISyncConfigWithResponse Get OpenAPI Sync Config
 	//
@@ -22550,11 +24958,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListOpenAPISyncHistoryWithResponse List OpenAPI Sync History
 	//
-	// Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
+	// Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /collections/{id}/openapi-sync/history (the `ListOpenAPISyncHistory` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListOpenAPISyncHistoryWithResponse(ctx context.Context, id openapi_types.UUID, params *ListOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*ListOpenAPISyncHistoryResponse, error)
 
 	// CreateOrUpdateOpenAPISyncConfigWithBodyWithResponse Create or Update OpenAPI Sync Config
@@ -22575,9 +24985,27 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /collections/{id}/openapi-sync/history (the `CreateOrUpdateOpenAPISyncConfig` operationId).
 	CreateOrUpdateOpenAPISyncConfigWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateOrUpdateOpenAPISyncConfigParams, body CreateOrUpdateOpenAPISyncConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrUpdateOpenAPISyncConfigResponse, error)
 
+	// SearchOpenAPISyncHistoryWithBodyWithResponse Search OpenAPI Sync History
+	//
+	// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+	SearchOpenAPISyncHistoryWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchOpenAPISyncHistoryResponse, error)
+
+	// SearchOpenAPISyncHistoryWithResponse Search OpenAPI Sync History
+	//
+	// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+	SearchOpenAPISyncHistoryWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, body SearchOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchOpenAPISyncHistoryResponse, error)
+
 	// SearchOpenAPISyncOperationsWithBodyWithResponse Search OpenAPI Sync Operations
 	//
-	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22586,7 +25014,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchOpenAPISyncOperationsWithResponse Search OpenAPI Sync Operations
 	//
-	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+	// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22613,11 +25041,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListCollectionRequestsWithResponse List Collection Requests
 	//
-	// Returns paginated requests for a collection, optionally filtered by folder and search query.
+	// Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /collections/{id}/requests (the `ListCollectionRequests` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListCollectionRequestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListCollectionRequestsParams, reqEditors ...RequestEditorFn) (*ListCollectionRequestsResponse, error)
 
 	// AddRequestWithBodyWithResponse Add Request
@@ -22638,15 +25068,54 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /collections/{id}/requests (the `AddRequest` operationId).
 	AddRequestWithResponse(ctx context.Context, id openapi_types.UUID, params *AddRequestParams, body AddRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*AddRequestResponse, error)
 
+	// SearchCollectionRequestsWithBodyWithResponse Search Collection Requests
+	//
+	// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+	SearchCollectionRequestsWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionRequestsResponse, error)
+
+	// SearchCollectionRequestsWithResponse Search Collection Requests
+	//
+	// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+	SearchCollectionRequestsWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, body SearchCollectionRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionRequestsResponse, error)
+
 	// ListExecutionsWithResponse List Organization Executions
 	//
+	// Deprecated: use `searchExecutions`, which pages with a cursor.
 	// Retrieves org-wide execution activity, newest first. Rows are slim
 	// activity records and do not include flow snapshots.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /executions (the `ListExecutions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListExecutionsWithResponse(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*ListExecutionsResponse, error)
+
+	// SearchExecutionsWithBodyWithResponse Search Executions
+	//
+	// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+	SearchExecutionsWithBodyWithResponse(ctx context.Context, params *SearchExecutionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchExecutionsResponse, error)
+
+	// SearchExecutionsWithResponse Search Executions
+	//
+	// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+	SearchExecutionsWithResponse(ctx context.Context, params *SearchExecutionsParams, body SearchExecutionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchExecutionsResponse, error)
 
 	// GetExecutionsSummaryWithResponse Get Organization Execution Summary
 	//
@@ -22660,11 +25129,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListFlowsWithResponse List Flows
 	//
-	// Retrieves a paginated list of flows for the authenticated user.
+	// Deprecated: use `searchFlows`, which pages with a cursor. Retrieves a paginated list of flows for the authenticated user.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flows (the `ListFlows` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowsWithResponse(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*ListFlowsResponse, error)
 
 	// CreateFlowWithBodyWithResponse Create Flow
@@ -22687,11 +25158,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListFlowFoldersWithResponse List Flow Folders
 	//
-	// Returns every flow folder for the organization so clients can build the tree.
+	// Deprecated: use `searchFlowFolders`, which pages with a cursor. Returns every flow folder for the organization so clients can build the tree.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flows/folders (the `ListFlowFolders` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowFoldersWithResponse(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*ListFlowFoldersResponse, error)
 
 	// CreateFlowFolderWithBodyWithResponse Create Flow Folder
@@ -22729,6 +25202,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /flows/folders/move (the `BulkMoveFlows` operationId).
 	BulkMoveFlowsWithResponse(ctx context.Context, params *BulkMoveFlowsParams, body BulkMoveFlowsJSONRequestBody, reqEditors ...RequestEditorFn) (*BulkMoveFlowsResponse, error)
+
+	// SearchFlowFoldersWithBodyWithResponse Search Flow Folders
+	//
+	// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+	SearchFlowFoldersWithBodyWithResponse(ctx context.Context, params *SearchFlowFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowFoldersResponse, error)
+
+	// SearchFlowFoldersWithResponse Search Flow Folders
+	//
+	// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+	SearchFlowFoldersWithResponse(ctx context.Context, params *SearchFlowFoldersParams, body SearchFlowFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowFoldersResponse, error)
 
 	// DeleteFlowFolderWithResponse Delete Flow Folder
 	//
@@ -22777,10 +25268,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchFlowsWithBodyWithResponse Search Flows
 	//
-	// Dedicated flow-domain search against canonical flows with pagination, sorting,
-	// full-text search, and exact tag filtering. Returns lightweight flow items;
-	// flow_definition is omitted unless requested via `include_definition`.
-	// Callable by bearer users and API keys scoped with flows:read.
+	// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22789,10 +25277,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchFlowsWithResponse Search Flows
 	//
-	// Dedicated flow-domain search against canonical flows with pagination, sorting,
-	// full-text search, and exact tag filtering. Returns lightweight flow items;
-	// flow_definition is omitted unless requested via `include_definition`.
-	// Callable by bearer users and API keys scoped with flows:read.
+	// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -22801,7 +25286,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListFlowTagsWithResponse List Flow Tags
 	//
-	// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete.
+	// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete. Not paginated: aggregated tag suggestions capped at 100, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22819,7 +25304,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetExecutionNodeResultsWithResponse Get All Node Results
 	//
-	// Retrieves execution results for all nodes in a flow execution.
+	// Retrieves execution results for all nodes in a flow execution. Not paginated: bounded by the nodes of one execution, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -22846,12 +25331,32 @@ type ClientWithResponsesInterface interface {
 
 	// GetNodeExecutionHistoryWithResponse Get Node Execution History
 	//
-	// Retrieves execution history for a specific node across all flow executions with pagination.
+	// Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flows/{flowId}/nodes/{nodeId}/executions (the `GetNodeExecutionHistory` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	GetNodeExecutionHistoryWithResponse(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *GetNodeExecutionHistoryParams, reqEditors ...RequestEditorFn) (*GetNodeExecutionHistoryResponse, error)
+
+	// SearchNodeExecutionHistoryWithBodyWithResponse Search Node Execution History
+	//
+	// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+	SearchNodeExecutionHistoryWithBodyWithResponse(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchNodeExecutionHistoryResponse, error)
+
+	// SearchNodeExecutionHistoryWithResponse Search Node Execution History
+	//
+	// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+	SearchNodeExecutionHistoryWithResponse(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, body SearchNodeExecutionHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchNodeExecutionHistoryResponse, error)
 
 	// DeleteFlowWithResponse Delete Flow
 	//
@@ -22891,11 +25396,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListFlowExecutionsWithResponse List Flow Executions
 	//
-	// Retrieves execution history for a specific flow with pagination.
+	// Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flows/{id}/executions (the `ListFlowExecutions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowExecutionsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListFlowExecutionsParams, reqEditors ...RequestEditorFn) (*ListFlowExecutionsResponse, error)
 
 	// ExportFlowWithResponse Export Flow
@@ -23023,12 +25530,32 @@ type ClientWithResponsesInterface interface {
 
 	// ListFlowVersionsWithResponse List Flow Versions
 	//
-	// Retrieves a paginated list of saved versions for a flow.
+	// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowVersionsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*ListFlowVersionsResponse, error)
+
+	// SearchFlowVersionsWithBodyWithResponse Search Flow Versions
+	//
+	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+	SearchFlowVersionsWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowVersionsResponse, error)
+
+	// SearchFlowVersionsWithResponse Search Flow Versions
+	//
+	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+	SearchFlowVersionsWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, body SearchFlowVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowVersionsResponse, error)
 
 	// GetFlowVersionWithResponse Get Flow Version
 	//
@@ -23240,11 +25767,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListFlowSchedulesWithResponse List Monitors
 	//
-	// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+	// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error)
 
 	// CreateFlowScheduleWithBodyWithResponse Create Monitor
@@ -23309,6 +25838,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
 	PreviewScheduleTagsWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error)
+
+	// SearchFlowSchedulesWithBodyWithResponse Search Monitors
+	//
+	// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+	SearchFlowSchedulesWithBodyWithResponse(ctx context.Context, params *SearchFlowSchedulesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowSchedulesResponse, error)
+
+	// SearchFlowSchedulesWithResponse Search Monitors
+	//
+	// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+	SearchFlowSchedulesWithResponse(ctx context.Context, params *SearchFlowSchedulesParams, body SearchFlowSchedulesJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowSchedulesResponse, error)
 
 	// DeleteFlowScheduleWithResponse Delete Monitor
 	//
@@ -23375,12 +25922,32 @@ type ClientWithResponsesInterface interface {
 
 	// ListFlowScheduleRunsWithResponse List Monitor Runs
 	//
-	// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+	// Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListFlowScheduleRunsWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error)
+
+	// SearchFlowScheduleRunsWithBodyWithResponse Search Monitor Runs
+	//
+	// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+	SearchFlowScheduleRunsWithBodyWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowScheduleRunsResponse, error)
+
+	// SearchFlowScheduleRunsWithResponse Search Monitor Runs
+	//
+	// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+	SearchFlowScheduleRunsWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, body SearchFlowScheduleRunsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowScheduleRunsResponse, error)
 
 	// GetFlowScheduleRunWithResponse Get Monitor Run
 	//
@@ -23393,7 +25960,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListNodesWithResponse List Available Nodes
 	//
-	// Retrieves all available special nodes for flow control (delay, etc.).
+	// Retrieves all available special nodes for flow control (delay, etc.). Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -23402,7 +25969,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchOpenAPISyncConfigsWithBodyWithResponse Search OpenAPI Sync Configs
 	//
-	// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+	// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -23411,7 +25978,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchOpenAPISyncConfigsWithResponse Search OpenAPI Sync Configs
 	//
-	// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+	// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -23420,7 +25987,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListOperationsWithResponse List Available Operations
 	//
-	// Retrieves all available operations (extractors and assertions) for flow data processing.
+	// Retrieves all available operations (extractors and assertions) for flow data processing. Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -23429,11 +25996,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListEnvironmentsWithResponse List Environments
 	//
-	// Lists the organization's environments. Variables are not included; read them from the organization variable set.
+	// Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListEnvironmentsWithResponse(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*ListEnvironmentsResponse, error)
 
 	// CreateEnvironmentWithBodyWithResponse Create Environment
@@ -23453,6 +26022,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /organization/environments (the `CreateEnvironment` operationId).
 	CreateEnvironmentWithResponse(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
+
+	// SearchEnvironmentsWithBodyWithResponse Search Environments
+	//
+	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+	SearchEnvironmentsWithBodyWithResponse(ctx context.Context, params *SearchEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchEnvironmentsResponse, error)
+
+	// SearchEnvironmentsWithResponse Search Environments
+	//
+	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+	SearchEnvironmentsWithResponse(ctx context.Context, params *SearchEnvironmentsParams, body SearchEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchEnvironmentsResponse, error)
 
 	// DeleteEnvironmentWithResponse Delete Environment
 	//
@@ -23537,7 +26124,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListPermissionsWithResponse List Available Permissions
 	//
-	// Lists product permissions that can be assigned to Echopoint API keys for the requested type.
+	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -23564,7 +26151,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchResourcesWithBodyWithResponse Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -23573,7 +26160,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchResourcesWithResponse Search Resources
 	//
-	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+	// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -23739,6 +26326,7 @@ type ClientWithResponsesInterface interface {
 	// Returns the requests captured by the run webhook of this job's execution,
 	// oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
 	// with the job token. The request is refused once the execution is terminal.
+	// Not paginated: runner protocol authenticated by a job token that returns the newest requests of the run webhook, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -23751,6 +26339,7 @@ type ClientWithResponsesInterface interface {
 	// based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
 	// Cloud workers are never listed: a Cloud container is a transient worker of the
 	// shared pool, not a runner that the organization operates.
+	// Not paginated: this is a live view over Redis presence keys, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -23759,11 +26348,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListSpecsWithResponse List Specs
 	//
-	// Lists the organization's specs with their Live version, by slug.
+	// Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /specs (the `ListSpecs` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListSpecsWithResponse(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*ListSpecsResponse, error)
 
 	// CreateSpecWithBodyWithResponse Create Spec
@@ -23801,6 +26392,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /specs (the `CreateSpec` operationId).
 	CreateSpecWithResponse(ctx context.Context, params *CreateSpecParams, body CreateSpecJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSpecResponse, error)
+
+	// SearchSpecsWithBodyWithResponse Search Specs
+	//
+	// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+	SearchSpecsWithBodyWithResponse(ctx context.Context, params *SearchSpecsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchSpecsResponse, error)
+
+	// SearchSpecsWithResponse Search Specs
+	//
+	// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+	SearchSpecsWithResponse(ctx context.Context, params *SearchSpecsParams, body SearchSpecsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchSpecsResponse, error)
 
 	// GetSpecWithResponse Get Spec
 	//
@@ -23874,11 +26483,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListSpecVersionsWithResponse List Spec Versions
 	//
-	// Lists a spec's Live versions, newest first. The first item is the current Live version.
+	// Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListSpecVersionsWithResponse(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*ListSpecVersionsResponse, error)
 
 	// PushSpecVersionWithBodyWithResponse Push Spec Version
@@ -23920,6 +26531,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /specs/{slug}/versions (the `PushSpecVersion` operationId).
 	PushSpecVersionWithResponse(ctx context.Context, slug SpecSlugParameter, params *PushSpecVersionParams, body PushSpecVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*PushSpecVersionResponse, error)
+
+	// SearchSpecVersionsWithBodyWithResponse Search Spec Versions
+	//
+	// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+	SearchSpecVersionsWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchSpecVersionsResponse, error)
+
+	// SearchSpecVersionsWithResponse Search Spec Versions
+	//
+	// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+	SearchSpecVersionsWithResponse(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, body SearchSpecVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchSpecVersionsResponse, error)
 
 	// GetSpecVersionWithResponse Get Spec Version
 	//
@@ -24040,11 +26669,13 @@ type ClientWithResponsesInterface interface {
 
 	// ListWebhooksWithResponse List Webhook Endpoints
 	//
-	// Lists webhook endpoints for the current organization.
+	// Deprecated: use `searchWebhooks`, which pages with a cursor. Lists webhook endpoints for the current organization.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /webhooks (the `ListWebhooks` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListWebhooksWithResponse(ctx context.Context, params *ListWebhooksParams, reqEditors ...RequestEditorFn) (*ListWebhooksResponse, error)
 
 	// CreateWebhookWithBodyWithResponse Create Webhook Endpoint
@@ -24067,7 +26698,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchWebhooksWithBodyWithResponse Search Webhook Endpoints
 	//
-	// Server-side search with pagination, filtering and sorting for webhook endpoints.
+	// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24076,7 +26707,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchWebhooksWithResponse Search Webhook Endpoints
 	//
-	// Server-side search with pagination, filtering and sorting for webhook endpoints.
+	// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24121,7 +26752,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchWebhookRequestsWithBodyWithResponse Search Webhook Requests
 	//
-	// Server-side search with pagination, filtering and sorting for a webhook's requests.
+	// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24130,7 +26761,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchWebhookRequestsWithResponse Search Webhook Requests
 	//
-	// Server-side search with pagination, filtering and sorting for a webhook's requests.
+	// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25263,6 +27894,61 @@ func (r ImportFromOpenAPIResponse) ContentType() string {
 	return ""
 }
 
+type SearchCollectionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CollectionListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchCollectionsResponse) GetJSON200() *CollectionListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchCollectionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchCollectionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchCollectionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchCollectionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchCollectionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchCollectionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type DeleteFolderResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -25662,6 +28348,68 @@ func (r ListCollectionRequestOpenAPISyncHistoryResponse) ContentType() string {
 	return ""
 }
 
+type SearchCollectionRequestOpenAPISyncHistoryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OpenAPISyncChangeListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetJSON200() *OpenAPISyncChangeListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type DeleteCollectionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -25937,6 +28685,68 @@ func (r AddFolderResponse) ContentType() string {
 	return ""
 }
 
+type SearchCollectionFoldersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CollectionFolderListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchCollectionFoldersResponse) GetJSON200() *CollectionFolderListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchCollectionFoldersResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchCollectionFoldersResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchCollectionFoldersResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchCollectionFoldersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchCollectionFoldersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchCollectionFoldersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchCollectionFoldersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetOpenAPISyncConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -26151,6 +28961,68 @@ func (r CreateOrUpdateOpenAPISyncConfigResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateOrUpdateOpenAPISyncConfigResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchOpenAPISyncHistoryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OpenAPISyncChangeListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchOpenAPISyncHistoryResponse) GetJSON200() *OpenAPISyncChangeListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchOpenAPISyncHistoryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchOpenAPISyncHistoryResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchOpenAPISyncHistoryResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchOpenAPISyncHistoryResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchOpenAPISyncHistoryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchOpenAPISyncHistoryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchOpenAPISyncHistoryResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -26405,6 +29277,68 @@ func (r AddRequestResponse) ContentType() string {
 	return ""
 }
 
+type SearchCollectionRequestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CollectionRequestListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchCollectionRequestsResponse) GetJSON200() *CollectionRequestListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchCollectionRequestsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchCollectionRequestsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchCollectionRequestsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchCollectionRequestsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchCollectionRequestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchCollectionRequestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchCollectionRequestsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListExecutionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -26461,6 +29395,68 @@ func (r ListExecutionsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListExecutionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchExecutionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FlowExecutionActivityListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchExecutionsResponse) GetJSON200() *FlowExecutionActivityListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchExecutionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchExecutionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchExecutionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchExecutionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchExecutionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchExecutionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchExecutionsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -26868,6 +29864,68 @@ func (r BulkMoveFlowsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r BulkMoveFlowsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchFlowFoldersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FlowFolderListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchFlowFoldersResponse) GetJSON200() *FlowFolderListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchFlowFoldersResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchFlowFoldersResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchFlowFoldersResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchFlowFoldersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchFlowFoldersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchFlowFoldersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchFlowFoldersResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -27488,6 +30546,68 @@ func (r GetNodeExecutionHistoryResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetNodeExecutionHistoryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchNodeExecutionHistoryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NodeExecutionHistoryResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchNodeExecutionHistoryResponse) GetJSON200() *NodeExecutionHistoryResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchNodeExecutionHistoryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchNodeExecutionHistoryResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchNodeExecutionHistoryResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchNodeExecutionHistoryResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchNodeExecutionHistoryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchNodeExecutionHistoryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchNodeExecutionHistoryResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -28197,6 +31317,68 @@ func (r ListFlowVersionsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListFlowVersionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchFlowVersionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FlowVersionListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchFlowVersionsResponse) GetJSON200() *FlowVersionListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchFlowVersionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchFlowVersionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchFlowVersionsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchFlowVersionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchFlowVersionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchFlowVersionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchFlowVersionsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -29285,6 +32467,68 @@ func (r PreviewScheduleTagsResponse) ContentType() string {
 	return ""
 }
 
+type SearchFlowSchedulesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MonitorListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchFlowSchedulesResponse) GetJSON200() *MonitorListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchFlowSchedulesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchFlowSchedulesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchFlowSchedulesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchFlowSchedulesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchFlowSchedulesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchFlowSchedulesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchFlowSchedulesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type DeleteFlowScheduleResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -29747,6 +32991,68 @@ func (r ListFlowScheduleRunsResponse) ContentType() string {
 	return ""
 }
 
+type SearchFlowScheduleRunsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MonitorRunListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchFlowScheduleRunsResponse) GetJSON200() *MonitorRunListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchFlowScheduleRunsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchFlowScheduleRunsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchFlowScheduleRunsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchFlowScheduleRunsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchFlowScheduleRunsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchFlowScheduleRunsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchFlowScheduleRunsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetFlowScheduleRunResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -30071,6 +33377,61 @@ func (r CreateEnvironmentResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateEnvironmentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchEnvironmentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *EnvironmentSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchEnvironmentsResponse) GetJSON200() *EnvironmentSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchEnvironmentsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchEnvironmentsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchEnvironmentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchEnvironmentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchEnvironmentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchEnvironmentsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -31513,6 +34874,68 @@ func (r CreateSpecResponse) ContentType() string {
 	return ""
 }
 
+type SearchSpecsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchSpecsResponse) GetJSON200() *SpecListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchSpecsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchSpecsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchSpecsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchSpecsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchSpecsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchSpecsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchSpecsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetSpecResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -31859,6 +35282,75 @@ func (r PushSpecVersionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r PushSpecVersionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchSpecVersionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecVersionListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchSpecVersionsResponse) GetJSON200() *SpecVersionListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchSpecVersionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchSpecVersionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchSpecVersionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchSpecVersionsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchSpecVersionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchSpecVersionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchSpecVersionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchSpecVersionsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -33162,6 +36654,7 @@ func (c *ClientWithResponses) ResyncResourceSearchWithResponse(ctx context.Conte
 // An endpoint is the request's URL template before resolution, so
 // `/users/{{userId}}` stays one endpoint whatever the user id, and no
 // resolved URL, query string or body is kept.
+// Not paginated: an aggregate computed per request over the window and capped, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -33179,6 +36672,7 @@ func (c *ClientWithResponses) ListEndpointAnalyticsWithResponse(ctx context.Cont
 // One row per flow that finished a run in the window, most runs first:
 // how often it ran and failed, how long its runs took, and how many HTTP
 // calls they sent. A deleted flow keeps its row with an empty name.
+// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -33201,6 +36695,7 @@ func (c *ClientWithResponses) ListFlowAnalyticsWithResponse(ctx context.Context,
 // analytics a few seconds after it finishes. Runs whose runner predates
 // HTTP call recording count in `runs` but not in `measured_runs`, so their
 // calls are missing from the call totals.
+// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -33365,11 +36860,13 @@ func (c *ClientWithResponses) ChatWithAssistantWithResponse(ctx context.Context,
 
 // ListCollectionsWithResponse List Collections
 //
-// Retrieves a paginated list of collections for the authenticated user.
+// Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /collections (the `ListCollections` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListCollectionsWithResponse(ctx context.Context, params *ListCollectionsParams, reqEditors ...RequestEditorFn) (*ListCollectionsResponse, error) {
 	rsp, err := c.ListCollections(ctx, params, reqEditors...)
 	if err != nil {
@@ -33436,6 +36933,36 @@ func (c *ClientWithResponses) ImportFromOpenAPIWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseImportFromOpenAPIResponse(rsp)
+}
+
+// SearchCollectionsWithBodyWithResponse Search Collections
+//
+// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+func (c *ClientWithResponses) SearchCollectionsWithBodyWithResponse(ctx context.Context, params *SearchCollectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionsResponse, error) {
+	rsp, err := c.SearchCollectionsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionsResponse(rsp)
+}
+
+// SearchCollectionsWithResponse Search Collections
+//
+// Searches the organization's collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/search (the `SearchCollections` operationId).
+func (c *ClientWithResponses) SearchCollectionsWithResponse(ctx context.Context, params *SearchCollectionsParams, body SearchCollectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionsResponse, error) {
+	rsp, err := c.SearchCollections(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionsResponse(rsp)
 }
 
 // DeleteFolderWithResponse Delete Folder
@@ -33575,17 +37102,49 @@ func (c *ClientWithResponses) ExecuteCollectionRequestWithResponse(ctx context.C
 
 // ListCollectionRequestOpenAPISyncHistoryWithResponse List Request OpenAPI Sync History
 //
-// Lists OpenAPI sync changes for the upstream binding currently associated with a request.
+// Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /collections/{collectionId}/requests/{requestId}/openapi-sync-history (the `ListCollectionRequestOpenAPISyncHistory` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListCollectionRequestOpenAPISyncHistoryWithResponse(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *ListCollectionRequestOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*ListCollectionRequestOpenAPISyncHistoryResponse, error) {
 	rsp, err := c.ListCollectionRequestOpenAPISyncHistory(ctx, collectionId, requestId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseListCollectionRequestOpenAPISyncHistoryResponse(rsp)
+}
+
+// SearchCollectionRequestOpenAPISyncHistoryWithBodyWithResponse Search Request OpenAPI Sync History
+//
+// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+func (c *ClientWithResponses) SearchCollectionRequestOpenAPISyncHistoryWithBodyWithResponse(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionRequestOpenAPISyncHistoryResponse, error) {
+	rsp, err := c.SearchCollectionRequestOpenAPISyncHistoryWithBody(ctx, collectionId, requestId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionRequestOpenAPISyncHistoryResponse(rsp)
+}
+
+// SearchCollectionRequestOpenAPISyncHistoryWithResponse Search Request OpenAPI Sync History
+//
+// Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search (the `SearchCollectionRequestOpenAPISyncHistory` operationId).
+func (c *ClientWithResponses) SearchCollectionRequestOpenAPISyncHistoryWithResponse(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *SearchCollectionRequestOpenAPISyncHistoryParams, body SearchCollectionRequestOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionRequestOpenAPISyncHistoryResponse, error) {
+	rsp, err := c.SearchCollectionRequestOpenAPISyncHistory(ctx, collectionId, requestId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionRequestOpenAPISyncHistoryResponse(rsp)
 }
 
 // DeleteCollectionWithResponse Delete Collection
@@ -33650,11 +37209,13 @@ func (c *ClientWithResponses) UpdateCollectionWithResponse(ctx context.Context, 
 
 // ListCollectionFoldersWithResponse List Collection Folders
 //
-// Returns all folders for a collection so clients can build the tree lazily.
+// Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /collections/{id}/folders (the `ListCollectionFolders` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListCollectionFoldersWithResponse(ctx context.Context, id openapi_types.UUID, params *ListCollectionFoldersParams, reqEditors ...RequestEditorFn) (*ListCollectionFoldersResponse, error) {
 	rsp, err := c.ListCollectionFolders(ctx, id, params, reqEditors...)
 	if err != nil {
@@ -33693,6 +37254,36 @@ func (c *ClientWithResponses) AddFolderWithResponse(ctx context.Context, id open
 	return ParseAddFolderResponse(rsp)
 }
 
+// SearchCollectionFoldersWithBodyWithResponse Search Collection Folders
+//
+// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+func (c *ClientWithResponses) SearchCollectionFoldersWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionFoldersResponse, error) {
+	rsp, err := c.SearchCollectionFoldersWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionFoldersResponse(rsp)
+}
+
+// SearchCollectionFoldersWithResponse Search Collection Folders
+//
+// Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{id}/folders/search (the `SearchCollectionFolders` operationId).
+func (c *ClientWithResponses) SearchCollectionFoldersWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionFoldersParams, body SearchCollectionFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionFoldersResponse, error) {
+	rsp, err := c.SearchCollectionFolders(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionFoldersResponse(rsp)
+}
+
 // GetOpenAPISyncConfigWithResponse Get OpenAPI Sync Config
 //
 // Retrieves the OpenAPI sync config for a collection.
@@ -33725,11 +37316,13 @@ func (c *ClientWithResponses) DeleteOpenAPISyncConfigWithResponse(ctx context.Co
 
 // ListOpenAPISyncHistoryWithResponse List OpenAPI Sync History
 //
-// Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
+// Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /collections/{id}/openapi-sync/history (the `ListOpenAPISyncHistory` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListOpenAPISyncHistoryWithResponse(ctx context.Context, id openapi_types.UUID, params *ListOpenAPISyncHistoryParams, reqEditors ...RequestEditorFn) (*ListOpenAPISyncHistoryResponse, error) {
 	rsp, err := c.ListOpenAPISyncHistory(ctx, id, params, reqEditors...)
 	if err != nil {
@@ -33768,9 +37361,39 @@ func (c *ClientWithResponses) CreateOrUpdateOpenAPISyncConfigWithResponse(ctx co
 	return ParseCreateOrUpdateOpenAPISyncConfigResponse(rsp)
 }
 
+// SearchOpenAPISyncHistoryWithBodyWithResponse Search OpenAPI Sync History
+//
+// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+func (c *ClientWithResponses) SearchOpenAPISyncHistoryWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchOpenAPISyncHistoryResponse, error) {
+	rsp, err := c.SearchOpenAPISyncHistoryWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchOpenAPISyncHistoryResponse(rsp)
+}
+
+// SearchOpenAPISyncHistoryWithResponse Search OpenAPI Sync History
+//
+// Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{id}/openapi-sync/history/search (the `SearchOpenAPISyncHistory` operationId).
+func (c *ClientWithResponses) SearchOpenAPISyncHistoryWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchOpenAPISyncHistoryParams, body SearchOpenAPISyncHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchOpenAPISyncHistoryResponse, error) {
+	rsp, err := c.SearchOpenAPISyncHistory(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchOpenAPISyncHistoryResponse(rsp)
+}
+
 // SearchOpenAPISyncOperationsWithBodyWithResponse Search OpenAPI Sync Operations
 //
-// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -33785,7 +37408,7 @@ func (c *ClientWithResponses) SearchOpenAPISyncOperationsWithBodyWithResponse(ct
 
 // SearchOpenAPISyncOperationsWithResponse Search OpenAPI Sync Operations
 //
-// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+// Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -33830,11 +37453,13 @@ func (c *ClientWithResponses) RunOpenAPISyncNowWithResponse(ctx context.Context,
 
 // ListCollectionRequestsWithResponse List Collection Requests
 //
-// Returns paginated requests for a collection, optionally filtered by folder and search query.
+// Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /collections/{id}/requests (the `ListCollectionRequests` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListCollectionRequestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListCollectionRequestsParams, reqEditors ...RequestEditorFn) (*ListCollectionRequestsResponse, error) {
 	rsp, err := c.ListCollectionRequests(ctx, id, params, reqEditors...)
 	if err != nil {
@@ -33873,20 +37498,83 @@ func (c *ClientWithResponses) AddRequestWithResponse(ctx context.Context, id ope
 	return ParseAddRequestResponse(rsp)
 }
 
+// SearchCollectionRequestsWithBodyWithResponse Search Collection Requests
+//
+// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+func (c *ClientWithResponses) SearchCollectionRequestsWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchCollectionRequestsResponse, error) {
+	rsp, err := c.SearchCollectionRequestsWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionRequestsResponse(rsp)
+}
+
+// SearchCollectionRequestsWithResponse Search Collection Requests
+//
+// Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
+func (c *ClientWithResponses) SearchCollectionRequestsWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, body SearchCollectionRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionRequestsResponse, error) {
+	rsp, err := c.SearchCollectionRequests(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchCollectionRequestsResponse(rsp)
+}
+
 // ListExecutionsWithResponse List Organization Executions
 //
+// Deprecated: use `searchExecutions`, which pages with a cursor.
 // Retrieves org-wide execution activity, newest first. Rows are slim
 // activity records and do not include flow snapshots.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /executions (the `ListExecutions` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListExecutionsWithResponse(ctx context.Context, params *ListExecutionsParams, reqEditors ...RequestEditorFn) (*ListExecutionsResponse, error) {
 	rsp, err := c.ListExecutions(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseListExecutionsResponse(rsp)
+}
+
+// SearchExecutionsWithBodyWithResponse Search Executions
+//
+// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+func (c *ClientWithResponses) SearchExecutionsWithBodyWithResponse(ctx context.Context, params *SearchExecutionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchExecutionsResponse, error) {
+	rsp, err := c.SearchExecutionsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchExecutionsResponse(rsp)
+}
+
+// SearchExecutionsWithResponse Search Executions
+//
+// Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /executions/search (the `SearchExecutions` operationId).
+func (c *ClientWithResponses) SearchExecutionsWithResponse(ctx context.Context, params *SearchExecutionsParams, body SearchExecutionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchExecutionsResponse, error) {
+	rsp, err := c.SearchExecutions(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchExecutionsResponse(rsp)
 }
 
 // GetExecutionsSummaryWithResponse Get Organization Execution Summary
@@ -33907,11 +37595,13 @@ func (c *ClientWithResponses) GetExecutionsSummaryWithResponse(ctx context.Conte
 
 // ListFlowsWithResponse List Flows
 //
-// Retrieves a paginated list of flows for the authenticated user.
+// Deprecated: use `searchFlows`, which pages with a cursor. Retrieves a paginated list of flows for the authenticated user.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flows (the `ListFlows` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListFlowsWithResponse(ctx context.Context, params *ListFlowsParams, reqEditors ...RequestEditorFn) (*ListFlowsResponse, error) {
 	rsp, err := c.ListFlows(ctx, params, reqEditors...)
 	if err != nil {
@@ -33952,11 +37642,13 @@ func (c *ClientWithResponses) CreateFlowWithResponse(ctx context.Context, params
 
 // ListFlowFoldersWithResponse List Flow Folders
 //
-// Returns every flow folder for the organization so clients can build the tree.
+// Deprecated: use `searchFlowFolders`, which pages with a cursor. Returns every flow folder for the organization so clients can build the tree.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flows/folders (the `ListFlowFolders` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListFlowFoldersWithResponse(ctx context.Context, params *ListFlowFoldersParams, reqEditors ...RequestEditorFn) (*ListFlowFoldersResponse, error) {
 	rsp, err := c.ListFlowFolders(ctx, params, reqEditors...)
 	if err != nil {
@@ -34023,6 +37715,36 @@ func (c *ClientWithResponses) BulkMoveFlowsWithResponse(ctx context.Context, par
 		return nil, err
 	}
 	return ParseBulkMoveFlowsResponse(rsp)
+}
+
+// SearchFlowFoldersWithBodyWithResponse Search Flow Folders
+//
+// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+func (c *ClientWithResponses) SearchFlowFoldersWithBodyWithResponse(ctx context.Context, params *SearchFlowFoldersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowFoldersResponse, error) {
+	rsp, err := c.SearchFlowFoldersWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowFoldersResponse(rsp)
+}
+
+// SearchFlowFoldersWithResponse Search Flow Folders
+//
+// Searches the organization's flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/folders/search (the `SearchFlowFolders` operationId).
+func (c *ClientWithResponses) SearchFlowFoldersWithResponse(ctx context.Context, params *SearchFlowFoldersParams, body SearchFlowFoldersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowFoldersResponse, error) {
+	rsp, err := c.SearchFlowFolders(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowFoldersResponse(rsp)
 }
 
 // DeleteFlowFolderWithResponse Delete Flow Folder
@@ -34102,10 +37824,7 @@ func (c *ClientWithResponses) MoveFlowFolderWithResponse(ctx context.Context, fo
 
 // SearchFlowsWithBodyWithResponse Search Flows
 //
-// Dedicated flow-domain search against canonical flows with pagination, sorting,
-// full-text search, and exact tag filtering. Returns lightweight flow items;
-// flow_definition is omitted unless requested via `include_definition`.
-// Callable by bearer users and API keys scoped with flows:read.
+// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34120,10 +37839,7 @@ func (c *ClientWithResponses) SearchFlowsWithBodyWithResponse(ctx context.Contex
 
 // SearchFlowsWithResponse Search Flows
 //
-// Dedicated flow-domain search against canonical flows with pagination, sorting,
-// full-text search, and exact tag filtering. Returns lightweight flow items;
-// flow_definition is omitted unless requested via `include_definition`.
-// Callable by bearer users and API keys scoped with flows:read.
+// Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34138,7 +37854,7 @@ func (c *ClientWithResponses) SearchFlowsWithResponse(ctx context.Context, param
 
 // ListFlowTagsWithResponse List Flow Tags
 //
-// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete.
+// Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete. Not paginated: aggregated tag suggestions capped at 100, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -34168,7 +37884,7 @@ func (c *ClientWithResponses) GetExecutionWithResponse(ctx context.Context, flow
 
 // GetExecutionNodeResultsWithResponse Get All Node Results
 //
-// Retrieves execution results for all nodes in a flow execution.
+// Retrieves execution results for all nodes in a flow execution. Not paginated: bounded by the nodes of one execution, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -34213,17 +37929,49 @@ func (c *ClientWithResponses) StreamExecutionWithResponse(ctx context.Context, f
 
 // GetNodeExecutionHistoryWithResponse Get Node Execution History
 //
-// Retrieves execution history for a specific node across all flow executions with pagination.
+// Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flows/{flowId}/nodes/{nodeId}/executions (the `GetNodeExecutionHistory` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) GetNodeExecutionHistoryWithResponse(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *GetNodeExecutionHistoryParams, reqEditors ...RequestEditorFn) (*GetNodeExecutionHistoryResponse, error) {
 	rsp, err := c.GetNodeExecutionHistory(ctx, flowId, nodeId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseGetNodeExecutionHistoryResponse(rsp)
+}
+
+// SearchNodeExecutionHistoryWithBodyWithResponse Search Node Execution History
+//
+// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+func (c *ClientWithResponses) SearchNodeExecutionHistoryWithBodyWithResponse(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchNodeExecutionHistoryResponse, error) {
+	rsp, err := c.SearchNodeExecutionHistoryWithBody(ctx, flowId, nodeId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchNodeExecutionHistoryResponse(rsp)
+}
+
+// SearchNodeExecutionHistoryWithResponse Search Node Execution History
+//
+// Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/{flowId}/nodes/{nodeId}/executions/search (the `SearchNodeExecutionHistory` operationId).
+func (c *ClientWithResponses) SearchNodeExecutionHistoryWithResponse(ctx context.Context, flowId openapi_types.UUID, nodeId string, params *SearchNodeExecutionHistoryParams, body SearchNodeExecutionHistoryJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchNodeExecutionHistoryResponse, error) {
+	rsp, err := c.SearchNodeExecutionHistory(ctx, flowId, nodeId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchNodeExecutionHistoryResponse(rsp)
 }
 
 // DeleteFlowWithResponse Delete Flow
@@ -34288,11 +38036,13 @@ func (c *ClientWithResponses) UpdateFlowWithResponse(ctx context.Context, id ope
 
 // ListFlowExecutionsWithResponse List Flow Executions
 //
-// Retrieves execution history for a specific flow with pagination.
+// Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flows/{id}/executions (the `ListFlowExecutions` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListFlowExecutionsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListFlowExecutionsParams, reqEditors ...RequestEditorFn) (*ListFlowExecutionsResponse, error) {
 	rsp, err := c.ListFlowExecutions(ctx, id, params, reqEditors...)
 	if err != nil {
@@ -34480,17 +38230,49 @@ func (c *ClientWithResponses) SetFlowVariableWithResponse(ctx context.Context, i
 
 // ListFlowVersionsWithResponse List Flow Versions
 //
-// Retrieves a paginated list of saved versions for a flow.
+// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListFlowVersionsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*ListFlowVersionsResponse, error) {
 	rsp, err := c.ListFlowVersions(ctx, id, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseListFlowVersionsResponse(rsp)
+}
+
+// SearchFlowVersionsWithBodyWithResponse Search Flow Versions
+//
+// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+func (c *ClientWithResponses) SearchFlowVersionsWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowVersionsResponse, error) {
+	rsp, err := c.SearchFlowVersionsWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowVersionsResponse(rsp)
+}
+
+// SearchFlowVersionsWithResponse Search Flow Versions
+//
+// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/{id}/versions/search (the `SearchFlowVersions` operationId).
+func (c *ClientWithResponses) SearchFlowVersionsWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchFlowVersionsParams, body SearchFlowVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowVersionsResponse, error) {
+	rsp, err := c.SearchFlowVersions(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowVersionsResponse(rsp)
 }
 
 // GetFlowVersionWithResponse Get Flow Version
@@ -34781,11 +38563,13 @@ func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Co
 
 // ListFlowSchedulesWithResponse List Monitors
 //
-// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error) {
 	rsp, err := c.ListFlowSchedules(ctx, params, reqEditors...)
 	if err != nil {
@@ -34899,6 +38683,36 @@ func (c *ClientWithResponses) PreviewScheduleTagsWithResponse(ctx context.Contex
 	return ParsePreviewScheduleTagsResponse(rsp)
 }
 
+// SearchFlowSchedulesWithBodyWithResponse Search Monitors
+//
+// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+func (c *ClientWithResponses) SearchFlowSchedulesWithBodyWithResponse(ctx context.Context, params *SearchFlowSchedulesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowSchedulesResponse, error) {
+	rsp, err := c.SearchFlowSchedulesWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowSchedulesResponse(rsp)
+}
+
+// SearchFlowSchedulesWithResponse Search Monitors
+//
+// Searches the organization's monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/search (the `SearchFlowSchedules` operationId).
+func (c *ClientWithResponses) SearchFlowSchedulesWithResponse(ctx context.Context, params *SearchFlowSchedulesParams, body SearchFlowSchedulesJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowSchedulesResponse, error) {
+	rsp, err := c.SearchFlowSchedules(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowSchedulesResponse(rsp)
+}
+
 // DeleteFlowScheduleWithResponse Delete Monitor
 //
 // Deletes a monitor and prevents future launches; prior execution history is preserved.
@@ -35006,17 +38820,49 @@ func (c *ClientWithResponses) RunMonitorWithResponse(ctx context.Context, monito
 
 // ListFlowScheduleRunsWithResponse List Monitor Runs
 //
-// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+// Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListFlowScheduleRunsWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error) {
 	rsp, err := c.ListFlowScheduleRuns(ctx, monitorId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseListFlowScheduleRunsResponse(rsp)
+}
+
+// SearchFlowScheduleRunsWithBodyWithResponse Search Monitor Runs
+//
+// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+func (c *ClientWithResponses) SearchFlowScheduleRunsWithBodyWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchFlowScheduleRunsResponse, error) {
+	rsp, err := c.SearchFlowScheduleRunsWithBody(ctx, monitorId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowScheduleRunsResponse(rsp)
+}
+
+// SearchFlowScheduleRunsWithResponse Search Monitor Runs
+//
+// Searches a monitor's occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/{monitorId}/runs/search (the `SearchFlowScheduleRuns` operationId).
+func (c *ClientWithResponses) SearchFlowScheduleRunsWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *SearchFlowScheduleRunsParams, body SearchFlowScheduleRunsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchFlowScheduleRunsResponse, error) {
+	rsp, err := c.SearchFlowScheduleRuns(ctx, monitorId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchFlowScheduleRunsResponse(rsp)
 }
 
 // GetFlowScheduleRunWithResponse Get Monitor Run
@@ -35036,7 +38882,7 @@ func (c *ClientWithResponses) GetFlowScheduleRunWithResponse(ctx context.Context
 
 // ListNodesWithResponse List Available Nodes
 //
-// Retrieves all available special nodes for flow control (delay, etc.).
+// Retrieves all available special nodes for flow control (delay, etc.). Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -35051,7 +38897,7 @@ func (c *ClientWithResponses) ListNodesWithResponse(ctx context.Context, params 
 
 // SearchOpenAPISyncConfigsWithBodyWithResponse Search OpenAPI Sync Configs
 //
-// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35066,7 +38912,7 @@ func (c *ClientWithResponses) SearchOpenAPISyncConfigsWithBodyWithResponse(ctx c
 
 // SearchOpenAPISyncConfigsWithResponse Search OpenAPI Sync Configs
 //
-// Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+// Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35081,7 +38927,7 @@ func (c *ClientWithResponses) SearchOpenAPISyncConfigsWithResponse(ctx context.C
 
 // ListOperationsWithResponse List Available Operations
 //
-// Retrieves all available operations (extractors and assertions) for flow data processing.
+// Retrieves all available operations (extractors and assertions) for flow data processing. Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -35096,11 +38942,13 @@ func (c *ClientWithResponses) ListOperationsWithResponse(ctx context.Context, pa
 
 // ListEnvironmentsWithResponse List Environments
 //
-// Lists the organization's environments. Variables are not included; read them from the organization variable set.
+// Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /organization/environments (the `ListEnvironments` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListEnvironmentsWithResponse(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*ListEnvironmentsResponse, error) {
 	rsp, err := c.ListEnvironments(ctx, params, reqEditors...)
 	if err != nil {
@@ -35137,6 +38985,36 @@ func (c *ClientWithResponses) CreateEnvironmentWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseCreateEnvironmentResponse(rsp)
+}
+
+// SearchEnvironmentsWithBodyWithResponse Search Environments
+//
+// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+func (c *ClientWithResponses) SearchEnvironmentsWithBodyWithResponse(ctx context.Context, params *SearchEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchEnvironmentsResponse, error) {
+	rsp, err := c.SearchEnvironmentsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchEnvironmentsResponse(rsp)
+}
+
+// SearchEnvironmentsWithResponse Search Environments
+//
+// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /organization/environments/search (the `SearchEnvironments` operationId).
+func (c *ClientWithResponses) SearchEnvironmentsWithResponse(ctx context.Context, params *SearchEnvironmentsParams, body SearchEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchEnvironmentsResponse, error) {
+	rsp, err := c.SearchEnvironments(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchEnvironmentsResponse(rsp)
 }
 
 // DeleteEnvironmentWithResponse Delete Environment
@@ -35276,7 +39154,7 @@ func (c *ClientWithResponses) SetOrganizationVariableWithResponse(ctx context.Co
 
 // ListPermissionsWithResponse List Available Permissions
 //
-// Lists product permissions that can be assigned to Echopoint API keys for the requested type.
+// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -35321,7 +39199,7 @@ func (c *ClientWithResponses) GetPublicStatusPageWithResponse(ctx context.Contex
 
 // SearchResourcesWithBodyWithResponse Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35336,7 +39214,7 @@ func (c *ClientWithResponses) SearchResourcesWithBodyWithResponse(ctx context.Co
 
 // SearchResourcesWithResponse Search Resources
 //
-// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+// Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group's next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35586,6 +39464,7 @@ func (c *ClientWithResponses) GetCloudJobPayloadWithResponse(ctx context.Context
 // Returns the requests captured by the run webhook of this job's execution,
 // oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
 // with the job token. The request is refused once the execution is terminal.
+// Not paginated: runner protocol authenticated by a job token that returns the newest requests of the run webhook, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -35604,6 +39483,7 @@ func (c *ClientWithResponses) ListRunnerJobWebhookRequestsWithResponse(ctx conte
 // based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
 // Cloud workers are never listed: a Cloud container is a transient worker of the
 // shared pool, not a runner that the organization operates.
+// Not paginated: this is a live view over Redis presence keys, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -35618,11 +39498,13 @@ func (c *ClientWithResponses) ListLiveRunnersWithResponse(ctx context.Context, p
 
 // ListSpecsWithResponse List Specs
 //
-// Lists the organization's specs with their Live version, by slug.
+// Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /specs (the `ListSpecs` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListSpecsWithResponse(ctx context.Context, params *ListSpecsParams, reqEditors ...RequestEditorFn) (*ListSpecsResponse, error) {
 	rsp, err := c.ListSpecs(ctx, params, reqEditors...)
 	if err != nil {
@@ -35677,6 +39559,36 @@ func (c *ClientWithResponses) CreateSpecWithResponse(ctx context.Context, params
 		return nil, err
 	}
 	return ParseCreateSpecResponse(rsp)
+}
+
+// SearchSpecsWithBodyWithResponse Search Specs
+//
+// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+func (c *ClientWithResponses) SearchSpecsWithBodyWithResponse(ctx context.Context, params *SearchSpecsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchSpecsResponse, error) {
+	rsp, err := c.SearchSpecsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchSpecsResponse(rsp)
+}
+
+// SearchSpecsWithResponse Search Specs
+//
+// Searches the organization's specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/search (the `SearchSpecs` operationId).
+func (c *ClientWithResponses) SearchSpecsWithResponse(ctx context.Context, params *SearchSpecsParams, body SearchSpecsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchSpecsResponse, error) {
+	rsp, err := c.SearchSpecs(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchSpecsResponse(rsp)
 }
 
 // GetSpecWithResponse Get Spec
@@ -35775,11 +39687,13 @@ func (c *ClientWithResponses) PullSpecWithResponse(ctx context.Context, slug Spe
 
 // ListSpecVersionsWithResponse List Spec Versions
 //
-// Lists a spec's Live versions, newest first. The first item is the current Live version.
+// Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /specs/{slug}/versions (the `ListSpecVersions` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListSpecVersionsWithResponse(ctx context.Context, slug SpecSlugParameter, params *ListSpecVersionsParams, reqEditors ...RequestEditorFn) (*ListSpecVersionsResponse, error) {
 	rsp, err := c.ListSpecVersions(ctx, slug, params, reqEditors...)
 	if err != nil {
@@ -35838,6 +39752,36 @@ func (c *ClientWithResponses) PushSpecVersionWithResponse(ctx context.Context, s
 		return nil, err
 	}
 	return ParsePushSpecVersionResponse(rsp)
+}
+
+// SearchSpecVersionsWithBodyWithResponse Search Spec Versions
+//
+// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+func (c *ClientWithResponses) SearchSpecVersionsWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchSpecVersionsResponse, error) {
+	rsp, err := c.SearchSpecVersionsWithBody(ctx, slug, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchSpecVersionsResponse(rsp)
+}
+
+// SearchSpecVersionsWithResponse Search Spec Versions
+//
+// Searches a spec's Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/versions/search (the `SearchSpecVersions` operationId).
+func (c *ClientWithResponses) SearchSpecVersionsWithResponse(ctx context.Context, slug SpecSlugParameter, params *SearchSpecVersionsParams, body SearchSpecVersionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchSpecVersionsResponse, error) {
+	rsp, err := c.SearchSpecVersions(ctx, slug, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchSpecVersionsResponse(rsp)
 }
 
 // GetSpecVersionWithResponse Get Spec Version
@@ -36037,11 +39981,13 @@ func (c *ClientWithResponses) ReceiveWebhookPutWithBodyWithResponse(ctx context.
 
 // ListWebhooksWithResponse List Webhook Endpoints
 //
-// Lists webhook endpoints for the current organization.
+// Deprecated: use `searchWebhooks`, which pages with a cursor. Lists webhook endpoints for the current organization.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /webhooks (the `ListWebhooks` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListWebhooksWithResponse(ctx context.Context, params *ListWebhooksParams, reqEditors ...RequestEditorFn) (*ListWebhooksResponse, error) {
 	rsp, err := c.ListWebhooks(ctx, params, reqEditors...)
 	if err != nil {
@@ -36082,7 +40028,7 @@ func (c *ClientWithResponses) CreateWebhookWithResponse(ctx context.Context, par
 
 // SearchWebhooksWithBodyWithResponse Search Webhook Endpoints
 //
-// Server-side search with pagination, filtering and sorting for webhook endpoints.
+// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -36097,7 +40043,7 @@ func (c *ClientWithResponses) SearchWebhooksWithBodyWithResponse(ctx context.Con
 
 // SearchWebhooksWithResponse Search Webhook Endpoints
 //
-// Server-side search with pagination, filtering and sorting for webhook endpoints.
+// Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -36172,7 +40118,7 @@ func (c *ClientWithResponses) GetWebhookRequestVolumesWithResponse(ctx context.C
 
 // SearchWebhookRequestsWithBodyWithResponse Search Webhook Requests
 //
-// Server-side search with pagination, filtering and sorting for a webhook's requests.
+// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -36187,7 +40133,7 @@ func (c *ClientWithResponses) SearchWebhookRequestsWithBodyWithResponse(ctx cont
 
 // SearchWebhookRequestsWithResponse Search Webhook Requests
 //
-// Server-side search with pagination, filtering and sorting for a webhook's requests.
+// Server-side search with pagination, filtering and sorting for a webhook's requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -37067,6 +41013,46 @@ func ParseImportFromOpenAPIResponse(rsp *http.Response) (*ImportFromOpenAPIRespo
 	return response, nil
 }
 
+// ParseSearchCollectionsResponse parses an HTTP response from a SearchCollectionsWithResponse call
+func ParseSearchCollectionsResponse(rsp *http.Response) (*SearchCollectionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchCollectionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CollectionListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteFolderResponse parses an HTTP response from a DeleteFolderWithResponse call
 func ParseDeleteFolderResponse(rsp *http.Response) (*DeleteFolderResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -37367,6 +41353,53 @@ func ParseListCollectionRequestOpenAPISyncHistoryResponse(rsp *http.Response) (*
 	return response, nil
 }
 
+// ParseSearchCollectionRequestOpenAPISyncHistoryResponse parses an HTTP response from a SearchCollectionRequestOpenAPISyncHistoryWithResponse call
+func ParseSearchCollectionRequestOpenAPISyncHistoryResponse(rsp *http.Response) (*SearchCollectionRequestOpenAPISyncHistoryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchCollectionRequestOpenAPISyncHistoryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OpenAPISyncChangeListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteCollectionResponse parses an HTTP response from a DeleteCollectionWithResponse call
 func ParseDeleteCollectionResponse(rsp *http.Response) (*DeleteCollectionResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -37570,6 +41603,53 @@ func ParseAddFolderResponse(rsp *http.Response) (*AddFolderResponse, error) {
 	return response, nil
 }
 
+// ParseSearchCollectionFoldersResponse parses an HTTP response from a SearchCollectionFoldersWithResponse call
+func ParseSearchCollectionFoldersResponse(rsp *http.Response) (*SearchCollectionFoldersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchCollectionFoldersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CollectionFolderListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetOpenAPISyncConfigResponse parses an HTTP response from a GetOpenAPISyncConfigWithResponse call
 func ParseGetOpenAPISyncConfigResponse(rsp *http.Response) (*GetOpenAPISyncConfigResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -37702,6 +41782,53 @@ func ParseCreateOrUpdateOpenAPISyncConfigResponse(rsp *http.Response) (*CreateOr
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest OpenAPISyncConfig
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchOpenAPISyncHistoryResponse parses an HTTP response from a SearchOpenAPISyncHistoryWithResponse call
+func ParseSearchOpenAPISyncHistoryResponse(rsp *http.Response) (*SearchOpenAPISyncHistoryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchOpenAPISyncHistoryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OpenAPISyncChangeListResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -37921,6 +42048,53 @@ func ParseAddRequestResponse(rsp *http.Response) (*AddRequestResponse, error) {
 	return response, nil
 }
 
+// ParseSearchCollectionRequestsResponse parses an HTTP response from a SearchCollectionRequestsWithResponse call
+func ParseSearchCollectionRequestsResponse(rsp *http.Response) (*SearchCollectionRequestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchCollectionRequestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CollectionRequestListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListExecutionsResponse parses an HTTP response from a ListExecutionsWithResponse call
 func ParseListExecutionsResponse(rsp *http.Response) (*ListExecutionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -37930,6 +42104,53 @@ func ParseListExecutionsResponse(rsp *http.Response) (*ListExecutionsResponse, e
 	}
 
 	response := &ListExecutionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowExecutionActivityListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchExecutionsResponse parses an HTTP response from a SearchExecutionsWithResponse call
+func ParseSearchExecutionsResponse(rsp *http.Response) (*SearchExecutionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchExecutionsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -38279,6 +42500,53 @@ func ParseBulkMoveFlowsResponse(rsp *http.Response) (*BulkMoveFlowsResponse, err
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchFlowFoldersResponse parses an HTTP response from a SearchFlowFoldersWithResponse call
+func ParseSearchFlowFoldersResponse(rsp *http.Response) (*SearchFlowFoldersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchFlowFoldersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowFolderListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
@@ -38735,6 +43003,53 @@ func ParseGetNodeExecutionHistoryResponse(rsp *http.Response) (*GetNodeExecution
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchNodeExecutionHistoryResponse parses an HTTP response from a SearchNodeExecutionHistoryWithResponse call
+func ParseSearchNodeExecutionHistoryResponse(rsp *http.Response) (*SearchNodeExecutionHistoryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchNodeExecutionHistoryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NodeExecutionHistoryResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -39273,6 +43588,53 @@ func ParseListFlowVersionsResponse(rsp *http.Response) (*ListFlowVersionsRespons
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchFlowVersionsResponse parses an HTTP response from a SearchFlowVersionsWithResponse call
+func ParseSearchFlowVersionsResponse(rsp *http.Response) (*SearchFlowVersionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchFlowVersionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FlowVersionListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -40123,6 +44485,53 @@ func ParsePreviewScheduleTagsResponse(rsp *http.Response) (*PreviewScheduleTagsR
 	return response, nil
 }
 
+// ParseSearchFlowSchedulesResponse parses an HTTP response from a SearchFlowSchedulesWithResponse call
+func ParseSearchFlowSchedulesResponse(rsp *http.Response) (*SearchFlowSchedulesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchFlowSchedulesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MonitorListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteFlowScheduleResponse parses an HTTP response from a DeleteFlowScheduleWithResponse call
 func ParseDeleteFlowScheduleResponse(rsp *http.Response) (*DeleteFlowScheduleResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -40483,6 +44892,53 @@ func ParseListFlowScheduleRunsResponse(rsp *http.Response) (*ListFlowScheduleRun
 	return response, nil
 }
 
+// ParseSearchFlowScheduleRunsResponse parses an HTTP response from a SearchFlowScheduleRunsWithResponse call
+func ParseSearchFlowScheduleRunsResponse(rsp *http.Response) (*SearchFlowScheduleRunsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchFlowScheduleRunsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MonitorRunListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetFlowScheduleRunResponse parses an HTTP response from a GetFlowScheduleRunWithResponse call
 func ParseGetFlowScheduleRunResponse(rsp *http.Response) (*GetFlowScheduleRunResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -40717,6 +45173,46 @@ func ParseCreateEnvironmentResponse(rsp *http.Response) (*CreateEnvironmentRespo
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchEnvironmentsResponse parses an HTTP response from a SearchEnvironmentsWithResponse call
+func ParseSearchEnvironmentsResponse(rsp *http.Response) (*SearchEnvironmentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchEnvironmentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EnvironmentSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
 
 	}
 
@@ -41871,6 +46367,53 @@ func ParseCreateSpecResponse(rsp *http.Response) (*CreateSpecResponse, error) {
 	return response, nil
 }
 
+// ParseSearchSpecsResponse parses an HTTP response from a SearchSpecsWithResponse call
+func ParseSearchSpecsResponse(rsp *http.Response) (*SearchSpecsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchSpecsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetSpecResponse parses an HTTP response from a GetSpecWithResponse call
 func ParseGetSpecResponse(rsp *http.Response) (*GetSpecResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -42142,6 +46685,60 @@ func ParsePushSpecVersionResponse(rsp *http.Response) (*PushSpecVersionResponse,
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchSpecVersionsResponse parses an HTTP response from a SearchSpecVersionsWithResponse call
+func ParseSearchSpecVersionsResponse(rsp *http.Response) (*SearchSpecVersionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchSpecVersionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecVersionListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

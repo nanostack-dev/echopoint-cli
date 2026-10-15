@@ -14,16 +14,10 @@ func completeSpecSlugs(state *AppState) completionFunc {
 			return noCompletion()
 		}
 		return completeFromAPI(state, cmd, toComplete,
-			func(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-				resp, err := client.ListSpecsWithResponse(
-					ctx,
-					&api.ListSpecsParams{Limit: api.LimitParameter(specPageSize)},
-				)
-				if err != nil || resp.JSON200 == nil {
-					return nil
-				}
-				candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-				for _, spec := range resp.JSON200.Items {
+			func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+				specs := walkSome(ctx, completionMaxPages, searchSpecs(state))
+				candidates := make([]completionCandidate, 0, len(specs))
+				for _, spec := range specs {
 					candidates = append(candidates, completionCandidate{
 						spec.Slug, "Live " + spec.Live.Version + " · " + oneLine(spec.Title),
 					})
@@ -43,15 +37,10 @@ func completeSpecVersions(state *AppState) completionFunc {
 			return noCompletion()
 		}
 		return completeFromAPI(state, cmd, toComplete,
-			func(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-				resp, err := client.ListSpecVersionsWithResponse(ctx, args[0], &api.ListSpecVersionsParams{
-					Limit: api.LimitParameter(specPageSize),
-				})
-				if err != nil || resp.JSON200 == nil {
-					return nil
-				}
-				candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-				for i, item := range resp.JSON200.Items {
+			func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+				versions := walkSome(ctx, completionMaxPages, searchSpecVersions(state, args[0]))
+				candidates := make([]completionCandidate, 0, len(versions))
+				for i, item := range versions {
 					description := string(item.Bump) + " · " + formatWhen(item.CreatedAt)
 					if i == 0 {
 						description = "Live · " + description
