@@ -6,10 +6,10 @@
 | Organization | Tenant scope selected for API operations; `--org` is the visible flag. |
 | Environment | Named overlay of organization variables. |
 | Flow | Graph identified by an ID and free-text name; it has no slug. |
-| Monitor | Recurring execution configuration selecting flows by tags or explicit IDs. |
-| Probe | A monitor of type `probe` producing one health result from all selected flows and their executed assertions, with safe status-page publication policy. |
+| Monitor | Recurring execution configuration selecting flows by tags or explicit IDs, on a cron or interval cadence. It is the API's flow schedule: the `/monitors` paths keep the `FlowSchedule` operation names. |
+| Health policy | The `health_policy` of a monitor (`confirmation_runs`, `recovery_runs`, `freshness_seconds`). A monitor with one runs on an interval of 60 to 86400 seconds, measures health from its scheduled runs and can be bound to a status page. Diagnostic runs never confirm health. A probe was this concept under another name and no longer exists. |
 | Flow role | `standalone` (default) or `module`; set with `flow role <flow-id> --set`. |
-| Module flow | Flow with role `module`: a reusable building block that other flows call through a module node. It can be launched directly to test it; schedules skip it when their tags match unless the schedule sets `ignore_modules` to false. `flow run --tag` runs it unless `--ignore-modules` is passed. |
+| Module flow | Flow with role `module`: a reusable building block that other flows call through a module node. It can be launched directly to test it; monitors skip it when their tags match unless the monitor sets `ignore_modules` to false. `flow run --tag` runs it unless `--ignore-modules` is passed. |
 | Collection | API request grouping identified by an ID and name. |
 | Spec | OpenAPI document stored in Echopoint, addressed by a unique slug with a separate title. |
 | Cloud | Echopoint operates the execution runner. |

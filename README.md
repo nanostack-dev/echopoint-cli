@@ -2,7 +2,7 @@
 
 Contributor and agent guidance: [documentation index](docs/README.md) and [AGENTS.md](AGENTS.md). This repository works as a standalone checkout.
 
-Terminal-first tooling for EchoPoint. Manage flows and their executions, probes, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
+Terminal-first tooling for EchoPoint. Manage flows and their executions, monitors, OpenAPI specs, collections, status pages, and the variables of an organization from a fast CLI, and run flows from your terminal or CI.
 
 ## Installation
 
@@ -75,7 +75,7 @@ latest release.
 - Organize flows into folders, and bulk-move them by id, search, or tag
 - Keep [OpenAPI specs](docs/specs.md) in EchoPoint: create, push, pull, check, lint, diff, and edit them by slug
 - Configure and publish [public status pages](docs/status-pages.md), including anonymous verification
-- Configure [probes](docs/probes.md), inspect scheduled evidence and run private diagnostics
+- Run flows on a schedule with [monitors](docs/monitors.md), measure their health with a health policy, and run diagnostics
 - Read [execution analytics](docs/technical/analytics.md): runs, failures, run time and HTTP calls per organization, flow and endpoint
 - Manage collections with OpenAPI import support
 - Variables for an organization, its environments, and each flow
@@ -209,11 +209,11 @@ modified or removed.
 ## Commands
 
 Nouns are singular and the plural stays as an alias: `flow` (`flows`), `collection`
-(`collections`), `probe` (`probes`), `status-page` (`status-pages`). `echopoint --help` groups the commands:
+(`collections`), `monitor` (`monitors`), `status-page` (`status-pages`). `echopoint --help` groups the commands:
 
 | Group | Commands |
 |-------|----------|
-| Resources | `analytics`, `flow`, `probe`, `spec`, `collection`, `status-page`, `org` |
+| Resources | `analytics`, `flow`, `monitor`, `spec`, `collection`, `status-page`, `org` |
 | Account and setup | `auth`, `profile`, `config` |
 | Tools | `mcp`, `completion`, `update`, `version` |
 
@@ -225,17 +225,17 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
   `flow execution view`, `flow env view`, `org env view`, `spec view` and `config view` show one thing; `get` and
   `show` still work as aliases of `view`. `list` shows many.
 - **A file is always `-f/--file`.** `flow create`, `flow update`, `collection import`,
-  `org env import`, `flow env set`, `probe create|update|validate`, `status-page save`, `status-page validate` and the
+  `org env import`, `flow env set`, `monitor create|update|estimate`, `status-page save`, `status-page validate` and the
   `spec` commands take it that way; a file typed as an argument fails with
   `pass the file with -f`. `-f -` reads stdin where the command says so
-  (`status-page save|validate`, `probe create|update|validate`).
+  (`status-page save|validate`, `monitor create|update|estimate`).
 - **Specs are named by their slug; flows by their id.** A spec's `<slug>` is unique and
   its title is free text. A flow is `<flow-id>`, the id `flow list` shows; anything else
   fails before any request.
 - **Deleting a whole resource asks; editing part of one does not.** `flow delete`,
   `collection delete`, `flow folder delete`, `flow env delete`, `org env delete`,
   `org env environments delete`, `profile delete`, `config reset` and
-  `probe delete` and `status-page unpublish` ask `Delete flow <id>? [y/N]` on stderr when stdin and
+  `monitor delete` and `status-page unpublish` ask `Delete flow <id>? [y/N]` on stderr when stdin and
   stdout are terminals; anything but `y` or `yes` cancels with exit code 2. Without a
   terminal they refuse (`pass --yes to delete flow <id> without a prompt`) unless
   `-y/--yes` is given. `env unset`, removing a node, edge, assertion or output, and the
@@ -472,25 +472,31 @@ echopoint collection delete <id>
 echopoint collection import -f ./openapi.json --name "My API"
 ```
 
-### Probes
+### Monitors
 
 ```bash
-echopoint probe list -o json
-echopoint probe estimate --tag production --interval 60 -o json
-echopoint probe create --name API --flow-id <flow-id> --environment production -o json
-echopoint probe validate -f probe.json
-echopoint probe create -f probe.json --environment production -o json
-echopoint probe view <probe-id> -o json
-echopoint probe run <probe-id> --expected-revision 1 -o json
-echopoint probe history <probe-id> -o json
-echopoint probe pause <probe-id> --expected-revision 1
-echopoint probe resume <probe-id> --expected-revision 2
-echopoint probe delete <probe-id> --expected-revision 3 --yes
+echopoint monitor list --enabled --has-health-policy -o json
+echopoint monitor estimate -f estimate.yaml
+echopoint monitor create -f monitor.yaml
+echopoint monitor view <monitor-id>
+echopoint monitor update <monitor-id> -f monitor.yaml
+echopoint monitor run <monitor-id>
+echopoint monitor runs <monitor-id>
+echopoint monitor run-view <monitor-id> <run-id>
+echopoint monitor pause <monitor-id>
+echopoint monitor resume <monitor-id>
+echopoint monitor delete <monitor-id> --yes
 ```
 
-Each probe produces one health result from its selected flows and executed
-assertions. See [docs/probes.md](docs/probes.md) for complete noninteractive setup,
-direct status-page binding and optional public service messages.
+A monitor runs the flows it selects on a cron or interval cadence. With a health policy
+it also measures health, and a status page binds it with `monitor_bindings`. See
+[docs/monitors.md](docs/monitors.md).
+
+**Breaking change.** The `probe` commands are removed: a probe is now a monitor with a
+`health_policy` (API 11.0.0), and status pages bind monitors with
+`monitor_bindings` instead of `probe_bindings` and `binding`.
+`status-page binding-options` is removed. Use this CLI only with an API that serves
+11.0.0.
 
 ### Status Pages
 

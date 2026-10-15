@@ -21,8 +21,7 @@ func TestStatusPageToolsDispatchWithTenantScope(t *testing.T) {
 	}
 	for _, tc := range []struct{ name, method, path, args string }{
 		{"get_status_page", "GET", "/status-pages/current", `{}`},
-		{"save_status_page", "PUT", "/status-pages/current", `{"expected_draft_version":7,"slug":"example","config":{"theme":"orbit","services":[{"id":"api","messages":{"operational":"Checkout is available","outage":"Checkout is unavailable","unknown":"We are checking checkout"}}]},"probe_bindings":[{"service_id":"api","probe_id":"probe"}]}`},
-		{"get_status_page_binding_options", "GET", "/status-pages/binding-options", `{"schedule_id":"schedule","flow_id":"flow"}`},
+		{"save_status_page", "PUT", "/status-pages/current", `{"expected_draft_version":7,"slug":"example","config":{"theme":"orbit","services":[{"id":"api","messages":{"operational":"Checkout is available","outage":"Checkout is unavailable","unknown":"We are checking checkout"}}]},"monitor_bindings":[{"service_id":"api","monitor_id":"8fc078c1-d8e6-4059-9e6f-b69fb52b7b17"}]}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			called := false
@@ -43,14 +42,10 @@ func TestStatusPageToolsDispatchWithTenantScope(t *testing.T) {
 					if input["expected_draft_version"] != float64(7) || input["slug"] != "example" {
 						t.Errorf("body = %s", data)
 					}
-					bindings, ok := input["probe_bindings"].([]any)
+					bindings, ok := input["monitor_bindings"].([]any)
 					if !ok || len(bindings) != 1 {
-						t.Errorf("probe mapping dropped: %s", data)
+						t.Errorf("monitor bindings dropped: %s", data)
 					}
-				}
-				if tc.name == "get_status_page_binding_options" &&
-					(r.URL.Query().Get("flow_id") != "flow" || r.URL.Query().Get("schedule_id") != "schedule") {
-					t.Error("missing query")
 				}
 				w.Header().Set("Content-Type", "application/json")
 				io.WriteString(w, `{"ok":true}`)

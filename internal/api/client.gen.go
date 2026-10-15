@@ -454,24 +454,6 @@ func (e FlowRunStatus) Valid() bool {
 	}
 }
 
-// Defines values for FlowScheduleType.
-const (
-	FlowScheduleTypeProbe    FlowScheduleType = "probe"
-	FlowScheduleTypeStandard FlowScheduleType = "standard"
-)
-
-// Valid indicates whether the value is a known member of the FlowScheduleType enum.
-func (e FlowScheduleType) Valid() bool {
-	switch e {
-	case FlowScheduleTypeProbe:
-		return true
-	case FlowScheduleTypeStandard:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for HttpMethod.
 const (
 	DELETE  HttpMethod = "DELETE"
@@ -580,6 +562,48 @@ const (
 func (e ModuleFlowNodeType) Valid() bool {
 	switch e {
 	case ModuleFlowNodeTypeModule:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MonitorHealthState.
+const (
+	MonitorHealthStateNotMonitored MonitorHealthState = "not_monitored"
+	MonitorHealthStateOperational  MonitorHealthState = "operational"
+	MonitorHealthStateOutage       MonitorHealthState = "outage"
+	MonitorHealthStateUnknown      MonitorHealthState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the MonitorHealthState enum.
+func (e MonitorHealthState) Valid() bool {
+	switch e {
+	case MonitorHealthStateNotMonitored:
+		return true
+	case MonitorHealthStateOperational:
+		return true
+	case MonitorHealthStateOutage:
+		return true
+	case MonitorHealthStateUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MonitorRunOrigin.
+const (
+	MonitorRunOriginDiagnostic MonitorRunOrigin = "diagnostic"
+	MonitorRunOriginScheduled  MonitorRunOrigin = "scheduled"
+)
+
+// Valid indicates whether the value is a known member of the MonitorRunOrigin enum.
+func (e MonitorRunOrigin) Valid() bool {
+	switch e {
+	case MonitorRunOriginDiagnostic:
+		return true
+	case MonitorRunOriginScheduled:
 		return true
 	default:
 		return false
@@ -892,108 +916,6 @@ const (
 func (e PollFlowNodeType) Valid() bool {
 	switch e {
 	case PollFlowNodeTypePoll:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ProbeConfigRunnerType.
-const (
-	ProbeRunnerCloud      ProbeConfigRunnerType = "cloud"
-	ProbeRunnerSelfHosted ProbeConfigRunnerType = "self_hosted"
-)
-
-// Valid indicates whether the value is a known member of the ProbeConfigRunnerType enum.
-func (e ProbeConfigRunnerType) Valid() bool {
-	switch e {
-	case ProbeRunnerCloud:
-		return true
-	case ProbeRunnerSelfHosted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ProbeEstimateRequestRunnerType.
-const (
-	ProbeEstimateCloud      ProbeEstimateRequestRunnerType = "cloud"
-	ProbeEstimateSelfHosted ProbeEstimateRequestRunnerType = "self_hosted"
-)
-
-// Valid indicates whether the value is a known member of the ProbeEstimateRequestRunnerType enum.
-func (e ProbeEstimateRequestRunnerType) Valid() bool {
-	switch e {
-	case ProbeEstimateCloud:
-		return true
-	case ProbeEstimateSelfHosted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ProbeHealthState.
-const (
-	ProbeNotMonitored ProbeHealthState = "not_monitored"
-	ProbeOperational  ProbeHealthState = "operational"
-	ProbeOutage       ProbeHealthState = "outage"
-	ProbeUnknown      ProbeHealthState = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the ProbeHealthState enum.
-func (e ProbeHealthState) Valid() bool {
-	switch e {
-	case ProbeNotMonitored:
-		return true
-	case ProbeOperational:
-		return true
-	case ProbeOutage:
-		return true
-	case ProbeUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ProbeRunOrigin.
-const (
-	ProbeDiagnostic ProbeRunOrigin = "diagnostic"
-	ProbeScheduled  ProbeRunOrigin = "scheduled"
-)
-
-// Valid indicates whether the value is a known member of the ProbeRunOrigin enum.
-func (e ProbeRunOrigin) Valid() bool {
-	switch e {
-	case ProbeDiagnostic:
-		return true
-	case ProbeScheduled:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ProbeRunStatus.
-const (
-	ProbeCompleted   ProbeRunStatus = "completed"
-	ProbePending     ProbeRunStatus = "pending"
-	ProbeRunning     ProbeRunStatus = "running"
-	ProbeUnavailable ProbeRunStatus = "unavailable"
-)
-
-// Valid indicates whether the value is a known member of the ProbeRunStatus enum.
-func (e ProbeRunStatus) Valid() bool {
-	switch e {
-	case ProbeCompleted:
-		return true
-	case ProbePending:
-		return true
-	case ProbeRunning:
-		return true
-	case ProbeUnavailable:
 		return true
 	default:
 		return false
@@ -2602,38 +2524,6 @@ type CreateFlowRequest struct {
 	Version *string `json:"version,omitempty"`
 }
 
-// CreateFlowScheduleRequest Create a flow schedule. The schedule targets the suite of flows matching `tags`
-// (with `tag_match_mode`), resolved at each due tick.
-type CreateFlowScheduleRequest struct {
-	// CronExpression Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
-	CronExpression string  `json:"cron_expression"`
-	Description    *string `json:"description,omitempty"`
-	Enabled        *bool   `json:"enabled,omitempty"`
-	EnvironmentKey *string `json:"environment_key,omitempty"`
-
-	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
-	IgnoreModules *bool  `json:"ignore_modules,omitempty"`
-	Name          string `json:"name"`
-
-	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
-	// ad-hoc addresses. Each must be a valid email; an empty/omitted set
-	// disables alerting.
-	RecipientEmails *[]string `json:"recipient_emails,omitempty"`
-
-	// RunnerType Execution backend used to run a flow.
-	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
-	RunnerType RunnerType `json:"runner_type"`
-
-	// StartsAt Optional UTC anchor; defaults to creation time when omitted.
-	StartsAt *time.Time `json:"starts_at,omitempty"`
-
-	// TagMatchMode Whether any or all of the provided tags must match.
-	TagMatchMode   *TagMatchMode `json:"tag_match_mode,omitempty"`
-	Tags           []string      `json:"tags"`
-	TimeoutSeconds *int32        `json:"timeout_seconds,omitempty"`
-}
-
 // CreateFolderRequest defines model for CreateFolderRequest.
 type CreateFolderRequest struct {
 	// Description Optional folder description
@@ -2652,15 +2542,46 @@ type CreateFolderRequest struct {
 	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
+// CreateMonitorRequest Create a monitor. Choose either flow_ids or tags. Use cron_expression for a monitor without a health policy (at most every 15 minutes) or interval_seconds (60-86400) with a health policy.
+type CreateMonitorRequest struct {
+	// CronExpression Standard 5-field cron expression; rejected if it would run more often than every 15 minutes. Required without a health policy.
+	CronExpression *string               `json:"cron_expression,omitempty"`
+	Description    *string               `json:"description,omitempty"`
+	Enabled        *bool                 `json:"enabled,omitempty"`
+	EnvironmentKey *string               `json:"environment_key,omitempty"`
+	FlowIds        *[]openapi_types.UUID `json:"flow_ids,omitempty"`
+
+	// HealthPolicy Turns a monitor into a health measurement. Requires interval_seconds; freshness_seconds must cover interval_seconds + timeout_seconds.
+	HealthPolicy *MonitorHealthPolicy `json:"health_policy,omitempty"`
+
+	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+	IgnoreModules *bool `json:"ignore_modules,omitempty"`
+
+	// IntervalSeconds Interval cadence in seconds; only with a health policy.
+	IntervalSeconds *int   `json:"interval_seconds,omitempty"`
+	Name            string `json:"name"`
+
+	// RecipientEmails Email addresses alerted when a scheduled run fails. Each must be a valid email; an empty/omitted set disables alerting.
+	RecipientEmails *[]string `json:"recipient_emails,omitempty"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
+	RunnerType RunnerType `json:"runner_type"`
+
+	// StartsAt Optional UTC anchor; defaults to creation time when omitted.
+	StartsAt *time.Time `json:"starts_at,omitempty"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode   *TagMatchMode `json:"tag_match_mode,omitempty"`
+	Tags           *[]string     `json:"tags,omitempty"`
+	TimeoutSeconds *int32        `json:"timeout_seconds,omitempty"`
+}
+
 // CreateOrganizationInvitationRequest defines model for CreateOrganizationInvitationRequest.
 type CreateOrganizationInvitationRequest struct {
 	// Email The email address to invite. The role is always admin.
 	Email openapi_types.Email `json:"email"`
-}
-
-// CreateProbeRequest defines model for CreateProbeRequest.
-type CreateProbeRequest struct {
-	Config ProbeConfig `json:"config"`
 }
 
 // CreateRequestRequest defines model for CreateRequestRequest.
@@ -3548,119 +3469,6 @@ type FlowRole string
 // FlowRunStatus Outcome of a flow's most recent terminal execution, folded to the states the Flow Library list renders: passed (completed), failed (failed), or none (no terminal run yet). In-flight and cancelled runs are ignored: they never erase the last real pass/fail badge.
 type FlowRunStatus string
 
-// FlowSchedule A recurring schedule that launches the tag-selected suite of flows resolved at each due tick.
-type FlowSchedule struct {
-	CreatedAt time.Time `json:"created_at"`
-	CreatedBy string    `json:"created_by"`
-
-	// CronExpression Standard 5-field cron expression (minute hour day-of-month month day-of-week)
-	// evaluated in `timezone`.
-	CronExpression string               `json:"cron_expression"`
-	Description    *string              `json:"description,omitempty"`
-	Enabled        bool                 `json:"enabled"`
-	EnvironmentKey string               `json:"environment_key"`
-	FlowIds        []openapi_types.UUID `json:"flow_ids"`
-	Id             openapi_types.UUID   `json:"id"`
-
-	// IgnoreModules Whether the tag selector skips flows whose role is `module`.
-	IgnoreModules bool `json:"ignore_modules"`
-
-	// IntervalSeconds Probe cadence; zero for cron-based standard monitors.
-	IntervalSeconds int    `json:"interval_seconds"`
-	Name            string `json:"name"`
-
-	// NextRunAt Next due time in UTC; null when paused with no future occurrence computed.
-	NextRunAt      *time.Time `json:"next_run_at,omitempty"`
-	OrganizationId string     `json:"organization_id"`
-	ProbeId        *string    `json:"probe_id,omitempty"`
-
-	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
-	// ad-hoc addresses; an empty set disables alerting for this schedule.
-	RecipientEmails []string `json:"recipient_emails"`
-
-	// RunnerType Execution backend used to run a flow.
-	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
-	RunnerType RunnerType `json:"runner_type"`
-
-	// StartsAt UTC anchor for the recurrence.
-	StartsAt time.Time `json:"starts_at"`
-
-	// TagMatchMode Whether any or all of the provided tags must match.
-	TagMatchMode TagMatchMode `json:"tag_match_mode"`
-
-	// Tags Tag selector resolved to matching flows at each due tick.
-	Tags []string `json:"tags"`
-
-	// TimeoutSeconds Per-run-item timeout in seconds.
-	TimeoutSeconds int32 `json:"timeout_seconds"`
-
-	// Timezone IANA timezone name stored for display and anchoring; due times remain UTC.
-	Timezone  string           `json:"timezone"`
-	Type      FlowScheduleType `json:"type"`
-	UpdatedAt time.Time        `json:"updated_at"`
-}
-
-// FlowScheduleType defines model for FlowSchedule.Type.
-type FlowScheduleType string
-
-// FlowScheduleListResponse defines model for FlowScheduleListResponse.
-type FlowScheduleListResponse struct {
-	// Count The number of items returned in this response.
-	Count int            `json:"count"`
-	Items []FlowSchedule `json:"items"`
-
-	// Total Total number of matching items.
-	Total int64 `json:"total"`
-}
-
-// FlowScheduleRun One fire of a schedule (suite run). Records fire-time facts; `status`,
-// `started_at`, and `completed_at` are derived from the executions launched for
-// this run (linked via the execution's `schedule_run_id`).
-type FlowScheduleRun struct {
-	// CompletedAt Derived latest completion once the run is terminal.
-	CompletedAt *time.Time         `json:"completed_at,omitempty"`
-	CreatedAt   time.Time          `json:"created_at"`
-	DueAt       time.Time          `json:"due_at"`
-	Id          openapi_types.UUID `json:"id"`
-
-	// LaunchFailures Flows that could not be launched when the run fired.
-	LaunchFailures []ScheduleLaunchFailure `json:"launch_failures"`
-
-	// MatchedFlowCount Number of flows the tag selector matched when the run fired.
-	MatchedFlowCount int32              `json:"matched_flow_count"`
-	OrganizationId   string             `json:"organization_id"`
-	ScheduleId       openapi_types.UUID `json:"schedule_id"`
-
-	// StartedAt Derived earliest start of the run's executions.
-	StartedAt *time.Time `json:"started_at,omitempty"`
-
-	// Status Aggregate status of a schedule run, derived from the executions launched for it
-	// plus any recorded launch failures.
-	Status    ScheduleOccurrenceStatus `json:"status"`
-	UpdatedAt time.Time                `json:"updated_at"`
-}
-
-// FlowScheduleRunDetail A schedule run together with the executions it launched.
-type FlowScheduleRunDetail struct {
-	Executions []ScheduleRunExecution `json:"executions"`
-
-	// Run One fire of a schedule (suite run). Records fire-time facts; `status`,
-	// `started_at`, and `completed_at` are derived from the executions launched for
-	// this run (linked via the execution's `schedule_run_id`).
-	Run FlowScheduleRun `json:"run"`
-}
-
-// FlowScheduleRunListResponse defines model for FlowScheduleRunListResponse.
-type FlowScheduleRunListResponse struct {
-	// Count The number of items returned in this response.
-	Count int               `json:"count"`
-	Items []FlowScheduleRun `json:"items"`
-
-	// Total Total number of matching items.
-	Total int64 `json:"total"`
-}
-
 // FlowSearchItem Lightweight flow returned by flow search. flow_definition is present only when requested via include_definition, keeping search payloads small.
 type FlowSearchItem struct {
 	CreatedAt      time.Time       `json:"created_at"`
@@ -3966,15 +3774,17 @@ type LicenseUsage struct {
 	// Cloud jobs, which wait in the queue.
 	ActiveCloudJobs LicenseGauge `json:"active_cloud_jobs"`
 
-	// ExecutionsLast24Hours Executions launched in the 24 hours before `generated_at`, every
-	// trigger and runner counted. A launch is refused once `used` reaches
+	// CloudExecutionsLast24Hours Cloud executions launched in the 24 hours before `generated_at`, every
+	// trigger counted. Self-hosted and ephemeral runs never count; execution
+	// analytics show them. A Cloud launch is refused once `used` reaches
 	// `limit`. The window rolls: a launch stops counting 24 hours after it
 	// started.
-	ExecutionsLast24Hours RollingExecutionUsage `json:"executions_last_24_hours"`
+	CloudExecutionsLast24Hours RollingExecutionUsage `json:"cloud_executions_last_24_hours"`
 
-	// ExecutionsThisMonth Executions launched since the first of the month, UTC. Reported to the
-	// license for tracking only: no launch is refused on it.
-	ExecutionsThisMonth MonthlyExecutionUsage `json:"executions_this_month"`
+	// CloudExecutionsThisMonth Cloud executions launched since the first of the month, UTC.
+	// Self-hosted and ephemeral runs never count. Reported to the license for
+	// tracking only: no launch is refused on it.
+	CloudExecutionsThisMonth MonthlyExecutionUsage `json:"cloud_executions_this_month"`
 
 	// Flows A count the license caps. A create past `limit` is refused, except
 	// Cloud jobs, which wait in the queue.
@@ -4185,8 +3995,239 @@ type ModuleNodeData struct {
 	OutputBindings *map[string]string `json:"output_bindings,omitempty"`
 }
 
-// MonthlyExecutionUsage Executions launched since the first of the month, UTC. Reported to the
-// license for tracking only: no launch is refused on it.
+// Monitor Runs the selected flows on a cadence. With a health policy it also measures health, which a status page can publish.
+type Monitor struct {
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy string    `json:"created_by"`
+
+	// CronExpression Standard 5-field cron expression evaluated in `timezone`; null for a monitor that runs on an interval.
+	CronExpression *string `json:"cron_expression,omitempty"`
+	Description    *string `json:"description,omitempty"`
+	Enabled        bool    `json:"enabled"`
+	EnvironmentKey string  `json:"environment_key"`
+
+	// FlowIds Explicit flows; empty when a tag selector is used.
+	FlowIds []openapi_types.UUID `json:"flow_ids"`
+	Health  *MonitorHealth       `json:"health,omitempty"`
+
+	// HealthPolicy Turns a monitor into a health measurement. Requires interval_seconds; freshness_seconds must cover interval_seconds + timeout_seconds.
+	HealthPolicy *MonitorHealthPolicy `json:"health_policy,omitempty"`
+	Id           openapi_types.UUID   `json:"id"`
+
+	// IgnoreModules Whether the tag selector skips flows whose role is `module`.
+	IgnoreModules bool `json:"ignore_modules"`
+
+	// IntervalSeconds Interval cadence of a monitor with a health policy; 0 for a cron monitor.
+	IntervalSeconds int    `json:"interval_seconds"`
+	Name            string `json:"name"`
+
+	// NextRunAt Next due time in UTC; null when paused.
+	NextRunAt      *time.Time `json:"next_run_at,omitempty"`
+	OrganizationId string     `json:"organization_id"`
+
+	// RecipientEmails Email addresses alerted when a scheduled run fails; empty disables alerting.
+	RecipientEmails []string `json:"recipient_emails"`
+
+	// Revision Bumps on every configuration, enable or pause change. Status-page publication approves one revision.
+	Revision int64 `json:"revision"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
+	RunnerType RunnerType `json:"runner_type"`
+
+	// StartsAt UTC anchor for the recurrence.
+	StartsAt time.Time `json:"starts_at"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode TagMatchMode `json:"tag_match_mode"`
+
+	// Tags Tag selector resolved to matching flows at each occurrence; empty when flow_ids are used.
+	Tags []string `json:"tags"`
+
+	// TimeoutSeconds Per-run-item timeout in seconds.
+	TimeoutSeconds int32 `json:"timeout_seconds"`
+
+	// Timezone IANA timezone name stored for display and anchoring; due times remain UTC.
+	Timezone  string    `json:"timezone"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// MonitorCloudBudget Cloud executions per day planned by the organization's enabled Cloud monitors against the license limit. Self-hosted and paused monitors never count.
+type MonitorCloudBudget struct {
+	DailyCloudExecutionLimit int64     `json:"daily_cloud_execution_limit"`
+	GeneratedAt              time.Time `json:"generated_at"`
+
+	// Monitors Enabled Cloud monitors, largest plan first.
+	Monitors                     []MonitorCloudPlan `json:"monitors"`
+	OverLimit                    bool               `json:"over_limit"`
+	PlannedCloudExecutionsPerDay int64              `json:"planned_cloud_executions_per_day"`
+}
+
+// MonitorCloudPlan defines model for MonitorCloudPlan.
+type MonitorCloudPlan struct {
+	ExecutionsPerDay int64              `json:"executions_per_day"`
+	MonitorId        openapi_types.UUID `json:"monitor_id"`
+	Name             string             `json:"name"`
+}
+
+// MonitorEstimate defines model for MonitorEstimate.
+type MonitorEstimate struct {
+	// DailyCloudExecutionLimit The organization's licensed Cloud executions per rolling 24 hours, shared by every Cloud launch. Present only for a Cloud selection.
+	DailyCloudExecutionLimit *int64   `json:"daily_cloud_execution_limit,omitempty"`
+	EstimateNotes            []string `json:"estimate_notes"`
+	ExecutionsPer30Days      int64    `json:"executions_per_30_days"`
+
+	// ExecutionsPerDay The most executions this monitor can launch in one UTC day.
+	ExecutionsPerDay         int64                 `json:"executions_per_day"`
+	ExecutionsPerOccurrence  int64                 `json:"executions_per_occurrence"`
+	ExecutionsRemainingMonth int64                 `json:"executions_remaining_month"`
+	Flows                    []MonitorEstimateFlow `json:"flows"`
+	GeneratedAt              time.Time             `json:"generated_at"`
+	MatchedFlowCount         int                   `json:"matched_flow_count"`
+
+	// OtherCloudExecutionsPerDay Cloud executions per day planned by the organization's other enabled Cloud monitors. Present only for a Cloud selection.
+	OtherCloudExecutionsPerDay *int64 `json:"other_cloud_executions_per_day,omitempty"`
+	RequestsExact              bool   `json:"requests_exact"`
+	RequestsPer30Days          *int64 `json:"requests_per_30_days,omitempty"`
+	RequestsPerDay             *int64 `json:"requests_per_day,omitempty"`
+	RequestsPerOccurrence      *int64 `json:"requests_per_occurrence,omitempty"`
+}
+
+// MonitorEstimateFlow defines model for MonitorEstimateFlow.
+type MonitorEstimateFlow struct {
+	Id                    openapi_types.UUID `json:"id"`
+	Name                  string             `json:"name"`
+	RequestsExact         bool               `json:"requests_exact"`
+	RequestsPerOccurrence *int64             `json:"requests_per_occurrence,omitempty"`
+}
+
+// MonitorEstimateRequest A monitor selection and cadence to forecast. Use cron_expression, or interval_seconds with health_policy true.
+type MonitorEstimateRequest struct {
+	CronExpression *string               `json:"cron_expression,omitempty"`
+	EnvironmentKey *string               `json:"environment_key,omitempty"`
+	FlowIds        *[]openapi_types.UUID `json:"flow_ids,omitempty"`
+
+	// HealthPolicy Whether the monitor will have a health policy (a health monitor over the flows-per-run limit never launches).
+	HealthPolicy    *bool `json:"health_policy,omitempty"`
+	IgnoreModules   *bool `json:"ignore_modules,omitempty"`
+	IntervalSeconds *int  `json:"interval_seconds,omitempty"`
+
+	// MonitorId The monitor being edited; it is left out of other_cloud_executions_per_day.
+	MonitorId *openapi_types.UUID `json:"monitor_id,omitempty"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
+	RunnerType RunnerType `json:"runner_type"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
+	Tags         *[]string     `json:"tags,omitempty"`
+}
+
+// MonitorHealth defines model for MonitorHealth.
+type MonitorHealth struct {
+	ConfirmationCount int                `json:"confirmation_count"`
+	ExpiresAt         *time.Time         `json:"expires_at,omitempty"`
+	ObservedAt        *time.Time         `json:"observed_at,omitempty"`
+	Reason            string             `json:"reason"`
+	State             MonitorHealthState `json:"state"`
+}
+
+// MonitorHealthPolicy Turns a monitor into a health measurement. Requires interval_seconds; freshness_seconds must cover interval_seconds + timeout_seconds.
+type MonitorHealthPolicy struct {
+	// ConfirmationRuns Consecutive scheduled occurrences needed to confirm a new state.
+	ConfirmationRuns int `json:"confirmation_runs"`
+
+	// FreshnessSeconds How long a confirmed state stays valid after its last observation; stale health becomes Unknown.
+	FreshnessSeconds int `json:"freshness_seconds"`
+
+	// RecoveryRuns Consecutive passing occurrences needed to recover from an outage.
+	RecoveryRuns int `json:"recovery_runs"`
+}
+
+// MonitorHealthState defines model for MonitorHealthState.
+type MonitorHealthState string
+
+// MonitorListResponse defines model for MonitorListResponse.
+type MonitorListResponse struct {
+	// Count The number of items returned in this response.
+	Count int       `json:"count"`
+	Items []Monitor `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
+}
+
+// MonitorObservation The health classification of one occurrence of a monitor with a health policy.
+type MonitorObservation struct {
+	Reason string             `json:"reason"`
+	State  MonitorHealthState `json:"state"`
+}
+
+// MonitorRun One occurrence of a monitor. Records fire-time facts; `status`,
+// `started_at`, and `completed_at` are derived from the executions launched for
+// this run (linked via the execution's `schedule_run_id`).
+type MonitorRun struct {
+	// CompletedAt Derived latest completion once the run is terminal.
+	CompletedAt *time.Time         `json:"completed_at,omitempty"`
+	CreatedAt   time.Time          `json:"created_at"`
+	DueAt       time.Time          `json:"due_at"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// LaunchFailures Flows that could not be launched when the run fired.
+	LaunchFailures []ScheduleLaunchFailure `json:"launch_failures"`
+
+	// MatchedFlowCount Number of flows the selection matched when the run fired.
+	MatchedFlowCount int32 `json:"matched_flow_count"`
+
+	// Observation The health classification of one occurrence of a monitor with a health policy.
+	Observation    *MonitorObservation `json:"observation,omitempty"`
+	OrganizationId string              `json:"organization_id"`
+	Origin         MonitorRunOrigin    `json:"origin"`
+
+	// Revision The monitor revision the run fired under.
+	Revision int64 `json:"revision"`
+
+	// ScheduleId The monitor that fired this run.
+	ScheduleId openapi_types.UUID `json:"schedule_id"`
+
+	// StartedAt Derived earliest start of the run's executions.
+	StartedAt *time.Time `json:"started_at,omitempty"`
+
+	// Status Aggregate status of a schedule run, derived from the executions launched for it
+	// plus any recorded launch failures.
+	Status    ScheduleOccurrenceStatus `json:"status"`
+	UpdatedAt time.Time                `json:"updated_at"`
+}
+
+// MonitorRunDetail A monitor run together with the executions it launched.
+type MonitorRunDetail struct {
+	Executions []ScheduleRunExecution `json:"executions"`
+
+	// Run One occurrence of a monitor. Records fire-time facts; `status`,
+	// `started_at`, and `completed_at` are derived from the executions launched for
+	// this run (linked via the execution's `schedule_run_id`).
+	Run MonitorRun `json:"run"`
+}
+
+// MonitorRunListResponse defines model for MonitorRunListResponse.
+type MonitorRunListResponse struct {
+	// Count The number of items returned in this response.
+	Count int          `json:"count"`
+	Items []MonitorRun `json:"items"`
+
+	// Total Total number of matching items.
+	Total int64 `json:"total"`
+}
+
+// MonitorRunOrigin defines model for MonitorRunOrigin.
+type MonitorRunOrigin string
+
+// MonthlyExecutionUsage Cloud executions launched since the first of the month, UTC.
+// Self-hosted and ephemeral runs never count. Reported to the license for
+// tracking only: no launch is refused on it.
 type MonthlyExecutionUsage struct {
 	// Daily Launches per UTC day from `since` through today, oldest first.
 	Daily []int64 `json:"daily"`
@@ -4722,180 +4763,6 @@ type PollNodeData struct {
 	TimeoutMs *int `json:"timeout_ms,omitempty"`
 }
 
-// Probe defines model for Probe.
-type Probe struct {
-	Config     ProbeConfig        `json:"config"`
-	CreatedAt  time.Time          `json:"created_at"`
-	Health     ProbeHealth        `json:"health"`
-	Id         string             `json:"id"`
-	NextRunAt  time.Time          `json:"next_run_at"`
-	Revision   int64              `json:"revision"`
-	ScheduleId openapi_types.UUID `json:"schedule_id"`
-	UpdatedAt  time.Time          `json:"updated_at"`
-}
-
-// ProbeAssertionEvidence defines model for ProbeAssertionEvidence.
-type ProbeAssertionEvidence struct {
-	Error  bool  `json:"error"`
-	Index  int   `json:"index"`
-	Passed *bool `json:"passed,omitempty"`
-}
-
-// ProbeConfig defines model for ProbeConfig.
-type ProbeConfig struct {
-	ConfirmationRuns int    `json:"confirmation_runs"`
-	Enabled          bool   `json:"enabled"`
-	EnvironmentKey   string `json:"environment_key"`
-
-	// FlowIds Explicit flows; mutually exclusive with tags.
-	FlowIds *[]openapi_types.UUID `json:"flow_ids,omitempty"`
-
-	// FreshnessSeconds Must cover interval_seconds + timeout_seconds; stale measurements become Unknown.
-	FreshnessSeconds int                   `json:"freshness_seconds"`
-	IntervalSeconds  int                   `json:"interval_seconds"`
-	Name             string                `json:"name"`
-	RecoveryRuns     int                   `json:"recovery_runs"`
-	RunnerType       ProbeConfigRunnerType `json:"runner_type"`
-
-	// SourceFingerprint Server-owned source signature; caller values are ignored.
-	SourceFingerprint *string `json:"source_fingerprint,omitempty"`
-
-	// TagMatchMode Whether any or all of the provided tags must match.
-	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
-
-	// Tags Tag selector; mutually exclusive with flow_ids.
-	Tags           *[]string `json:"tags,omitempty"`
-	TimeoutSeconds int       `json:"timeout_seconds"`
-}
-
-// ProbeConfigRunnerType defines model for ProbeConfig.RunnerType.
-type ProbeConfigRunnerType string
-
-// ProbeEstimate defines model for ProbeEstimate.
-type ProbeEstimate struct {
-	EstimateNotes            []string            `json:"estimate_notes"`
-	ExecutionsPer30Days      int64               `json:"executions_per_30_days"`
-	ExecutionsPerDay         int64               `json:"executions_per_day"`
-	ExecutionsPerOccurrence  int64               `json:"executions_per_occurrence"`
-	ExecutionsRemainingMonth int64               `json:"executions_remaining_month"`
-	Flows                    []ProbeEstimateFlow `json:"flows"`
-	GeneratedAt              time.Time           `json:"generated_at"`
-	MatchedFlowCount         int                 `json:"matched_flow_count"`
-	RequestsExact            bool                `json:"requests_exact"`
-	RequestsPer30Days        *int64              `json:"requests_per_30_days,omitempty"`
-	RequestsPerDay           *int64              `json:"requests_per_day,omitempty"`
-	RequestsPerOccurrence    *int64              `json:"requests_per_occurrence,omitempty"`
-}
-
-// ProbeEstimateFlow defines model for ProbeEstimateFlow.
-type ProbeEstimateFlow struct {
-	Id                    openapi_types.UUID `json:"id"`
-	Name                  string             `json:"name"`
-	RequestsExact         bool               `json:"requests_exact"`
-	RequestsPerOccurrence *int64             `json:"requests_per_occurrence,omitempty"`
-}
-
-// ProbeEstimateRequest defines model for ProbeEstimateRequest.
-type ProbeEstimateRequest struct {
-	EnvironmentKey  *string                        `json:"environment_key,omitempty"`
-	FlowIds         *[]openapi_types.UUID          `json:"flow_ids,omitempty"`
-	IntervalSeconds int                            `json:"interval_seconds"`
-	RunnerType      ProbeEstimateRequestRunnerType `json:"runner_type"`
-
-	// TagMatchMode Whether any or all of the provided tags must match.
-	TagMatchMode *TagMatchMode `json:"tag_match_mode,omitempty"`
-	Tags         *[]string     `json:"tags,omitempty"`
-}
-
-// ProbeEstimateRequestRunnerType defines model for ProbeEstimateRequest.RunnerType.
-type ProbeEstimateRequestRunnerType string
-
-// ProbeHealth defines model for ProbeHealth.
-type ProbeHealth struct {
-	ConfirmationCount int              `json:"confirmation_count"`
-	ExpiresAt         *time.Time       `json:"expires_at,omitempty"`
-	ObservedAt        *time.Time       `json:"observed_at,omitempty"`
-	Reason            string           `json:"reason"`
-	State             ProbeHealthState `json:"state"`
-}
-
-// ProbeHealthState defines model for ProbeHealthState.
-type ProbeHealthState string
-
-// ProbeListResponse defines model for ProbeListResponse.
-type ProbeListResponse struct {
-	// Count The number of items returned in this response.
-	Count int     `json:"count"`
-	Items []Probe `json:"items"`
-
-	// Total Total number of matching items.
-	Total int64 `json:"total"`
-}
-
-// ProbeObservation defines model for ProbeObservation.
-type ProbeObservation struct {
-	Reason string           `json:"reason"`
-	State  ProbeHealthState `json:"state"`
-}
-
-// ProbeRevisionRequest defines model for ProbeRevisionRequest.
-type ProbeRevisionRequest struct {
-	ExpectedRevision int64 `json:"expected_revision"`
-}
-
-// ProbeRun defines model for ProbeRun.
-type ProbeRun struct {
-	Config          ProbeConfig         `json:"config"`
-	CreatedAt       time.Time           `json:"created_at"`
-	DueAt           time.Time           `json:"due_at"`
-	ExecutionId     *openapi_types.UUID `json:"execution_id,omitempty"`
-	ExecutionStatus *string             `json:"execution_status,omitempty"`
-	Executions      []ProbeRunExecution `json:"executions"`
-	Id              string              `json:"id"`
-	Observation     ProbeObservation    `json:"observation"`
-	ObservedAt      *time.Time          `json:"observed_at,omitempty"`
-	Origin          ProbeRunOrigin      `json:"origin"`
-	ProbeId         string              `json:"probe_id"`
-	Reason          string              `json:"reason"`
-	Revision        int64               `json:"revision"`
-	ScheduleRunId   openapi_types.UUID  `json:"schedule_run_id"`
-	Status          ProbeRunStatus      `json:"status"`
-	Steps           []ProbeStepEvidence `json:"steps"`
-	UpdatedAt       time.Time           `json:"updated_at"`
-}
-
-// ProbeRunOrigin defines model for ProbeRun.Origin.
-type ProbeRunOrigin string
-
-// ProbeRunStatus defines model for ProbeRun.Status.
-type ProbeRunStatus string
-
-// ProbeRunExecution defines model for ProbeRunExecution.
-type ProbeRunExecution struct {
-	ExecutionId openapi_types.UUID `json:"execution_id"`
-	FlowId      openapi_types.UUID `json:"flow_id"`
-	Status      string             `json:"status"`
-}
-
-// ProbeRunListResponse defines model for ProbeRunListResponse.
-type ProbeRunListResponse struct {
-	// Count The number of items returned in this response.
-	Count int        `json:"count"`
-	Items []ProbeRun `json:"items"`
-
-	// Total Total number of matching items.
-	Total int64 `json:"total"`
-}
-
-// ProbeStepEvidence defines model for ProbeStepEvidence.
-type ProbeStepEvidence struct {
-	Assertions []ProbeAssertionEvidence `json:"assertions"`
-	FlowId     openapi_types.UUID       `json:"flow_id"`
-	Label      string                   `json:"label"`
-	NodeId     string                   `json:"node_id"`
-	Status     string                   `json:"status"`
-}
-
 // PublicStatusService defines model for PublicStatusService.
 type PublicStatusService struct {
 	Detail string           `json:"detail"`
@@ -5234,8 +5101,9 @@ type ResourceSearchScope struct {
 // ResourceSearchType Concrete resource type represented by a search result item.
 type ResourceSearchType string
 
-// RollingExecutionUsage Executions launched in the 24 hours before `generated_at`, every
-// trigger and runner counted. A launch is refused once `used` reaches
+// RollingExecutionUsage Cloud executions launched in the 24 hours before `generated_at`, every
+// trigger counted. Self-hosted and ephemeral runs never count; execution
+// analytics show them. A Cloud launch is refused once `used` reaches
 // `limit`. The window rolls: a launch stops counting 24 hours after it
 // started.
 type RollingExecutionUsage struct {
@@ -5457,12 +5325,10 @@ type RunnerType string
 
 // SaveStatusPageRequest defines model for SaveStatusPageRequest.
 type SaveStatusPageRequest struct {
-	Binding *StatusPageBinding `json:"binding,omitempty"`
-
 	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
-	Config               StatusPageConfig          `json:"config"`
-	ExpectedDraftVersion int64                     `json:"expected_draft_version"`
-	ProbeBindings        *[]StatusPageProbeBinding `json:"probe_bindings,omitempty"`
+	Config               StatusPageConfig            `json:"config"`
+	ExpectedDraftVersion int64                       `json:"expected_draft_version"`
+	MonitorBindings      *[]StatusPageMonitorBinding `json:"monitor_bindings,omitempty"`
 
 	// Slug On creation, a 3-48 character name prefix; the server appends a random suffix. On update, send the complete immutable slug returned by save/get.
 	Slug string `json:"slug"`
@@ -5963,37 +5829,6 @@ type SseNodeData struct {
 // StatusCodeExtractorConfig Status code extractor requires no configuration
 type StatusCodeExtractorConfig = map[string]interface{}
 
-// StatusPageBinding defines model for StatusPageBinding.
-type StatusPageBinding struct {
-	Check          StatusPageCheck    `json:"check"`
-	EnvironmentKey string             `json:"environment_key"`
-	FlowId         openapi_types.UUID `json:"flow_id"`
-	ScheduleId     openapi_types.UUID `json:"schedule_id"`
-	ServiceId      string             `json:"service_id"`
-	VersionId      openapi_types.UUID `json:"version_id"`
-}
-
-// StatusPageBindingOptions defines model for StatusPageBindingOptions.
-type StatusPageBindingOptions struct {
-	Checks         []StatusPageCheckOption `json:"checks"`
-	CronExpression string                  `json:"cron_expression"`
-	EnvironmentKey string                  `json:"environment_key"`
-	Timezone       string                  `json:"timezone"`
-	VersionId      openapi_types.UUID      `json:"version_id"`
-}
-
-// StatusPageCheck defines model for StatusPageCheck.
-type StatusPageCheck struct {
-	AssertionIndex int    `json:"assertion_index"`
-	NodeId         string `json:"node_id"`
-}
-
-// StatusPageCheckOption defines model for StatusPageCheckOption.
-type StatusPageCheckOption struct {
-	Check StatusPageCheck `json:"check"`
-	Label string          `json:"label"`
-}
-
 // StatusPageColors defines model for StatusPageColors.
 type StatusPageColors struct {
 	Accent     string `json:"accent"`
@@ -6032,17 +5867,15 @@ type StatusPageConfigVersion int
 
 // StatusPageEditor defines model for StatusPageEditor.
 type StatusPageEditor struct {
-	Binding *StatusPageBinding `json:"binding,omitempty"`
-
 	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
-	Config        StatusPageConfig `json:"config"`
-	DraftVersion  int64            `json:"draft_version"`
-	Id            string           `json:"id"`
-	IntentVersion int64            `json:"intent_version"`
+	Config          StatusPageConfig            `json:"config"`
+	DraftVersion    int64                       `json:"draft_version"`
+	Id              string                      `json:"id"`
+	IntentVersion   int64                       `json:"intent_version"`
+	MonitorBindings *[]StatusPageMonitorBinding `json:"monitor_bindings,omitempty"`
 
 	// OrganizationKey Permanent DNS-safe lowercase hex encoding of the Anchor organization KSUID bytes. Absent for legacy organizations without an Anchor KSUID.
-	OrganizationKey *string                   `json:"organization_key,omitempty"`
-	ProbeBindings   *[]StatusPageProbeBinding `json:"probe_bindings,omitempty"`
+	OrganizationKey *string `json:"organization_key,omitempty"`
 
 	// PublicUrl Authoritative public URL for this environment. Stable organization hostname when configured, otherwise the application status path. Present even while unpublished.
 	PublicUrl             string `json:"public_url"`
@@ -6065,14 +5898,14 @@ type StatusPageHealth struct {
 // StatusPageHealthState defines model for StatusPageHealthState.
 type StatusPageHealthState string
 
+// StatusPageMonitorBinding Publishes the health of a monitor with a health policy on one status-page service.
+type StatusPageMonitorBinding struct {
+	MonitorId openapi_types.UUID `json:"monitor_id"`
+	ServiceId string             `json:"service_id"`
+}
+
 // StatusPagePalette defines model for StatusPagePalette.
 type StatusPagePalette string
-
-// StatusPageProbeBinding defines model for StatusPageProbeBinding.
-type StatusPageProbeBinding struct {
-	ProbeId   string `json:"probe_id"`
-	ServiceId string `json:"service_id"`
-}
 
 // StatusPageRegion defines model for StatusPageRegion.
 type StatusPageRegion struct {
@@ -6207,36 +6040,6 @@ type UpdateFlowRequest struct {
 	Version *string `json:"version,omitempty"`
 }
 
-// UpdateFlowScheduleRequest Replace the mutable configuration of a schedule. The tag selector is resolved to matching
-// flows at each due tick, same as creation.
-type UpdateFlowScheduleRequest struct {
-	// CronExpression Standard 5-field cron expression; rejected if it would run more often than every 15 minutes.
-	CronExpression string  `json:"cron_expression"`
-	Description    *string `json:"description,omitempty"`
-	Enabled        *bool   `json:"enabled,omitempty"`
-	EnvironmentKey *string `json:"environment_key,omitempty"`
-
-	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omit to keep the current value.
-	IgnoreModules *bool  `json:"ignore_modules,omitempty"`
-	Name          string `json:"name"`
-
-	// RecipientEmails Email addresses alerted when a scheduled run fails. May be members or
-	// ad-hoc addresses. Each must be a valid email; an empty/omitted set
-	// disables alerting.
-	RecipientEmails *[]string `json:"recipient_emails,omitempty"`
-
-	// RunnerType Execution backend used to run a flow.
-	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
-	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
-	RunnerType RunnerType `json:"runner_type"`
-	StartsAt   *time.Time `json:"starts_at,omitempty"`
-
-	// TagMatchMode Whether any or all of the provided tags must match.
-	TagMatchMode   *TagMatchMode `json:"tag_match_mode,omitempty"`
-	Tags           []string      `json:"tags"`
-	TimeoutSeconds *int32        `json:"timeout_seconds,omitempty"`
-}
-
 // UpdateFolderRequest defines model for UpdateFolderRequest.
 type UpdateFolderRequest struct {
 	// Description Optional folder description
@@ -6251,10 +6054,38 @@ type UpdateFolderRequest struct {
 	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
-// UpdateProbeRequest defines model for UpdateProbeRequest.
-type UpdateProbeRequest struct {
-	Config           ProbeConfig `json:"config"`
-	ExpectedRevision int64       `json:"expected_revision"`
+// UpdateMonitorRequest Replace the mutable configuration of a monitor. Same rules as creation; omit health_policy to remove it.
+type UpdateMonitorRequest struct {
+	// CronExpression Standard 5-field cron expression; rejected if it would run more often than every 15 minutes. Required without a health policy.
+	CronExpression *string               `json:"cron_expression,omitempty"`
+	Description    *string               `json:"description,omitempty"`
+	Enabled        *bool                 `json:"enabled,omitempty"`
+	EnvironmentKey *string               `json:"environment_key,omitempty"`
+	FlowIds        *[]openapi_types.UUID `json:"flow_ids,omitempty"`
+
+	// HealthPolicy Turns a monitor into a health measurement. Requires interval_seconds; freshness_seconds must cover interval_seconds + timeout_seconds.
+	HealthPolicy *MonitorHealthPolicy `json:"health_policy,omitempty"`
+
+	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omit to keep the current value.
+	IgnoreModules *bool `json:"ignore_modules,omitempty"`
+
+	// IntervalSeconds Interval cadence in seconds; only with a health policy.
+	IntervalSeconds *int   `json:"interval_seconds,omitempty"`
+	Name            string `json:"name"`
+
+	// RecipientEmails Email addresses alerted when a scheduled run fails. Each must be a valid email; an empty/omitted set disables alerting.
+	RecipientEmails *[]string `json:"recipient_emails,omitempty"`
+
+	// RunnerType Execution backend used to run a flow.
+	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
+	// customer runner, and `ephemeral` creates a one-shot Job for a caller-owned runner.
+	RunnerType RunnerType `json:"runner_type"`
+	StartsAt   *time.Time `json:"starts_at,omitempty"`
+
+	// TagMatchMode Whether any or all of the provided tags must match.
+	TagMatchMode   *TagMatchMode `json:"tag_match_mode,omitempty"`
+	Tags           *[]string     `json:"tags,omitempty"`
+	TimeoutSeconds *int32        `json:"timeout_seconds,omitempty"`
 }
 
 // UpdateRequestRequest defines model for UpdateRequestRequest.
@@ -7005,81 +6836,6 @@ type GetExecutionsSummaryParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// ListFlowSchedulesParams defines parameters for ListFlowSchedules.
-type ListFlowSchedulesParams struct {
-	// Limit Maximum number of items per page.
-	Limit LimitParameter `form:"limit" json:"limit"`
-
-	// Offset Number of items to skip. Absent means 0.
-	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
-
-	// Enabled Filter by enabled/paused state.
-	Enabled *bool `form:"enabled,omitempty" json:"enabled,omitempty"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// CreateFlowScheduleParams defines parameters for CreateFlowSchedule.
-type CreateFlowScheduleParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// PreviewScheduleTagsParams defines parameters for PreviewScheduleTags.
-type PreviewScheduleTagsParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// DeleteFlowScheduleParams defines parameters for DeleteFlowSchedule.
-type DeleteFlowScheduleParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// GetFlowScheduleParams defines parameters for GetFlowSchedule.
-type GetFlowScheduleParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// UpdateFlowScheduleParams defines parameters for UpdateFlowSchedule.
-type UpdateFlowScheduleParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// PauseFlowScheduleParams defines parameters for PauseFlowSchedule.
-type PauseFlowScheduleParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// ResumeFlowScheduleParams defines parameters for ResumeFlowSchedule.
-type ResumeFlowScheduleParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// ListFlowScheduleRunsParams defines parameters for ListFlowScheduleRuns.
-type ListFlowScheduleRunsParams struct {
-	// Limit Maximum number of items per page.
-	Limit LimitParameter `form:"limit" json:"limit"`
-
-	// Offset Number of items to skip. Absent means 0.
-	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// GetFlowScheduleRunParams defines parameters for GetFlowScheduleRun.
-type GetFlowScheduleRunParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
 // ListFlowsParams defines parameters for ListFlows.
 type ListFlowsParams struct {
 	// Limit Maximum number of items per page.
@@ -7341,6 +7097,102 @@ type ListOrganizationMembersParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListFlowSchedulesParams defines parameters for ListFlowSchedules.
+type ListFlowSchedulesParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Enabled Filter by enabled/paused state.
+	Enabled *bool `form:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// HasHealthPolicy Only monitors with (true) or without (false) a health policy.
+	HasHealthPolicy *bool `form:"has_health_policy,omitempty" json:"has_health_policy,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// CreateFlowScheduleParams defines parameters for CreateFlowSchedule.
+type CreateFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetMonitorCloudBudgetParams defines parameters for GetMonitorCloudBudget.
+type GetMonitorCloudBudgetParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// EstimateMonitorParams defines parameters for EstimateMonitor.
+type EstimateMonitorParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PreviewScheduleTagsParams defines parameters for PreviewScheduleTags.
+type PreviewScheduleTagsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteFlowScheduleParams defines parameters for DeleteFlowSchedule.
+type DeleteFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetFlowScheduleParams defines parameters for GetFlowSchedule.
+type GetFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// UpdateFlowScheduleParams defines parameters for UpdateFlowSchedule.
+type UpdateFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PauseFlowScheduleParams defines parameters for PauseFlowSchedule.
+type PauseFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ResumeFlowScheduleParams defines parameters for ResumeFlowSchedule.
+type ResumeFlowScheduleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// RunMonitorParams defines parameters for RunMonitor.
+type RunMonitorParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListFlowScheduleRunsParams defines parameters for ListFlowScheduleRuns.
+type ListFlowScheduleRunsParams struct {
+	// Limit Maximum number of items per page.
+	Limit LimitParameter `form:"limit" json:"limit"`
+
+	// Offset Number of items to skip. Absent means 0.
+	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetFlowScheduleRunParams defines parameters for GetFlowScheduleRun.
+type GetFlowScheduleRunParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListNodesParams defines parameters for ListNodes.
 type ListNodesParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -7418,86 +7270,6 @@ type ListPermissionsParams struct {
 	// Type The API key permission type to list.
 	Type ApiKeyPermissionTypeParameter `form:"type" json:"type"`
 
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// ListProbesParams defines parameters for ListProbes.
-type ListProbesParams struct {
-	// Limit Maximum number of items per page.
-	Limit LimitParameter `form:"limit" json:"limit"`
-
-	// Offset Number of items to skip. Absent means 0.
-	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// CreateProbeParams defines parameters for CreateProbe.
-type CreateProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// EstimateProbeParams defines parameters for EstimateProbe.
-type EstimateProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// DeleteProbeParams defines parameters for DeleteProbe.
-type DeleteProbeParams struct {
-	ExpectedRevision int64 `form:"expected_revision" json:"expected_revision"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// GetProbeParams defines parameters for GetProbe.
-type GetProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// UpdateProbeParams defines parameters for UpdateProbe.
-type UpdateProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// PauseProbeParams defines parameters for PauseProbe.
-type PauseProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// ResumeProbeParams defines parameters for ResumeProbe.
-type ResumeProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// RunProbeParams defines parameters for RunProbe.
-type RunProbeParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// ListProbeRunsParams defines parameters for ListProbeRuns.
-type ListProbeRunsParams struct {
-	// Limit Maximum number of items per page.
-	Limit LimitParameter `form:"limit" json:"limit"`
-
-	// Offset Number of items to skip. Absent means 0.
-	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// GetProbeRunParams defines parameters for GetProbeRun.
-type GetProbeRunParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7585,15 +7357,6 @@ type PushSpecVersionParams struct {
 
 // GetSpecVersionParams defines parameters for GetSpecVersion.
 type GetSpecVersionParams struct {
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// GetStatusPageBindingOptionsParams defines parameters for GetStatusPageBindingOptions.
-type GetStatusPageBindingOptionsParams struct {
-	ScheduleId openapi_types.UUID `form:"schedule_id" json:"schedule_id"`
-	FlowId     openapi_types.UUID `form:"flow_id" json:"flow_id"`
-
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7735,15 +7498,6 @@ type RunOpenAPISyncNowJSONRequestBody = RunOpenAPISyncNowRequest
 // AddRequestJSONRequestBody defines body for AddRequest for application/json ContentType.
 type AddRequestJSONRequestBody = CreateRequestRequest
 
-// CreateFlowScheduleJSONRequestBody defines body for CreateFlowSchedule for application/json ContentType.
-type CreateFlowScheduleJSONRequestBody = CreateFlowScheduleRequest
-
-// PreviewScheduleTagsJSONRequestBody defines body for PreviewScheduleTags for application/json ContentType.
-type PreviewScheduleTagsJSONRequestBody = ScheduleTagPreviewRequest
-
-// UpdateFlowScheduleJSONRequestBody defines body for UpdateFlowSchedule for application/json ContentType.
-type UpdateFlowScheduleJSONRequestBody = UpdateFlowScheduleRequest
-
 // CreateFlowJSONRequestBody defines body for CreateFlow for application/json ContentType.
 type CreateFlowJSONRequestBody = CreateFlowRequest
 
@@ -7774,6 +7528,18 @@ type SetFlowVariableJSONRequestBody = SetVariableRequest
 // CreateOrganizationInvitationJSONRequestBody defines body for CreateOrganizationInvitation for application/json ContentType.
 type CreateOrganizationInvitationJSONRequestBody = CreateOrganizationInvitationRequest
 
+// CreateFlowScheduleJSONRequestBody defines body for CreateFlowSchedule for application/json ContentType.
+type CreateFlowScheduleJSONRequestBody = CreateMonitorRequest
+
+// EstimateMonitorJSONRequestBody defines body for EstimateMonitor for application/json ContentType.
+type EstimateMonitorJSONRequestBody = MonitorEstimateRequest
+
+// PreviewScheduleTagsJSONRequestBody defines body for PreviewScheduleTags for application/json ContentType.
+type PreviewScheduleTagsJSONRequestBody = ScheduleTagPreviewRequest
+
+// UpdateFlowScheduleJSONRequestBody defines body for UpdateFlowSchedule for application/json ContentType.
+type UpdateFlowScheduleJSONRequestBody = UpdateMonitorRequest
+
 // SearchOpenAPISyncConfigsJSONRequestBody defines body for SearchOpenAPISyncConfigs for application/json ContentType.
 type SearchOpenAPISyncConfigsJSONRequestBody = OpenAPISyncConfigSearchRequest
 
@@ -7785,24 +7551,6 @@ type SetEnvironmentVariableJSONRequestBody = SetVariableRequest
 
 // SetOrganizationVariableJSONRequestBody defines body for SetOrganizationVariable for application/json ContentType.
 type SetOrganizationVariableJSONRequestBody = SetVariableRequest
-
-// CreateProbeJSONRequestBody defines body for CreateProbe for application/json ContentType.
-type CreateProbeJSONRequestBody = CreateProbeRequest
-
-// EstimateProbeJSONRequestBody defines body for EstimateProbe for application/json ContentType.
-type EstimateProbeJSONRequestBody = ProbeEstimateRequest
-
-// UpdateProbeJSONRequestBody defines body for UpdateProbe for application/json ContentType.
-type UpdateProbeJSONRequestBody = UpdateProbeRequest
-
-// PauseProbeJSONRequestBody defines body for PauseProbe for application/json ContentType.
-type PauseProbeJSONRequestBody = ProbeRevisionRequest
-
-// ResumeProbeJSONRequestBody defines body for ResumeProbe for application/json ContentType.
-type ResumeProbeJSONRequestBody = ProbeRevisionRequest
-
-// RunProbeJSONRequestBody defines body for RunProbe for application/json ContentType.
-type RunProbeJSONRequestBody = ProbeRevisionRequest
 
 // SearchResourcesJSONRequestBody defines body for SearchResources for application/json ContentType.
 type SearchResourcesJSONRequestBody = ResourceSearchRequest
@@ -8998,14 +8746,14 @@ type ClientInterface interface {
 
 	// RunFlowScheduleNow Run Flow Schedule Now
 	//
-	// Runs a single flow schedule immediately instead of waiting for its next cron tick.
+	// Runs a single monitor immediately instead of waiting for its next occurrence.
 	// Processes the schedule inline — creates the occurrence, advances next_run_at, and
 	// launches pending run items. Reserved for operator use; the caller must authenticate
 	// with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
 	// not accepted on admin routes.
 	//
-	// Corresponds with POST /administrations/flow-schedules/{scheduleId}/run (the `RunFlowScheduleNow` operationId).
-	RunFlowScheduleNow(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with POST /administrations/monitors/{monitorId}/run (the `RunFlowScheduleNow` operationId).
+	RunFlowScheduleNow(ctx context.Context, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ResyncResourceSearch Resync Resource Search Documents
 	//
@@ -9433,114 +9181,6 @@ type ClientInterface interface {
 	// Corresponds with GET /executions/summary (the `GetExecutionsSummary` operationId).
 	GetExecutionsSummary(ctx context.Context, params *GetExecutionsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListFlowSchedules List Flow Schedules
-	//
-	// Lists flow schedules for the organization with optional filtering by enabled state.
-	// Callable by bearer users and API keys scoped with flows:read.
-	//
-	// Corresponds with GET /flow-schedules (the `ListFlowSchedules` operationId).
-	ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateFlowScheduleWithBody Create Flow Schedule
-	//
-	// Creates a tag-suite schedule targeting the flows matching the tag selector.
-	// Callable by bearer users and API keys scoped with flows:update.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-	CreateFlowScheduleWithBody(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateFlowSchedule Create Flow Schedule
-	//
-	// Creates a tag-suite schedule targeting the flows matching the tag selector.
-	// Callable by bearer users and API keys scoped with flows:update.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-	CreateFlowSchedule(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PreviewScheduleTagsWithBody Preview Tag-Suite Flows
-	//
-	// Resolves which organization flows currently match a tag selector, reporting truncation
-	// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-	PreviewScheduleTagsWithBody(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PreviewScheduleTags Preview Tag-Suite Flows
-	//
-	// Resolves which organization flows currently match a tag selector, reporting truncation
-	// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-	PreviewScheduleTags(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteFlowSchedule Delete Flow Schedule
-	//
-	// Deletes a schedule and prevents future launches; prior execution history is preserved.
-	//
-	// Corresponds with DELETE /flow-schedules/{scheduleId} (the `DeleteFlowSchedule` operationId).
-	DeleteFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetFlowSchedule Get Flow Schedule
-	//
-	// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
-	//
-	// Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
-	GetFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateFlowScheduleWithBody Update Flow Schedule
-	//
-	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-	UpdateFlowScheduleWithBody(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateFlowSchedule Update Flow Schedule
-	//
-	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-	UpdateFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PauseFlowSchedule Pause Flow Schedule
-	//
-	// Disables a schedule so the scheduler stops launching future due runs.
-	//
-	// Corresponds with POST /flow-schedules/{scheduleId}/pause (the `PauseFlowSchedule` operationId).
-	PauseFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ResumeFlowSchedule Resume Flow Schedule
-	//
-	// Enables a paused schedule and recomputes next_run_at so the next occurrence is in the future.
-	//
-	// Corresponds with POST /flow-schedules/{scheduleId}/resume (the `ResumeFlowSchedule` operationId).
-	ResumeFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListFlowScheduleRuns List Schedule Run Occurrences
-	//
-	// Lists schedule run occurrences (one per due tick) most recent first.
-	//
-	// Corresponds with GET /flow-schedules/{scheduleId}/runs (the `ListFlowScheduleRuns` operationId).
-	ListFlowScheduleRuns(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetFlowScheduleRun Get Schedule Run Occurrence
-	//
-	// Returns a schedule run occurrence together with its per-flow run items.
-	//
-	// Corresponds with GET /flow-schedules/{scheduleId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
-	GetFlowScheduleRun(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListFlows List Flows
 	//
 	// Retrieves a paginated list of flows for the authenticated user.
@@ -9771,10 +9411,17 @@ type ClientInterface interface {
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
 	//
-	// Each organization may launch at most its license's `max_executions_per_day`
-	// executions in any 24 hours, counting every trigger and runner. A launch past
-	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-	// earlier launch does not count.
+	// Each organization may launch at most its license's `max_cloud_executions_per_day`
+	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+	// Self-hosted and ephemeral launches run on the organization's own compute and
+	// never count against it. An idempotent replay of an earlier launch does not
+	// count.
+	//
+	// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+	// launches per organization in any 24 hours, which stops a flow that keeps
+	// launching itself. Past it the launch answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
 	// Cloud launches additionally share an operator-configured fleet budget in
 	// any 24 hours. Exhausting it also answers 429
@@ -9794,10 +9441,17 @@ type ClientInterface interface {
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
 	//
-	// Each organization may launch at most its license's `max_executions_per_day`
-	// executions in any 24 hours, counting every trigger and runner. A launch past
-	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-	// earlier launch does not count.
+	// Each organization may launch at most its license's `max_cloud_executions_per_day`
+	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+	// Self-hosted and ephemeral launches run on the organization's own compute and
+	// never count against it. An idempotent replay of an earlier launch does not
+	// count.
+	//
+	// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+	// launches per organization in any 24 hours, which stops a flow that keeps
+	// launching itself. Past it the launch answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
 	// Cloud launches additionally share an operator-configured fleet budget in
 	// any 24 hours. Exhausting it also answers 429
@@ -10049,6 +9703,141 @@ type ClientInterface interface {
 	// Corresponds with GET /members (the `ListOrganizationMembers` operationId).
 	ListOrganizationMembers(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListFlowSchedules List Monitors
+	//
+	// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+	ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateFlowScheduleWithBody Create Monitor
+	//
+	// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+	CreateFlowScheduleWithBody(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateFlowSchedule Create Monitor
+	//
+	// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+	CreateFlowSchedule(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetMonitorCloudBudget Get Monitor Cloud Budget
+	//
+	// Returns the Cloud executions per day planned by the organization's enabled Cloud monitors against the license limit, largest monitor first. Used by the web app to warn when the plan passes the limit; it never blocks a save. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Corresponds with GET /monitors/cloud-budget (the `GetMonitorCloudBudget` operationId).
+	GetMonitorCloudBudget(ctx context.Context, params *GetMonitorCloudBudgetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// EstimateMonitorWithBody Estimate Monitor
+	//
+	// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+	EstimateMonitorWithBody(ctx context.Context, params *EstimateMonitorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// EstimateMonitor Estimate Monitor
+	//
+	// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+	EstimateMonitor(ctx context.Context, params *EstimateMonitorParams, body EstimateMonitorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PreviewScheduleTagsWithBody Preview Tag-Suite Flows
+	//
+	// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+	PreviewScheduleTagsWithBody(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PreviewScheduleTags Preview Tag-Suite Flows
+	//
+	// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+	PreviewScheduleTags(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteFlowSchedule Delete Monitor
+	//
+	// Deletes a monitor and prevents future launches; prior execution history is preserved.
+	//
+	// Corresponds with DELETE /monitors/{monitorId} (the `DeleteFlowSchedule` operationId).
+	DeleteFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetFlowSchedule Get Monitor
+	//
+	// Returns one monitor of the organization: its selection, cadence, runner, environment, health policy and current health, and whether it is enabled.
+	//
+	// Corresponds with GET /monitors/{monitorId} (the `GetFlowSchedule` operationId).
+	GetFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateFlowScheduleWithBody Update Monitor
+	//
+	// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+	UpdateFlowScheduleWithBody(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateFlowSchedule Update Monitor
+	//
+	// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+	UpdateFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PauseFlowSchedule Pause Monitor
+	//
+	// Disables a monitor so the scheduler stops launching future occurrences.
+	//
+	// Corresponds with POST /monitors/{monitorId}/pause (the `PauseFlowSchedule` operationId).
+	PauseFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResumeFlowSchedule Resume Monitor
+	//
+	// Enables a paused monitor and recomputes next_run_at so the next occurrence is in the future.
+	//
+	// Corresponds with POST /monitors/{monitorId}/resume (the `ResumeFlowSchedule` operationId).
+	ResumeFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RunMonitor Run Monitor
+	//
+	// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+	//
+	// Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
+	RunMonitor(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListFlowScheduleRuns List Monitor Runs
+	//
+	// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+	//
+	// Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+	ListFlowScheduleRuns(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetFlowScheduleRun Get Monitor Run
+	//
+	// Returns a monitor run together with the executions it launched.
+	//
+	// Corresponds with GET /monitors/{monitorId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
+	GetFlowScheduleRun(ctx context.Context, monitorId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListNodes List Available Nodes
 	//
 	// Retrieves all available special nodes for flow control (delay, etc.).
@@ -10183,149 +9972,6 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListProbes ListProbes
-	//
-	// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
-	//
-	// Corresponds with GET /probes (the `ListProbes` operationId).
-	ListProbes(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateProbeWithBody CreateProbe
-	//
-	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /probes (the `CreateProbe` operationId).
-	CreateProbeWithBody(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateProbe CreateProbe
-	//
-	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /probes (the `CreateProbe` operationId).
-	CreateProbe(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// EstimateProbeWithBody EstimateProbe
-	//
-	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-	EstimateProbeWithBody(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// EstimateProbe EstimateProbe
-	//
-	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-	EstimateProbe(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteProbe DeleteProbe
-	//
-	// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
-	//
-	// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
-	DeleteProbe(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetProbe GetProbe
-	//
-	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
-	//
-	// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
-	GetProbe(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateProbeWithBody UpdateProbe
-	//
-	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-	UpdateProbeWithBody(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateProbe UpdateProbe
-	//
-	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-	UpdateProbe(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PauseProbeWithBody PauseProbe
-	//
-	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-	PauseProbeWithBody(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PauseProbe PauseProbe
-	//
-	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-	PauseProbe(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ResumeProbeWithBody ResumeProbe
-	//
-	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-	ResumeProbeWithBody(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ResumeProbe ResumeProbe
-	//
-	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-	ResumeProbe(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RunProbeWithBody RunProbe
-	//
-	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-	RunProbeWithBody(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RunProbe RunProbe
-	//
-	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-	RunProbe(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListProbeRuns ListProbeRuns
-	//
-	// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
-	//
-	// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
-	ListProbeRuns(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetProbeRun GetProbeRun
-	//
-	// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
-	//
-	// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
-	GetProbeRun(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPublicStatusPageByOrganization Read a published status page by permanent organization key
 	//
@@ -10693,16 +10339,9 @@ type ClientInterface interface {
 	// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
 	GetSpecVersion(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetStatusPageBindingOptions List publishable monitor checks
-	//
-	// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
-	//
-	// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
-	GetStatusPageBindingOptions(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// GetStatusPage Read the shared status page draft
 	//
-	// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
+	// Returns the organization's status page: the shared draft, its monitor bindings, the public address, and whether it is published. Returns 404 until the first save.
 	//
 	// Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
 	GetStatusPage(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -10983,15 +10622,15 @@ func (c *Client) UpdateCloudFleet(ctx context.Context, body UpdateCloudFleetJSON
 
 // RunFlowScheduleNow Run Flow Schedule Now
 //
-// Runs a single flow schedule immediately instead of waiting for its next cron tick.
+// Runs a single monitor immediately instead of waiting for its next occurrence.
 // Processes the schedule inline — creates the occurrence, advances next_run_at, and
 // launches pending run items. Reserved for operator use; the caller must authenticate
 // with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
 // not accepted on admin routes.
 //
-// Corresponds with POST /administrations/flow-schedules/{scheduleId}/run (the `RunFlowScheduleNow` operationId).
-func (c *Client) RunFlowScheduleNow(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRunFlowScheduleNowRequest(c.Server, scheduleId, params)
+// Corresponds with POST /administrations/monitors/{monitorId}/run (the `RunFlowScheduleNow` operationId).
+func (c *Client) RunFlowScheduleNow(ctx context.Context, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRunFlowScheduleNowRequest(c.Server, monitorId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -11928,244 +11567,6 @@ func (c *Client) GetExecutionsSummary(ctx context.Context, params *GetExecutions
 	return c.Client.Do(req)
 }
 
-// ListFlowSchedules List Flow Schedules
-//
-// Lists flow schedules for the organization with optional filtering by enabled state.
-// Callable by bearer users and API keys scoped with flows:read.
-//
-// Corresponds with GET /flow-schedules (the `ListFlowSchedules` operationId).
-func (c *Client) ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListFlowSchedulesRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// CreateFlowScheduleWithBody Create Flow Schedule
-//
-// Creates a tag-suite schedule targeting the flows matching the tag selector.
-// Callable by bearer users and API keys scoped with flows:update.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-func (c *Client) CreateFlowScheduleWithBody(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateFlowScheduleRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// CreateFlowSchedule Create Flow Schedule
-//
-// Creates a tag-suite schedule targeting the flows matching the tag selector.
-// Callable by bearer users and API keys scoped with flows:update.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-func (c *Client) CreateFlowSchedule(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateFlowScheduleRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PreviewScheduleTagsWithBody Preview Tag-Suite Flows
-//
-// Resolves which organization flows currently match a tag selector, reporting truncation
-// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-func (c *Client) PreviewScheduleTagsWithBody(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPreviewScheduleTagsRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PreviewScheduleTags Preview Tag-Suite Flows
-//
-// Resolves which organization flows currently match a tag selector, reporting truncation
-// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-func (c *Client) PreviewScheduleTags(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPreviewScheduleTagsRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// DeleteFlowSchedule Delete Flow Schedule
-//
-// Deletes a schedule and prevents future launches; prior execution history is preserved.
-//
-// Corresponds with DELETE /flow-schedules/{scheduleId} (the `DeleteFlowSchedule` operationId).
-func (c *Client) DeleteFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteFlowScheduleRequest(c.Server, scheduleId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetFlowSchedule Get Flow Schedule
-//
-// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
-//
-// Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
-func (c *Client) GetFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFlowScheduleRequest(c.Server, scheduleId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// UpdateFlowScheduleWithBody Update Flow Schedule
-//
-// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-func (c *Client) UpdateFlowScheduleWithBody(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateFlowScheduleRequestWithBody(c.Server, scheduleId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// UpdateFlowSchedule Update Flow Schedule
-//
-// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-func (c *Client) UpdateFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateFlowScheduleRequest(c.Server, scheduleId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PauseFlowSchedule Pause Flow Schedule
-//
-// Disables a schedule so the scheduler stops launching future due runs.
-//
-// Corresponds with POST /flow-schedules/{scheduleId}/pause (the `PauseFlowSchedule` operationId).
-func (c *Client) PauseFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPauseFlowScheduleRequest(c.Server, scheduleId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ResumeFlowSchedule Resume Flow Schedule
-//
-// Enables a paused schedule and recomputes next_run_at so the next occurrence is in the future.
-//
-// Corresponds with POST /flow-schedules/{scheduleId}/resume (the `ResumeFlowSchedule` operationId).
-func (c *Client) ResumeFlowSchedule(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewResumeFlowScheduleRequest(c.Server, scheduleId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ListFlowScheduleRuns List Schedule Run Occurrences
-//
-// Lists schedule run occurrences (one per due tick) most recent first.
-//
-// Corresponds with GET /flow-schedules/{scheduleId}/runs (the `ListFlowScheduleRuns` operationId).
-func (c *Client) ListFlowScheduleRuns(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListFlowScheduleRunsRequest(c.Server, scheduleId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetFlowScheduleRun Get Schedule Run Occurrence
-//
-// Returns a schedule run occurrence together with its per-flow run items.
-//
-// Corresponds with GET /flow-schedules/{scheduleId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
-func (c *Client) GetFlowScheduleRun(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFlowScheduleRunRequest(c.Server, scheduleId, runId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // ListFlows List Flows
 //
 // Retrieves a paginated list of flows for the authenticated user.
@@ -12666,10 +12067,17 @@ func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
 //
-// Each organization may launch at most its license's `max_executions_per_day`
-// executions in any 24 hours, counting every trigger and runner. A launch past
-// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-// earlier launch does not count.
+// Each organization may launch at most its license's `max_cloud_executions_per_day`
+// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+// Self-hosted and ephemeral launches run on the organization's own compute and
+// never count against it. An idempotent replay of an earlier launch does not
+// count.
+//
+// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+// launches per organization in any 24 hours, which stops a flow that keeps
+// launching itself. Past it the launch answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
 // Cloud launches additionally share an operator-configured fleet budget in
 // any 24 hours. Exhausting it also answers 429
@@ -12699,10 +12107,17 @@ func (c *Client) LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
 //
-// Each organization may launch at most its license's `max_executions_per_day`
-// executions in any 24 hours, counting every trigger and runner. A launch past
-// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-// earlier launch does not count.
+// Each organization may launch at most its license's `max_cloud_executions_per_day`
+// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+// Self-hosted and ephemeral launches run on the organization's own compute and
+// never count against it. An idempotent replay of an earlier launch does not
+// count.
+//
+// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+// launches per organization in any 24 hours, which stops a flow that keeps
+// launching itself. Past it the launch answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
 // Cloud launches additionally share an operator-configured fleet budget in
 // any 24 hours. Exhausting it also answers 429
@@ -13164,6 +12579,311 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, params *ListOrgani
 	return c.Client.Do(req)
 }
 
+// ListFlowSchedules List Monitors
+//
+// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+//
+// Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+func (c *Client) ListFlowSchedules(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlowSchedulesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateFlowScheduleWithBody Create Monitor
+//
+// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+func (c *Client) CreateFlowScheduleWithBody(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFlowScheduleRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateFlowSchedule Create Monitor
+//
+// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+func (c *Client) CreateFlowSchedule(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFlowScheduleRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetMonitorCloudBudget Get Monitor Cloud Budget
+//
+// Returns the Cloud executions per day planned by the organization's enabled Cloud monitors against the license limit, largest monitor first. Used by the web app to warn when the plan passes the limit; it never blocks a save. Callable by bearer users and API keys scoped with flows:read.
+//
+// Corresponds with GET /monitors/cloud-budget (the `GetMonitorCloudBudget` operationId).
+func (c *Client) GetMonitorCloudBudget(ctx context.Context, params *GetMonitorCloudBudgetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMonitorCloudBudgetRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// EstimateMonitorWithBody Estimate Monitor
+//
+// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+func (c *Client) EstimateMonitorWithBody(ctx context.Context, params *EstimateMonitorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEstimateMonitorRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// EstimateMonitor Estimate Monitor
+//
+// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+func (c *Client) EstimateMonitor(ctx context.Context, params *EstimateMonitorParams, body EstimateMonitorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEstimateMonitorRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PreviewScheduleTagsWithBody Preview Tag-Suite Flows
+//
+// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+func (c *Client) PreviewScheduleTagsWithBody(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewScheduleTagsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PreviewScheduleTags Preview Tag-Suite Flows
+//
+// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+func (c *Client) PreviewScheduleTags(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewScheduleTagsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteFlowSchedule Delete Monitor
+//
+// Deletes a monitor and prevents future launches; prior execution history is preserved.
+//
+// Corresponds with DELETE /monitors/{monitorId} (the `DeleteFlowSchedule` operationId).
+func (c *Client) DeleteFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteFlowScheduleRequest(c.Server, monitorId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetFlowSchedule Get Monitor
+//
+// Returns one monitor of the organization: its selection, cadence, runner, environment, health policy and current health, and whether it is enabled.
+//
+// Corresponds with GET /monitors/{monitorId} (the `GetFlowSchedule` operationId).
+func (c *Client) GetFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFlowScheduleRequest(c.Server, monitorId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateFlowScheduleWithBody Update Monitor
+//
+// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+func (c *Client) UpdateFlowScheduleWithBody(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateFlowScheduleRequestWithBody(c.Server, monitorId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateFlowSchedule Update Monitor
+//
+// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+func (c *Client) UpdateFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateFlowScheduleRequest(c.Server, monitorId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PauseFlowSchedule Pause Monitor
+//
+// Disables a monitor so the scheduler stops launching future occurrences.
+//
+// Corresponds with POST /monitors/{monitorId}/pause (the `PauseFlowSchedule` operationId).
+func (c *Client) PauseFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPauseFlowScheduleRequest(c.Server, monitorId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ResumeFlowSchedule Resume Monitor
+//
+// Enables a paused monitor and recomputes next_run_at so the next occurrence is in the future.
+//
+// Corresponds with POST /monitors/{monitorId}/resume (the `ResumeFlowSchedule` operationId).
+func (c *Client) ResumeFlowSchedule(ctx context.Context, monitorId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResumeFlowScheduleRequest(c.Server, monitorId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RunMonitor Run Monitor
+//
+// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+//
+// Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
+func (c *Client) RunMonitor(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRunMonitorRequest(c.Server, monitorId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListFlowScheduleRuns List Monitor Runs
+//
+// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+//
+// Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+func (c *Client) ListFlowScheduleRuns(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlowScheduleRunsRequest(c.Server, monitorId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetFlowScheduleRun Get Monitor Run
+//
+// Returns a monitor run together with the executions it launched.
+//
+// Corresponds with GET /monitors/{monitorId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
+func (c *Client) GetFlowScheduleRun(ctx context.Context, monitorId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFlowScheduleRunRequest(c.Server, monitorId, runId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListNodes List Available Nodes
 //
 // Retrieves all available special nodes for flow control (delay, etc.).
@@ -13459,319 +13179,6 @@ func (c *Client) SetOrganizationVariable(ctx context.Context, key VariableKey, p
 // Corresponds with GET /permissions (the `ListPermissions` operationId).
 func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListPermissionsRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ListProbes ListProbes
-//
-// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
-//
-// Corresponds with GET /probes (the `ListProbes` operationId).
-func (c *Client) ListProbes(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListProbesRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// CreateProbeWithBody CreateProbe
-//
-// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /probes (the `CreateProbe` operationId).
-func (c *Client) CreateProbeWithBody(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateProbeRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// CreateProbe CreateProbe
-//
-// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /probes (the `CreateProbe` operationId).
-func (c *Client) CreateProbe(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateProbeRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// EstimateProbeWithBody EstimateProbe
-//
-// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-func (c *Client) EstimateProbeWithBody(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewEstimateProbeRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// EstimateProbe EstimateProbe
-//
-// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-func (c *Client) EstimateProbe(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewEstimateProbeRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// DeleteProbe DeleteProbe
-//
-// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
-//
-// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
-func (c *Client) DeleteProbe(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteProbeRequest(c.Server, probeId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetProbe GetProbe
-//
-// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
-//
-// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
-func (c *Client) GetProbe(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetProbeRequest(c.Server, probeId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// UpdateProbeWithBody UpdateProbe
-//
-// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-func (c *Client) UpdateProbeWithBody(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateProbeRequestWithBody(c.Server, probeId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// UpdateProbe UpdateProbe
-//
-// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-func (c *Client) UpdateProbe(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateProbeRequest(c.Server, probeId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PauseProbeWithBody PauseProbe
-//
-// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-func (c *Client) PauseProbeWithBody(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPauseProbeRequestWithBody(c.Server, probeId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PauseProbe PauseProbe
-//
-// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-func (c *Client) PauseProbe(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPauseProbeRequest(c.Server, probeId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ResumeProbeWithBody ResumeProbe
-//
-// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-func (c *Client) ResumeProbeWithBody(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewResumeProbeRequestWithBody(c.Server, probeId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ResumeProbe ResumeProbe
-//
-// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-func (c *Client) ResumeProbe(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewResumeProbeRequest(c.Server, probeId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// RunProbeWithBody RunProbe
-//
-// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-func (c *Client) RunProbeWithBody(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRunProbeRequestWithBody(c.Server, probeId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// RunProbe RunProbe
-//
-// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-func (c *Client) RunProbe(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRunProbeRequest(c.Server, probeId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ListProbeRuns ListProbeRuns
-//
-// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
-//
-// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
-func (c *Client) ListProbeRuns(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListProbeRunsRequest(c.Server, probeId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetProbeRun GetProbeRun
-//
-// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
-//
-// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
-func (c *Client) GetProbeRun(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetProbeRunRequest(c.Server, probeId, runId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -14448,26 +13855,9 @@ func (c *Client) GetSpecVersion(ctx context.Context, slug SpecSlugParameter, ver
 	return c.Client.Do(req)
 }
 
-// GetStatusPageBindingOptions List publishable monitor checks
-//
-// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
-//
-// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
-func (c *Client) GetStatusPageBindingOptions(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetStatusPageBindingOptionsRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // GetStatusPage Read the shared status page draft
 //
-// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
+// Returns the organization's status page: the shared draft, its monitor bindings, the public address, and whether it is published. Returns 404 until the first save.
 //
 // Corresponds with GET /status-pages/current (the `GetStatusPage` operationId).
 func (c *Client) GetStatusPage(ctx context.Context, params *GetStatusPageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -15015,12 +14405,12 @@ func NewUpdateCloudFleetRequestWithBody(server string, contentType string, body 
 }
 
 // NewRunFlowScheduleNowRequest constructs an http.Request for the RunFlowScheduleNow method
-func NewRunFlowScheduleNowRequest(server string, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams) (*http.Request, error) {
+func NewRunFlowScheduleNowRequest(server string, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
 	if err != nil {
 		return nil, err
 	}
@@ -15030,7 +14420,7 @@ func NewRunFlowScheduleNowRequest(server string, scheduleId openapi_types.UUID, 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/administrations/flow-schedules/%s/run", pathParam0)
+	operationPath := fmt.Sprintf("/administrations/monitors/%s/run", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -17263,575 +16653,6 @@ func NewGetExecutionsSummaryRequest(server string, params *GetExecutionsSummaryP
 	return req, nil
 }
 
-// NewListFlowSchedulesRequest constructs an http.Request for the ListFlowSchedules method
-func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if params.Enabled != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "enabled", *params.Enabled, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewCreateFlowScheduleRequest calls the generic CreateFlowSchedule builder with application/json body
-func NewCreateFlowScheduleRequest(server string, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateFlowScheduleRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewCreateFlowScheduleRequestWithBody constructs an http.Request for the CreateFlowSchedule method, with any body, and a specified content type
-func NewCreateFlowScheduleRequestWithBody(server string, params *CreateFlowScheduleParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewPreviewScheduleTagsRequest calls the generic PreviewScheduleTags builder with application/json body
-func NewPreviewScheduleTagsRequest(server string, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPreviewScheduleTagsRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewPreviewScheduleTagsRequestWithBody constructs an http.Request for the PreviewScheduleTags method, with any body, and a specified content type
-func NewPreviewScheduleTagsRequestWithBody(server string, params *PreviewScheduleTagsParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/preview-tags")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewDeleteFlowScheduleRequest constructs an http.Request for the DeleteFlowSchedule method
-func NewDeleteFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewGetFlowScheduleRequest constructs an http.Request for the GetFlowSchedule method
-func NewGetFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *GetFlowScheduleParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewUpdateFlowScheduleRequest calls the generic UpdateFlowSchedule builder with application/json body
-func NewUpdateFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdateFlowScheduleRequestWithBody(server, scheduleId, params, "application/json", bodyReader)
-}
-
-// NewUpdateFlowScheduleRequestWithBody constructs an http.Request for the UpdateFlowSchedule method, with any body, and a specified content type
-func NewUpdateFlowScheduleRequestWithBody(server string, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewPauseFlowScheduleRequest constructs an http.Request for the PauseFlowSchedule method
-func NewPauseFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/%s/pause", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewResumeFlowScheduleRequest constructs an http.Request for the ResumeFlowSchedule method
-func NewResumeFlowScheduleRequest(server string, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/%s/resume", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewListFlowScheduleRunsRequest constructs an http.Request for the ListFlowScheduleRuns method
-func NewListFlowScheduleRunsRequest(server string, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/%s/runs", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewGetFlowScheduleRunRequest constructs an http.Request for the GetFlowScheduleRun method
-func NewGetFlowScheduleRunRequest(server string, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "scheduleId", scheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "runId", runId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flow-schedules/%s/runs/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
 // NewListFlowsRequest constructs an http.Request for the ListFlows method
 func NewListFlowsRequest(server string, params *ListFlowsParams) (*http.Request, error) {
 	var err error
@@ -19978,6 +18799,727 @@ func NewListOrganizationMembersRequest(server string, params *ListOrganizationMe
 	return req, nil
 }
 
+// NewListFlowSchedulesRequest constructs an http.Request for the ListFlowSchedules method
+func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.Enabled != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "enabled", *params.Enabled, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.HasHealthPolicy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "has_health_policy", *params.HasHealthPolicy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateFlowScheduleRequest calls the generic CreateFlowSchedule builder with application/json body
+func NewCreateFlowScheduleRequest(server string, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateFlowScheduleRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateFlowScheduleRequestWithBody constructs an http.Request for the CreateFlowSchedule method, with any body, and a specified content type
+func NewCreateFlowScheduleRequestWithBody(server string, params *CreateFlowScheduleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetMonitorCloudBudgetRequest constructs an http.Request for the GetMonitorCloudBudget method
+func NewGetMonitorCloudBudgetRequest(server string, params *GetMonitorCloudBudgetParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/cloud-budget")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewEstimateMonitorRequest calls the generic EstimateMonitor builder with application/json body
+func NewEstimateMonitorRequest(server string, params *EstimateMonitorParams, body EstimateMonitorJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewEstimateMonitorRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewEstimateMonitorRequestWithBody constructs an http.Request for the EstimateMonitor method, with any body, and a specified content type
+func NewEstimateMonitorRequestWithBody(server string, params *EstimateMonitorParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/estimate")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPreviewScheduleTagsRequest calls the generic PreviewScheduleTags builder with application/json body
+func NewPreviewScheduleTagsRequest(server string, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPreviewScheduleTagsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewPreviewScheduleTagsRequestWithBody constructs an http.Request for the PreviewScheduleTags method, with any body, and a specified content type
+func NewPreviewScheduleTagsRequestWithBody(server string, params *PreviewScheduleTagsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/preview-tags")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteFlowScheduleRequest constructs an http.Request for the DeleteFlowSchedule method
+func NewDeleteFlowScheduleRequest(server string, monitorId openapi_types.UUID, params *DeleteFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetFlowScheduleRequest constructs an http.Request for the GetFlowSchedule method
+func NewGetFlowScheduleRequest(server string, monitorId openapi_types.UUID, params *GetFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUpdateFlowScheduleRequest calls the generic UpdateFlowSchedule builder with application/json body
+func NewUpdateFlowScheduleRequest(server string, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateFlowScheduleRequestWithBody(server, monitorId, params, "application/json", bodyReader)
+}
+
+// NewUpdateFlowScheduleRequestWithBody constructs an http.Request for the UpdateFlowSchedule method, with any body, and a specified content type
+func NewUpdateFlowScheduleRequestWithBody(server string, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewPauseFlowScheduleRequest constructs an http.Request for the PauseFlowSchedule method
+func NewPauseFlowScheduleRequest(server string, monitorId openapi_types.UUID, params *PauseFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s/pause", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewResumeFlowScheduleRequest constructs an http.Request for the ResumeFlowSchedule method
+func NewResumeFlowScheduleRequest(server string, monitorId openapi_types.UUID, params *ResumeFlowScheduleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s/resume", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewRunMonitorRequest constructs an http.Request for the RunMonitor method
+func NewRunMonitorRequest(server string, monitorId openapi_types.UUID, params *RunMonitorParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s/run", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListFlowScheduleRunsRequest constructs an http.Request for the ListFlowScheduleRuns method
+func NewListFlowScheduleRunsRequest(server string, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s/runs", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetFlowScheduleRunRequest constructs an http.Request for the GetFlowScheduleRun method
+func NewGetFlowScheduleRunRequest(server string, monitorId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "monitorId", monitorId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "runId", runId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/monitors/%s/runs/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewListNodesRequest constructs an http.Request for the ListNodes method
 func NewListNodesRequest(server string, params *ListNodesParams) (*http.Request, error) {
 	var err error
@@ -20599,672 +20141,6 @@ func NewListPermissionsRequest(server string, params *ListPermissionsParams) (*h
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
 		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewListProbesRequest constructs an http.Request for the ListProbes method
-func NewListProbesRequest(server string, params *ListProbesParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewCreateProbeRequest calls the generic CreateProbe builder with application/json body
-func NewCreateProbeRequest(server string, params *CreateProbeParams, body CreateProbeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateProbeRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewCreateProbeRequestWithBody constructs an http.Request for the CreateProbe method, with any body, and a specified content type
-func NewCreateProbeRequestWithBody(server string, params *CreateProbeParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewEstimateProbeRequest calls the generic EstimateProbe builder with application/json body
-func NewEstimateProbeRequest(server string, params *EstimateProbeParams, body EstimateProbeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewEstimateProbeRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewEstimateProbeRequestWithBody constructs an http.Request for the EstimateProbe method, with any body, and a specified content type
-func NewEstimateProbeRequestWithBody(server string, params *EstimateProbeParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/estimate")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewDeleteProbeRequest constructs an http.Request for the DeleteProbe method
-func NewDeleteProbeRequest(server string, probeId string, params *DeleteProbeParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "expected_revision", params.ExpectedRevision, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int64"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewGetProbeRequest constructs an http.Request for the GetProbe method
-func NewGetProbeRequest(server string, probeId string, params *GetProbeParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewUpdateProbeRequest calls the generic UpdateProbe builder with application/json body
-func NewUpdateProbeRequest(server string, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdateProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
-}
-
-// NewUpdateProbeRequestWithBody constructs an http.Request for the UpdateProbe method, with any body, and a specified content type
-func NewUpdateProbeRequestWithBody(server string, probeId string, params *UpdateProbeParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewPauseProbeRequest calls the generic PauseProbe builder with application/json body
-func NewPauseProbeRequest(server string, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPauseProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
-}
-
-// NewPauseProbeRequestWithBody constructs an http.Request for the PauseProbe method, with any body, and a specified content type
-func NewPauseProbeRequestWithBody(server string, probeId string, params *PauseProbeParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s/pause", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewResumeProbeRequest calls the generic ResumeProbe builder with application/json body
-func NewResumeProbeRequest(server string, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewResumeProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
-}
-
-// NewResumeProbeRequestWithBody constructs an http.Request for the ResumeProbe method, with any body, and a specified content type
-func NewResumeProbeRequestWithBody(server string, probeId string, params *ResumeProbeParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s/resume", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewRunProbeRequest calls the generic RunProbe builder with application/json body
-func NewRunProbeRequest(server string, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewRunProbeRequestWithBody(server, probeId, params, "application/json", bodyReader)
-}
-
-// NewRunProbeRequestWithBody constructs an http.Request for the RunProbe method, with any body, and a specified content type
-func NewRunProbeRequestWithBody(server string, probeId string, params *RunProbeParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s/run", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewListProbeRunsRequest constructs an http.Request for the ListProbeRuns method
-func NewListProbeRunsRequest(server string, probeId string, params *ListProbeRunsParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s/runs", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewGetProbeRunRequest constructs an http.Request for the GetProbeRun method
-func NewGetProbeRunRequest(server string, probeId string, runId string, params *GetProbeRunParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "probeId", probeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "runId", runId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/probes/%s/runs/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -22308,77 +21184,6 @@ func NewGetSpecVersionRequest(server string, slug SpecSlugParameter, version str
 	return req, nil
 }
 
-// NewGetStatusPageBindingOptionsRequest constructs an http.Request for the GetStatusPageBindingOptions method
-func NewGetStatusPageBindingOptionsRequest(server string, params *GetStatusPageBindingOptionsParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/status-pages/binding-options")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "schedule_id", params.ScheduleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_id", params.FlowId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
 // NewGetStatusPageRequest constructs an http.Request for the GetStatusPage method
 func NewGetStatusPageRequest(server string, params *GetStatusPageParams) (*http.Request, error) {
 	var err error
@@ -23372,7 +22177,7 @@ type ClientWithResponsesInterface interface {
 
 	// RunFlowScheduleNowWithResponse Run Flow Schedule Now
 	//
-	// Runs a single flow schedule immediately instead of waiting for its next cron tick.
+	// Runs a single monitor immediately instead of waiting for its next occurrence.
 	// Processes the schedule inline — creates the occurrence, advances next_run_at, and
 	// launches pending run items. Reserved for operator use; the caller must authenticate
 	// with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
@@ -23380,8 +22185,8 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with POST /administrations/flow-schedules/{scheduleId}/run (the `RunFlowScheduleNow` operationId).
-	RunFlowScheduleNowWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*RunFlowScheduleNowResponse, error)
+	// Corresponds with POST /administrations/monitors/{monitorId}/run (the `RunFlowScheduleNow` operationId).
+	RunFlowScheduleNowWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*RunFlowScheduleNowResponse, error)
 
 	// ResyncResourceSearchWithResponse Resync Resource Search Documents
 	//
@@ -23853,128 +22658,6 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /executions/summary (the `GetExecutionsSummary` operationId).
 	GetExecutionsSummaryWithResponse(ctx context.Context, params *GetExecutionsSummaryParams, reqEditors ...RequestEditorFn) (*GetExecutionsSummaryResponse, error)
 
-	// ListFlowSchedulesWithResponse List Flow Schedules
-	//
-	// Lists flow schedules for the organization with optional filtering by enabled state.
-	// Callable by bearer users and API keys scoped with flows:read.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /flow-schedules (the `ListFlowSchedules` operationId).
-	ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error)
-
-	// CreateFlowScheduleWithBodyWithResponse Create Flow Schedule
-	//
-	// Creates a tag-suite schedule targeting the flows matching the tag selector.
-	// Callable by bearer users and API keys scoped with flows:update.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-	CreateFlowScheduleWithBodyWithResponse(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error)
-
-	// CreateFlowScheduleWithResponse Create Flow Schedule
-	//
-	// Creates a tag-suite schedule targeting the flows matching the tag selector.
-	// Callable by bearer users and API keys scoped with flows:update.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-	CreateFlowScheduleWithResponse(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error)
-
-	// PreviewScheduleTagsWithBodyWithResponse Preview Tag-Suite Flows
-	//
-	// Resolves which organization flows currently match a tag selector, reporting truncation
-	// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-	PreviewScheduleTagsWithBodyWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error)
-
-	// PreviewScheduleTagsWithResponse Preview Tag-Suite Flows
-	//
-	// Resolves which organization flows currently match a tag selector, reporting truncation
-	// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-	PreviewScheduleTagsWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error)
-
-	// DeleteFlowScheduleWithResponse Delete Flow Schedule
-	//
-	// Deletes a schedule and prevents future launches; prior execution history is preserved.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with DELETE /flow-schedules/{scheduleId} (the `DeleteFlowSchedule` operationId).
-	DeleteFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*DeleteFlowScheduleResponse, error)
-
-	// GetFlowScheduleWithResponse Get Flow Schedule
-	//
-	// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
-	GetFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleResponse, error)
-
-	// UpdateFlowScheduleWithBodyWithResponse Update Flow Schedule
-	//
-	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-	UpdateFlowScheduleWithBodyWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error)
-
-	// UpdateFlowScheduleWithResponse Update Flow Schedule
-	//
-	// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-	UpdateFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error)
-
-	// PauseFlowScheduleWithResponse Pause Flow Schedule
-	//
-	// Disables a schedule so the scheduler stops launching future due runs.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flow-schedules/{scheduleId}/pause (the `PauseFlowSchedule` operationId).
-	PauseFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*PauseFlowScheduleResponse, error)
-
-	// ResumeFlowScheduleWithResponse Resume Flow Schedule
-	//
-	// Enables a paused schedule and recomputes next_run_at so the next occurrence is in the future.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flow-schedules/{scheduleId}/resume (the `ResumeFlowSchedule` operationId).
-	ResumeFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*ResumeFlowScheduleResponse, error)
-
-	// ListFlowScheduleRunsWithResponse List Schedule Run Occurrences
-	//
-	// Lists schedule run occurrences (one per due tick) most recent first.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /flow-schedules/{scheduleId}/runs (the `ListFlowScheduleRuns` operationId).
-	ListFlowScheduleRunsWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error)
-
-	// GetFlowScheduleRunWithResponse Get Schedule Run Occurrence
-	//
-	// Returns a schedule run occurrence together with its per-flow run items.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /flow-schedules/{scheduleId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
-	GetFlowScheduleRunWithResponse(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleRunResponse, error)
-
 	// ListFlowsWithResponse List Flows
 	//
 	// Retrieves a paginated list of flows for the authenticated user.
@@ -24231,10 +22914,17 @@ type ClientWithResponsesInterface interface {
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
 	//
-	// Each organization may launch at most its license's `max_executions_per_day`
-	// executions in any 24 hours, counting every trigger and runner. A launch past
-	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-	// earlier launch does not count.
+	// Each organization may launch at most its license's `max_cloud_executions_per_day`
+	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+	// Self-hosted and ephemeral launches run on the organization's own compute and
+	// never count against it. An idempotent replay of an earlier launch does not
+	// count.
+	//
+	// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+	// launches per organization in any 24 hours, which stops a flow that keeps
+	// launching itself. Past it the launch answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
 	// Cloud launches additionally share an operator-configured fleet budget in
 	// any 24 hours. Exhausting it also answers 429
@@ -24254,10 +22944,17 @@ type ClientWithResponsesInterface interface {
 	// Specify a version_id in the request body to run a specific published version;
 	// omit it to run the current (mutable) flow definition.
 	//
-	// Each organization may launch at most its license's `max_executions_per_day`
-	// executions in any 24 hours, counting every trigger and runner. A launch past
-	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-	// earlier launch does not count.
+	// Each organization may launch at most its license's `max_cloud_executions_per_day`
+	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+	// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+	// Self-hosted and ephemeral launches run on the organization's own compute and
+	// never count against it. An idempotent replay of an earlier launch does not
+	// count.
+	//
+	// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+	// launches per organization in any 24 hours, which stops a flow that keeps
+	// launching itself. Past it the launch answers 429
+	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
 	// Cloud launches additionally share an operator-configured fleet budget in
 	// any 24 hours. Exhausting it also answers 429
@@ -24541,6 +23238,159 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /members (the `ListOrganizationMembers` operationId).
 	ListOrganizationMembersWithResponse(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error)
 
+	// ListFlowSchedulesWithResponse List Monitors
+	//
+	// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+	ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error)
+
+	// CreateFlowScheduleWithBodyWithResponse Create Monitor
+	//
+	// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+	CreateFlowScheduleWithBodyWithResponse(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error)
+
+	// CreateFlowScheduleWithResponse Create Monitor
+	//
+	// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+	CreateFlowScheduleWithResponse(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error)
+
+	// GetMonitorCloudBudgetWithResponse Get Monitor Cloud Budget
+	//
+	// Returns the Cloud executions per day planned by the organization's enabled Cloud monitors against the license limit, largest monitor first. Used by the web app to warn when the plan passes the limit; it never blocks a save. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /monitors/cloud-budget (the `GetMonitorCloudBudget` operationId).
+	GetMonitorCloudBudgetWithResponse(ctx context.Context, params *GetMonitorCloudBudgetParams, reqEditors ...RequestEditorFn) (*GetMonitorCloudBudgetResponse, error)
+
+	// EstimateMonitorWithBodyWithResponse Estimate Monitor
+	//
+	// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+	EstimateMonitorWithBodyWithResponse(ctx context.Context, params *EstimateMonitorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EstimateMonitorResponse, error)
+
+	// EstimateMonitorWithResponse Estimate Monitor
+	//
+	// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+	EstimateMonitorWithResponse(ctx context.Context, params *EstimateMonitorParams, body EstimateMonitorJSONRequestBody, reqEditors ...RequestEditorFn) (*EstimateMonitorResponse, error)
+
+	// PreviewScheduleTagsWithBodyWithResponse Preview Tag-Suite Flows
+	//
+	// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+	PreviewScheduleTagsWithBodyWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error)
+
+	// PreviewScheduleTagsWithResponse Preview Tag-Suite Flows
+	//
+	// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+	PreviewScheduleTagsWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error)
+
+	// DeleteFlowScheduleWithResponse Delete Monitor
+	//
+	// Deletes a monitor and prevents future launches; prior execution history is preserved.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /monitors/{monitorId} (the `DeleteFlowSchedule` operationId).
+	DeleteFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*DeleteFlowScheduleResponse, error)
+
+	// GetFlowScheduleWithResponse Get Monitor
+	//
+	// Returns one monitor of the organization: its selection, cadence, runner, environment, health policy and current health, and whether it is enabled.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /monitors/{monitorId} (the `GetFlowSchedule` operationId).
+	GetFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleResponse, error)
+
+	// UpdateFlowScheduleWithBodyWithResponse Update Monitor
+	//
+	// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+	UpdateFlowScheduleWithBodyWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error)
+
+	// UpdateFlowScheduleWithResponse Update Monitor
+	//
+	// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+	UpdateFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error)
+
+	// PauseFlowScheduleWithResponse Pause Monitor
+	//
+	// Disables a monitor so the scheduler stops launching future occurrences.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/{monitorId}/pause (the `PauseFlowSchedule` operationId).
+	PauseFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*PauseFlowScheduleResponse, error)
+
+	// ResumeFlowScheduleWithResponse Resume Monitor
+	//
+	// Enables a paused monitor and recomputes next_run_at so the next occurrence is in the future.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/{monitorId}/resume (the `ResumeFlowSchedule` operationId).
+	ResumeFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*ResumeFlowScheduleResponse, error)
+
+	// RunMonitorWithResponse Run Monitor
+	//
+	// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
+	RunMonitorWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*RunMonitorResponse, error)
+
+	// ListFlowScheduleRunsWithResponse List Monitor Runs
+	//
+	// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+	ListFlowScheduleRunsWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error)
+
+	// GetFlowScheduleRunWithResponse Get Monitor Run
+	//
+	// Returns a monitor run together with the executions it launched.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /monitors/{monitorId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
+	GetFlowScheduleRunWithResponse(ctx context.Context, monitorId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleRunResponse, error)
+
 	// ListNodesWithResponse List Available Nodes
 	//
 	// Retrieves all available special nodes for flow control (delay, etc.).
@@ -24693,159 +23543,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissionsWithResponse(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*ListPermissionsResponse, error)
-
-	// ListProbesWithResponse ListProbes
-	//
-	// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /probes (the `ListProbes` operationId).
-	ListProbesWithResponse(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*ListProbesResponse, error)
-
-	// CreateProbeWithBodyWithResponse CreateProbe
-	//
-	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes (the `CreateProbe` operationId).
-	CreateProbeWithBodyWithResponse(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error)
-
-	// CreateProbeWithResponse CreateProbe
-	//
-	// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes (the `CreateProbe` operationId).
-	CreateProbeWithResponse(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error)
-
-	// EstimateProbeWithBodyWithResponse EstimateProbe
-	//
-	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-	EstimateProbeWithBodyWithResponse(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error)
-
-	// EstimateProbeWithResponse EstimateProbe
-	//
-	// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-	EstimateProbeWithResponse(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error)
-
-	// DeleteProbeWithResponse DeleteProbe
-	//
-	// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
-	DeleteProbeWithResponse(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*DeleteProbeResponse, error)
-
-	// GetProbeWithResponse GetProbe
-	//
-	// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
-	GetProbeWithResponse(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*GetProbeResponse, error)
-
-	// UpdateProbeWithBodyWithResponse UpdateProbe
-	//
-	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-	UpdateProbeWithBodyWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error)
-
-	// UpdateProbeWithResponse UpdateProbe
-	//
-	// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-	UpdateProbeWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error)
-
-	// PauseProbeWithBodyWithResponse PauseProbe
-	//
-	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-	PauseProbeWithBodyWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error)
-
-	// PauseProbeWithResponse PauseProbe
-	//
-	// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-	PauseProbeWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error)
-
-	// ResumeProbeWithBodyWithResponse ResumeProbe
-	//
-	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-	ResumeProbeWithBodyWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error)
-
-	// ResumeProbeWithResponse ResumeProbe
-	//
-	// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-	ResumeProbeWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error)
-
-	// RunProbeWithBodyWithResponse RunProbe
-	//
-	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-	RunProbeWithBodyWithResponse(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RunProbeResponse, error)
-
-	// RunProbeWithResponse RunProbe
-	//
-	// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-	RunProbeWithResponse(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*RunProbeResponse, error)
-
-	// ListProbeRunsWithResponse ListProbeRuns
-	//
-	// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
-	ListProbeRunsWithResponse(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*ListProbeRunsResponse, error)
-
-	// GetProbeRunWithResponse GetProbeRun
-	//
-	// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
-	GetProbeRunWithResponse(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*GetProbeRunResponse, error)
 
 	// GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
 	//
@@ -25233,18 +23930,9 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /specs/{slug}/versions/{version} (the `GetSpecVersion` operationId).
 	GetSpecVersionWithResponse(ctx context.Context, slug SpecSlugParameter, version string, params *GetSpecVersionParams, reqEditors ...RequestEditorFn) (*GetSpecVersionResponse, error)
 
-	// GetStatusPageBindingOptionsWithResponse List publishable monitor checks
-	//
-	// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
-	GetStatusPageBindingOptionsWithResponse(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*GetStatusPageBindingOptionsResponse, error)
-
 	// GetStatusPageWithResponse Read the shared status page draft
 	//
-	// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
+	// Returns the organization's status page: the shared draft, its monitor bindings, the public address, and whether it is published. Returns 404 until the first save.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -27841,661 +26529,6 @@ func (r GetExecutionsSummaryResponse) ContentType() string {
 	return ""
 }
 
-type ListFlowSchedulesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowScheduleListResponse
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListFlowSchedulesResponse) GetJSON200() *FlowScheduleListResponse {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r ListFlowSchedulesResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ListFlowSchedulesResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ListFlowSchedulesResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetBody returns the raw response body bytes
-func (r ListFlowSchedulesResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ListFlowSchedulesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListFlowSchedulesResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ListFlowSchedulesResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type CreateFlowScheduleResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *FlowSchedule
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-}
-
-// GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r CreateFlowScheduleResponse) GetJSON201() *FlowSchedule {
-	return r.JSON201
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r CreateFlowScheduleResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r CreateFlowScheduleResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r CreateFlowScheduleResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r CreateFlowScheduleResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r CreateFlowScheduleResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetBody returns the raw response body bytes
-func (r CreateFlowScheduleResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateFlowScheduleResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateFlowScheduleResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r CreateFlowScheduleResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type PreviewScheduleTagsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ScheduleTagPreviewResponse
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PreviewScheduleTagsResponse) GetJSON200() *ScheduleTagPreviewResponse {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r PreviewScheduleTagsResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r PreviewScheduleTagsResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r PreviewScheduleTagsResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r PreviewScheduleTagsResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetBody returns the raw response body bytes
-func (r PreviewScheduleTagsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r PreviewScheduleTagsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PreviewScheduleTagsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r PreviewScheduleTagsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type DeleteFlowScheduleResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r DeleteFlowScheduleResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r DeleteFlowScheduleResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetBody returns the raw response body bytes
-func (r DeleteFlowScheduleResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteFlowScheduleResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteFlowScheduleResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r DeleteFlowScheduleResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetFlowScheduleResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowSchedule
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetFlowScheduleResponse) GetJSON200() *FlowSchedule {
-	return r.JSON200
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetFlowScheduleResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r GetFlowScheduleResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetFlowScheduleResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r GetFlowScheduleResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetFlowScheduleResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetFlowScheduleResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetFlowScheduleResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type UpdateFlowScheduleResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowSchedule
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r UpdateFlowScheduleResponse) GetJSON200() *FlowSchedule {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r UpdateFlowScheduleResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r UpdateFlowScheduleResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r UpdateFlowScheduleResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r UpdateFlowScheduleResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r UpdateFlowScheduleResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetBody returns the raw response body bytes
-func (r UpdateFlowScheduleResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateFlowScheduleResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateFlowScheduleResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r UpdateFlowScheduleResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type PauseFlowScheduleResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowSchedule
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PauseFlowScheduleResponse) GetJSON200() *FlowSchedule {
-	return r.JSON200
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r PauseFlowScheduleResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r PauseFlowScheduleResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r PauseFlowScheduleResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r PauseFlowScheduleResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetBody returns the raw response body bytes
-func (r PauseFlowScheduleResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r PauseFlowScheduleResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PauseFlowScheduleResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r PauseFlowScheduleResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ResumeFlowScheduleResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowSchedule
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ResumeFlowScheduleResponse) GetJSON200() *FlowSchedule {
-	return r.JSON200
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ResumeFlowScheduleResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ResumeFlowScheduleResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r ResumeFlowScheduleResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r ResumeFlowScheduleResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetBody returns the raw response body bytes
-func (r ResumeFlowScheduleResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ResumeFlowScheduleResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ResumeFlowScheduleResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ResumeFlowScheduleResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ListFlowScheduleRunsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowScheduleRunListResponse
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListFlowScheduleRunsResponse) GetJSON200() *FlowScheduleRunListResponse {
-	return r.JSON200
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ListFlowScheduleRunsResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ListFlowScheduleRunsResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r ListFlowScheduleRunsResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r ListFlowScheduleRunsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ListFlowScheduleRunsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListFlowScheduleRunsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ListFlowScheduleRunsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetFlowScheduleRunResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowScheduleRunDetail
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetFlowScheduleRunResponse) GetJSON200() *FlowScheduleRunDetail {
-	return r.JSON200
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetFlowScheduleRunResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r GetFlowScheduleRunResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetFlowScheduleRunResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r GetFlowScheduleRunResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetFlowScheduleRunResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetFlowScheduleRunResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetFlowScheduleRunResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 type ListFlowsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -30921,6 +28954,861 @@ func (r ListOrganizationMembersResponse) ContentType() string {
 	return ""
 }
 
+type ListFlowSchedulesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MonitorListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListFlowSchedulesResponse) GetJSON200() *MonitorListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListFlowSchedulesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListFlowSchedulesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListFlowSchedulesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListFlowSchedulesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFlowSchedulesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFlowSchedulesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListFlowSchedulesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *Monitor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateFlowScheduleResponse) GetJSON201() *Monitor {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateFlowScheduleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateFlowScheduleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateFlowScheduleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r CreateFlowScheduleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateFlowScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateFlowScheduleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetMonitorCloudBudgetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MonitorCloudBudget
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetMonitorCloudBudgetResponse) GetJSON200() *MonitorCloudBudget {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetMonitorCloudBudgetResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetMonitorCloudBudgetResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r GetMonitorCloudBudgetResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetMonitorCloudBudgetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetMonitorCloudBudgetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetMonitorCloudBudgetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type EstimateMonitorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MonitorEstimate
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r EstimateMonitorResponse) GetJSON200() *MonitorEstimate {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r EstimateMonitorResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r EstimateMonitorResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r EstimateMonitorResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r EstimateMonitorResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r EstimateMonitorResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r EstimateMonitorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r EstimateMonitorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r EstimateMonitorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PreviewScheduleTagsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ScheduleTagPreviewResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PreviewScheduleTagsResponse) GetJSON200() *ScheduleTagPreviewResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PreviewScheduleTagsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PreviewScheduleTagsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PreviewScheduleTagsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PreviewScheduleTagsResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r PreviewScheduleTagsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PreviewScheduleTagsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PreviewScheduleTagsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PreviewScheduleTagsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteFlowScheduleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteFlowScheduleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteFlowScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteFlowScheduleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Monitor
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetFlowScheduleResponse) GetJSON200() *Monitor {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetFlowScheduleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetFlowScheduleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetFlowScheduleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetFlowScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetFlowScheduleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Monitor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateFlowScheduleResponse) GetJSON200() *Monitor {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateFlowScheduleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateFlowScheduleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateFlowScheduleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateFlowScheduleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateFlowScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateFlowScheduleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PauseFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Monitor
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PauseFlowScheduleResponse) GetJSON200() *Monitor {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PauseFlowScheduleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PauseFlowScheduleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PauseFlowScheduleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PauseFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r PauseFlowScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PauseFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PauseFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PauseFlowScheduleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ResumeFlowScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Monitor
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ResumeFlowScheduleResponse) GetJSON200() *Monitor {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ResumeFlowScheduleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ResumeFlowScheduleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ResumeFlowScheduleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ResumeFlowScheduleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r ResumeFlowScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ResumeFlowScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResumeFlowScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ResumeFlowScheduleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RunMonitorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *MonitorRun
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r RunMonitorResponse) GetJSON202() *MonitorRun {
+	return r.JSON202
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RunMonitorResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RunMonitorResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RunMonitorResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RunMonitorResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r RunMonitorResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r RunMonitorResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RunMonitorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RunMonitorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RunMonitorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListFlowScheduleRunsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MonitorRunListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListFlowScheduleRunsResponse) GetJSON200() *MonitorRunListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListFlowScheduleRunsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListFlowScheduleRunsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListFlowScheduleRunsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r ListFlowScheduleRunsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFlowScheduleRunsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFlowScheduleRunsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListFlowScheduleRunsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetFlowScheduleRunResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MonitorRunDetail
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetFlowScheduleRunResponse) GetJSON200() *MonitorRunDetail {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetFlowScheduleRunResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetFlowScheduleRunResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetFlowScheduleRunResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetFlowScheduleRunResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetFlowScheduleRunResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetFlowScheduleRunResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetFlowScheduleRunResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListNodesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -31588,989 +30476,6 @@ func (r ListPermissionsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListPermissionsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ListProbesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ProbeListResponse
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListProbesResponse) GetJSON200() *ProbeListResponse {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r ListProbesResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ListProbesResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ListProbesResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r ListProbesResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r ListProbesResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r ListProbesResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r ListProbesResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r ListProbesResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ListProbesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListProbesResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ListProbesResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type CreateProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *Probe
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r CreateProbeResponse) GetJSON201() *Probe {
-	return r.JSON201
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r CreateProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r CreateProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r CreateProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r CreateProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r CreateProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r CreateProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r CreateProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r CreateProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r CreateProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type EstimateProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ProbeEstimate
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r EstimateProbeResponse) GetJSON200() *ProbeEstimate {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r EstimateProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r EstimateProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r EstimateProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r EstimateProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r EstimateProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r EstimateProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r EstimateProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r EstimateProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r EstimateProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r EstimateProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r EstimateProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type DeleteProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r DeleteProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r DeleteProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r DeleteProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r DeleteProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r DeleteProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r DeleteProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r DeleteProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r DeleteProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r DeleteProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Probe
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetProbeResponse) GetJSON200() *Probe {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r GetProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r GetProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r GetProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r GetProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r GetProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r GetProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type UpdateProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Probe
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r UpdateProbeResponse) GetJSON200() *Probe {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r UpdateProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r UpdateProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r UpdateProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r UpdateProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r UpdateProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r UpdateProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r UpdateProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r UpdateProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r UpdateProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type PauseProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Probe
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PauseProbeResponse) GetJSON200() *Probe {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r PauseProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r PauseProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r PauseProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r PauseProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r PauseProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r PauseProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r PauseProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r PauseProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r PauseProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PauseProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r PauseProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ResumeProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *Probe
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ResumeProbeResponse) GetJSON200() *Probe {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r ResumeProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ResumeProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ResumeProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r ResumeProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r ResumeProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r ResumeProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r ResumeProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r ResumeProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ResumeProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ResumeProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ResumeProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type RunProbeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON202 the response for an HTTP 202 `application/json` response
-	JSON202 *ProbeRun
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON202 returns the response for an HTTP 202 `application/json` response
-func (r RunProbeResponse) GetJSON202() *ProbeRun {
-	return r.JSON202
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r RunProbeResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r RunProbeResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r RunProbeResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r RunProbeResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r RunProbeResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r RunProbeResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r RunProbeResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r RunProbeResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r RunProbeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RunProbeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r RunProbeResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ListProbeRunsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ProbeRunListResponse
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListProbeRunsResponse) GetJSON200() *ProbeRunListResponse {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r ListProbeRunsResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ListProbeRunsResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ListProbeRunsResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r ListProbeRunsResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r ListProbeRunsResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r ListProbeRunsResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r ListProbeRunsResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r ListProbeRunsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ListProbeRunsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListProbeRunsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ListProbeRunsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetProbeRunResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ProbeRun
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *TooManyRequests
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetProbeRunResponse) GetJSON200() *ProbeRun {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r GetProbeRunResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetProbeRunResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r GetProbeRunResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetProbeRunResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r GetProbeRunResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r GetProbeRunResponse) GetJSON429() *TooManyRequests {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r GetProbeRunResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r GetProbeRunResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetProbeRunResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetProbeRunResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetProbeRunResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -34022,96 +31927,6 @@ func (r GetSpecVersionResponse) ContentType() string {
 	return ""
 }
 
-// GetStatusPageBindingOptionsResponse200Headers the declared response headers of an HTTP 200 response for GetStatusPageBindingOptions
-type GetStatusPageBindingOptionsResponse200Headers struct {
-	CacheControl *string
-}
-
-type GetStatusPageBindingOptionsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *StatusPageBindingOptions
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *Conflict
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *InternalServerError
-	// Headers200 the parsed response headers for an HTTP 200 response
-	Headers200 *GetStatusPageBindingOptionsResponse200Headers
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetStatusPageBindingOptionsResponse) GetJSON200() *StatusPageBindingOptions {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r GetStatusPageBindingOptionsResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r GetStatusPageBindingOptionsResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r GetStatusPageBindingOptionsResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r GetStatusPageBindingOptionsResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r GetStatusPageBindingOptionsResponse) GetJSON409() *Conflict {
-	return r.JSON409
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r GetStatusPageBindingOptionsResponse) GetJSON500() *InternalServerError {
-	return r.JSON500
-}
-
-// GetBody returns the raw response body bytes
-func (r GetStatusPageBindingOptionsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetStatusPageBindingOptionsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetStatusPageBindingOptionsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetStatusPageBindingOptionsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 // GetStatusPageResponse200Headers the declared response headers of an HTTP 200 response for GetStatusPage
 type GetStatusPageResponse200Headers struct {
 	CacheControl *string
@@ -35303,7 +33118,7 @@ func (c *ClientWithResponses) UpdateCloudFleetWithResponse(ctx context.Context, 
 
 // RunFlowScheduleNowWithResponse Run Flow Schedule Now
 //
-// Runs a single flow schedule immediately instead of waiting for its next cron tick.
+// Runs a single monitor immediately instead of waiting for its next occurrence.
 // Processes the schedule inline — creates the occurrence, advances next_run_at, and
 // launches pending run items. Reserved for operator use; the caller must authenticate
 // with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
@@ -35311,9 +33126,9 @@ func (c *ClientWithResponses) UpdateCloudFleetWithResponse(ctx context.Context, 
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with POST /administrations/flow-schedules/{scheduleId}/run (the `RunFlowScheduleNow` operationId).
-func (c *ClientWithResponses) RunFlowScheduleNowWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*RunFlowScheduleNowResponse, error) {
-	rsp, err := c.RunFlowScheduleNow(ctx, scheduleId, params, reqEditors...)
+// Corresponds with POST /administrations/monitors/{monitorId}/run (the `RunFlowScheduleNow` operationId).
+func (c *ClientWithResponses) RunFlowScheduleNowWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*RunFlowScheduleNowResponse, error) {
+	rsp, err := c.RunFlowScheduleNow(ctx, monitorId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -36090,206 +33905,6 @@ func (c *ClientWithResponses) GetExecutionsSummaryWithResponse(ctx context.Conte
 	return ParseGetExecutionsSummaryResponse(rsp)
 }
 
-// ListFlowSchedulesWithResponse List Flow Schedules
-//
-// Lists flow schedules for the organization with optional filtering by enabled state.
-// Callable by bearer users and API keys scoped with flows:read.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /flow-schedules (the `ListFlowSchedules` operationId).
-func (c *ClientWithResponses) ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error) {
-	rsp, err := c.ListFlowSchedules(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListFlowSchedulesResponse(rsp)
-}
-
-// CreateFlowScheduleWithBodyWithResponse Create Flow Schedule
-//
-// Creates a tag-suite schedule targeting the flows matching the tag selector.
-// Callable by bearer users and API keys scoped with flows:update.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-func (c *ClientWithResponses) CreateFlowScheduleWithBodyWithResponse(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error) {
-	rsp, err := c.CreateFlowScheduleWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateFlowScheduleResponse(rsp)
-}
-
-// CreateFlowScheduleWithResponse Create Flow Schedule
-//
-// Creates a tag-suite schedule targeting the flows matching the tag selector.
-// Callable by bearer users and API keys scoped with flows:update.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flow-schedules (the `CreateFlowSchedule` operationId).
-func (c *ClientWithResponses) CreateFlowScheduleWithResponse(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error) {
-	rsp, err := c.CreateFlowSchedule(ctx, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateFlowScheduleResponse(rsp)
-}
-
-// PreviewScheduleTagsWithBodyWithResponse Preview Tag-Suite Flows
-//
-// Resolves which organization flows currently match a tag selector, reporting truncation
-// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-func (c *ClientWithResponses) PreviewScheduleTagsWithBodyWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error) {
-	rsp, err := c.PreviewScheduleTagsWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePreviewScheduleTagsResponse(rsp)
-}
-
-// PreviewScheduleTagsWithResponse Preview Tag-Suite Flows
-//
-// Resolves which organization flows currently match a tag selector, reporting truncation
-// against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flow-schedules/preview-tags (the `PreviewScheduleTags` operationId).
-func (c *ClientWithResponses) PreviewScheduleTagsWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error) {
-	rsp, err := c.PreviewScheduleTags(ctx, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePreviewScheduleTagsResponse(rsp)
-}
-
-// DeleteFlowScheduleWithResponse Delete Flow Schedule
-//
-// Deletes a schedule and prevents future launches; prior execution history is preserved.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with DELETE /flow-schedules/{scheduleId} (the `DeleteFlowSchedule` operationId).
-func (c *ClientWithResponses) DeleteFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*DeleteFlowScheduleResponse, error) {
-	rsp, err := c.DeleteFlowSchedule(ctx, scheduleId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteFlowScheduleResponse(rsp)
-}
-
-// GetFlowScheduleWithResponse Get Flow Schedule
-//
-// Returns one schedule of the organization: its tag selector, cron expression, runner, environment, and whether it is enabled.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /flow-schedules/{scheduleId} (the `GetFlowSchedule` operationId).
-func (c *ClientWithResponses) GetFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleResponse, error) {
-	rsp, err := c.GetFlowSchedule(ctx, scheduleId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetFlowScheduleResponse(rsp)
-}
-
-// UpdateFlowScheduleWithBodyWithResponse Update Flow Schedule
-//
-// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-func (c *ClientWithResponses) UpdateFlowScheduleWithBodyWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error) {
-	rsp, err := c.UpdateFlowScheduleWithBody(ctx, scheduleId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateFlowScheduleResponse(rsp)
-}
-
-// UpdateFlowScheduleWithResponse Update Flow Schedule
-//
-// Replaces the mutable configuration of a schedule. The tag selector is resolved to matching flows at each due tick, so the change applies from the next tick.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with PUT /flow-schedules/{scheduleId} (the `UpdateFlowSchedule` operationId).
-func (c *ClientWithResponses) UpdateFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error) {
-	rsp, err := c.UpdateFlowSchedule(ctx, scheduleId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateFlowScheduleResponse(rsp)
-}
-
-// PauseFlowScheduleWithResponse Pause Flow Schedule
-//
-// Disables a schedule so the scheduler stops launching future due runs.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flow-schedules/{scheduleId}/pause (the `PauseFlowSchedule` operationId).
-func (c *ClientWithResponses) PauseFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*PauseFlowScheduleResponse, error) {
-	rsp, err := c.PauseFlowSchedule(ctx, scheduleId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePauseFlowScheduleResponse(rsp)
-}
-
-// ResumeFlowScheduleWithResponse Resume Flow Schedule
-//
-// Enables a paused schedule and recomputes next_run_at so the next occurrence is in the future.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flow-schedules/{scheduleId}/resume (the `ResumeFlowSchedule` operationId).
-func (c *ClientWithResponses) ResumeFlowScheduleWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*ResumeFlowScheduleResponse, error) {
-	rsp, err := c.ResumeFlowSchedule(ctx, scheduleId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseResumeFlowScheduleResponse(rsp)
-}
-
-// ListFlowScheduleRunsWithResponse List Schedule Run Occurrences
-//
-// Lists schedule run occurrences (one per due tick) most recent first.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /flow-schedules/{scheduleId}/runs (the `ListFlowScheduleRuns` operationId).
-func (c *ClientWithResponses) ListFlowScheduleRunsWithResponse(ctx context.Context, scheduleId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error) {
-	rsp, err := c.ListFlowScheduleRuns(ctx, scheduleId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListFlowScheduleRunsResponse(rsp)
-}
-
-// GetFlowScheduleRunWithResponse Get Schedule Run Occurrence
-//
-// Returns a schedule run occurrence together with its per-flow run items.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /flow-schedules/{scheduleId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
-func (c *ClientWithResponses) GetFlowScheduleRunWithResponse(ctx context.Context, scheduleId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleRunResponse, error) {
-	rsp, err := c.GetFlowScheduleRun(ctx, scheduleId, runId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetFlowScheduleRunResponse(rsp)
-}
-
 // ListFlowsWithResponse List Flows
 //
 // Retrieves a paginated list of flows for the authenticated user.
@@ -36708,10 +34323,17 @@ func (c *ClientWithResponses) ExportFlowWithResponse(ctx context.Context, id ope
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
 //
-// Each organization may launch at most its license's `max_executions_per_day`
-// executions in any 24 hours, counting every trigger and runner. A launch past
-// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-// earlier launch does not count.
+// Each organization may launch at most its license's `max_cloud_executions_per_day`
+// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+// Self-hosted and ephemeral launches run on the organization's own compute and
+// never count against it. An idempotent replay of an earlier launch does not
+// count.
+//
+// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+// launches per organization in any 24 hours, which stops a flow that keeps
+// launching itself. Past it the launch answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
 // Cloud launches additionally share an operator-configured fleet budget in
 // any 24 hours. Exhausting it also answers 429
@@ -36737,10 +34359,17 @@ func (c *ClientWithResponses) LaunchFlowWithBodyWithResponse(ctx context.Context
 // Specify a version_id in the request body to run a specific published version;
 // omit it to run the current (mutable) flow definition.
 //
-// Each organization may launch at most its license's `max_executions_per_day`
-// executions in any 24 hours, counting every trigger and runner. A launch past
-// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED`; an idempotent replay of an
-// earlier launch does not count.
+// Each organization may launch at most its license's `max_cloud_executions_per_day`
+// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
+// it answers 429 `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization`.
+// Self-hosted and ephemeral launches run on the organization's own compute and
+// never count against it. An idempotent replay of an earlier launch does not
+// count.
+//
+// Every launch, whatever its runner, also passes a safety ceiling of 50,000
+// launches per organization in any 24 hours, which stops a flow that keeps
+// launching itself. Past it the launch answers 429
+// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
 // Cloud launches additionally share an operator-configured fleet budget in
 // any 24 hours. Exhausting it also answers 429
@@ -37150,6 +34779,261 @@ func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Co
 	return ParseListOrganizationMembersResponse(rsp)
 }
 
+// ListFlowSchedulesWithResponse List Monitors
+//
+// Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /monitors (the `ListFlowSchedules` operationId).
+func (c *ClientWithResponses) ListFlowSchedulesWithResponse(ctx context.Context, params *ListFlowSchedulesParams, reqEditors ...RequestEditorFn) (*ListFlowSchedulesResponse, error) {
+	rsp, err := c.ListFlowSchedules(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFlowSchedulesResponse(rsp)
+}
+
+// CreateFlowScheduleWithBodyWithResponse Create Monitor
+//
+// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+func (c *ClientWithResponses) CreateFlowScheduleWithBodyWithResponse(ctx context.Context, params *CreateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error) {
+	rsp, err := c.CreateFlowScheduleWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFlowScheduleResponse(rsp)
+}
+
+// CreateFlowScheduleWithResponse Create Monitor
+//
+// Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors (the `CreateFlowSchedule` operationId).
+func (c *ClientWithResponses) CreateFlowScheduleWithResponse(ctx context.Context, params *CreateFlowScheduleParams, body CreateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowScheduleResponse, error) {
+	rsp, err := c.CreateFlowSchedule(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFlowScheduleResponse(rsp)
+}
+
+// GetMonitorCloudBudgetWithResponse Get Monitor Cloud Budget
+//
+// Returns the Cloud executions per day planned by the organization's enabled Cloud monitors against the license limit, largest monitor first. Used by the web app to warn when the plan passes the limit; it never blocks a save. Callable by bearer users and API keys scoped with flows:read.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /monitors/cloud-budget (the `GetMonitorCloudBudget` operationId).
+func (c *ClientWithResponses) GetMonitorCloudBudgetWithResponse(ctx context.Context, params *GetMonitorCloudBudgetParams, reqEditors ...RequestEditorFn) (*GetMonitorCloudBudgetResponse, error) {
+	rsp, err := c.GetMonitorCloudBudget(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetMonitorCloudBudgetResponse(rsp)
+}
+
+// EstimateMonitorWithBodyWithResponse Estimate Monitor
+//
+// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+func (c *ClientWithResponses) EstimateMonitorWithBodyWithResponse(ctx context.Context, params *EstimateMonitorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EstimateMonitorResponse, error) {
+	rsp, err := c.EstimateMonitorWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEstimateMonitorResponse(rsp)
+}
+
+// EstimateMonitorWithResponse Estimate Monitor
+//
+// Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/estimate (the `EstimateMonitor` operationId).
+func (c *ClientWithResponses) EstimateMonitorWithResponse(ctx context.Context, params *EstimateMonitorParams, body EstimateMonitorJSONRequestBody, reqEditors ...RequestEditorFn) (*EstimateMonitorResponse, error) {
+	rsp, err := c.EstimateMonitor(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEstimateMonitorResponse(rsp)
+}
+
+// PreviewScheduleTagsWithBodyWithResponse Preview Tag-Suite Flows
+//
+// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+func (c *ClientWithResponses) PreviewScheduleTagsWithBodyWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error) {
+	rsp, err := c.PreviewScheduleTagsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewScheduleTagsResponse(rsp)
+}
+
+// PreviewScheduleTagsWithResponse Preview Tag-Suite Flows
+//
+// Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/preview-tags (the `PreviewScheduleTags` operationId).
+func (c *ClientWithResponses) PreviewScheduleTagsWithResponse(ctx context.Context, params *PreviewScheduleTagsParams, body PreviewScheduleTagsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewScheduleTagsResponse, error) {
+	rsp, err := c.PreviewScheduleTags(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewScheduleTagsResponse(rsp)
+}
+
+// DeleteFlowScheduleWithResponse Delete Monitor
+//
+// Deletes a monitor and prevents future launches; prior execution history is preserved.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /monitors/{monitorId} (the `DeleteFlowSchedule` operationId).
+func (c *ClientWithResponses) DeleteFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *DeleteFlowScheduleParams, reqEditors ...RequestEditorFn) (*DeleteFlowScheduleResponse, error) {
+	rsp, err := c.DeleteFlowSchedule(ctx, monitorId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFlowScheduleResponse(rsp)
+}
+
+// GetFlowScheduleWithResponse Get Monitor
+//
+// Returns one monitor of the organization: its selection, cadence, runner, environment, health policy and current health, and whether it is enabled.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /monitors/{monitorId} (the `GetFlowSchedule` operationId).
+func (c *ClientWithResponses) GetFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *GetFlowScheduleParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleResponse, error) {
+	rsp, err := c.GetFlowSchedule(ctx, monitorId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetFlowScheduleResponse(rsp)
+}
+
+// UpdateFlowScheduleWithBodyWithResponse Update Monitor
+//
+// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+func (c *ClientWithResponses) UpdateFlowScheduleWithBodyWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error) {
+	rsp, err := c.UpdateFlowScheduleWithBody(ctx, monitorId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateFlowScheduleResponse(rsp)
+}
+
+// UpdateFlowScheduleWithResponse Update Monitor
+//
+// Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /monitors/{monitorId} (the `UpdateFlowSchedule` operationId).
+func (c *ClientWithResponses) UpdateFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *UpdateFlowScheduleParams, body UpdateFlowScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowScheduleResponse, error) {
+	rsp, err := c.UpdateFlowSchedule(ctx, monitorId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateFlowScheduleResponse(rsp)
+}
+
+// PauseFlowScheduleWithResponse Pause Monitor
+//
+// Disables a monitor so the scheduler stops launching future occurrences.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/{monitorId}/pause (the `PauseFlowSchedule` operationId).
+func (c *ClientWithResponses) PauseFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *PauseFlowScheduleParams, reqEditors ...RequestEditorFn) (*PauseFlowScheduleResponse, error) {
+	rsp, err := c.PauseFlowSchedule(ctx, monitorId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePauseFlowScheduleResponse(rsp)
+}
+
+// ResumeFlowScheduleWithResponse Resume Monitor
+//
+// Enables a paused monitor and recomputes next_run_at so the next occurrence is in the future.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/{monitorId}/resume (the `ResumeFlowSchedule` operationId).
+func (c *ClientWithResponses) ResumeFlowScheduleWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *ResumeFlowScheduleParams, reqEditors ...RequestEditorFn) (*ResumeFlowScheduleResponse, error) {
+	rsp, err := c.ResumeFlowSchedule(ctx, monitorId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResumeFlowScheduleResponse(rsp)
+}
+
+// RunMonitorWithResponse Run Monitor
+//
+// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
+func (c *ClientWithResponses) RunMonitorWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*RunMonitorResponse, error) {
+	rsp, err := c.RunMonitor(ctx, monitorId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRunMonitorResponse(rsp)
+}
+
+// ListFlowScheduleRunsWithResponse List Monitor Runs
+//
+// Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /monitors/{monitorId}/runs (the `ListFlowScheduleRuns` operationId).
+func (c *ClientWithResponses) ListFlowScheduleRunsWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *ListFlowScheduleRunsParams, reqEditors ...RequestEditorFn) (*ListFlowScheduleRunsResponse, error) {
+	rsp, err := c.ListFlowScheduleRuns(ctx, monitorId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFlowScheduleRunsResponse(rsp)
+}
+
+// GetFlowScheduleRunWithResponse Get Monitor Run
+//
+// Returns a monitor run together with the executions it launched.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /monitors/{monitorId}/runs/{runId} (the `GetFlowScheduleRun` operationId).
+func (c *ClientWithResponses) GetFlowScheduleRunWithResponse(ctx context.Context, monitorId openapi_types.UUID, runId openapi_types.UUID, params *GetFlowScheduleRunParams, reqEditors ...RequestEditorFn) (*GetFlowScheduleRunResponse, error) {
+	rsp, err := c.GetFlowScheduleRun(ctx, monitorId, runId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetFlowScheduleRunResponse(rsp)
+}
+
 // ListNodesWithResponse List Available Nodes
 //
 // Retrieves all available special nodes for flow control (delay, etc.).
@@ -37403,261 +35287,6 @@ func (c *ClientWithResponses) ListPermissionsWithResponse(ctx context.Context, p
 		return nil, err
 	}
 	return ParseListPermissionsResponse(rsp)
-}
-
-// ListProbesWithResponse ListProbes
-//
-// Lists the organization's persistent Probes with configuration revisions and current server-derived health. Supports limit and offset pagination.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /probes (the `ListProbes` operationId).
-func (c *ClientWithResponses) ListProbesWithResponse(ctx context.Context, params *ListProbesParams, reqEditors ...RequestEditorFn) (*ListProbesResponse, error) {
-	rsp, err := c.ListProbes(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListProbesResponse(rsp)
-}
-
-// CreateProbeWithBodyWithResponse CreateProbe
-//
-// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes (the `CreateProbe` operationId).
-func (c *ClientWithResponses) CreateProbeWithBodyWithResponse(ctx context.Context, params *CreateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error) {
-	rsp, err := c.CreateProbeWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateProbeResponse(rsp)
-}
-
-// CreateProbeWithResponse CreateProbe
-//
-// Creates a tenant-scoped Probe backed by a probe-type monitor. Choose flows or tags; the shared monitor resolves sources automatically and owns durable scheduling.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes (the `CreateProbe` operationId).
-func (c *ClientWithResponses) CreateProbeWithResponse(ctx context.Context, params *CreateProbeParams, body CreateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProbeResponse, error) {
-	rsp, err := c.CreateProbe(ctx, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateProbeResponse(rsp)
-}
-
-// EstimateProbeWithBodyWithResponse EstimateProbe
-//
-// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-func (c *ClientWithResponses) EstimateProbeWithBodyWithResponse(ctx context.Context, params *EstimateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error) {
-	rsp, err := c.EstimateProbeWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseEstimateProbeResponse(rsp)
-}
-
-// EstimateProbeWithResponse EstimateProbe
-//
-// Resolves the selected flows without executing them. Execution forecasts assume every scheduled occurrence starts; HTTP request forecasts are omitted when dynamic definitions cannot be bounded. Executions, not HTTP requests, consume the execution budget.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/estimate (the `EstimateProbe` operationId).
-func (c *ClientWithResponses) EstimateProbeWithResponse(ctx context.Context, params *EstimateProbeParams, body EstimateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*EstimateProbeResponse, error) {
-	rsp, err := c.EstimateProbe(ctx, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseEstimateProbeResponse(rsp)
-}
-
-// DeleteProbeWithResponse DeleteProbe
-//
-// Deletes a tenant-scoped Probe and its occurrence history after checking expected_revision. Existing flow execution records remain available through the execution API.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with DELETE /probes/{probeId} (the `DeleteProbe` operationId).
-func (c *ClientWithResponses) DeleteProbeWithResponse(ctx context.Context, probeId string, params *DeleteProbeParams, reqEditors ...RequestEditorFn) (*DeleteProbeResponse, error) {
-	rsp, err := c.DeleteProbe(ctx, probeId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteProbeResponse(rsp)
-}
-
-// GetProbeWithResponse GetProbe
-//
-// Returns a tenant-scoped Probe, its approved configuration revision, next due time and current health derived only from compatible scheduled occurrences.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /probes/{probeId} (the `GetProbe` operationId).
-func (c *ClientWithResponses) GetProbeWithResponse(ctx context.Context, probeId string, params *GetProbeParams, reqEditors ...RequestEditorFn) (*GetProbeResponse, error) {
-	rsp, err := c.GetProbe(ctx, probeId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetProbeResponse(rsp)
-}
-
-// UpdateProbeWithBodyWithResponse UpdateProbe
-//
-// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-func (c *ClientWithResponses) UpdateProbeWithBodyWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error) {
-	rsp, err := c.UpdateProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateProbeResponse(rsp)
-}
-
-// UpdateProbeWithResponse UpdateProbe
-//
-// Replaces Probe configuration after checking expected_revision. The server revalidates the published source and increments the revision, excluding earlier measurements from health confirmation.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with PUT /probes/{probeId} (the `UpdateProbe` operationId).
-func (c *ClientWithResponses) UpdateProbeWithResponse(ctx context.Context, probeId string, params *UpdateProbeParams, body UpdateProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProbeResponse, error) {
-	rsp, err := c.UpdateProbe(ctx, probeId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateProbeResponse(rsp)
-}
-
-// PauseProbeWithBodyWithResponse PauseProbe
-//
-// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-func (c *ClientWithResponses) PauseProbeWithBodyWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error) {
-	rsp, err := c.PauseProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePauseProbeResponse(rsp)
-}
-
-// PauseProbeWithResponse PauseProbe
-//
-// Stops future scheduled occurrences after checking expected_revision. A changed enabled state increments the revision; already launched executions can finish, and their obsolete measurements cannot confirm health.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/{probeId}/pause (the `PauseProbe` operationId).
-func (c *ClientWithResponses) PauseProbeWithResponse(ctx context.Context, probeId string, params *PauseProbeParams, body PauseProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*PauseProbeResponse, error) {
-	rsp, err := c.PauseProbe(ctx, probeId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePauseProbeResponse(rsp)
-}
-
-// ResumeProbeWithBodyWithResponse ResumeProbe
-//
-// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-func (c *ClientWithResponses) ResumeProbeWithBodyWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error) {
-	rsp, err := c.ResumeProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseResumeProbeResponse(rsp)
-}
-
-// ResumeProbeWithResponse ResumeProbe
-//
-// Revalidates the approved source and resumes durable scheduling after checking expected_revision. A changed enabled state increments the revision and starts fresh scheduled confirmation.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/{probeId}/resume (the `ResumeProbe` operationId).
-func (c *ClientWithResponses) ResumeProbeWithResponse(ctx context.Context, probeId string, params *ResumeProbeParams, body ResumeProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*ResumeProbeResponse, error) {
-	rsp, err := c.ResumeProbe(ctx, probeId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseResumeProbeResponse(rsp)
-}
-
-// RunProbeWithBodyWithResponse RunProbe
-//
-// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-func (c *ClientWithResponses) RunProbeWithBodyWithResponse(ctx context.Context, probeId string, params *RunProbeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RunProbeResponse, error) {
-	rsp, err := c.RunProbeWithBody(ctx, probeId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRunProbeResponse(rsp)
-}
-
-// RunProbeWithResponse RunProbe
-//
-// Starts a private diagnostic occurrence through the existing runner. It never contributes to health confirmation or the public status page. Durable scheduled occurrences are the only policy samples.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /probes/{probeId}/run (the `RunProbe` operationId).
-func (c *ClientWithResponses) RunProbeWithResponse(ctx context.Context, probeId string, params *RunProbeParams, body RunProbeJSONRequestBody, reqEditors ...RequestEditorFn) (*RunProbeResponse, error) {
-	rsp, err := c.RunProbe(ctx, probeId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRunProbeResponse(rsp)
-}
-
-// ListProbeRunsWithResponse ListProbeRuns
-//
-// Lists the Probe's durable scheduled and diagnostic occurrence history with safe assertion summaries and actual execution links. Supports limit and offset pagination.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /probes/{probeId}/runs (the `ListProbeRuns` operationId).
-func (c *ClientWithResponses) ListProbeRunsWithResponse(ctx context.Context, probeId string, params *ListProbeRunsParams, reqEditors ...RequestEditorFn) (*ListProbeRunsResponse, error) {
-	rsp, err := c.ListProbeRuns(ctx, probeId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListProbeRunsResponse(rsp)
-}
-
-// GetProbeRunWithResponse GetProbeRun
-//
-// Returns one tenant-scoped Probe occurrence, its source revision, actual execution link and safe terminal assertion evidence. Raw request and response data are excluded.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /probes/{probeId}/runs/{runId} (the `GetProbeRun` operationId).
-func (c *ClientWithResponses) GetProbeRunWithResponse(ctx context.Context, probeId string, runId string, params *GetProbeRunParams, reqEditors ...RequestEditorFn) (*GetProbeRunResponse, error) {
-	rsp, err := c.GetProbeRun(ctx, probeId, runId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetProbeRunResponse(rsp)
 }
 
 // GetPublicStatusPageByOrganizationWithResponse Read a published status page by permanent organization key
@@ -38226,24 +35855,9 @@ func (c *ClientWithResponses) GetSpecVersionWithResponse(ctx context.Context, sl
 	return ParseGetSpecVersionResponse(rsp)
 }
 
-// GetStatusPageBindingOptionsWithResponse List publishable monitor checks
-//
-// Lists the assertions of a scheduled flow that a status page service can be bound to, with the schedule's flow version, environment, and cron. The schedule and the flow must belong to the organization.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /status-pages/binding-options (the `GetStatusPageBindingOptions` operationId).
-func (c *ClientWithResponses) GetStatusPageBindingOptionsWithResponse(ctx context.Context, params *GetStatusPageBindingOptionsParams, reqEditors ...RequestEditorFn) (*GetStatusPageBindingOptionsResponse, error) {
-	rsp, err := c.GetStatusPageBindingOptions(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetStatusPageBindingOptionsResponse(rsp)
-}
-
 // GetStatusPageWithResponse Read the shared status page draft
 //
-// Returns the organization's status page: the shared draft, its monitor binding, the public address, and whether it is published. Returns 404 until the first save.
+// Returns the organization's status page: the shared draft, its monitor bindings, the public address, and whether it is published. Returns 404 until the first save.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -40401,514 +38015,6 @@ func ParseGetExecutionsSummaryResponse(rsp *http.Response) (*GetExecutionsSummar
 	return response, nil
 }
 
-// ParseListFlowSchedulesResponse parses an HTTP response from a ListFlowSchedulesWithResponse call
-func ParseListFlowSchedulesResponse(rsp *http.Response) (*ListFlowSchedulesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListFlowSchedulesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowScheduleListResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCreateFlowScheduleResponse parses an HTTP response from a CreateFlowScheduleWithResponse call
-func ParseCreateFlowScheduleResponse(rsp *http.Response) (*CreateFlowScheduleResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateFlowScheduleResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest FlowSchedule
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePreviewScheduleTagsResponse parses an HTTP response from a PreviewScheduleTagsWithResponse call
-func ParsePreviewScheduleTagsResponse(rsp *http.Response) (*PreviewScheduleTagsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PreviewScheduleTagsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ScheduleTagPreviewResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteFlowScheduleResponse parses an HTTP response from a DeleteFlowScheduleWithResponse call
-func ParseDeleteFlowScheduleResponse(rsp *http.Response) (*DeleteFlowScheduleResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteFlowScheduleResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case rsp.StatusCode == 204:
-		break // No content-type
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetFlowScheduleResponse parses an HTTP response from a GetFlowScheduleWithResponse call
-func ParseGetFlowScheduleResponse(rsp *http.Response) (*GetFlowScheduleResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetFlowScheduleResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowSchedule
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUpdateFlowScheduleResponse parses an HTTP response from a UpdateFlowScheduleWithResponse call
-func ParseUpdateFlowScheduleResponse(rsp *http.Response) (*UpdateFlowScheduleResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateFlowScheduleResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowSchedule
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePauseFlowScheduleResponse parses an HTTP response from a PauseFlowScheduleWithResponse call
-func ParsePauseFlowScheduleResponse(rsp *http.Response) (*PauseFlowScheduleResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PauseFlowScheduleResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowSchedule
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseResumeFlowScheduleResponse parses an HTTP response from a ResumeFlowScheduleWithResponse call
-func ParseResumeFlowScheduleResponse(rsp *http.Response) (*ResumeFlowScheduleResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ResumeFlowScheduleResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowSchedule
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListFlowScheduleRunsResponse parses an HTTP response from a ListFlowScheduleRunsWithResponse call
-func ParseListFlowScheduleRunsResponse(rsp *http.Response) (*ListFlowScheduleRunsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListFlowScheduleRunsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowScheduleRunListResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetFlowScheduleRunResponse parses an HTTP response from a GetFlowScheduleRunWithResponse call
-func ParseGetFlowScheduleRunResponse(rsp *http.Response) (*GetFlowScheduleRunResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetFlowScheduleRunResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowScheduleRunDetail
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseListFlowsResponse parses an HTTP response from a ListFlowsWithResponse call
 func ParseListFlowsResponse(rsp *http.Response) (*ListFlowsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -42761,6 +39867,669 @@ func ParseListOrganizationMembersResponse(rsp *http.Response) (*ListOrganization
 	return response, nil
 }
 
+// ParseListFlowSchedulesResponse parses an HTTP response from a ListFlowSchedulesWithResponse call
+func ParseListFlowSchedulesResponse(rsp *http.Response) (*ListFlowSchedulesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFlowSchedulesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MonitorListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateFlowScheduleResponse parses an HTTP response from a CreateFlowScheduleWithResponse call
+func ParseCreateFlowScheduleResponse(rsp *http.Response) (*CreateFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest Monitor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetMonitorCloudBudgetResponse parses an HTTP response from a GetMonitorCloudBudgetWithResponse call
+func ParseGetMonitorCloudBudgetResponse(rsp *http.Response) (*GetMonitorCloudBudgetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetMonitorCloudBudgetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MonitorCloudBudget
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseEstimateMonitorResponse parses an HTTP response from a EstimateMonitorWithResponse call
+func ParseEstimateMonitorResponse(rsp *http.Response) (*EstimateMonitorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &EstimateMonitorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MonitorEstimate
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePreviewScheduleTagsResponse parses an HTTP response from a PreviewScheduleTagsWithResponse call
+func ParsePreviewScheduleTagsResponse(rsp *http.Response) (*PreviewScheduleTagsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PreviewScheduleTagsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ScheduleTagPreviewResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFlowScheduleResponse parses an HTTP response from a DeleteFlowScheduleWithResponse call
+func ParseDeleteFlowScheduleResponse(rsp *http.Response) (*DeleteFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetFlowScheduleResponse parses an HTTP response from a GetFlowScheduleWithResponse call
+func ParseGetFlowScheduleResponse(rsp *http.Response) (*GetFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Monitor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateFlowScheduleResponse parses an HTTP response from a UpdateFlowScheduleWithResponse call
+func ParseUpdateFlowScheduleResponse(rsp *http.Response) (*UpdateFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Monitor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePauseFlowScheduleResponse parses an HTTP response from a PauseFlowScheduleWithResponse call
+func ParsePauseFlowScheduleResponse(rsp *http.Response) (*PauseFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PauseFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Monitor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResumeFlowScheduleResponse parses an HTTP response from a ResumeFlowScheduleWithResponse call
+func ParseResumeFlowScheduleResponse(rsp *http.Response) (*ResumeFlowScheduleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResumeFlowScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Monitor
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRunMonitorResponse parses an HTTP response from a RunMonitorWithResponse call
+func ParseRunMonitorResponse(rsp *http.Response) (*RunMonitorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RunMonitorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest MonitorRun
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListFlowScheduleRunsResponse parses an HTTP response from a ListFlowScheduleRunsWithResponse call
+func ParseListFlowScheduleRunsResponse(rsp *http.Response) (*ListFlowScheduleRunsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFlowScheduleRunsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MonitorRunListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetFlowScheduleRunResponse parses an HTTP response from a GetFlowScheduleRunWithResponse call
+func ParseGetFlowScheduleRunResponse(rsp *http.Response) (*GetFlowScheduleRunResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetFlowScheduleRunResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MonitorRunDetail
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListNodesResponse parses an HTTP response from a ListNodesWithResponse call
 func ParseListNodesResponse(rsp *http.Response) (*ListNodesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -43238,827 +41007,6 @@ func ParseListPermissionsResponse(rsp *http.Response) (*ListPermissionsResponse,
 			return nil, err
 		}
 		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListProbesResponse parses an HTTP response from a ListProbesWithResponse call
-func ParseListProbesResponse(rsp *http.Response) (*ListProbesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListProbesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ProbeListResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCreateProbeResponse parses an HTTP response from a CreateProbeWithResponse call
-func ParseCreateProbeResponse(rsp *http.Response) (*CreateProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest Probe
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseEstimateProbeResponse parses an HTTP response from a EstimateProbeWithResponse call
-func ParseEstimateProbeResponse(rsp *http.Response) (*EstimateProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &EstimateProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ProbeEstimate
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteProbeResponse parses an HTTP response from a DeleteProbeWithResponse call
-func ParseDeleteProbeResponse(rsp *http.Response) (*DeleteProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case rsp.StatusCode == 204:
-		break // No content-type
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetProbeResponse parses an HTTP response from a GetProbeWithResponse call
-func ParseGetProbeResponse(rsp *http.Response) (*GetProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Probe
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUpdateProbeResponse parses an HTTP response from a UpdateProbeWithResponse call
-func ParseUpdateProbeResponse(rsp *http.Response) (*UpdateProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Probe
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePauseProbeResponse parses an HTTP response from a PauseProbeWithResponse call
-func ParsePauseProbeResponse(rsp *http.Response) (*PauseProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PauseProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Probe
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseResumeProbeResponse parses an HTTP response from a ResumeProbeWithResponse call
-func ParseResumeProbeResponse(rsp *http.Response) (*ResumeProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ResumeProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Probe
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRunProbeResponse parses an HTTP response from a RunProbeWithResponse call
-func ParseRunProbeResponse(rsp *http.Response) (*RunProbeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RunProbeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
-		var dest ProbeRun
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON202 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListProbeRunsResponse parses an HTTP response from a ListProbeRunsWithResponse call
-func ParseListProbeRunsResponse(rsp *http.Response) (*ListProbeRunsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListProbeRunsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ProbeRunListResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetProbeRunResponse parses an HTTP response from a GetProbeRunWithResponse call
-func ParseGetProbeRunResponse(rsp *http.Response) (*GetProbeRunResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetProbeRunResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ProbeRun
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest TooManyRequests
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
@@ -45242,87 +42190,6 @@ func ParseGetSpecVersionResponse(rsp *http.Response) (*GetSpecVersionResponse, e
 		}
 		response.JSON404 = &dest
 
-	}
-
-	return response, nil
-}
-
-// ParseGetStatusPageBindingOptionsResponse parses an HTTP response from a GetStatusPageBindingOptionsWithResponse call
-func ParseGetStatusPageBindingOptionsResponse(rsp *http.Response) (*GetStatusPageBindingOptionsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetStatusPageBindingOptionsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest StatusPageBindingOptions
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	switch {
-	case rsp.StatusCode == 200:
-		var headers GetStatusPageBindingOptionsResponse200Headers
-		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.CacheControl = &value
-		}
-		response.Headers200 = &headers
 	}
 
 	return response, nil

@@ -43,8 +43,7 @@ echopoint --org <organization-id> flow version list <flow-id> --limit 20 -o json
 echopoint --org <organization-id> flow version view <flow-id> <version-id> -o json
 ```
 
-Publishing snapshots the saved definition. The returned version ID pins a probe's
-source; publishing a later version does not change that pin. Version reads include
+Publishing snapshots the saved definition. Version reads include
 the definition and assertions, and default to JSON so nested fields are preserved.
 `flow versions` is an alias of `flow version`; `get` and `show` alias `view`.
 

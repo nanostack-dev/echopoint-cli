@@ -11,9 +11,8 @@ and the normal session/API-key authentication. Nested results default to JSON;
 # Discover the shared draft. A 404 means the organization has no page yet.
 echopoint --profile prod status-page view
 
-# Discover the exact published version, environment and assertion choices.
-echopoint --profile prod status-page binding-options \
-  --schedule-id <monitor-uuid> --flow-id <flow-id>
+# Find the monitors a service can be bound to: enabled, with a health policy.
+echopoint --profile prod monitor list --enabled --has-health-policy
 
 # Validate a complete SaveStatusPageRequest without credentials or an API call.
 echopoint status-page validate -f page.json
@@ -32,40 +31,36 @@ echopoint --profile prod status-page public "$(jq -r .slug saved-page.json)"
 [Complete example input](../internal/commands/testdata/status-page.json) includes
 all design fields for Orbit, Ledger and Signal. For a new page,
 `expected_draft_version` is `0`. For edits, read the current draft and construct
-`{expected_draft_version, slug, config, binding}` from its current versions and
-configuration. Keep any existing binding and `probe_bindings` unless intentionally removing them. The
+`{expected_draft_version, slug, config, monitor_bindings}` from its current versions and
+configuration. Keep any existing `monitor_bindings` unless intentionally removing them. The
 server appends a random 12-character suffix on creation: an input such as `example` becomes `example-a1b2c3d4e5f6`. The prefix accepts 3–48 characters and may be shared by other organizations. The returned full slug (up to 61 characters) is immutable: use it for later saves and public reads; never reconstruct it from the company name. Saving does not change the published page.
 
 For an existing page, a complete editable request can be constructed without dropping the assigned address:
 
 ```bash
-echopoint --profile prod status-page view | jq '{expected_draft_version: .draft_version, slug, config, binding, probe_bindings} | with_entries(select(.value != null))' > page.json
+echopoint --profile prod status-page view | jq '{expected_draft_version: .draft_version, slug, config, monitor_bindings} | with_entries(select(.value != null))' > page.json
 ```
 
 Existing addresses remain unchanged. This change adds suffixes only when creating new pages; it never renames a saved page.
 
-For measured status, add a `binding` using the discovered values:
+For measured status, bind a visible service to a monitor with a health policy:
 
 ```json
-{
-  "service_id": "api",
-  "schedule_id": "00000000-0000-0000-0000-000000000001",
-  "flow_id": "00000000-0000-0000-0000-000000000002",
-  "version_id": "00000000-0000-0000-0000-000000000003",
-  "environment_key": "production",
-  "check": {"node_id": "health", "assertion_index": 0}
-}
+{"monitor_bindings":[{"service_id":"api","monitor_id":"00000000-0000-0000-0000-000000000001"}]}
 ```
 
-The monitor must be enabled and select the published flow. Use the environment
-returned by `binding-options`, including an empty string if that is its value.
-Milestone 1 supports one monitored service/assertion. Monitors and published flow
-versions are discoverable through the CLI's MCP tools (`list_flow_schedules`,
-`list_flows`, `publish_flow`, `create_flow_schedule`).
+Only an enabled monitor with a health policy can be bound. See
+[monitors](monitors.md) to create one. Publication freezes the monitor's `revision`:
+a later change to the monitor makes that service Unknown until the page is published
+again. The probe bindings (`probe_bindings`), the single-assertion `binding` and
+`status-page binding-options` were removed with the Probe API (API 11.0.0); a
+monitor with a health policy replaces them. A page that still carries the old fields
+fails offline validation, and the server shows its services as not monitored until they
+are rebound.
 
 Offline validation checks the OpenAPI schema. The server additionally validates
-service/region uniqueness, visible services, logo policy, address immutability, binding
-ownership and current monitor selection. Version conflicts are returned without
+service/region uniqueness, visible services, logo policy, address immutability, monitor
+bindings and current monitor selection. Version conflicts are returned without
 retrying: read the draft again and reconcile changes before another write.
 
 ## Public reads and withdrawal
@@ -87,24 +82,22 @@ Use the latest intent version from `view`. The public endpoint returns 404 after
 withdrawal, while the private draft remains editable. No page deletion endpoint
 exists in milestone 1.
 
-Legacy monitor health needs two consecutive scheduled measurements. Manual launches do not
-establish public health. The minimum monitor interval is 15 minutes. [Durable probes](probes.md)
-support a minimum 60-second interval and configurable confirmation, recovery and freshness.
-Attach probes directly with the complete request's `probe_bindings` array, each
-entry containing `service_id` and `probe_id`; publication pins their revisions
-server-side. Optional `config.services[].messages` contains `operational`, `outage`
-and `unknown` text, each at most 240 characters. Empty or absent messages retain
-the normal public wording. Messages belong to the service and are frozen with the
-published page; editing a draft does not change the public page. Custom text does
-not alter measured health. Missing,
-stale or inconclusive evidence stays Unknown; publishing never fabricates uptime.
+A monitor's health follows its health policy: `confirmation_runs` and `recovery_runs`
+consecutive scheduled runs, and `freshness_seconds` of validity. Diagnostic runs
+(`monitor run`) and manual launches do not establish public health. A health monitor
+runs every 60 to 86400 seconds. Optional `config.services[].messages` contains
+`operational`, `outage` and `unknown` text, each at most 240 characters. Empty or absent
+messages retain the normal public wording. Messages belong to the service and are frozen
+with the published page; editing a draft does not change the public page. Custom text
+does not alter measured health. Missing, stale or inconclusive evidence stays Unknown;
+publishing never fabricates uptime.
 
 The public HTML and JSON responses request exclusion from search engines with `X-Robots-Tag: noindex, nofollow`. They remain anonymously accessible. Customer CNAME domains require verified hostname routing and TLS; this milestone does not provide custom-domain commands.
 
 ## MCP exposure
 
-The refreshed contract exposes `get_status_page`, `save_status_page` and
-`get_status_page_binding_options`. The existing contract excludes publication,
+The refreshed contract exposes `get_status_page` and `save_status_page`
+(`get_status_page_binding_options` was removed). The existing contract excludes publication,
 withdrawal and visitor reads from the MCP catalog. Use the explicit CLI commands
 for these actions; this change does not widen the MCP exposure policy.
 

@@ -263,7 +263,7 @@ func newFlowExecutionListCmd(state *AppState) *cobra.Command {
 					})
 				}
 				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
-				return output.PrintTable([]string{"Execution ID", "Status", "Runner", "Started"}, rows)
+				return output.PrintTable([]string{"Execution ID", "Status", "Runner", columnStarted}, rows)
 			}
 		},
 	}
@@ -329,6 +329,8 @@ func printExecutionSummary(execution api.FlowExecution) error {
 const (
 	columnID   = "ID"
 	columnName = "Name"
+
+	columnStarted = "Started"
 )
 
 // flowListColumns are the columns every `flow list` variant renders, whether
