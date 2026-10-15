@@ -11,8 +11,9 @@ paths:
       tags:
         - Webhook
       summary: List Webhook Endpoints
-      description: Lists webhook endpoints for the current organization.
+      description: 'Deprecated: use `searchWebhooks`, which pages with a cursor. Lists webhook endpoints for the current organization.'
       operationId: listWebhooks
+      deprecated: true
       responses:
         "200":
           description: Webhook endpoints retrieved successfully.
@@ -118,7 +119,7 @@ paths:
       tags:
         - Resources
       summary: Search Resources
-      description: Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`.
+      description: 'Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group''s next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.'
       operationId: searchResources
       requestBody:
         description: Search criteria for cross-domain resources.
@@ -297,7 +298,7 @@ paths:
       tags:
         - Webhook
       summary: Search Webhook Requests
-      description: Server-side search with pagination, filtering and sorting for a webhook's requests.
+      description: 'Server-side search with pagination, filtering and sorting for a webhook''s requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.'
       operationId: searchWebhookRequests
       requestBody:
         description: Search criteria for webhook requests.
@@ -330,7 +331,7 @@ paths:
       tags:
         - Webhook
       summary: Search Webhook Endpoints
-      description: Server-side search with pagination, filtering and sorting for webhook endpoints.
+      description: 'Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.'
       operationId: searchWebhooks
       requestBody:
         description: Search criteria for webhook endpoints.
@@ -797,6 +798,7 @@ paths:
         based on Redis-backed presence refreshed by runner poll and heartbeat traffic.
         Cloud workers are never listed: a Cloud container is a transient worker of the
         shared pool, not a runner that the organization operates.
+        Not paginated: this is a live view over Redis presence keys, not a persisted collection, so it has no search.
       operationId: listLiveRunners
       responses:
         "200":
@@ -1015,8 +1017,9 @@ paths:
       tags:
         - Flows
       summary: List Flows
-      description: Retrieves a paginated list of flows for the authenticated user.
+      description: 'Deprecated: use `searchFlows`, which pages with a cursor. Retrieves a paginated list of flows for the authenticated user.'
       operationId: listFlows
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -1077,11 +1080,7 @@ paths:
       tags:
         - Flows
       summary: Search Flows
-      description: |
-        Dedicated flow-domain search against canonical flows with pagination, sorting,
-        full-text search, and exact tag filtering. Returns lightweight flow items;
-        flow_definition is omitted unless requested via `include_definition`.
-        Callable by bearer users and API keys scoped with flows:read.
+      description: 'Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.'
       operationId: searchFlows
       requestBody:
         description: Flow search criteria.
@@ -1160,8 +1159,9 @@ paths:
       tags:
         - Flows
       summary: List Flow Folders
-      description: Returns every flow folder for the organization so clients can build the tree.
+      description: 'Deprecated: use `searchFlowFolders`, which pages with a cursor. Returns every flow folder for the organization so clients can build the tree.'
       operationId: listFlowFolders
+      deprecated: true
       responses:
         "200":
           description: Flow folders returned successfully.
@@ -1221,6 +1221,42 @@ paths:
             - flows:create
         - ApiKeys:
             - flows:create
+      x-ai-tool: true
+  /flows/folders/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Flows
+      summary: Search Flow Folders
+      description: 'Searches the organization''s flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.'
+      operationId: searchFlowFolders
+      requestBody:
+        description: Search criteria for flow folders.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlowFolderSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Flow folders returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowFolderListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search the organization's flow folders (id, parent, name) to render the flow tree. Page with the returned next_cursor.
       x-ai-tool: true
   /flows/folders/{folderId}:
     parameters:
@@ -1361,7 +1397,7 @@ paths:
       tags:
         - Flows
       summary: List Flow Tags
-      description: Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete.
+      description: 'Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete. Not paginated: aggregated tag suggestions capped at 100, not a persisted collection, so it has no search.'
       operationId: listFlowTags
       responses:
         "200":
@@ -1659,8 +1695,9 @@ paths:
       tags:
         - Organization
       summary: List Environments
-      description: Lists the organization's environments. Variables are not included; read them from the organization variable set.
+      description: 'Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization''s environments. Variables are not included; read them from the organization variable set.'
       operationId: listEnvironments
+      deprecated: true
       responses:
         "200":
           description: Environments retrieved successfully.
@@ -1706,6 +1743,40 @@ paths:
             - environment:create
         - ApiKeys:
             - environment:create
+      x-ai-tool: true
+  /organization/environments/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Organization
+      summary: Search Environments
+      description: 'Searches the organization''s environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.'
+      operationId: searchEnvironments
+      requestBody:
+        description: Search criteria for environments.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnvironmentSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Environments retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth:
+            - environment:read
+        - ApiKeys:
+            - environment:read
+      x-ai-description: Search the environments of the organization by name. Page with the returned next_cursor.
       x-ai-tool: true
   /organization/environments/{environment}:
     parameters:
@@ -1912,7 +1983,7 @@ paths:
       tags:
         - Auth
       summary: List Available Permissions
-      description: Lists product permissions that can be assigned to Echopoint API keys for the requested type.
+      description: 'Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.'
       operationId: listPermissions
       responses:
         "200":
@@ -2014,8 +2085,9 @@ paths:
       tags:
         - Collections
       summary: List Collections
-      description: Retrieves a paginated list of collections for the authenticated user.
+      description: 'Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.'
       operationId: listCollections
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -2066,6 +2138,40 @@ paths:
             - collections:create
         - ApiKeys:
             - collections:create
+      x-ai-tool: true
+  /collections/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Collections
+      summary: Search Collections
+      description: 'Searches the organization''s collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.'
+      operationId: searchCollections
+      requestBody:
+        description: Search criteria for collections.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Collections retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth:
+            - collections:read
+        - ApiKeys:
+            - collections:read
+      x-ai-description: Search API request collections in the organization. Page with the returned next_cursor.
       x-ai-tool: true
   /collections/{id}:
     parameters:
@@ -2240,8 +2346,9 @@ paths:
       tags:
         - Collections
       summary: List OpenAPI Sync History
-      description: Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
+      description: 'Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.'
       operationId: listOpenAPISyncHistory
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -2313,6 +2420,49 @@ paths:
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
+  /collections/{id}/openapi-sync/history/search:
+    parameters:
+      - name: id
+        in: path
+        description: The unique identifier of the collection.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Collections
+      summary: Search OpenAPI Sync History
+      description: 'Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      operationId: searchOpenAPISyncHistory
+      requestBody:
+        description: Search criteria for OpenAPI sync history.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenAPISyncHistorySearchRequest'
+        required: true
+      responses:
+        "200":
+          description: OpenAPI sync history returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAPISyncChangeListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - collections:read
+        - ApiKeys:
+            - collections:read
+      x-ai-description: Search the OpenAPI sync change history of a collection, newest first, and page with the returned next_cursor.
+      x-ai-tool: true
   /collections/{id}/openapi-sync/operations/search:
     parameters:
       - name: id
@@ -2327,7 +2477,7 @@ paths:
       tags:
         - Collections
       summary: Search OpenAPI Sync Operations
-      description: Server-side search with pagination and sorting for persisted OpenAPI operations in a collection.
+      description: 'Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.'
       operationId: searchOpenAPISyncOperations
       requestBody:
         description: Search criteria for OpenAPI sync operations.
@@ -2362,7 +2512,7 @@ paths:
       tags:
         - Collections
       summary: Search OpenAPI Sync Configs
-      description: Server-side search with pagination and sorting for top-level OpenAPI sync configs.
+      description: 'Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.'
       operationId: searchOpenAPISyncConfigs
       requestBody:
         description: Search criteria for top-level OpenAPI sync configs.
@@ -2404,8 +2554,9 @@ paths:
       tags:
         - Collections
       summary: List Collection Folders
-      description: Returns all folders for a collection so clients can build the tree lazily.
+      description: 'Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.'
       operationId: listCollectionFolders
+      deprecated: true
       responses:
         "200":
           description: Collection folders returned successfully.
@@ -2454,6 +2605,49 @@ paths:
             - collections:create
         - ApiKeys:
             - collections:create
+      x-ai-tool: true
+  /collections/{id}/folders/search:
+    parameters:
+      - name: id
+        in: path
+        description: The unique identifier of the collection.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Collections
+      summary: Search Collection Folders
+      description: 'Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.'
+      operationId: searchCollectionFolders
+      requestBody:
+        description: Search criteria for collection folders.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionFolderSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Collection folders returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionFolderListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - collections:read
+        - ApiKeys:
+            - collections:read
+      x-ai-description: Search the folders of a collection to build its tree. Page with the returned next_cursor.
       x-ai-tool: true
   /collections/{collectionId}/folders/{folderId}:
     parameters:
@@ -2539,8 +2733,9 @@ paths:
       tags:
         - Collections
       summary: List Collection Requests
-      description: Returns paginated requests for a collection, optionally filtered by folder and search query.
+      description: 'Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.'
       operationId: listCollectionRequests
+      deprecated: true
       parameters:
         - name: folder_id
           in: query
@@ -2612,6 +2807,49 @@ paths:
             - collections:create
         - ApiKeys:
             - collections:create
+      x-ai-tool: true
+  /collections/{id}/requests/search:
+    parameters:
+      - name: id
+        in: path
+        description: The unique identifier of the collection.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Collections
+      summary: Search Collection Requests
+      description: 'Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.'
+      operationId: searchCollectionRequests
+      requestBody:
+        description: Search criteria for collection requests.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionRequestSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Collection requests returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionRequestListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - collections:read
+        - ApiKeys:
+            - collections:read
+      x-ai-description: Search the requests of a collection by folder, name or URL. Page with the returned next_cursor.
       x-ai-tool: true
   /collections/{collectionId}/requests/{requestId}:
     parameters:
@@ -2776,8 +3014,9 @@ paths:
       tags:
         - Collections
       summary: List Request OpenAPI Sync History
-      description: Lists OpenAPI sync changes for the upstream binding currently associated with a request.
+      description: 'Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.'
       operationId: listCollectionRequestOpenAPISyncHistory
+      deprecated: true
       responses:
         "200":
           description: Request OpenAPI sync history returned successfully.
@@ -2794,6 +3033,56 @@ paths:
             - collections:read
         - ApiKeys:
             - collections:read
+      x-ai-tool: true
+  /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search:
+    parameters:
+      - name: collectionId
+        in: path
+        description: The unique identifier of the collection.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: requestId
+        in: path
+        description: The unique identifier of the request.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Collections
+      summary: Search Request OpenAPI Sync History
+      description: 'Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      operationId: searchCollectionRequestOpenAPISyncHistory
+      requestBody:
+        description: Search criteria for request OpenAPI sync history.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenAPISyncHistorySearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Request OpenAPI sync history returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAPISyncChangeListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - collections:read
+        - ApiKeys:
+            - collections:read
+      x-ai-description: Search the OpenAPI sync change history of one request, newest first, and page with the returned next_cursor.
       x-ai-tool: true
   /collections/import/openapi:
     parameters:
@@ -2994,8 +3283,9 @@ paths:
       tags:
         - Flows
       summary: List Flow Versions
-      description: Retrieves a paginated list of saved versions for a flow.
+      description: 'Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.'
       operationId: listFlowVersions
+      deprecated: true
       responses:
         "200":
           description: Flow versions retrieved successfully.
@@ -3012,6 +3302,49 @@ paths:
             - flows:read
         - ApiKeys:
             - flows:read
+      x-ai-tool: true
+  /flows/{id}/versions/search:
+    parameters:
+      - name: id
+        in: path
+        description: The unique identifier of the flow.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Flows
+      summary: Search Flow Versions
+      description: 'Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      operationId: searchFlowVersions
+      requestBody:
+        description: Search criteria for flow versions.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlowVersionSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Flow versions retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowVersionListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search the saved versions of a flow, newest first, and page with the returned next_cursor.
       x-ai-tool: true
   /flows/{id}/versions/{versionId}:
     parameters:
@@ -3104,7 +3437,7 @@ paths:
       tags:
         - Operations
       summary: List Available Operations
-      description: Retrieves all available operations (extractors and assertions) for flow data processing.
+      description: 'Retrieves all available operations (extractors and assertions) for flow data processing. Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.'
       operationId: listOperations
       responses:
         "200":
@@ -3130,7 +3463,7 @@ paths:
       tags:
         - Nodes
       summary: List Available Nodes
-      description: Retrieves all available special nodes for flow control (delay, etc.).
+      description: 'Retrieves all available special nodes for flow control (delay, etc.). Not paginated: a static catalog compiled into the binary, not a persisted collection, so it has no search.'
       operationId: listNodes
       responses:
         "200":
@@ -3237,6 +3570,7 @@ paths:
         analytics a few seconds after it finishes. Runs whose runner predates
         HTTP call recording count in `runs` but not in `measured_runs`, so their
         calls are missing from the call totals.
+        Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
       operationId: getExecutionAnalyticsSummary
       parameters:
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
@@ -3270,6 +3604,7 @@ paths:
         One row per flow that finished a run in the window, most runs first:
         how often it ran and failed, how long its runs took, and how many HTTP
         calls they sent. A deleted flow keeps its row with an empty name.
+        Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
       operationId: listFlowAnalytics
       parameters:
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
@@ -3309,6 +3644,7 @@ paths:
         An endpoint is the request's URL template before resolution, so
         `/users/{{userId}}` stays one endpoint whatever the user id, and no
         resolved URL, query string or body is kept.
+        Not paginated: an aggregate computed per request over the window and capped, not a persisted collection, so it has no search.
       operationId: listEndpointAnalytics
       parameters:
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
@@ -3346,9 +3682,11 @@ paths:
         - Flows
       summary: List Organization Executions
       description: |
+        Deprecated: use `searchExecutions`, which pages with a cursor.
         Retrieves org-wide execution activity, newest first. Rows are slim
         activity records and do not include flow snapshots.
       operationId: listExecutions
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -3397,6 +3735,42 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+  /executions/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Flows
+      summary: Search Executions
+      description: 'Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      operationId: searchExecutions
+      requestBody:
+        description: Search criteria for executions.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Executions retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowExecutionActivityListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search executions across the organization or for chosen flows, newest first, filtered by status, trigger and start time. Page with the returned next_cursor.
+      x-ai-tool: true
   /flows/{id}/executions:
     parameters:
       - name: id
@@ -3411,8 +3785,9 @@ paths:
       tags:
         - Flows
       summary: List Flow Executions
-      description: Retrieves execution history for a specific flow with pagination.
+      description: 'Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.'
       operationId: listFlowExecutions
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -3486,6 +3861,7 @@ paths:
         Returns the requests captured by the run webhook of this job's execution,
         oldest first. Launch injects this URL as `webhook.requests_url`. Authenticate
         with the job token. The request is refused once the execution is terminal.
+        Not paginated: runner protocol authenticated by a job token that returns the newest requests of the run webhook, so it has no search.
       operationId: listRunnerJobWebhookRequests
       responses:
         "200":
@@ -3563,7 +3939,7 @@ paths:
       tags:
         - Flows
       summary: Get All Node Results
-      description: Retrieves execution results for all nodes in a flow execution.
+      description: 'Retrieves execution results for all nodes in a flow execution. Not paginated: bounded by the nodes of one execution, so it has no search.'
       operationId: getExecutionNodeResults
       responses:
         "200":
@@ -3652,8 +4028,9 @@ paths:
       tags:
         - Flows
       summary: Get Node Execution History
-      description: Retrieves execution history for a specific node across all flow executions with pagination.
+      description: 'Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.'
       operationId: getNodeExecutionHistory
+      deprecated: true
       responses:
         "200":
           description: Node execution history retrieved successfully.
@@ -3670,6 +4047,55 @@ paths:
             - flows:read
         - ApiKeys:
             - flows:read
+      x-ai-tool: true
+  /flows/{flowId}/nodes/{nodeId}/executions/search:
+    parameters:
+      - name: flowId
+        in: path
+        description: The unique identifier of the flow.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: nodeId
+        in: path
+        description: The node ID (from flow definition).
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Flows
+      summary: Search Node Execution History
+      description: 'Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      operationId: searchNodeExecutionHistory
+      requestBody:
+        description: Search criteria for node execution history.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeExecutionHistorySearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Node execution history retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeExecutionHistoryResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search the execution history of one node across the runs of a flow, newest first, and page with the returned next_cursor.
       x-ai-tool: true
   /members:
     parameters:
@@ -3924,8 +4350,9 @@ paths:
       tags:
         - Monitors
       summary: List Monitors
-      description: Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
+      description: 'Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization''s monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.'
       operationId: listFlowSchedules
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -3994,6 +4421,42 @@ paths:
             - flows:update
         - ApiKeys:
             - flows:update
+      x-ai-tool: true
+  /monitors/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Monitors
+      summary: Search Monitors
+      description: 'Searches the organization''s monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.'
+      operationId: searchFlowSchedules
+      requestBody:
+        description: Search criteria for monitors.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonitorSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Monitors retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitorListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search the monitors of the organization by name, state or health policy. Page with the returned next_cursor.
       x-ai-tool: true
   /monitors/estimate:
     parameters:
@@ -4309,8 +4772,9 @@ paths:
       tags:
         - Monitors
       summary: List Monitor Runs
-      description: Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
+      description: 'Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor''s occurrences (scheduled and diagnostic), most recent first.'
       operationId: listFlowScheduleRuns
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4332,6 +4796,49 @@ paths:
             - flows:read
         - ApiKeys:
             - flows:read
+      x-ai-tool: true
+  /monitors/{monitorId}/runs/search:
+    parameters:
+      - name: monitorId
+        in: path
+        description: The unique identifier of the monitor.
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Monitors
+      summary: Search Monitor Runs
+      description: 'Searches a monitor''s occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      operationId: searchFlowScheduleRuns
+      requestBody:
+        description: Search criteria for monitor runs.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonitorRunSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Monitor runs retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitorRunListResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search the runs of one monitor, most recent first, and page with the returned next_cursor.
       x-ai-tool: true
   /monitors/{monitorId}/runs/{runId}:
     parameters:
@@ -4414,8 +4921,9 @@ paths:
       tags:
         - Specs
       summary: List Specs
-      description: Lists the organization's specs with their Live version, by slug.
+      description: 'Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization''s specs with their Live version, by slug.'
       operationId: listSpecs
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4481,6 +4989,42 @@ paths:
         - ApiKeys:
             - specs:write
       x-ai-tool: true
+  /specs/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Specs
+      summary: Search Specs
+      description: 'Searches the organization''s specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.'
+      operationId: searchSpecs
+      requestBody:
+        description: Search criteria for specs.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Specs retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - specs:read
+        - ApiKeys:
+            - specs:read
+      x-ai-description: Search the specs of the organization by slug or title, with their Live version. Page with the returned next_cursor.
+      x-ai-tool: true
   /specs/{slug}:
     parameters:
       - $ref: '#/components/parameters/SpecSlugParameter'
@@ -4518,8 +5062,9 @@ paths:
       tags:
         - Specs
       summary: List Spec Versions
-      description: Lists a spec's Live versions, newest first. The first item is the current Live version.
+      description: 'Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec''s Live versions, newest first. The first item is the current Live version.'
       operationId: listSpecVersions
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4590,6 +5135,45 @@ paths:
             - specs:write
         - ApiKeys:
             - specs:write
+      x-ai-tool: true
+  /specs/{slug}/versions/search:
+    parameters:
+      - $ref: '#/components/parameters/SpecSlugParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Specs
+      summary: Search Spec Versions
+      description: 'Searches a spec''s Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      operationId: searchSpecVersions
+      requestBody:
+        description: Search criteria for spec versions.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecVersionSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Live versions retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersionListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - specs:read
+        - ApiKeys:
+            - specs:read
+      x-ai-description: Search the Live versions of a spec, newest first, and page with the returned next_cursor.
       x-ai-tool: true
   /specs/{slug}/versions/{version}:
     parameters:
@@ -5476,12 +6060,15 @@ components:
         - count
       properties:
         total:
-          description: Total number of matching items.
+          description: Number of items matching the filter, independent of the cursor.
           type: integer
           format: int64
         count:
           description: The number of items returned in this response.
           type: integer
+        next_cursor:
+          description: 'Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.'
+          type: string
     PaginationRequest:
       type: object
       properties:
@@ -5493,17 +6080,24 @@ components:
           minimum: 1
           maximum: 100
         offset:
-          description: Number of items to skip.
+          description: Number of items to skip. Use for page-number navigation only; iterate with `cursor`.
           type: integer
           format: int32
           default: 0
           minimum: 0
+        cursor:
+          description: Opaque cursor from the previous page's `next_cursor`. Continues the search after the last item of that page, with the same filter and sort. Omit to start at the first item. Cannot be combined with a non-zero `offset`. An invalid cursor answers 400 INVALID_CURSOR.
+          type: string
+          maxLength: 8192
     SortDirection:
+      description: >-
+        Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC
+        when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is
+        filled in before the server reads the request, which would make an omitted direction look like DESC.
       type: string
       enum:
         - ASC
         - DESC
-      default: DESC
     TagMatchMode:
       description: Whether any or all of the provided tags must match.
       type: string
@@ -5532,7 +6126,6 @@ components:
           type: string
         sort_direction:
           $ref: '#/components/schemas/SortDirection'
-          description: Sorting direction
     ResourceSearchDomain:
       description: Searchable resource domain included in cross-domain resource search.
       type: string
@@ -5837,7 +6430,6 @@ components:
         - created_at
         - updated_at
         - request_count
-      default: created_at
     WebhookFilter:
       type: object
       properties:
@@ -6118,7 +6710,6 @@ components:
                 - received_at
                 - method
                 - ip_address
-              default: received_at
     WebhookRequestListResponse:
       allOf:
         - $ref: '#/components/schemas/PagedListResponse'
@@ -7220,6 +7811,20 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/FlowFolder'
+    FlowFolderSortField:
+      description: Field to sort flow folder search results by.
+      type: string
+      enum:
+        - name
+        - created_at
+    FlowFolderSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/FlowFolderSortField'
+              description: Field to sort by.
     CreateFlowFolderRequest:
       type: object
       required:
@@ -7514,6 +8119,19 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/FlowVersion'
+    FlowVersionSortField:
+      description: Field to sort flow version search results by.
+      type: string
+      enum:
+        - published_at
+    FlowVersionSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/FlowVersionSortField'
+              description: Field to sort by.
     ExecutionStatus:
       description: Status of a flow execution
       type: string
@@ -8471,6 +9089,43 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/FlowExecutionActivity'
+    ExecutionSortField:
+      description: Field to sort execution search results by.
+      type: string
+      enum:
+        - started_at
+    ExecutionSearchFilter:
+      type: object
+      properties:
+        flow_ids:
+          description: Keep the executions of these flows. Omit or leave empty for every flow of the organization.
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            format: uuid
+          x-go-type-skip-optional-pointer: true
+        status:
+          $ref: '#/components/schemas/ExecutionStatus'
+          description: Keep the executions in this status.
+        trigger_type:
+          $ref: '#/components/schemas/TriggerType'
+          description: Keep the executions started by this trigger.
+        since:
+          description: Inclusive lower bound on started_at (RFC3339).
+          type: string
+          format: date-time
+    ExecutionSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            filter:
+              $ref: '#/components/schemas/ExecutionSearchFilter'
+              description: Filter criteria.
+            sort_by:
+              $ref: '#/components/schemas/ExecutionSortField'
+              description: Field to sort by.
     ExecutionSummaryWindow:
       description: Lookback window for runs and failed counts. Running and pending are current.
       type: string
@@ -8836,6 +9491,19 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/NodeExecutionResult'
+    NodeExecutionHistorySortField:
+      description: Field to sort node execution history by.
+      type: string
+      enum:
+        - created_at
+    NodeExecutionHistorySearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/NodeExecutionHistorySortField'
+              description: Field to sort by.
     CollectionSource:
       description: Source of the collection
       type: string
@@ -8932,6 +9600,20 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/CollectionFolder'
+    CollectionFolderSortField:
+      description: Field to sort collection folder search results by.
+      type: string
+      enum:
+        - name
+        - created_at
+    CollectionFolderSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/CollectionFolderSortField'
+              description: Field to sort by.
     CollectionRequestListResponse:
       allOf:
         - $ref: '#/components/schemas/PagedListResponse'
@@ -8943,6 +9625,36 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/CollectionRequest'
+    CollectionRequestSortField:
+      description: Field to sort collection request search results by.
+      type: string
+      enum:
+        - name
+        - method
+        - created_at
+        - updated_at
+    CollectionRequestFilter:
+      type: object
+      properties:
+        folder_id:
+          description: Restrict results to a specific folder. Omit to search root-level requests only.
+          type: string
+          format: uuid
+        include_nested:
+          description: When true and folder_id is omitted, include requests nested in folders as well as root-level requests.
+          type: boolean
+          default: false
+    CollectionRequestSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            filter:
+              $ref: '#/components/schemas/CollectionRequestFilter'
+              description: Filter criteria.
+            sort_by:
+              $ref: '#/components/schemas/CollectionRequestSortField'
+              description: Field to sort by.
     CollectionFolder:
       type: object
       required:
@@ -9591,7 +10303,6 @@ components:
         - created_at
         - last_run_at
         - next_run_at
-      default: updated_at
     OpenAPISyncConfigSearchRequest:
       allOf:
         - $ref: '#/components/schemas/SearchRequest'
@@ -9681,7 +10392,21 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/OpenAPISyncChange'
+    OpenAPISyncChangeSortField:
+      description: Field to sort OpenAPI sync history by.
+      type: string
+      enum:
+        - created_at
+    OpenAPISyncHistorySearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/OpenAPISyncChangeSortField'
+              description: Field to sort by.
     OpenAPISyncOperationSortField:
+      description: 'Field to sort OpenAPI sync operations by. route_name, operation_key and source_operation_id order by their first 255 characters, so a cursor stays small however long a path or key is.'
       type: string
       enum:
         - route_name
@@ -9689,7 +10414,6 @@ components:
         - operation_key
         - source_operation_id
         - updated_at
-      default: route_name
     OpenAPISyncOperationSearchRequest:
       allOf:
         - $ref: '#/components/schemas/SearchRequest'
@@ -9782,6 +10506,21 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Collection'
+    CollectionSortField:
+      description: Field to sort collection search results by.
+      type: string
+      enum:
+        - name
+        - created_at
+        - updated_at
+    CollectionSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/CollectionSortField'
+              description: Field to sort by.
     DefinitionBase:
       type: object
       required:
@@ -10084,6 +10823,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Environment'
+    EnvironmentSortField:
+      description: Field to sort environment search results by.
+      type: string
+      enum:
+        - name
+        - created_at
+    EnvironmentSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/EnvironmentSortField'
+              description: Field to sort by.
+    EnvironmentSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Environment'
     VariableSet:
       type: object
       required:
@@ -10597,6 +11361,34 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Monitor'
+    MonitorSortField:
+      description: Field to sort monitor search results by.
+      type: string
+      enum:
+        - name
+        - created_at
+        - updated_at
+        - next_run_at
+    MonitorSearchFilter:
+      type: object
+      properties:
+        enabled:
+          description: Only enabled (true) or paused (false) monitors.
+          type: boolean
+        has_health_policy:
+          description: Only monitors with (true) or without (false) a health policy.
+          type: boolean
+    MonitorSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            filter:
+              $ref: '#/components/schemas/MonitorSearchFilter'
+              description: Filter criteria.
+            sort_by:
+              $ref: '#/components/schemas/MonitorSortField'
+              description: Field to sort by.
     MonitorRunOrigin:
       type: string
       enum:
@@ -10706,6 +11498,19 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/MonitorRun'
+    MonitorRunSortField:
+      description: Field to sort monitor run search results by.
+      type: string
+      enum:
+        - due_at
+    MonitorRunSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/MonitorRunSortField'
+              description: Field to sort by.
     MonitorEstimateRequest:
       description: A monitor selection and cadence to forecast. Use cron_expression, or interval_seconds with health_policy true.
       type: object
@@ -11244,6 +12049,24 @@ components:
         total:
           type: integer
           format: int64
+        next_cursor:
+          description: 'Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.'
+          type: string
+    SpecSortField:
+      description: Field to sort spec search results by.
+      type: string
+      enum:
+        - slug
+        - created_at
+        - updated_at
+    SpecSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/SpecSortField'
+              description: Field to sort by.
     SpecVersionListResponse:
       type: object
       required:
@@ -11261,6 +12084,23 @@ components:
         total:
           type: integer
           format: int64
+        next_cursor:
+          description: 'Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.'
+          type: string
+    SpecVersionSortField:
+      description: Field to sort spec version search results by.
+      type: string
+      enum:
+        - number
+        - created_at
+    SpecVersionSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/SpecVersionSortField'
+              description: Field to sort by.
     SpecDocument:
       description: A Live version's document in the canonical YAML layout, as `spec pull` writes it.
       type: object

@@ -217,13 +217,13 @@ func TestOrgAndItsAliasSelectTheOrganizationAndTheEnvironmentVariableStillDoes(t
 	} {
 		t.Run(name, func(t *testing.T) {
 			stub := newAPIStub(t)
-			stub.on(http.MethodGet, "/flows", http.StatusOK, map[string]any{"count": 0, "total": 0, "items": []any{}})
+			stub.onSearch(flowSearchPath)
 			isolateCLIEnvironment(t, stub.server.URL)
 			t.Setenv("ECHOPOINT_ORGANIZATION_ID", tc.env)
 
 			_, stderr, code := runCLI(t, append([]string{"flow", "list"}, tc.args...)...)
 
-			requests := stub.requestsTo(http.MethodGet, "/flows")
+			requests := stub.requestsTo(http.MethodPost, flowSearchPath)
 			if code != 0 || len(requests) != 1 {
 				t.Fatalf("exit %d, %d requests, stderr %q", code, len(requests), stderr)
 			}

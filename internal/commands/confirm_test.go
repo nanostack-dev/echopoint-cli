@@ -183,9 +183,7 @@ func destructiveCases() []destructiveCase {
 			build: newFlowCmd, verb: "delete", thing: "folder Anchor",
 			args: func(*apiStub) []string { return []string{"folder", "delete", "Anchor"} },
 			setup: func(_ *testing.T, stub *apiStub) {
-				stub.on(http.MethodGet, "/flows/folders", http.StatusOK, api.FlowFolderListResponse{
-					Count: 1, Total: 1, Items: []api.FlowFolder{sampleFolder(folderID, "Anchor", nil)},
-				})
+				stub.onFolders(sampleFolder(folderID, "Anchor", nil))
 				stub.on(http.MethodDelete, "/flows/folders/"+folderID.String(), http.StatusOK,
 					api.FlowFolderDeletionResult{DeletedFolders: 1})
 			},
@@ -398,9 +396,7 @@ func TestConfigResetConfirmsBeforeActing(t *testing.T) {
 func TestFlowFolderDeleteAsksAboutTheFlowsItWouldDeleteToo(t *testing.T) {
 	folderID := idFor("3")
 	stub := newAPIStub(t)
-	stub.on(http.MethodGet, "/flows/folders", http.StatusOK, api.FlowFolderListResponse{
-		Count: 1, Total: 1, Items: []api.FlowFolder{sampleFolder(folderID, "Anchor", nil)},
-	})
+	stub.onFolders(sampleFolder(folderID, "Anchor", nil))
 	stub.on(http.MethodDelete, "/flows/folders/"+folderID.String(), http.StatusOK, api.FlowFolderDeletionResult{})
 	state := stub.state(t)
 	state.IsTerminal = terminal(true)

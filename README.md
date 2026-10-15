@@ -258,9 +258,12 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
 ### Flows
 
 ```bash
-# List flows: NAME, ID, UPDATED
+# List flows: NAME, ID, ROLE, UPDATED. Listings page by cursor: -o json carries next_cursor,
+# the table says how to pass it with --cursor, and --all follows it to the end.
 echopoint flow list
 echopoint flow list -o json
+echopoint flow list --limit 50 --cursor <next_cursor> -o json
+echopoint flow list --all -o json
 echopoint flow view <flow-id>
 echopoint flow view <flow-id> -o json
 

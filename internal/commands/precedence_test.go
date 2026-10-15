@@ -33,9 +33,9 @@ func TestAnAPIURLFlagBeatsTheEnvironmentVariable(t *testing.T) {
 
 	_, stderr, code := runCLI(t, "flow", "list", "--api-url", stub.server.URL)
 
-	if code != 0 || len(stub.requestsTo(http.MethodGet, "/flows")) != 1 {
+	if code != 0 || len(stub.requestsTo(http.MethodPost, flowSearchPath)) != 1 {
 		t.Errorf("exit %d, %d requests to the flag's server, stderr %q",
-			code, len(stub.requestsTo(http.MethodGet, "/flows")), stderr)
+			code, len(stub.requestsTo(http.MethodPost, flowSearchPath)), stderr)
 	}
 }
 
@@ -44,13 +44,23 @@ func TestAnAPIURLEnvironmentVariableBeatsTheConfigAndTheConfigStillApplies(t *te
 	isolateCLIEnvironment(t, stub.server.URL)
 	writeCLIConfig(t, "current_profile: qa\nprofiles:\n  qa:\n    api_base_url: "+deadServerURL(t)+"\n")
 
-	if _, stderr, code := runCLI(t, "flow", "list"); code != 0 || len(stub.requestsTo(http.MethodGet, "/flows")) != 1 {
+	if _, stderr, code := runCLI(
+		t,
+		"flow",
+		"list",
+	); code != 0 ||
+		len(stub.requestsTo(http.MethodPost, flowSearchPath)) != 1 {
 		t.Errorf("the environment variable lost to the config: exit %d, stderr %q", code, stderr)
 	}
 
 	t.Setenv("ECHOPOINT_API_URL", "")
 	writeCLIConfig(t, "current_profile: qa\nprofiles:\n  qa:\n    api_base_url: "+stub.server.URL+"\n")
-	if _, stderr, code := runCLI(t, "flow", "list"); code != 0 || len(stub.requestsTo(http.MethodGet, "/flows")) != 2 {
+	if _, stderr, code := runCLI(
+		t,
+		"flow",
+		"list",
+	); code != 0 ||
+		len(stub.requestsTo(http.MethodPost, flowSearchPath)) != 2 {
 		t.Errorf("the config alone was not used: exit %d, stderr %q", code, stderr)
 	}
 }

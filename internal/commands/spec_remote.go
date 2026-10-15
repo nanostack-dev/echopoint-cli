@@ -48,20 +48,36 @@ func fetchSpecVersion(ctx context.Context, state *AppState, name, version string
 	return resp.JSON200, nil
 }
 
-func fetchSpecVersions(
-	ctx context.Context, state *AppState, name string, limit, offset int32,
-) (*api.SpecVersionListResponse, error) {
-	resp, err := state.Client.API().ListSpecVersionsWithResponse(ctx, name, &api.ListSpecVersionsParams{
-		Limit:  api.LimitParameter(limit),
-		Offset: api.OffsetParameter(offset),
-	})
-	if err != nil {
-		return nil, err
+// searchSpecVersions reads one page of a spec's Live versions, newest first.
+func searchSpecVersions(state *AppState, name string) pageFetcher[api.SpecVersionSummary] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.SpecVersionSummary], error) {
+		resp, err := state.Client.API().SearchSpecVersionsWithResponse(
+			ctx, name, nil, api.SpecVersionSearchRequest{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.SpecVersionSummary]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.SpecVersionSummary]{}, specAPIError(resp.HTTPResponse, resp.Body, name, "")
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
 	}
-	if resp.JSON200 == nil {
-		return nil, specAPIError(resp.HTTPResponse, resp.Body, name, "")
+}
+
+// searchSpecs reads one page of the organization's specs by slug.
+func searchSpecs(state *AppState) pageFetcher[api.Spec] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.Spec], error) {
+		resp, err := state.Client.API().SearchSpecsWithResponse(
+			ctx, nil, api.SpecSearchRequest{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.Spec]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.Spec]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
 	}
-	return resp.JSON200, nil
 }
 
 func pullSpec(ctx context.Context, state *AppState, name, version string) (*api.SpecDocument, error) {
@@ -103,10 +119,18 @@ func specAPIError(resp *http.Response, body []byte, name, version string) error 
 }
 
 func newSpecListCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
-		Use:               listVerb,
-		Short:             "List the organization's specs and their Live versions",
-		Example:           `  echopoint spec list`,
+	var pages pageFlags
+	cmd := &cobra.Command{
+		Use:   listVerb,
+		Short: "List the organization's specs and their Live versions",
+		Long: `List the organization's specs by slug, with their Live versions.
+
+A page ends with the cursor that continues the listing: -o json carries it as
+next_cursor, and the table says how to pass it with --cursor. --all follows it to
+the last spec.`,
+		Example: `  echopoint spec list
+  echopoint spec list --cursor <next_cursor> -o json
+  echopoint spec list --all`,
 		Args:              cobra.NoArgs,
 		ValidArgsFunction: cobra.NoFileCompletions,
 		SilenceUsage:      true,
@@ -115,27 +139,27 @@ func newSpecListCmd(state *AppState) *cobra.Command {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			resp, err := state.Client.API().ListSpecsWithResponse(cmd.Context(), &api.ListSpecsParams{
-				Limit: api.LimitParameter(specPageSize),
-			})
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchSpecs(state))
 			if err != nil {
 				return err
 			}
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-			if done, err := printStructured(cmd.OutOrStdout(), state.OutputFormat, resp.JSON200); done {
-				return err
-			}
-			rows := make([][]string, 0, len(resp.JSON200.Items))
-			for _, item := range resp.JSON200.Items {
-				rows = append(rows, []string{
-					item.Slug, item.Title, item.Live.Version, string(item.Live.Bump), formatWhen(item.Live.CreatedAt),
-				})
-			}
-			return output.PrintTableTo(cmd.OutOrStdout(), []string{"SLUG", "TITLE", "LIVE", "BUMP", "PUBLISHED"}, rows)
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for _, item := range page.Items {
+					rows = append(rows, []string{
+						item.Slug,
+						item.Title,
+						item.Live.Version,
+						string(item.Live.Bump),
+						formatWhen(item.Live.CreatedAt),
+					})
+				}
+				return output.PrintTableTo(w, []string{"SLUG", "TITLE", "LIVE", "BUMP", "PUBLISHED"}, rows)
+			})
 		},
 	}
+	pages.bind(cmd, specPageSize)
+	return cmd
 }
 
 func newSpecViewCmd(state *AppState) *cobra.Command {
@@ -185,47 +209,50 @@ func printSpecView(w io.Writer, state *AppState, spec *api.Spec) error {
 }
 
 func newSpecVersionsCmd(state *AppState) *cobra.Command {
-	var limit, offset int32
+	var pages pageFlags
 	cmd := &cobra.Command{
 		Use:   "versions <slug>",
 		Short: "List a spec's Live versions, newest first",
 		Long: `List the Live versions of a spec, newest first: the first one is Live now. Each
 shows its bump, what it changed against the version before it, how many
 convention findings it has, who published it, and when. The API returns at most
-100 versions a page: page with --offset.`,
+100 versions a page: -o json carries the next_cursor that continues the listing,
+the table says how to pass it with --cursor, and --all follows it to the first
+version.`,
 		Example: `  echopoint spec versions pets-api
-  echopoint spec versions pets-api --limit 100 --offset 100`,
+  echopoint spec versions pets-api --limit 100 -o json
+  echopoint spec versions pets-api --cursor <next_cursor>
+  echopoint spec versions pets-api --all`,
 		Args: specArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			versions, err := fetchSpecVersions(cmd.Context(), state, args[0], limit, offset)
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchSpecVersions(state, args[0]))
 			if err != nil {
 				return err
 			}
-			if done, err := printStructured(cmd.OutOrStdout(), state.OutputFormat, versions); done {
-				return err
-			}
-			rows := make([][]string, 0, len(versions.Items))
-			for i, item := range versions.Items {
-				version := item.Version
-				if offset == 0 && i == 0 {
-					version += " (Live)"
+			// the first version of the first page is the Live one
+			firstPage := pages.offset == 0 && pages.cursor == ""
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for i, item := range page.Items {
+					version := item.Version
+					if firstPage && i == 0 {
+						version += " (Live)"
+					}
+					rows = append(rows, []string{
+						version, string(item.Bump), describeChangeCounts(item.ChangeCounts),
+						describeFindingCount(item.FindingCount), actorLabel(item.CreatedBy), formatWhen(item.CreatedAt),
+					})
 				}
-				rows = append(rows, []string{
-					version, string(item.Bump), describeChangeCounts(item.ChangeCounts),
-					describeFindingCount(item.FindingCount), actorLabel(item.CreatedBy), formatWhen(item.CreatedAt),
-				})
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Total: %d\n", versions.Total)
-			return output.PrintTableTo(cmd.OutOrStdout(),
-				[]string{"VERSION", "BUMP", "CHANGES", "FINDINGS", "BY", "WHEN"}, rows)
+				fmt.Fprintf(w, "Total: %d\n", page.Total)
+				return output.PrintTableTo(w,
+					[]string{"VERSION", "BUMP", "CHANGES", "FINDINGS", "BY", "WHEN"}, rows)
+			})
 		},
 	}
-	cmd.Flags().
-		Int32Var(&limit, "limit", specVersionsDefaultPage, "Number of results to return (the API allows at most 100)")
-	cmd.Flags().Int32Var(&offset, "offset", 0, "Offset for pagination")
+	pages.bind(cmd, specVersionsDefaultPage)
 	return finishSpecCmd(state, cmd)
 }
 

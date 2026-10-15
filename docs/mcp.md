@@ -106,9 +106,26 @@ retained internally; they do not grant tool exposure. See
 The ordinary tool set tracks the contract: annotate an eligible operation
 `x-ai-tool` (and resync) to expose it. Administration routes remain excluded.
 
+## Searches and pagination
+
+Every collection is a cursor-paginated search tool named after its operation:
+`search_flows`, `search_flow_folders`, `search_environments`, `search_collections`,
+`search_collection_folders`, `search_collection_requests`, `search_open_api_sync_history`,
+`search_collection_request_open_api_sync_history`, `search_flow_versions`, `search_executions`,
+`search_node_execution_history`, `search_flow_schedules`, `search_flow_schedule_runs`,
+`search_specs`, `search_spec_versions`, and the searches of webhooks and OpenAPI sync.
+Path parameters are top-level arguments; the body fields `filter`, `sort_by`,
+`sort_direction`, `full_text_search` and `pagination` are too. A response carries `items`,
+`total`, `count` and `next_cursor`: continue by calling the same tool with the same
+arguments and `"pagination": {"cursor": "<next_cursor>"}`, until `next_cursor` is absent.
+`pagination.offset` skips by count and cannot be combined with a cursor. The deprecated
+`list_*` tools (`list_flows`, `list_specs`, ...) remain for compatibility; prefer the
+searches. See [cursor-paginated listings](technical/pagination.md).
+
 ## Monitors
 
 The contract exposes the monitor operations under their unchanged operation names:
+`search_flow_schedules` and `search_flow_schedule_runs` (the cursor-paginated reads), the deprecated
 `list_flow_schedules`, `create_flow_schedule`, `get_flow_schedule`, `update_flow_schedule`,
 `delete_flow_schedule`, `pause_flow_schedule`, `resume_flow_schedule`,
 `list_flow_schedule_runs`, `get_flow_schedule_run` and `preview_schedule_tags`, plus

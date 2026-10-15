@@ -6,6 +6,7 @@
 | Runner upgrade did not reach users | A `chore:`-only change does not trigger CLI publication. Follow the release workflow's `feat:`/`fix:` rule for shipped behavior. | A CLI release embeds the expected runner module version. |
 | Action rejects a removed flag | Action code and downloaded CLI differ. Verify the Action ref, `cli-version`, and the `v1` release step before rerunning. | Action tests and a pinned sandbox invocation agree with the flow-run contract. |
 | `flow list --limit` is rejected | The API caps this limit at 100 and the CLI does not clamp it. Supply a valid limit. | The API returns the expected page. |
+| `--cursor cannot be combined with --offset`, or the API answers `INVALID_CURSOR` | A cursor continues after the last result of a page and cannot be offset; a cursor also belongs to the filters and sort it was issued for. Drop `--offset`, and pass the `next_cursor` of the same command and filters unchanged. | `-o json` of the continued call returns the next page, and `next_cursor` is absent on the last. |
 | MCP reports missing path parameter | Tool arguments use OpenAPI names; for example `delete_flow` uses `id`. Consult the tool schema. | The call reaches the intended authenticated operation. |
 | A spec path is rejected as an argument | Specs use a stored slug; only file-reading commands accept a local document via `-f/--file`. | The relevant command example and [spec docs](../specs.md) match the invocation. |
 

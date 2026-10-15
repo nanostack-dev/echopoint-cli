@@ -443,7 +443,7 @@ func TestSpecRemoteRefusalsPrintNoUsage(t *testing.T) {
 
 func TestSpecListReturnsNamesAndLiveVersions(t *testing.T) {
 	fake, server := newSpecServer(t)
-	fake.responses["GET /specs"] = api.SpecListResponse{
+	fake.responses["POST /specs/search"] = api.SpecListResponse{
 		Count: 1, Total: 1,
 		Items: []api.Spec{specOf("pets-api", "Pets", "1.4.0")},
 	}
@@ -574,7 +574,7 @@ func TestSpecVersionsListsTheHistoryNewestFirst(t *testing.T) {
 	older := versionOf("1.3.0", "patch", api.SpecChangeCounts{Edit: 4}, nil)
 	older.CreatedAt = time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
 	older.CreatedBy = api.SpecActor{Id: "user-1", Type: api.SpecActorTypeMember}
-	fake.responses["GET /specs/pets-api/versions"] = api.SpecVersionListResponse{
+	fake.responses["POST /specs/pets-api/versions/search"] = api.SpecVersionListResponse{
 		Count: 2,
 		Total: 7,
 		Items: []api.SpecVersionSummary{
@@ -598,14 +598,14 @@ func TestSpecVersionsListsTheHistoryNewestFirst(t *testing.T) {
 			t.Errorf("%q line = %q, want %q\n%s", prefix, got, want, stdout)
 		}
 	}
-	if query := fake.queries["GET /specs/pets-api/versions"]; query != "limit=20&offset=0" {
-		t.Errorf("query = %q", query)
+	if sent := string(fake.bodies["POST /specs/pets-api/versions/search"]); sent != `{"pagination":{"limit":20}}` {
+		t.Errorf("body = %s", sent)
 	}
 }
 
 func TestSpecVersionsPagesWithLimitAndOffsetAndMarksLiveOnlyOnTheFirstPage(t *testing.T) {
 	fake, server := newSpecServer(t)
-	fake.responses["GET /specs/pets-api/versions"] = api.SpecVersionListResponse{
+	fake.responses["POST /specs/pets-api/versions/search"] = api.SpecVersionListResponse{
 		Count: 1, Total: 7, Items: []api.SpecVersionSummary{versionOf("1.1.0", "minor", api.SpecChangeCounts{}, nil)},
 	}
 
@@ -614,8 +614,10 @@ func TestSpecVersionsPagesWithLimitAndOffsetAndMarksLiveOnlyOnTheFirstPage(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if query := fake.queries["GET /specs/pets-api/versions"]; query != "limit=100&offset=6" {
-		t.Errorf("query = %q", query)
+	if sent := string(
+		fake.bodies["POST /specs/pets-api/versions/search"],
+	); sent != `{"pagination":{"limit":100,"offset":6}}` {
+		t.Errorf("body = %s", sent)
 	}
 	if got := line(stdout, "1.1.0"); !strings.HasPrefix(got, "1.1.0 minor none") {
 		t.Errorf("row = %q", got)
@@ -624,7 +626,7 @@ func TestSpecVersionsPagesWithLimitAndOffsetAndMarksLiveOnlyOnTheFirstPage(t *te
 
 func TestSpecVersionsJSONIsTheList(t *testing.T) {
 	fake, server := newSpecServer(t)
-	fake.responses["GET /specs/pets-api/versions"] = api.SpecVersionListResponse{
+	fake.responses["POST /specs/pets-api/versions/search"] = api.SpecVersionListResponse{
 		Count: 1, Total: 1, Items: []api.SpecVersionSummary{liveSummary("1.4.0")},
 	}
 

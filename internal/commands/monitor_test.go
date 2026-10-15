@@ -75,8 +75,7 @@ func monitorStub(t *testing.T) *apiStub {
 	diagnostic := sampleMonitorRun(idFor("201"), api.MonitorRunOrigin("diagnostic"))
 	message := "boom"
 	return newAPIStub(t).
-		on(http.MethodGet, "/monitors", http.StatusOK,
-			api.MonitorListResponse{Count: 2, Total: 2, Items: []api.Monitor{healthy, cron}}).
+		onSearch("/monitors/search", healthy, cron).
 		on(http.MethodPost, "/monitors", http.StatusCreated, healthy).
 		on(http.MethodGet, monitorPath, http.StatusOK, healthy).
 		on(http.MethodPut, monitorPath, http.StatusOK, healthy).
@@ -84,8 +83,7 @@ func monitorStub(t *testing.T) *apiStub {
 		on(http.MethodPost, monitorPath+"/pause", http.StatusOK, paused).
 		on(http.MethodPost, monitorPath+"/resume", http.StatusOK, healthy).
 		on(http.MethodPost, monitorPath+"/run", http.StatusAccepted, diagnostic).
-		on(http.MethodGet, monitorPath+"/runs", http.StatusOK,
-			api.MonitorRunListResponse{Count: 2, Total: 2, Items: []api.MonitorRun{run, diagnostic}}).
+		onSearch(monitorPath+"/runs/search", run, diagnostic).
 		on(http.MethodGet, monitorPath+"/runs/"+testMonitorRunID.String(), http.StatusOK, api.MonitorRunDetail{
 			Run: run,
 			Executions: []api.ScheduleRunExecution{{
@@ -131,9 +129,8 @@ func TestEachMonitorCommandSendsItsRequestUnderTheSelectedOrganization(t *testin
 		query                     map[string]string
 	}{
 		{
-			"list", http.MethodGet, "/monitors", "",
-			[]string{"list", "--limit", "7", "--offset", "2", "--enabled", "--has-health-policy=false"},
-			map[string]string{"limit": "7", "offset": "2", "enabled": "true", "has_health_policy": "false"},
+			"list", http.MethodPost, "/monitors/search", "",
+			[]string{"list", "--limit", "7", "--offset", "2", "--enabled", "--has-health-policy=false"}, nil,
 		},
 		{"view", http.MethodGet, "/monitors/" + id, "", []string{"view", id}, nil},
 		{"get alias", http.MethodGet, "/monitors/" + id, "", []string{"get", id}, nil},
@@ -144,8 +141,8 @@ func TestEachMonitorCommandSendsItsRequestUnderTheSelectedOrganization(t *testin
 		{"resume", http.MethodPost, "/monitors/" + id + "/resume", "", []string{"resume", id}, nil},
 		{"run", http.MethodPost, "/monitors/" + id + "/run", "", []string{"run", id}, nil},
 		{
-			"runs", http.MethodGet, "/monitors/" + id + "/runs", "",
-			[]string{"runs", id, "--limit", "5", "--offset", "1"}, map[string]string{"limit": "5", "offset": "1"},
+			"runs", http.MethodPost, "/monitors/" + id + "/runs/search", "",
+			[]string{"runs", id, "--limit", "5", "--offset", "1"}, nil,
 		},
 		{"run-view", http.MethodGet, "/monitors/" + id + "/runs/" + runID, "", []string{"run-view", id, runID}, nil},
 		{
@@ -260,9 +257,49 @@ func TestMonitorListSendsNoFilterUnlessAskedTo(t *testing.T) {
 	if _, _, err := execute(t, newMonitorCmd(stub.state(t)), "", "list"); err != nil {
 		t.Fatal(err)
 	}
-	query := stub.requestsTo(http.MethodGet, "/monitors")[0].query
-	if strings.Contains(query, "enabled") || strings.Contains(query, "has_health_policy") {
-		t.Errorf("query = %q", query)
+	body := bodyOf(t, stub.requestsTo(http.MethodPost, "/monitors/search")[0])
+	if _, filtered := body["filter"]; filtered {
+		t.Errorf("body = %v", body)
+	}
+}
+
+func TestMonitorListAndRunsSearchWithTheFlagsAsTheRequestBody(t *testing.T) {
+	id := testMonitorID.String()
+	for name, tc := range map[string]struct {
+		path string
+		args []string
+		want map[string]any
+	}{
+		"list": {
+			"/monitors/search",
+			[]string{"list", "--limit", "7", "--offset", "2", "--enabled", "--has-health-policy=false"},
+			map[string]any{
+				"pagination": map[string]any{"limit": float64(7), "offset": float64(2)},
+				"filter":     map[string]any{"enabled": true, "has_health_policy": false},
+			},
+		},
+		"list from a cursor": {
+			"/monitors/search",
+			[]string{"list", "--cursor", "abc"},
+			map[string]any{"pagination": map[string]any{"limit": float64(20), "cursor": "abc"}},
+		},
+		"runs": {
+			"/monitors/" + id + "/runs/search",
+			[]string{"runs", id, "--limit", "5", "--cursor", "abc"},
+			map[string]any{"pagination": map[string]any{"limit": float64(5), "cursor": "abc"}},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			stub := monitorStub(t)
+
+			if _, _, err := execute(t, newMonitorCmd(stub.state(t)), "", tc.args...); err != nil {
+				t.Fatal(err)
+			}
+
+			if got := bodyOf(t, stub.requestsTo(http.MethodPost, tc.path)[0]); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("body = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 

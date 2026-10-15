@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -33,56 +34,62 @@ func newCollectionCmd(state *AppState) *cobra.Command {
 }
 
 func newCollectionListCmd(state *AppState) *cobra.Command {
-	var limit int32 = 20
-	var offset int32
+	var pages pageFlags
 
 	cmd := &cobra.Command{
 		Use:   listVerb,
 		Short: "List collections",
+		Long: `List collections, newest first.
+
+A page ends with the cursor that continues the listing: -o json carries it as
+next_cursor, and the table says how to pass it with --cursor. --all follows it to
+the last collection.`,
 		Example: `  echopoint collection list
-  echopoint collection list --limit 100 -o json`,
+  echopoint collection list --limit 100 -o json
+  echopoint collection list --cursor <next_cursor> -o json
+  echopoint collection list --all -o json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			params := &api.ListCollectionsParams{
-				Limit:  api.LimitParameter(limit),
-				Offset: api.OffsetParameter(offset),
-			}
-
-			resp, err := state.Client.API().ListCollectionsWithResponse(context.Background(), params)
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchCollections(state))
 			if err != nil {
 				return err
 			}
-
-			if resp.JSON200 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			switch state.OutputFormat {
-			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, resp.JSON200)
-			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, resp.JSON200)
-			default:
-				rows := make([][]string, 0, len(resp.JSON200.Items))
-				for _, collection := range resp.JSON200.Items {
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for _, collection := range page.Items {
 					rows = append(
 						rows,
 						[]string{collection.Id.String(), collection.Name, formatWhen(collection.UpdatedAt)},
 					)
 				}
-				fmt.Fprintf(os.Stdout, "Total: %d\n", resp.JSON200.Total)
-				return output.PrintTable([]string{columnID, columnName, "Updated"}, rows)
-			}
+				fmt.Fprintf(w, "Total: %d\n", page.Total)
+				return output.PrintTableTo(w, []string{columnID, columnName, "Updated"}, rows)
+			})
 		},
 	}
 
-	cmd.Flags().Int32Var(&limit, "limit", 20, "Number of results to return")
-	cmd.Flags().Int32Var(&offset, "offset", 0, "Offset for pagination")
+	pages.bind(cmd, defaultListLimit)
 
 	return cmd
+}
+
+// searchCollections reads one page of the organization's collections.
+func searchCollections(state *AppState) pageFetcher[api.Collection] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.Collection], error) {
+		resp, err := state.Client.API().SearchCollectionsWithResponse(
+			ctx, nil, api.CollectionSearchRequest{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.Collection]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.Collection]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
+	}
 }
 
 func newCollectionViewCmd(state *AppState) *cobra.Command {

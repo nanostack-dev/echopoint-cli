@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const flowTagPageSize = 100
-
 func newFlowTagCmd(state *AppState) *cobra.Command {
 	var (
 		addTags    []string
@@ -118,8 +116,8 @@ de-duplicated server-side.`,
 }
 
 // searchFlowIDs resolves the flows to tag through POST /flows/search (the same
-// search that backs the flow list), paging through all matches. With no filter
-// it returns every flow in the organization.
+// search that backs the flow list), walking next_cursor through all matches. With
+// no filter it returns every flow in the organization.
 func searchFlowIDs(
 	ctx context.Context,
 	state *AppState,
@@ -127,41 +125,25 @@ func searchFlowIDs(
 	matchTags []string,
 	matchMode string,
 ) ([]string, error) {
-	params := &api.SearchFlowsParams{XOrganizationID: state.OrganizationID}
+	request := api.FlowSearchRequest{}
+	if query != "" {
+		request.FullTextSearch = &query
+	}
+	if len(matchTags) > 0 {
+		request.Tags = &matchTags
+		if matchMode != "" {
+			mode := api.TagMatchMode(matchMode)
+			request.TagMatchMode = &mode
+		}
+	}
 
-	var ids []string
-	var offset int32
-	for {
-		limit := int32(flowTagPageSize)
-		pageOffset := offset
-		body := api.FlowSearchRequest{
-			Pagination: &api.PaginationRequest{Limit: &limit, Offset: &pageOffset},
-		}
-		if query != "" {
-			body.FullTextSearch = &query
-		}
-		if len(matchTags) > 0 {
-			body.Tags = &matchTags
-			if matchMode != "" {
-				mode := api.TagMatchMode(matchMode)
-				body.TagMatchMode = &mode
-			}
-		}
-
-		resp, err := state.Client.API().SearchFlowsWithResponse(ctx, params, body)
-		if err != nil {
-			return nil, err
-		}
-		if resp.JSON200 == nil {
-			return nil, formatAPIError(resp.HTTPResponse, resp.Body)
-		}
-		for _, item := range resp.JSON200.Items {
-			ids = append(ids, item.Id.String())
-		}
-		if len(resp.JSON200.Items) < flowTagPageSize || int64(len(ids)) >= resp.JSON200.Total {
-			break
-		}
-		offset += flowTagPageSize
+	flows, err := walkAll(ctx, searchFlows(state, request))
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(flows))
+	for _, flow := range flows {
+		ids = append(ids, flow.Id.String())
 	}
 	return ids, nil
 }

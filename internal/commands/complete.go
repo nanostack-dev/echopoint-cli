@@ -17,7 +17,9 @@ import (
 var completionTimeout = 2 * time.Second
 
 const (
-	completionPageSize       = 100
+	// completionMaxPages bounds how many pages of 100 a completion reads by cursor
+	// before it answers with what it has; the timeout bounds it as well.
+	completionMaxPages       = 5
 	recentExecutionsComplete = 20
 )
 
@@ -86,30 +88,29 @@ func completeFlowArgs(state *AppState, leading int) completionFunc {
 		if leading >= 0 && len(args) >= leading {
 			return noCompletion()
 		}
-		return completeFromAPI(state, cmd, toComplete, fetchFlowCandidates)
+		return completeFromAPI(state, cmd, toComplete, fetchFlowCandidates(state))
 	}
 }
 
-func fetchFlowCandidates(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-	resp, err := client.ListFlowsWithResponse(ctx, &api.ListFlowsParams{Limit: api.LimitParameter(completionPageSize)})
-	if err != nil || resp.JSON200 == nil {
-		return nil
-	}
-	folders := newFolderIndex(nil)
-	if foldersResp, err := client.ListFlowFoldersWithResponse(ctx, nil); err == nil && foldersResp.JSON200 != nil {
-		folders = newFolderIndex(foldersResp.JSON200.Items)
-	}
-	candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-	for _, flow := range resp.JSON200.Items {
-		description := oneLine(flow.Name)
-		if flow.FolderId != nil {
-			if path := folders.path(*flow.FolderId); path != "" {
-				description += " · " + path
-			}
+func fetchFlowCandidates(state *AppState) func(context.Context, *api.ClientWithResponses) []completionCandidate {
+	return func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+		flows := walkSome(ctx, completionMaxPages, searchFlows(state, api.FlowSearchRequest{}))
+		folders := newFolderIndex(nil)
+		if items, err := fetchFlowFolders(ctx, state); err == nil {
+			folders = newFolderIndex(items)
 		}
-		candidates = append(candidates, completionCandidate{flow.Id.String(), description})
+		candidates := make([]completionCandidate, 0, len(flows))
+		for _, flow := range flows {
+			description := oneLine(flow.Name)
+			if flow.FolderId != nil {
+				if path := folders.path(*flow.FolderId); path != "" {
+					description += " · " + path
+				}
+			}
+			candidates = append(candidates, completionCandidate{flow.Id.String(), description})
+		}
+		return candidates
 	}
-	return candidates
 }
 
 // completeExecutionArgs completes a flow, then an execution of the flow already
@@ -118,15 +119,15 @@ func completeExecutionArgs(state *AppState) completionFunc {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		switch len(args) {
 		case 0:
-			return completeFromAPI(state, cmd, toComplete, fetchFlowCandidates)
+			return completeFromAPI(state, cmd, toComplete, fetchFlowCandidates(state))
 		case 1:
 			return completeFromAPI(state, cmd, toComplete,
-				func(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
+				func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
 					flowID, err := resolveFlowID(ctx, state, args[0])
 					if err != nil {
 						return nil
 					}
-					return fetchExecutionCandidates(ctx, client, flowID)
+					return fetchExecutionCandidates(ctx, state, flowID)
 				})
 		}
 		return noCompletion()
@@ -134,16 +135,16 @@ func completeExecutionArgs(state *AppState) completionFunc {
 }
 
 func fetchExecutionCandidates(
-	ctx context.Context, client *api.ClientWithResponses, flowID uuid.UUID,
+	ctx context.Context, state *AppState, flowID uuid.UUID,
 ) []completionCandidate {
-	resp, err := client.ListFlowExecutionsWithResponse(ctx, flowID, &api.ListFlowExecutionsParams{
-		Limit: api.LimitParameter(recentExecutionsComplete),
-	})
-	if err != nil || resp.JSON200 == nil {
+	// the recent executions are the first page: a completion never walks a long history
+	limit := int32(recentExecutionsComplete)
+	page, err := searchFlowExecutions(state, flowID)(ctx, &api.PaginationRequest{Limit: &limit})
+	if err != nil {
 		return nil
 	}
-	candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-	for _, execution := range resp.JSON200.Items {
+	candidates := make([]completionCandidate, 0, len(page.Items))
+	for _, execution := range page.Items {
 		candidates = append(candidates, completionCandidate{
 			execution.Id.String(), string(execution.Status) + " · " + formatWhen(execution.StartedAt),
 		})
@@ -158,15 +159,10 @@ func completeCollectionArgs(state *AppState) completionFunc {
 			return noCompletion()
 		}
 		return completeFromAPI(state, cmd, toComplete,
-			func(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-				resp, err := client.ListCollectionsWithResponse(ctx, &api.ListCollectionsParams{
-					Limit: api.LimitParameter(completionPageSize),
-				})
-				if err != nil || resp.JSON200 == nil {
-					return nil
-				}
-				candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-				for _, collection := range resp.JSON200.Items {
+			func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+				collections := walkSome(ctx, completionMaxPages, searchCollections(state))
+				candidates := make([]completionCandidate, 0, len(collections))
+				for _, collection := range collections {
 					candidates = append(
 						candidates,
 						completionCandidate{collection.Id.String(), oneLine(collection.Name)},
@@ -184,16 +180,17 @@ func completeCollectionArgs(state *AppState) completionFunc {
 func completeFolders(state *AppState, reserved ...string) completionFunc {
 	return func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return completeFromAPI(state, cmd, toComplete,
-			func(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-				resp, err := client.ListFlowFoldersWithResponse(ctx, nil)
-				if err != nil || resp.JSON200 == nil {
+			func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+				// paths need the whole tree: an unfinished walk answers nothing
+				items, err := fetchFlowFolders(ctx, state)
+				if err != nil {
 					return nil
 				}
 				var candidates []completionCandidate
 				for _, name := range reserved {
 					candidates = append(candidates, completionCandidate{value: name})
 				}
-				folders := newFolderIndex(resp.JSON200.Items)
+				folders := newFolderIndex(items)
 				folders.walk(uuid.Nil, 0, func(folder api.FlowFolder, _ int) {
 					path := folders.path(folder.Id)
 					if resolved, err := folders.resolve(
@@ -228,13 +225,10 @@ func completeFolderArg(state *AppState) completionFunc {
 func completeEnvironments(state *AppState) completionFunc {
 	return func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return completeFromAPI(state, cmd, toComplete,
-			func(ctx context.Context, client *api.ClientWithResponses) []completionCandidate {
-				resp, err := client.ListEnvironmentsWithResponse(ctx, nil)
-				if err != nil || resp.JSON200 == nil {
-					return nil
-				}
-				candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-				for _, environment := range resp.JSON200.Items {
+			func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+				environments := walkSome(ctx, completionMaxPages, searchEnvironments(state))
+				candidates := make([]completionCandidate, 0, len(environments))
+				for _, environment := range environments {
 					candidates = append(candidates, completionCandidate{value: environment.Name})
 				}
 				return candidates

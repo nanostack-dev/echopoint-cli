@@ -18,10 +18,10 @@ func completionServer(t *testing.T) (*specServer, string) {
 	t.Helper()
 	fake, server := newSpecServer(t)
 	users := specOf("users-api", "Users\tAPI\nv2", "2.0.0")
-	fake.responses["GET /specs"] = api.SpecListResponse{
+	fake.responses["POST /specs/search"] = api.SpecListResponse{
 		Count: 2, Total: 2, Items: []api.Spec{specOf("pets-api", "Pets", "1.4.0"), users},
 	}
-	fake.responses["GET /specs/pets-api/versions"] = api.SpecVersionListResponse{
+	fake.responses["POST /specs/pets-api/versions/search"] = api.SpecVersionListResponse{
 		Count: 2, Total: 2, Items: []api.SpecVersionSummary{
 			versionOf(
 				"1.4.0",
@@ -45,7 +45,7 @@ func TestCompleteSpecSlugsListsTheSpecsWithTheirLiveVersionAndTitle(t *testing.T
 	if !slices.Equal(names, want) || directive != cobra.ShellCompDirectiveNoFileComp {
 		t.Errorf("names %q, directive %v", names, directive)
 	}
-	if len(fake.requests) != 1 || !strings.HasPrefix(fake.requests[0], "GET /specs?") {
+	if len(fake.requests) != 1 || fake.requests[0] != "POST /specs/search" {
 		t.Errorf("requests = %v", fake.requests)
 	}
 }
@@ -75,8 +75,8 @@ func TestCompleteSpecSlugsOnlyCompletesTheFirstArgument(t *testing.T) {
 func TestCompleteSpecSlugsCompletesNothingOnAnyFailure(t *testing.T) {
 	_, url := completionServer(t)
 	failing, failingServer := newSpecServer(t)
-	failing.responses["GET /specs"] = apiError("INTERNAL", "boom")
-	failing.statuses["GET /specs"] = http.StatusInternalServerError
+	failing.responses["POST /specs/search"] = apiError("INTERNAL", "boom")
+	failing.statuses["POST /specs/search"] = http.StatusInternalServerError
 	closed := httptest.NewServer(http.NotFoundHandler())
 	closed.Close()
 	noCredentials := makeState(t, "test-api-key", "", url)
@@ -131,7 +131,7 @@ func TestCompleteSpecVersionsListsTheVersionsOfTheSpecAlreadyTyped(t *testing.T)
 	if !slices.Equal(versions, want) || directive != cobra.ShellCompDirectiveNoFileComp {
 		t.Errorf("versions %q, directive %v", versions, directive)
 	}
-	if len(fake.requests) != 1 || !strings.HasPrefix(fake.requests[0], "GET /specs/pets-api/versions?") {
+	if len(fake.requests) != 1 || fake.requests[0] != "POST /specs/pets-api/versions/search" {
 		t.Errorf("requests = %v", fake.requests)
 	}
 }

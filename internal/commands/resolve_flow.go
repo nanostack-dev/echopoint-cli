@@ -34,6 +34,6 @@ func resolveFlowID(_ context.Context, _ *AppState, arg string) (uuid.UUID, error
 // completeFlowFlag completes the id of a flow for --flow-id.
 func completeFlowFlag(state *AppState) completionFunc {
 	return func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return completeFromAPI(state, cmd, toComplete, fetchFlowCandidates)
+		return completeFromAPI(state, cmd, toComplete, fetchFlowCandidates(state))
 	}
 }

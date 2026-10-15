@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"echopoint-cli/internal/api"
+	"echopoint-cli/internal/output"
 )
 
 func newFlowPublishCmd(state *AppState) *cobra.Command {
@@ -42,33 +43,61 @@ func newFlowVersionCmd(state *AppState) *cobra.Command {
 }
 
 func newFlowVersionListCmd(state *AppState) *cobra.Command {
-	var limit, offset int
+	var pages pageFlags
 	cmd := quietOnError(&cobra.Command{
-		Use: "list <flow-id>", Short: "List published versions of a flow",
-		Example: `  echopoint flow version list <flow-id> --limit 20 -o json`, Args: cobra.ExactArgs(1),
+		Use: "list <flow-id>", Short: "List published versions of a flow, newest first",
+		Long: `List the published versions of a flow, newest first, as JSON (or YAML with -o yaml).
+
+A page ends with next_cursor, which --cursor takes to continue the listing; --all
+follows it to the oldest version.`,
+		Example: `  echopoint flow version list <flow-id> --limit 20 -o json
+  echopoint flow version list <flow-id> --cursor <next_cursor>
+  echopoint flow version list <flow-id> --all`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
-			if err := validateAPIPagination(limit, offset); err != nil {
+			if err := pages.validate(); err != nil {
 				return err
 			}
 			id, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
-			resp, err := state.Client.API().ListFlowVersionsWithResponse(cmd.Context(), id, &api.ListFlowVersionsParams{
-				Limit: api.LimitParameter(limit), Offset: api.OffsetParameter(offset),
-			})
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchFlowVersions(state, id))
 			if err != nil {
 				return err
 			}
-			return printStatusResponse(cmd, state, resp.JSON200, resp.HTTPResponse, resp.Body)
+			if state.OutputFormat == output.FormatYAML {
+				return output.PrintYAML(cmd.OutOrStdout(), page)
+			}
+			// Published versions are nested documents: they print as JSON unless YAML is asked for.
+			if err := output.PrintJSON(cmd.OutOrStdout(), page); err != nil {
+				return err
+			}
+			printContinueHint(cmd.ErrOrStderr(), page.NextCursor)
+			return nil
 		},
 	})
-	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum results (1-100)")
-	cmd.Flags().IntVar(&offset, "offset", 0, "Results to skip")
+	pages.bind(cmd, defaultListLimit)
 	return cmd
+}
+
+// searchFlowVersions reads one page of the published versions of a flow, newest first.
+func searchFlowVersions(state *AppState, flowID uuid.UUID) pageFetcher[api.FlowVersion] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.FlowVersion], error) {
+		resp, err := state.Client.API().SearchFlowVersionsWithResponse(
+			ctx, flowID, nil, api.FlowVersionSearchRequest{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.FlowVersion]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.FlowVersion]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
+	}
 }
 
 func newFlowVersionViewCmd(state *AppState) *cobra.Command {
@@ -116,17 +145,10 @@ func completeFlowVersionArgs(state *AppState) completionFunc {
 			state,
 			cmd,
 			toComplete,
-			func(ctx context.Context, cli *api.ClientWithResponses) []completionCandidate {
-				resp, err := cli.ListFlowVersionsWithResponse(
-					ctx,
-					id,
-					&api.ListFlowVersionsParams{Limit: completionPageSize},
-				)
-				if err != nil || resp.JSON200 == nil {
-					return nil
-				}
-				candidates := make([]completionCandidate, 0, len(resp.JSON200.Items))
-				for _, version := range resp.JSON200.Items {
+			func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
+				versions := walkSome(ctx, completionMaxPages, searchFlowVersions(state, id))
+				candidates := make([]completionCandidate, 0, len(versions))
+				for _, version := range versions {
 					candidates = append(
 						candidates,
 						completionCandidate{version.Id.String(), "published " + formatWhen(version.PublishedAt)},
@@ -136,14 +158,4 @@ func completeFlowVersionArgs(state *AppState) completionFunc {
 			},
 		)
 	}
-}
-
-func validateAPIPagination(limit, offset int) error {
-	if limit < 1 || limit > 100 {
-		return fmt.Errorf("--limit must be between 1 and 100")
-	}
-	if offset < 0 {
-		return fmt.Errorf("--offset must be nonnegative")
-	}
-	return nil
 }

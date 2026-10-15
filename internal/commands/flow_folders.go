@@ -26,9 +26,6 @@ const (
 	// rootRef is the reserved destination that puts a folder at the tree root.
 	rootRef = "root"
 
-	// folderSearchPageSize pages the flow search that backs folder flow counts.
-	folderSearchPageSize = 100
-
 	// maxFolderDepth bounds tree walks so a malformed tree cannot loop forever.
 	maxFolderDepth = 32
 )
@@ -582,15 +579,26 @@ func folderCountCell(withCounts bool, count int) string {
 	return strconv.Itoa(count)
 }
 
+// fetchFlowFolders reads every flow folder of the organization: the tree needs all
+// of them, so it walks the search by cursor to its end.
 func fetchFlowFolders(ctx context.Context, state *AppState) ([]api.FlowFolder, error) {
-	resp, err := state.Client.API().ListFlowFoldersWithResponse(ctx, nil)
-	if err != nil {
-		return nil, err
+	return walkAll(ctx, searchFlowFolders(state))
+}
+
+// searchFlowFolders reads one page of the organization's flow folders by name.
+func searchFlowFolders(state *AppState) pageFetcher[api.FlowFolder] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.FlowFolder], error) {
+		resp, err := state.Client.API().SearchFlowFoldersWithResponse(
+			ctx, nil, api.FlowFolderSearchRequest{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.FlowFolder]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.FlowFolder]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
 	}
-	if resp.JSON200 == nil {
-		return nil, formatAPIError(resp.HTTPResponse, resp.Body)
-	}
-	return resp.JSON200.Items, nil
 }
 
 func loadFolderIndex(ctx context.Context, state *AppState) (*folderIndex, error) {
@@ -623,36 +631,16 @@ func flowCountsByFolder(ctx context.Context, state *AppState) (map[uuid.UUID]int
 	counts := make(map[uuid.UUID]int)
 	uncategorized := 0
 
-	var (
-		seen   int
-		offset int32
-	)
-	for {
-		limit := int32(folderSearchPageSize)
-		pageOffset := offset
-		resp, err := state.Client.API().SearchFlowsWithResponse(ctx, nil, api.FlowSearchRequest{
-			Pagination: &api.PaginationRequest{Limit: &limit, Offset: &pageOffset},
-		})
-		if err != nil {
-			return nil, 0, err
+	flows, err := walkAll(ctx, searchFlows(state, api.FlowSearchRequest{}))
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, flow := range flows {
+		if flow.FolderId == nil {
+			uncategorized++
+			continue
 		}
-		if resp.JSON200 == nil {
-			return nil, 0, formatAPIError(resp.HTTPResponse, resp.Body)
-		}
-
-		for _, item := range resp.JSON200.Items {
-			if item.FolderId == nil {
-				uncategorized++
-				continue
-			}
-			counts[*item.FolderId]++
-		}
-
-		seen += len(resp.JSON200.Items)
-		if len(resp.JSON200.Items) < folderSearchPageSize || int64(seen) >= resp.JSON200.Total {
-			break
-		}
-		offset += folderSearchPageSize
+		counts[*flow.FolderId]++
 	}
 
 	return counts, uncategorized, nil
