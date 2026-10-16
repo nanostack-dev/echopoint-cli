@@ -113,14 +113,18 @@ Every collection is a cursor-paginated search tool named after its operation:
 `search_collection_folders`, `search_collection_requests`, `search_open_api_sync_history`,
 `search_collection_request_open_api_sync_history`, `search_flow_versions`, `search_executions`,
 `search_node_execution_history`, `search_flow_schedules`, `search_flow_schedule_runs`,
-`search_specs`, `search_spec_versions`, and the searches of webhooks and OpenAPI sync.
+`search_specs`, `search_spec_versions`, `search_organization_members` (Anchor-backed, by name or
+email), and the searches of webhooks and OpenAPI sync.
 Path parameters are top-level arguments; the body fields `filter`, `sort_by`,
 `sort_direction`, `full_text_search` and `pagination` are too. A response carries `items`,
 `total`, `count` and `next_cursor`: continue by calling the same tool with the same
 arguments and `"pagination": {"cursor": "<next_cursor>"}`, until `next_cursor` is absent.
 `pagination.offset` skips by count and cannot be combined with a cursor. The deprecated
-`list_*` tools (`list_flows`, `list_specs`, ...) remain for compatibility; prefer the
-searches. See [cursor-paginated listings](technical/pagination.md).
+`list_*` tools (`list_flows`, `list_specs`, `list_organization_members`, ...) remain for
+compatibility; each description starts with `Deprecated: use <search_tool> instead, which pages
+with a cursor.` Prefer the searches. The API-key and invitation searches
+(`searchAPIKeys`, `searchOrganizationInvitations`, `searchMyInvitations`) are `x-ai-danger`, so
+they and their lists are not tools. See [cursor-paginated listings](technical/pagination.md).
 
 ## Monitors
 

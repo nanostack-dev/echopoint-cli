@@ -33,6 +33,7 @@ var cursorSearchTools = map[string]string{
 	"search_specs":                                    "/specs/search",
 	"search_spec_versions":                            "/specs/{slug}/versions/search",
 	"search_environments":                             "/organization/environments/search",
+	"search_organization_members":                     "/members/search",
 }
 
 // deprecatedListTools are the lists the API keeps serving; their tools remain.
@@ -41,7 +42,15 @@ var deprecatedListTools = []string{
 	"list_collection_folders", "list_collection_requests", "list_open_api_sync_history",
 	"list_collection_request_open_api_sync_history", "list_flow_versions", "list_executions",
 	"list_flow_executions", "get_node_execution_history", "list_flow_schedules",
-	"list_flow_schedule_runs", "list_specs", "list_spec_versions",
+	"list_flow_schedule_runs", "list_specs", "list_spec_versions", "list_organization_members",
+}
+
+// dangerListsAndSearches are the Anchor-backed operations the contract marks x-ai-danger
+// (API keys and invitations), so neither their lists nor their searches are tools.
+var dangerListsAndSearches = []string{
+	"list_api_keys", "search_api_keys",
+	"list_organization_invitations", "search_organization_invitations",
+	"list_my_invitations", "search_my_invitations",
 }
 
 func catalogByName(t *testing.T) map[string]toolDef {
@@ -73,6 +82,35 @@ func TestTheCatalogExposesEveryCursorSearchAndKeepsTheDeprecatedLists(t *testing
 	for _, name := range deprecatedListTools {
 		if _, ok := byName[name]; !ok {
 			t.Errorf("the deprecated list tool %s is gone", name)
+		}
+	}
+}
+
+func TestTheDeprecatedListToolsPointAgentsAtTheirSearch(t *testing.T) {
+	byName := catalogByName(t)
+
+	for _, name := range deprecatedListTools {
+		td, ok := byName[name]
+		if !ok {
+			t.Errorf("the deprecated list tool %s is gone", name)
+			continue
+		}
+		if !strings.HasPrefix(td.Description, "Deprecated: use search_") ||
+			!strings.Contains(td.Description, " instead, which pages with a cursor.") {
+			t.Errorf(
+				"%s description = %q, want it to start with %q",
+				name, td.Description, "Deprecated: use <search_tool> instead, which pages with a cursor.",
+			)
+		}
+	}
+}
+
+func TestTheDangerousAnchorListsAndSearchesAreNotTools(t *testing.T) {
+	byName := catalogByName(t)
+
+	for _, name := range dangerListsAndSearches {
+		if _, ok := byName[name]; ok {
+			t.Errorf("%s is an x-ai-danger operation and must not be an MCP tool", name)
 		}
 	}
 }

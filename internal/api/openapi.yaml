@@ -32,7 +32,7 @@ paths:
             - webhooks:read
         - ApiKeys:
             - webhooks:read
-      x-ai-description: List webhook endpoints in the organization.
+      x-ai-description: 'Deprecated: use search_webhooks instead, which pages with a cursor. List webhook endpoints in the organization.'
       x-ai-tool: true
     post:
       tags:
@@ -1039,7 +1039,7 @@ paths:
             - flows:read
         - ApiKeys:
             - flows:read
-      x-ai-description: List flows in the organization. Returns flow ids, names, and metadata. Use to discover available flows.
+      x-ai-description: 'Deprecated: use search_flows instead, which pages with a cursor. List flows in the organization. Returns flow ids, names, and metadata. Use to discover available flows.'
       x-ai-tool: true
     post:
       tags:
@@ -1184,7 +1184,7 @@ paths:
             - flows:read
         - ApiKeys:
             - flows:read
-      x-ai-description: List the organization's flow folders (id, parent, name) to render the flow tree.
+      x-ai-description: 'Deprecated: use search_flow_folders instead, which pages with a cursor. List the organization''s flow folders (id, parent, name) to render the flow tree.'
       x-ai-tool: true
     post:
       tags:
@@ -1570,19 +1570,21 @@ paths:
     get:
       tags:
         - Invitations
-      summary: List My Invitations
+      summary: 'Deprecated: use search_my_invitations instead, which pages with a cursor. List My Invitations'
       description: |
+        Deprecated: use `searchMyInvitations`, which pages with a cursor.
+
         Lists the pending invitations addressed to any verified email address
-        of the signed-in user, across every organization, newest first. The app
-        calls it after sign-up and sign-in to offer the invitations waiting for
-        the person, who accepts one with
-        `POST /invitations/{invitationId}/accept`. The request carries no
-        `X-Organization-ID`: the caller need not belong to the organizations.
+        of the signed-in user, across every organization, newest first. It
+        walks the search to its end, so it returns every invitation. The
+        request carries no `X-Organization-ID`: the caller need not belong to
+        the organizations.
 
         An email address the sign-in provider has not verified never matches,
         so nobody sees an invitation by adding someone else's address to their
         account. A user with no verified address gets an empty list.
       operationId: listMyInvitations
+      deprecated: true
       responses:
         "200":
           description: The pending invitations of the caller.
@@ -1590,6 +1592,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReceivedInvitationListResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth: []
+      x-ai-danger: Invitee flow - requires a human session of the invited person.
+  /me/invitations/search:
+    post:
+      tags:
+        - Invitations
+      summary: Search My Invitations
+      description: |
+        Searches the pending invitations addressed to any verified email
+        address of the signed-in user, across every organization, and pages
+        with a cursor. The app calls it after sign-up and sign-in to offer the
+        invitations waiting for the person, who accepts one with
+        `POST /invitations/{invitationId}/accept`. The request carries no
+        `X-Organization-ID`: the caller need not belong to the organizations.
+
+        An email address the sign-in provider has not verified never matches,
+        so nobody sees an invitation by adding someone else's address to their
+        account. A user with no verified address gets an empty page.
+
+        Default order: created_at DESC, then id DESC; a sort_direction alone
+        reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+        is not used by this search. Anchor owns
+        the invitations: an invalid cursor is refused by Anchor and answers 400
+        INVALID_CURSOR.
+      operationId: searchMyInvitations
+      requestBody:
+        description: Search criteria for the invitations of the caller.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceivedInvitationSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: The pending invitations of the caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivedInvitationSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
         "500":
@@ -1694,7 +1742,7 @@ paths:
     get:
       tags:
         - Organization
-      summary: List Environments
+      summary: 'Deprecated: use search_environments instead, which pages with a cursor. List Environments'
       description: 'Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization''s environments. Variables are not included; read them from the organization variable set.'
       operationId: listEnvironments
       deprecated: true
@@ -1883,9 +1931,10 @@ paths:
     get:
       tags:
         - Auth
-      summary: List API Keys
-      description: Lists API keys for the current organization.
+      summary: 'Deprecated: use search_api_keys instead, which pages with a cursor. List API Keys'
+      description: 'Deprecated: use `searchAPIKeys`, which pages with a cursor. Lists API keys for the current organization.'
       operationId: listAPIKeys
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -1947,7 +1996,7 @@ paths:
       tags:
         - Auth
       summary: Search API Keys
-      description: Server-side search with pagination, filtering and sorting for organization API keys.
+      description: 'Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.'
       operationId: searchAPIKeys
       requestBody:
         description: Search criteria for API keys.
@@ -1983,7 +2032,7 @@ paths:
       tags:
         - Auth
       summary: List Available Permissions
-      description: 'Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.'
+      description: 'Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor''s cursor to the last page.'
       operationId: listPermissions
       responses:
         "200":
@@ -2107,7 +2156,7 @@ paths:
             - collections:read
         - ApiKeys:
             - collections:read
-      x-ai-description: List API request collections in the organization.
+      x-ai-description: 'Deprecated: use search_collections instead, which pages with a cursor. List API request collections in the organization.'
       x-ai-tool: true
     post:
       tags:
@@ -2345,7 +2394,7 @@ paths:
     get:
       tags:
         - Collections
-      summary: List OpenAPI Sync History
+      summary: 'Deprecated: use search_open_api_sync_history instead, which pages with a cursor. List OpenAPI Sync History'
       description: 'Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.'
       operationId: listOpenAPISyncHistory
       deprecated: true
@@ -2553,7 +2602,7 @@ paths:
     get:
       tags:
         - Collections
-      summary: List Collection Folders
+      summary: 'Deprecated: use search_collection_folders instead, which pages with a cursor. List Collection Folders'
       description: 'Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.'
       operationId: listCollectionFolders
       deprecated: true
@@ -2732,7 +2781,7 @@ paths:
     get:
       tags:
         - Collections
-      summary: List Collection Requests
+      summary: 'Deprecated: use search_collection_requests instead, which pages with a cursor. List Collection Requests'
       description: 'Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.'
       operationId: listCollectionRequests
       deprecated: true
@@ -3013,7 +3062,7 @@ paths:
     get:
       tags:
         - Collections
-      summary: List Request OpenAPI Sync History
+      summary: 'Deprecated: use search_collection_request_open_api_sync_history instead, which pages with a cursor. List Request OpenAPI Sync History'
       description: 'Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.'
       operationId: listCollectionRequestOpenAPISyncHistory
       deprecated: true
@@ -3282,7 +3331,7 @@ paths:
     get:
       tags:
         - Flows
-      summary: List Flow Versions
+      summary: 'Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions'
       description: 'Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.'
       operationId: listFlowVersions
       deprecated: true
@@ -3680,7 +3729,7 @@ paths:
     get:
       tags:
         - Flows
-      summary: List Organization Executions
+      summary: 'Deprecated: use search_executions instead, which pages with a cursor. List Organization Executions'
       description: |
         Deprecated: use `searchExecutions`, which pages with a cursor.
         Retrieves org-wide execution activity, newest first. Rows are slim
@@ -3784,7 +3833,7 @@ paths:
     get:
       tags:
         - Flows
-      summary: List Flow Executions
+      summary: 'Deprecated: use search_executions instead, which pages with a cursor. List Flow Executions'
       description: 'Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.'
       operationId: listFlowExecutions
       deprecated: true
@@ -4027,7 +4076,7 @@ paths:
     get:
       tags:
         - Flows
-      summary: Get Node Execution History
+      summary: 'Deprecated: use search_node_execution_history instead, which pages with a cursor. Get Node Execution History'
       description: 'Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.'
       operationId: getNodeExecutionHistory
       deprecated: true
@@ -4103,13 +4152,15 @@ paths:
     get:
       tags:
         - Members
-      summary: List Organization Members
+      summary: 'Deprecated: use search_organization_members instead, which pages with a cursor. List Organization Members'
       description: |
-        Lists the members of the current organization (proxied from anchor).
-        Backs the recipient picker for schedule failure alerts; returns each
-        member's email, display name, and role. Supports a full-text `search`
-        term for type-ahead.
+        Deprecated: use `searchOrganizationMembers`, which pages with a cursor.
+
+        Lists the members of the current organization (proxied from anchor),
+        newest member first. Returns each member's email, display name, and
+        role. Supports a full-text `search` term for type-ahead.
       operationId: listOrganizationMembers
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4138,18 +4189,58 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+  /members/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Members
+      summary: Search Organization Members
+      description: 'Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member''s email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.'
+      operationId: searchOrganizationMembers
+      requestBody:
+        description: Search criteria for organization members.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationMemberSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Organization members retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationMemberSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search the members of the organization by name or email, with their role. Page with the returned next_cursor.
+      x-ai-tool: true
   /invitations:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
     get:
       tags:
         - Invitations
-      summary: List Pending Organization Invitations
+      summary: 'Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations'
       description: |
+        Deprecated: use `searchOrganizationInvitations`, which pages with a
+        cursor.
+
         Lists the pending invitations of the current organization: invited, not
         accepted, not expired. An expired or accepted invitation is not listed.
         The invitation token is never part of a response.
       operationId: listOrganizationInvitations
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4218,6 +4309,48 @@ paths:
       security:
         - BearerAuth:
             - invitations:create
+      x-ai-danger: Membership change - invitations grant admin access; requires a human session.
+  /invitations/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Invitations
+      summary: Search Pending Organization Invitations
+      description: |
+        Searches the pending invitations of the current organization and pages
+        with a cursor: invited, not accepted, not expired. An expired or
+        accepted invitation is not found. The invitation token is never part of
+        a response.
+
+        Default order: created_at DESC, then id DESC. A sort_by without
+        sort_direction sorts DESC. full_text_search is not used by this search.
+        Anchor owns the invitations: an invalid cursor is refused by Anchor and
+        answers 400 INVALID_CURSOR.
+      operationId: searchOrganizationInvitations
+      requestBody:
+        description: Search criteria for pending invitations.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationInvitationSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Pending invitations retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationInvitationSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - invitations:read
       x-ai-danger: Membership change - invitations grant admin access; requires a human session.
   /invitations/{invitationId}:
     parameters:
@@ -4349,7 +4482,7 @@ paths:
     get:
       tags:
         - Monitors
-      summary: List Monitors
+      summary: 'Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors'
       description: 'Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization''s monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.'
       operationId: listFlowSchedules
       deprecated: true
@@ -4771,7 +4904,7 @@ paths:
     get:
       tags:
         - Monitors
-      summary: List Monitor Runs
+      summary: 'Deprecated: use search_flow_schedule_runs instead, which pages with a cursor. List Monitor Runs'
       description: 'Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor''s occurrences (scheduled and diagnostic), most recent first.'
       operationId: listFlowScheduleRuns
       deprecated: true
@@ -4920,7 +5053,7 @@ paths:
     get:
       tags:
         - Specs
-      summary: List Specs
+      summary: 'Deprecated: use search_specs instead, which pages with a cursor. List Specs'
       description: 'Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization''s specs with their Live version, by slug.'
       operationId: listSpecs
       deprecated: true
@@ -5061,7 +5194,7 @@ paths:
     get:
       tags:
         - Specs
-      summary: List Spec Versions
+      summary: 'Deprecated: use search_spec_versions instead, which pages with a cursor. List Spec Versions'
       description: 'Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec''s Live versions, newest first. The first item is the current Live version.'
       operationId: listSpecVersions
       deprecated: true
@@ -5999,7 +6132,6 @@ components:
         - name
         - created_at
         - last_used_at
-      default: created_at
     ApiKeyFilter:
       type: object
       properties:
@@ -6016,11 +6148,11 @@ components:
             type: string
           x-go-type-skip-optional-pointer: true
         last_used_after:
-          description: Include API keys last used at or after this timestamp.
+          description: Include API keys last used after this timestamp. A key that was never used does not match.
           type: string
           format: date-time
         last_used_before:
-          description: Include API keys last used at or before this timestamp.
+          description: Include API keys last used before this timestamp. A key that was never used does not match.
           type: string
           format: date-time
     ApiKeySearchRequest:
@@ -10976,6 +11108,31 @@ components:
         total:
           type: integer
           format: int64
+    OrganizationMemberSortField:
+      description: Field to sort member search results by.
+      type: string
+      enum:
+        - joined_at
+        - email
+    OrganizationMemberSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/OrganizationMemberSortField'
+              description: Field to sort by.
+    OrganizationMemberSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrganizationMember'
     OrganizationInvitation:
       description: A pending invitation to the current organization.
       type: object
@@ -11015,6 +11172,32 @@ components:
         total:
           type: integer
           format: int64
+    OrganizationInvitationSortField:
+      description: Field to sort pending invitation search results by.
+      type: string
+      enum:
+        - created_at
+        - email
+        - expires_at
+    OrganizationInvitationSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/OrganizationInvitationSortField'
+              description: Field to sort by.
+    OrganizationInvitationSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrganizationInvitation'
     CreateOrganizationInvitationRequest:
       type: object
       required:
@@ -11060,6 +11243,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReceivedInvitation'
+    ReceivedInvitationSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            sort_by:
+              $ref: '#/components/schemas/OrganizationInvitationSortField'
+              description: Field to sort by.
+    ReceivedInvitationSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReceivedInvitation'
     AcceptedInvitationResponse:
       description: The organization the caller belongs to after accepting.
       type: object

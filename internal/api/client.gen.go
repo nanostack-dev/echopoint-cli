@@ -1105,6 +1105,45 @@ func (e OperatorType) Valid() bool {
 	}
 }
 
+// Defines values for OrganizationInvitationSortField.
+const (
+	OrganizationInvitationSortFieldCreatedAt OrganizationInvitationSortField = "created_at"
+	OrganizationInvitationSortFieldEmail     OrganizationInvitationSortField = "email"
+	OrganizationInvitationSortFieldExpiresAt OrganizationInvitationSortField = "expires_at"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationInvitationSortField enum.
+func (e OrganizationInvitationSortField) Valid() bool {
+	switch e {
+	case OrganizationInvitationSortFieldCreatedAt:
+		return true
+	case OrganizationInvitationSortFieldEmail:
+		return true
+	case OrganizationInvitationSortFieldExpiresAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OrganizationMemberSortField.
+const (
+	OrganizationMemberSortFieldEmail    OrganizationMemberSortField = "email"
+	OrganizationMemberSortFieldJoinedAt OrganizationMemberSortField = "joined_at"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationMemberSortField enum.
+func (e OrganizationMemberSortField) Valid() bool {
+	switch e {
+	case OrganizationMemberSortFieldEmail:
+		return true
+	case OrganizationMemberSortFieldJoinedAt:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PollFlowNodeType.
 const (
 	PollFlowNodeTypePoll PollFlowNodeType = "poll"
@@ -2069,10 +2108,10 @@ type ApiKeyFilter struct {
 	// Ids Filter by specific API key IDs.
 	Ids []string `json:"ids,omitempty"`
 
-	// LastUsedAfter Include API keys last used at or after this timestamp.
+	// LastUsedAfter Include API keys last used after this timestamp. A key that was never used does not match.
 	LastUsedAfter *time.Time `json:"last_used_after,omitempty"`
 
-	// LastUsedBefore Include API keys last used at or before this timestamp.
+	// LastUsedBefore Include API keys last used before this timestamp. A key that was never used does not match.
 	LastUsedBefore *time.Time `json:"last_used_before,omitempty"`
 
 	// Names Filter by exact API key names.
@@ -5123,6 +5162,35 @@ type OrganizationInvitationListResponse struct {
 	Total int64                    `json:"total"`
 }
 
+// OrganizationInvitationSearchRequest defines model for OrganizationInvitationSearchRequest.
+type OrganizationInvitationSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *OrganizationInvitationSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// OrganizationInvitationSearchResponse defines model for OrganizationInvitationSearchResponse.
+type OrganizationInvitationSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int                      `json:"count"`
+	Items []OrganizationInvitation `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
+// OrganizationInvitationSortField Field to sort pending invitation search results by.
+type OrganizationInvitationSortField string
+
 // OrganizationMember A member of the current organization, as seen by echopoint (proxied from anchor).
 type OrganizationMember struct {
 	// Email Email address of the member; usable as an alert recipient.
@@ -5153,6 +5221,35 @@ type OrganizationMemberRole struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
 }
+
+// OrganizationMemberSearchRequest defines model for OrganizationMemberSearchRequest.
+type OrganizationMemberSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *OrganizationMemberSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// OrganizationMemberSearchResponse defines model for OrganizationMemberSearchResponse.
+type OrganizationMemberSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int                  `json:"count"`
+	Items []OrganizationMember `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
+// OrganizationMemberSortField Field to sort member search results by.
+type OrganizationMemberSortField string
 
 // Output defines model for Output.
 type Output struct {
@@ -5364,6 +5461,32 @@ type ReceivedInvitation struct {
 // ReceivedInvitationListResponse defines model for ReceivedInvitationListResponse.
 type ReceivedInvitationListResponse struct {
 	Items []ReceivedInvitation `json:"items"`
+}
+
+// ReceivedInvitationSearchRequest defines model for ReceivedInvitationSearchRequest.
+type ReceivedInvitationSearchRequest struct {
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortBy Field to sort by.
+	SortBy *OrganizationInvitationSortField `json:"sort_by,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// ReceivedInvitationSearchResponse defines model for ReceivedInvitationSearchResponse.
+type ReceivedInvitationSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int                  `json:"count"`
+	Items []ReceivedInvitation `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
 }
 
 // ReferencedFlow defines model for ReferencedFlow.
@@ -7690,6 +7813,12 @@ type CreateOrganizationInvitationParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchOrganizationInvitationsParams defines parameters for SearchOrganizationInvitations.
+type SearchOrganizationInvitationsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // DeleteOrganizationInvitationParams defines parameters for DeleteOrganizationInvitation.
 type DeleteOrganizationInvitationParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -7719,6 +7848,12 @@ type ListOrganizationMembersParams struct {
 	// Search Full-text search term matched against member name/email.
 	Search *string `form:"search,omitempty" json:"search,omitempty"`
 
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchOrganizationMembersParams defines parameters for SearchOrganizationMembers.
+type SearchOrganizationMembersParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8210,6 +8345,15 @@ type SearchFlowVersionsJSONRequestBody = FlowVersionSearchRequest
 
 // CreateOrganizationInvitationJSONRequestBody defines body for CreateOrganizationInvitation for application/json ContentType.
 type CreateOrganizationInvitationJSONRequestBody = CreateOrganizationInvitationRequest
+
+// SearchOrganizationInvitationsJSONRequestBody defines body for SearchOrganizationInvitations for application/json ContentType.
+type SearchOrganizationInvitationsJSONRequestBody = OrganizationInvitationSearchRequest
+
+// SearchMyInvitationsJSONRequestBody defines body for SearchMyInvitations for application/json ContentType.
+type SearchMyInvitationsJSONRequestBody = ReceivedInvitationSearchRequest
+
+// SearchOrganizationMembersJSONRequestBody defines body for SearchOrganizationMembers for application/json ContentType.
+type SearchOrganizationMembersJSONRequestBody = OrganizationMemberSearchRequest
 
 // CreateFlowScheduleJSONRequestBody defines body for CreateFlowSchedule for application/json ContentType.
 type CreateFlowScheduleJSONRequestBody = CreateMonitorRequest
@@ -9502,11 +9646,13 @@ type ClientInterface interface {
 	// Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
 	GetExecutionAnalyticsSummary(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListAPIKeys List API Keys
+	// ListAPIKeys Deprecated: use search_api_keys instead, which pages with a cursor. List API Keys
 	//
-	// Lists API keys for the current organization.
+	// Deprecated: use `searchAPIKeys`, which pages with a cursor. Lists API keys for the current organization.
 	//
 	// Corresponds with GET /api-keys (the `ListAPIKeys` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListAPIKeys(ctx context.Context, params *ListAPIKeysParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateAPIKeyWithBody Create API Key
@@ -9529,7 +9675,7 @@ type ClientInterface interface {
 
 	// SearchAPIKeysWithBody Search API Keys
 	//
-	// Server-side search with pagination, filtering and sorting for organization API keys.
+	// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -9538,7 +9684,7 @@ type ClientInterface interface {
 
 	// SearchAPIKeys Search API Keys
 	//
-	// Server-side search with pagination, filtering and sorting for organization API keys.
+	// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -9722,7 +9868,7 @@ type ClientInterface interface {
 	// Corresponds with POST /collections/{collectionId}/requests/{requestId}/execute (the `ExecuteCollectionRequest` operationId).
 	ExecuteCollectionRequest(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *ExecuteCollectionRequestParams, body ExecuteCollectionRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListCollectionRequestOpenAPISyncHistory List Request OpenAPI Sync History
+	// ListCollectionRequestOpenAPISyncHistory Deprecated: use search_collection_request_open_api_sync_history instead, which pages with a cursor. List Request OpenAPI Sync History
 	//
 	// Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 	//
@@ -9781,7 +9927,7 @@ type ClientInterface interface {
 	// Corresponds with PUT /collections/{id} (the `UpdateCollection` operationId).
 	UpdateCollection(ctx context.Context, id openapi_types.UUID, params *UpdateCollectionParams, body UpdateCollectionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListCollectionFolders List Collection Folders
+	// ListCollectionFolders Deprecated: use search_collection_folders instead, which pages with a cursor. List Collection Folders
 	//
 	// Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 	//
@@ -9840,7 +9986,7 @@ type ClientInterface interface {
 	// Corresponds with DELETE /collections/{id}/openapi-sync/history (the `DeleteOpenAPISyncConfig` operationId).
 	DeleteOpenAPISyncConfig(ctx context.Context, id openapi_types.UUID, params *DeleteOpenAPISyncConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListOpenAPISyncHistory List OpenAPI Sync History
+	// ListOpenAPISyncHistory Deprecated: use search_open_api_sync_history instead, which pages with a cursor. List OpenAPI Sync History
 	//
 	// Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 	//
@@ -9921,7 +10067,7 @@ type ClientInterface interface {
 	// Corresponds with POST /collections/{id}/openapi-sync/run (the `RunOpenAPISyncNow` operationId).
 	RunOpenAPISyncNow(ctx context.Context, id openapi_types.UUID, params *RunOpenAPISyncNowParams, body RunOpenAPISyncNowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListCollectionRequests List Collection Requests
+	// ListCollectionRequests Deprecated: use search_collection_requests instead, which pages with a cursor. List Collection Requests
 	//
 	// Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 	//
@@ -9966,7 +10112,7 @@ type ClientInterface interface {
 	// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
 	SearchCollectionRequests(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, body SearchCollectionRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListExecutions List Organization Executions
+	// ListExecutions Deprecated: use search_executions instead, which pages with a cursor. List Organization Executions
 	//
 	// Deprecated: use `searchExecutions`, which pages with a cursor.
 	// Retrieves org-wide execution activity, newest first. Rows are slim
@@ -10189,7 +10335,7 @@ type ClientInterface interface {
 	// Corresponds with GET /flows/{flowId}/executions/{executionId}/stream (the `StreamExecution` operationId).
 	StreamExecution(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *StreamExecutionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetNodeExecutionHistory Get Node Execution History
+	// GetNodeExecutionHistory Deprecated: use search_node_execution_history instead, which pages with a cursor. Get Node Execution History
 	//
 	// Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 	//
@@ -10248,7 +10394,7 @@ type ClientInterface interface {
 	// Corresponds with PUT /flows/{id} (the `UpdateFlow` operationId).
 	UpdateFlow(ctx context.Context, id openapi_types.UUID, params *UpdateFlowParams, body UpdateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListFlowExecutions List Flow Executions
+	// ListFlowExecutions Deprecated: use search_executions instead, which pages with a cursor. List Flow Executions
 	//
 	// Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 	//
@@ -10370,7 +10516,7 @@ type ClientInterface interface {
 	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
 	SetFlowVariable(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListFlowVersions List Flow Versions
+	// ListFlowVersions Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
 	//
 	// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 	//
@@ -10419,13 +10565,18 @@ type ClientInterface interface {
 	// Corresponds with POST /init (the `InitUser` operationId).
 	InitUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListOrganizationInvitations List Pending Organization Invitations
+	// ListOrganizationInvitations Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
+	//
+	// Deprecated: use `searchOrganizationInvitations`, which pages with a
+	// cursor.
 	//
 	// Lists the pending invitations of the current organization: invited, not
 	// accepted, not expired. An expired or accepted invitation is not listed.
 	// The invitation token is never part of a response.
 	//
 	// Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListOrganizationInvitations(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateOrganizationInvitationWithBody Invite A Member
@@ -10475,6 +10626,40 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
 	CreateOrganizationInvitation(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchOrganizationInvitationsWithBody Search Pending Organization Invitations
+	//
+	// Searches the pending invitations of the current organization and pages
+	// with a cursor: invited, not accepted, not expired. An expired or
+	// accepted invitation is not found. The invitation token is never part of
+	// a response.
+	//
+	// Default order: created_at DESC, then id DESC. A sort_by without
+	// sort_direction sorts DESC. full_text_search is not used by this search.
+	// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+	// answers 400 INVALID_CURSOR.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+	SearchOrganizationInvitationsWithBody(ctx context.Context, params *SearchOrganizationInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchOrganizationInvitations Search Pending Organization Invitations
+	//
+	// Searches the pending invitations of the current organization and pages
+	// with a cursor: invited, not accepted, not expired. An expired or
+	// accepted invitation is not found. The invitation token is never part of
+	// a response.
+	//
+	// Default order: created_at DESC, then id DESC. A sort_by without
+	// sort_direction sorts DESC. full_text_search is not used by this search.
+	// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+	// answers 400 INVALID_CURSOR.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+	SearchOrganizationInvitations(ctx context.Context, params *SearchOrganizationInvitationsParams, body SearchOrganizationInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteOrganizationInvitation Delete An Invitation
 	//
@@ -10557,33 +10742,105 @@ type ClientInterface interface {
 	// Corresponds with GET /me (the `GetMe` operationId).
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListMyInvitations List My Invitations
+	// ListMyInvitations Deprecated: use search_my_invitations instead, which pages with a cursor. List My Invitations
+	//
+	// Deprecated: use `searchMyInvitations`, which pages with a cursor.
 	//
 	// Lists the pending invitations addressed to any verified email address
-	// of the signed-in user, across every organization, newest first. The app
-	// calls it after sign-up and sign-in to offer the invitations waiting for
-	// the person, who accepts one with
-	// `POST /invitations/{invitationId}/accept`. The request carries no
-	// `X-Organization-ID`: the caller need not belong to the organizations.
+	// of the signed-in user, across every organization, newest first. It
+	// walks the search to its end, so it returns every invitation. The
+	// request carries no `X-Organization-ID`: the caller need not belong to
+	// the organizations.
 	//
 	// An email address the sign-in provider has not verified never matches,
 	// so nobody sees an invitation by adding someone else's address to their
 	// account. A user with no verified address gets an empty list.
 	//
 	// Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListMyInvitations(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListOrganizationMembers List Organization Members
+	// SearchMyInvitationsWithBody Search My Invitations
 	//
-	// Lists the members of the current organization (proxied from anchor).
-	// Backs the recipient picker for schedule failure alerts; returns each
-	// member's email, display name, and role. Supports a full-text `search`
-	// term for type-ahead.
+	// Searches the pending invitations addressed to any verified email
+	// address of the signed-in user, across every organization, and pages
+	// with a cursor. The app calls it after sign-up and sign-in to offer the
+	// invitations waiting for the person, who accepts one with
+	// `POST /invitations/{invitationId}/accept`. The request carries no
+	// `X-Organization-ID`: the caller need not belong to the organizations.
+	//
+	// An email address the sign-in provider has not verified never matches,
+	// so nobody sees an invitation by adding someone else's address to their
+	// account. A user with no verified address gets an empty page.
+	//
+	// Default order: created_at DESC, then id DESC; a sort_direction alone
+	// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+	// is not used by this search. Anchor owns
+	// the invitations: an invalid cursor is refused by Anchor and answers 400
+	// INVALID_CURSOR.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+	SearchMyInvitationsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchMyInvitations Search My Invitations
+	//
+	// Searches the pending invitations addressed to any verified email
+	// address of the signed-in user, across every organization, and pages
+	// with a cursor. The app calls it after sign-up and sign-in to offer the
+	// invitations waiting for the person, who accepts one with
+	// `POST /invitations/{invitationId}/accept`. The request carries no
+	// `X-Organization-ID`: the caller need not belong to the organizations.
+	//
+	// An email address the sign-in provider has not verified never matches,
+	// so nobody sees an invitation by adding someone else's address to their
+	// account. A user with no verified address gets an empty page.
+	//
+	// Default order: created_at DESC, then id DESC; a sort_direction alone
+	// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+	// is not used by this search. Anchor owns
+	// the invitations: an invalid cursor is refused by Anchor and answers 400
+	// INVALID_CURSOR.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+	SearchMyInvitations(ctx context.Context, body SearchMyInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListOrganizationMembers Deprecated: use search_organization_members instead, which pages with a cursor. List Organization Members
+	//
+	// Deprecated: use `searchOrganizationMembers`, which pages with a cursor.
+	//
+	// Lists the members of the current organization (proxied from anchor),
+	// newest member first. Returns each member's email, display name, and
+	// role. Supports a full-text `search` term for type-ahead.
 	//
 	// Corresponds with GET /members (the `ListOrganizationMembers` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListOrganizationMembers(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListFlowSchedules List Monitors
+	// SearchOrganizationMembersWithBody Search Organization Members
+	//
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+	SearchOrganizationMembersWithBody(ctx context.Context, params *SearchOrganizationMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchOrganizationMembers Search Organization Members
+	//
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+	SearchOrganizationMembers(ctx context.Context, params *SearchOrganizationMembersParams, body SearchOrganizationMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListFlowSchedules Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 	//
 	// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 	//
@@ -10724,7 +10981,7 @@ type ClientInterface interface {
 	// Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
 	RunMonitor(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListFlowScheduleRuns List Monitor Runs
+	// ListFlowScheduleRuns Deprecated: use search_flow_schedule_runs instead, which pages with a cursor. List Monitor Runs
 	//
 	// Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 	//
@@ -10790,7 +11047,7 @@ type ClientInterface interface {
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListEnvironments List Environments
+	// ListEnvironments Deprecated: use search_environments instead, which pages with a cursor. List Environments
 	//
 	// Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 	//
@@ -10908,7 +11165,7 @@ type ClientInterface interface {
 
 	// ListPermissions List Available Permissions
 	//
-	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
+	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -11118,7 +11375,7 @@ type ClientInterface interface {
 	// Corresponds with GET /runners (the `ListLiveRunners` operationId).
 	ListLiveRunners(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListSpecs List Specs
+	// ListSpecs Deprecated: use search_specs instead, which pages with a cursor. List Specs
 	//
 	// Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 	//
@@ -11247,7 +11504,7 @@ type ClientInterface interface {
 	// Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
 	PullSpec(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListSpecVersions List Spec Versions
+	// ListSpecVersions Deprecated: use search_spec_versions instead, which pages with a cursor. List Spec Versions
 	//
 	// Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 	//
@@ -11714,11 +11971,12 @@ func (c *Client) GetExecutionAnalyticsSummary(ctx context.Context, params *GetEx
 	return c.Client.Do(req)
 }
 
-// ListAPIKeys List API Keys
+// ListAPIKeys Deprecated: use search_api_keys instead, which pages with a cursor. List API Keys
 //
-// Lists API keys for the current organization.
+// Deprecated: use `searchAPIKeys`, which pages with a cursor. Lists API keys for the current organization.
 //
 // Corresponds with GET /api-keys (the `ListAPIKeys` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListAPIKeys(ctx context.Context, params *ListAPIKeysParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListAPIKeysRequest(c.Server, params)
 	if err != nil {
@@ -11771,7 +12029,7 @@ func (c *Client) CreateAPIKey(ctx context.Context, params *CreateAPIKeyParams, b
 
 // SearchAPIKeysWithBody Search API Keys
 //
-// Server-side search with pagination, filtering and sorting for organization API keys.
+// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes any type of body and a specified content type.
 //
@@ -11790,7 +12048,7 @@ func (c *Client) SearchAPIKeysWithBody(ctx context.Context, params *SearchAPIKey
 
 // SearchAPIKeys Search API Keys
 //
-// Server-side search with pagination, filtering and sorting for organization API keys.
+// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -12193,7 +12451,7 @@ func (c *Client) ExecuteCollectionRequest(ctx context.Context, collectionId open
 	return c.Client.Do(req)
 }
 
-// ListCollectionRequestOpenAPISyncHistory List Request OpenAPI Sync History
+// ListCollectionRequestOpenAPISyncHistory Deprecated: use search_collection_request_open_api_sync_history instead, which pages with a cursor. List Request OpenAPI Sync History
 //
 // Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 //
@@ -12321,7 +12579,7 @@ func (c *Client) UpdateCollection(ctx context.Context, id openapi_types.UUID, pa
 	return c.Client.Do(req)
 }
 
-// ListCollectionFolders List Collection Folders
+// ListCollectionFolders Deprecated: use search_collection_folders instead, which pages with a cursor. List Collection Folders
 //
 // Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 //
@@ -12449,7 +12707,7 @@ func (c *Client) DeleteOpenAPISyncConfig(ctx context.Context, id openapi_types.U
 	return c.Client.Do(req)
 }
 
-// ListOpenAPISyncHistory List OpenAPI Sync History
+// ListOpenAPISyncHistory Deprecated: use search_open_api_sync_history instead, which pages with a cursor. List OpenAPI Sync History
 //
 // Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 //
@@ -12619,7 +12877,7 @@ func (c *Client) RunOpenAPISyncNow(ctx context.Context, id openapi_types.UUID, p
 	return c.Client.Do(req)
 }
 
-// ListCollectionRequests List Collection Requests
+// ListCollectionRequests Deprecated: use search_collection_requests instead, which pages with a cursor. List Collection Requests
 //
 // Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 //
@@ -12713,7 +12971,7 @@ func (c *Client) SearchCollectionRequests(ctx context.Context, id openapi_types.
 	return c.Client.Do(req)
 }
 
-// ListExecutions List Organization Executions
+// ListExecutions Deprecated: use search_executions instead, which pages with a cursor. List Organization Executions
 //
 // Deprecated: use `searchExecutions`, which pages with a cursor.
 // Retrieves org-wide execution activity, newest first. Rows are slim
@@ -13193,7 +13451,7 @@ func (c *Client) StreamExecution(ctx context.Context, flowId openapi_types.UUID,
 	return c.Client.Do(req)
 }
 
-// GetNodeExecutionHistory Get Node Execution History
+// GetNodeExecutionHistory Deprecated: use search_node_execution_history instead, which pages with a cursor. Get Node Execution History
 //
 // Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 //
@@ -13321,7 +13579,7 @@ func (c *Client) UpdateFlow(ctx context.Context, id openapi_types.UUID, params *
 	return c.Client.Do(req)
 }
 
-// ListFlowExecutions List Flow Executions
+// ListFlowExecutions Deprecated: use search_executions instead, which pages with a cursor. List Flow Executions
 //
 // Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 //
@@ -13542,7 +13800,7 @@ func (c *Client) SetFlowVariable(ctx context.Context, id openapi_types.UUID, key
 	return c.Client.Do(req)
 }
 
-// ListFlowVersions List Flow Versions
+// ListFlowVersions Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
 //
 // Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 //
@@ -13650,13 +13908,17 @@ func (c *Client) InitUser(ctx context.Context, reqEditors ...RequestEditorFn) (*
 	return c.Client.Do(req)
 }
 
-// ListOrganizationInvitations List Pending Organization Invitations
+// ListOrganizationInvitations Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
+//
+// Deprecated: use `searchOrganizationInvitations`, which pages with a
+// cursor.
 //
 // Lists the pending invitations of the current organization: invited, not
 // accepted, not expired. An expired or accepted invitation is not listed.
 // The invitation token is never part of a response.
 //
 // Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListOrganizationInvitations(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListOrganizationInvitationsRequest(c.Server, params)
 	if err != nil {
@@ -13727,6 +13989,60 @@ func (c *Client) CreateOrganizationInvitationWithBody(ctx context.Context, param
 // Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
 func (c *Client) CreateOrganizationInvitation(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateOrganizationInvitationRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchOrganizationInvitationsWithBody Search Pending Organization Invitations
+//
+// Searches the pending invitations of the current organization and pages
+// with a cursor: invited, not accepted, not expired. An expired or
+// accepted invitation is not found. The invitation token is never part of
+// a response.
+//
+// Default order: created_at DESC, then id DESC. A sort_by without
+// sort_direction sorts DESC. full_text_search is not used by this search.
+// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+// answers 400 INVALID_CURSOR.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+func (c *Client) SearchOrganizationInvitationsWithBody(ctx context.Context, params *SearchOrganizationInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchOrganizationInvitationsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchOrganizationInvitations Search Pending Organization Invitations
+//
+// Searches the pending invitations of the current organization and pages
+// with a cursor: invited, not accepted, not expired. An expired or
+// accepted invitation is not found. The invitation token is never part of
+// a response.
+//
+// Default order: created_at DESC, then id DESC. A sort_by without
+// sort_direction sorts DESC. full_text_search is not used by this search.
+// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+// answers 400 INVALID_CURSOR.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+func (c *Client) SearchOrganizationInvitations(ctx context.Context, params *SearchOrganizationInvitationsParams, body SearchOrganizationInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchOrganizationInvitationsRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -13868,20 +14184,22 @@ func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*htt
 	return c.Client.Do(req)
 }
 
-// ListMyInvitations List My Invitations
+// ListMyInvitations Deprecated: use search_my_invitations instead, which pages with a cursor. List My Invitations
+//
+// Deprecated: use `searchMyInvitations`, which pages with a cursor.
 //
 // Lists the pending invitations addressed to any verified email address
-// of the signed-in user, across every organization, newest first. The app
-// calls it after sign-up and sign-in to offer the invitations waiting for
-// the person, who accepts one with
-// `POST /invitations/{invitationId}/accept`. The request carries no
-// `X-Organization-ID`: the caller need not belong to the organizations.
+// of the signed-in user, across every organization, newest first. It
+// walks the search to its end, so it returns every invitation. The
+// request carries no `X-Organization-ID`: the caller need not belong to
+// the organizations.
 //
 // An email address the sign-in provider has not verified never matches,
 // so nobody sees an invitation by adding someone else's address to their
 // account. A user with no verified address gets an empty list.
 //
 // Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListMyInvitations(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListMyInvitationsRequest(c.Server)
 	if err != nil {
@@ -13894,14 +14212,84 @@ func (c *Client) ListMyInvitations(ctx context.Context, reqEditors ...RequestEdi
 	return c.Client.Do(req)
 }
 
-// ListOrganizationMembers List Organization Members
+// SearchMyInvitationsWithBody Search My Invitations
 //
-// Lists the members of the current organization (proxied from anchor).
-// Backs the recipient picker for schedule failure alerts; returns each
-// member's email, display name, and role. Supports a full-text `search`
-// term for type-ahead.
+// Searches the pending invitations addressed to any verified email
+// address of the signed-in user, across every organization, and pages
+// with a cursor. The app calls it after sign-up and sign-in to offer the
+// invitations waiting for the person, who accepts one with
+// `POST /invitations/{invitationId}/accept`. The request carries no
+// `X-Organization-ID`: the caller need not belong to the organizations.
+//
+// An email address the sign-in provider has not verified never matches,
+// so nobody sees an invitation by adding someone else's address to their
+// account. A user with no verified address gets an empty page.
+//
+// Default order: created_at DESC, then id DESC; a sort_direction alone
+// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+// is not used by this search. Anchor owns
+// the invitations: an invalid cursor is refused by Anchor and answers 400
+// INVALID_CURSOR.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+func (c *Client) SearchMyInvitationsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchMyInvitationsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchMyInvitations Search My Invitations
+//
+// Searches the pending invitations addressed to any verified email
+// address of the signed-in user, across every organization, and pages
+// with a cursor. The app calls it after sign-up and sign-in to offer the
+// invitations waiting for the person, who accepts one with
+// `POST /invitations/{invitationId}/accept`. The request carries no
+// `X-Organization-ID`: the caller need not belong to the organizations.
+//
+// An email address the sign-in provider has not verified never matches,
+// so nobody sees an invitation by adding someone else's address to their
+// account. A user with no verified address gets an empty page.
+//
+// Default order: created_at DESC, then id DESC; a sort_direction alone
+// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+// is not used by this search. Anchor owns
+// the invitations: an invalid cursor is refused by Anchor and answers 400
+// INVALID_CURSOR.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+func (c *Client) SearchMyInvitations(ctx context.Context, body SearchMyInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchMyInvitationsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListOrganizationMembers Deprecated: use search_organization_members instead, which pages with a cursor. List Organization Members
+//
+// Deprecated: use `searchOrganizationMembers`, which pages with a cursor.
+//
+// Lists the members of the current organization (proxied from anchor),
+// newest member first. Returns each member's email, display name, and
+// role. Supports a full-text `search` term for type-ahead.
 //
 // Corresponds with GET /members (the `ListOrganizationMembers` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) ListOrganizationMembers(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListOrganizationMembersRequest(c.Server, params)
 	if err != nil {
@@ -13914,7 +14302,45 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, params *ListOrgani
 	return c.Client.Do(req)
 }
 
-// ListFlowSchedules List Monitors
+// SearchOrganizationMembersWithBody Search Organization Members
+//
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+func (c *Client) SearchOrganizationMembersWithBody(ctx context.Context, params *SearchOrganizationMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchOrganizationMembersRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchOrganizationMembers Search Organization Members
+//
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+func (c *Client) SearchOrganizationMembers(ctx context.Context, params *SearchOrganizationMembersParams, body SearchOrganizationMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchOrganizationMembersRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListFlowSchedules Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 //
 // Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 //
@@ -14224,7 +14650,7 @@ func (c *Client) RunMonitor(ctx context.Context, monitorId openapi_types.UUID, p
 	return c.Client.Do(req)
 }
 
-// ListFlowScheduleRuns List Monitor Runs
+// ListFlowScheduleRuns Deprecated: use search_flow_schedule_runs instead, which pages with a cursor. List Monitor Runs
 //
 // Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 //
@@ -14369,7 +14795,7 @@ func (c *Client) ListOperations(ctx context.Context, params *ListOperationsParam
 	return c.Client.Do(req)
 }
 
-// ListEnvironments List Environments
+// ListEnvironments Deprecated: use search_environments instead, which pages with a cursor. List Environments
 //
 // Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 //
@@ -14626,7 +15052,7 @@ func (c *Client) SetOrganizationVariable(ctx context.Context, key VariableKey, p
 
 // ListPermissions List Available Permissions
 //
-// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
+// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
 //
 // Corresponds with GET /permissions (the `ListPermissions` operationId).
 func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -15036,7 +15462,7 @@ func (c *Client) ListLiveRunners(ctx context.Context, params *ListLiveRunnersPar
 	return c.Client.Do(req)
 }
 
-// ListSpecs List Specs
+// ListSpecs Deprecated: use search_specs instead, which pages with a cursor. List Specs
 //
 // Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 //
@@ -15254,7 +15680,7 @@ func (c *Client) PullSpec(ctx context.Context, slug SpecSlugParameter, params *P
 	return c.Client.Do(req)
 }
 
-// ListSpecVersions List Spec Versions
+// ListSpecVersions Deprecated: use search_spec_versions instead, which pages with a cursor. List Spec Versions
 //
 // Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 //
@@ -20560,6 +20986,59 @@ func NewCreateOrganizationInvitationRequestWithBody(server string, params *Creat
 	return req, nil
 }
 
+// NewSearchOrganizationInvitationsRequest calls the generic SearchOrganizationInvitations builder with application/json body
+func NewSearchOrganizationInvitationsRequest(server string, params *SearchOrganizationInvitationsParams, body SearchOrganizationInvitationsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchOrganizationInvitationsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchOrganizationInvitationsRequestWithBody constructs an http.Request for the SearchOrganizationInvitations method, with any body, and a specified content type
+func NewSearchOrganizationInvitationsRequestWithBody(server string, params *SearchOrganizationInvitationsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewDeleteOrganizationInvitationRequest constructs an http.Request for the DeleteOrganizationInvitation method
 func NewDeleteOrganizationInvitationRequest(server string, invitationId InvitationId, params *DeleteOrganizationInvitationParams) (*http.Request, error) {
 	var err error
@@ -20782,6 +21261,46 @@ func NewListMyInvitationsRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewSearchMyInvitationsRequest calls the generic SearchMyInvitations builder with application/json body
+func NewSearchMyInvitationsRequest(server string, body SearchMyInvitationsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchMyInvitationsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSearchMyInvitationsRequestWithBody constructs an http.Request for the SearchMyInvitations method, with any body, and a specified content type
+func NewSearchMyInvitationsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/me/invitations/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListOrganizationMembersRequest constructs an http.Request for the ListOrganizationMembers method
 func NewListOrganizationMembersRequest(server string, params *ListOrganizationMembersParams) (*http.Request, error) {
 	var err error
@@ -20848,6 +21367,59 @@ func NewListOrganizationMembersRequest(server string, params *ListOrganizationMe
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchOrganizationMembersRequest calls the generic SearchOrganizationMembers builder with application/json body
+func NewSearchOrganizationMembersRequest(server string, params *SearchOrganizationMembersParams, body SearchOrganizationMembersJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchOrganizationMembersRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchOrganizationMembersRequestWithBody constructs an http.Request for the SearchOrganizationMembers method, with any body, and a specified content type
+func NewSearchOrganizationMembersRequestWithBody(server string, params *SearchOrganizationMembersParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/members/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -24590,13 +25162,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /analytics/summary (the `GetExecutionAnalyticsSummary` operationId).
 	GetExecutionAnalyticsSummaryWithResponse(ctx context.Context, params *GetExecutionAnalyticsSummaryParams, reqEditors ...RequestEditorFn) (*GetExecutionAnalyticsSummaryResponse, error)
 
-	// ListAPIKeysWithResponse List API Keys
+	// ListAPIKeysWithResponse Deprecated: use search_api_keys instead, which pages with a cursor. List API Keys
 	//
-	// Lists API keys for the current organization.
+	// Deprecated: use `searchAPIKeys`, which pages with a cursor. Lists API keys for the current organization.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /api-keys (the `ListAPIKeys` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListAPIKeysWithResponse(ctx context.Context, params *ListAPIKeysParams, reqEditors ...RequestEditorFn) (*ListAPIKeysResponse, error)
 
 	// CreateAPIKeyWithBodyWithResponse Create API Key
@@ -24619,7 +25193,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchAPIKeysWithBodyWithResponse Search API Keys
 	//
-	// Server-side search with pagination, filtering and sorting for organization API keys.
+	// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24628,7 +25202,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchAPIKeysWithResponse Search API Keys
 	//
-	// Server-side search with pagination, filtering and sorting for organization API keys.
+	// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24826,7 +25400,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /collections/{collectionId}/requests/{requestId}/execute (the `ExecuteCollectionRequest` operationId).
 	ExecuteCollectionRequestWithResponse(ctx context.Context, collectionId openapi_types.UUID, requestId openapi_types.UUID, params *ExecuteCollectionRequestParams, body ExecuteCollectionRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*ExecuteCollectionRequestResponse, error)
 
-	// ListCollectionRequestOpenAPISyncHistoryWithResponse List Request OpenAPI Sync History
+	// ListCollectionRequestOpenAPISyncHistoryWithResponse Deprecated: use search_collection_request_open_api_sync_history instead, which pages with a cursor. List Request OpenAPI Sync History
 	//
 	// Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 	//
@@ -24891,7 +25465,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /collections/{id} (the `UpdateCollection` operationId).
 	UpdateCollectionWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateCollectionParams, body UpdateCollectionJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateCollectionResponse, error)
 
-	// ListCollectionFoldersWithResponse List Collection Folders
+	// ListCollectionFoldersWithResponse Deprecated: use search_collection_folders instead, which pages with a cursor. List Collection Folders
 	//
 	// Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 	//
@@ -24956,7 +25530,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with DELETE /collections/{id}/openapi-sync/history (the `DeleteOpenAPISyncConfig` operationId).
 	DeleteOpenAPISyncConfigWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteOpenAPISyncConfigParams, reqEditors ...RequestEditorFn) (*DeleteOpenAPISyncConfigResponse, error)
 
-	// ListOpenAPISyncHistoryWithResponse List OpenAPI Sync History
+	// ListOpenAPISyncHistoryWithResponse Deprecated: use search_open_api_sync_history instead, which pages with a cursor. List OpenAPI Sync History
 	//
 	// Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 	//
@@ -25039,7 +25613,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /collections/{id}/openapi-sync/run (the `RunOpenAPISyncNow` operationId).
 	RunOpenAPISyncNowWithResponse(ctx context.Context, id openapi_types.UUID, params *RunOpenAPISyncNowParams, body RunOpenAPISyncNowJSONRequestBody, reqEditors ...RequestEditorFn) (*RunOpenAPISyncNowResponse, error)
 
-	// ListCollectionRequestsWithResponse List Collection Requests
+	// ListCollectionRequestsWithResponse Deprecated: use search_collection_requests instead, which pages with a cursor. List Collection Requests
 	//
 	// Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 	//
@@ -25086,7 +25660,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /collections/{id}/requests/search (the `SearchCollectionRequests` operationId).
 	SearchCollectionRequestsWithResponse(ctx context.Context, id openapi_types.UUID, params *SearchCollectionRequestsParams, body SearchCollectionRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchCollectionRequestsResponse, error)
 
-	// ListExecutionsWithResponse List Organization Executions
+	// ListExecutionsWithResponse Deprecated: use search_executions instead, which pages with a cursor. List Organization Executions
 	//
 	// Deprecated: use `searchExecutions`, which pages with a cursor.
 	// Retrieves org-wide execution activity, newest first. Rows are slim
@@ -25329,7 +25903,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /flows/{flowId}/executions/{executionId}/stream (the `StreamExecution` operationId).
 	StreamExecutionWithResponse(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, params *StreamExecutionParams, reqEditors ...RequestEditorFn) (*StreamExecutionResponse, error)
 
-	// GetNodeExecutionHistoryWithResponse Get Node Execution History
+	// GetNodeExecutionHistoryWithResponse Deprecated: use search_node_execution_history instead, which pages with a cursor. Get Node Execution History
 	//
 	// Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 	//
@@ -25394,7 +25968,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /flows/{id} (the `UpdateFlow` operationId).
 	UpdateFlowWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateFlowParams, body UpdateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateFlowResponse, error)
 
-	// ListFlowExecutionsWithResponse List Flow Executions
+	// ListFlowExecutionsWithResponse Deprecated: use search_executions instead, which pages with a cursor. List Flow Executions
 	//
 	// Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 	//
@@ -25528,7 +26102,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
 	SetFlowVariableWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlowVariableResponse, error)
 
-	// ListFlowVersionsWithResponse List Flow Versions
+	// ListFlowVersionsWithResponse Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
 	//
 	// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 	//
@@ -25585,7 +26159,10 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /init (the `InitUser` operationId).
 	InitUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*InitUserResponse, error)
 
-	// ListOrganizationInvitationsWithResponse List Pending Organization Invitations
+	// ListOrganizationInvitationsWithResponse Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
+	//
+	// Deprecated: use `searchOrganizationInvitations`, which pages with a
+	// cursor.
 	//
 	// Lists the pending invitations of the current organization: invited, not
 	// accepted, not expired. An expired or accepted invitation is not listed.
@@ -25594,6 +26171,8 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListOrganizationInvitationsWithResponse(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*ListOrganizationInvitationsResponse, error)
 
 	// CreateOrganizationInvitationWithBodyWithResponse Invite A Member
@@ -25643,6 +26222,40 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /invitations (the `CreateOrganizationInvitation` operationId).
 	CreateOrganizationInvitationWithResponse(ctx context.Context, params *CreateOrganizationInvitationParams, body CreateOrganizationInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrganizationInvitationResponse, error)
+
+	// SearchOrganizationInvitationsWithBodyWithResponse Search Pending Organization Invitations
+	//
+	// Searches the pending invitations of the current organization and pages
+	// with a cursor: invited, not accepted, not expired. An expired or
+	// accepted invitation is not found. The invitation token is never part of
+	// a response.
+	//
+	// Default order: created_at DESC, then id DESC. A sort_by without
+	// sort_direction sorts DESC. full_text_search is not used by this search.
+	// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+	// answers 400 INVALID_CURSOR.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+	SearchOrganizationInvitationsWithBodyWithResponse(ctx context.Context, params *SearchOrganizationInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchOrganizationInvitationsResponse, error)
+
+	// SearchOrganizationInvitationsWithResponse Search Pending Organization Invitations
+	//
+	// Searches the pending invitations of the current organization and pages
+	// with a cursor: invited, not accepted, not expired. An expired or
+	// accepted invitation is not found. The invitation token is never part of
+	// a response.
+	//
+	// Default order: created_at DESC, then id DESC. A sort_by without
+	// sort_direction sorts DESC. full_text_search is not used by this search.
+	// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+	// answers 400 INVALID_CURSOR.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+	SearchOrganizationInvitationsWithResponse(ctx context.Context, params *SearchOrganizationInvitationsParams, body SearchOrganizationInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchOrganizationInvitationsResponse, error)
 
 	// DeleteOrganizationInvitationWithResponse Delete An Invitation
 	//
@@ -25735,14 +26348,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /me (the `GetMe` operationId).
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
 
-	// ListMyInvitationsWithResponse List My Invitations
+	// ListMyInvitationsWithResponse Deprecated: use search_my_invitations instead, which pages with a cursor. List My Invitations
+	//
+	// Deprecated: use `searchMyInvitations`, which pages with a cursor.
 	//
 	// Lists the pending invitations addressed to any verified email address
-	// of the signed-in user, across every organization, newest first. The app
-	// calls it after sign-up and sign-in to offer the invitations waiting for
-	// the person, who accepts one with
-	// `POST /invitations/{invitationId}/accept`. The request carries no
-	// `X-Organization-ID`: the caller need not belong to the organizations.
+	// of the signed-in user, across every organization, newest first. It
+	// walks the search to its end, so it returns every invitation. The
+	// request carries no `X-Organization-ID`: the caller need not belong to
+	// the organizations.
 	//
 	// An email address the sign-in provider has not verified never matches,
 	// so nobody sees an invitation by adding someone else's address to their
@@ -25751,21 +26365,92 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListMyInvitationsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyInvitationsResponse, error)
 
-	// ListOrganizationMembersWithResponse List Organization Members
+	// SearchMyInvitationsWithBodyWithResponse Search My Invitations
 	//
-	// Lists the members of the current organization (proxied from anchor).
-	// Backs the recipient picker for schedule failure alerts; returns each
-	// member's email, display name, and role. Supports a full-text `search`
-	// term for type-ahead.
+	// Searches the pending invitations addressed to any verified email
+	// address of the signed-in user, across every organization, and pages
+	// with a cursor. The app calls it after sign-up and sign-in to offer the
+	// invitations waiting for the person, who accepts one with
+	// `POST /invitations/{invitationId}/accept`. The request carries no
+	// `X-Organization-ID`: the caller need not belong to the organizations.
+	//
+	// An email address the sign-in provider has not verified never matches,
+	// so nobody sees an invitation by adding someone else's address to their
+	// account. A user with no verified address gets an empty page.
+	//
+	// Default order: created_at DESC, then id DESC; a sort_direction alone
+	// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+	// is not used by this search. Anchor owns
+	// the invitations: an invalid cursor is refused by Anchor and answers 400
+	// INVALID_CURSOR.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+	SearchMyInvitationsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchMyInvitationsResponse, error)
+
+	// SearchMyInvitationsWithResponse Search My Invitations
+	//
+	// Searches the pending invitations addressed to any verified email
+	// address of the signed-in user, across every organization, and pages
+	// with a cursor. The app calls it after sign-up and sign-in to offer the
+	// invitations waiting for the person, who accepts one with
+	// `POST /invitations/{invitationId}/accept`. The request carries no
+	// `X-Organization-ID`: the caller need not belong to the organizations.
+	//
+	// An email address the sign-in provider has not verified never matches,
+	// so nobody sees an invitation by adding someone else's address to their
+	// account. A user with no verified address gets an empty page.
+	//
+	// Default order: created_at DESC, then id DESC; a sort_direction alone
+	// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+	// is not used by this search. Anchor owns
+	// the invitations: an invalid cursor is refused by Anchor and answers 400
+	// INVALID_CURSOR.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+	SearchMyInvitationsWithResponse(ctx context.Context, body SearchMyInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchMyInvitationsResponse, error)
+
+	// ListOrganizationMembersWithResponse Deprecated: use search_organization_members instead, which pages with a cursor. List Organization Members
+	//
+	// Deprecated: use `searchOrganizationMembers`, which pages with a cursor.
+	//
+	// Lists the members of the current organization (proxied from anchor),
+	// newest member first. Returns each member's email, display name, and
+	// role. Supports a full-text `search` term for type-ahead.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /members (the `ListOrganizationMembers` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ListOrganizationMembersWithResponse(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error)
 
-	// ListFlowSchedulesWithResponse List Monitors
+	// SearchOrganizationMembersWithBodyWithResponse Search Organization Members
+	//
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+	SearchOrganizationMembersWithBodyWithResponse(ctx context.Context, params *SearchOrganizationMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchOrganizationMembersResponse, error)
+
+	// SearchOrganizationMembersWithResponse Search Organization Members
+	//
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+	SearchOrganizationMembersWithResponse(ctx context.Context, params *SearchOrganizationMembersParams, body SearchOrganizationMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchOrganizationMembersResponse, error)
+
+	// ListFlowSchedulesWithResponse Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 	//
 	// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 	//
@@ -25920,7 +26605,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
 	RunMonitorWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*RunMonitorResponse, error)
 
-	// ListFlowScheduleRunsWithResponse List Monitor Runs
+	// ListFlowScheduleRunsWithResponse Deprecated: use search_flow_schedule_runs instead, which pages with a cursor. List Monitor Runs
 	//
 	// Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 	//
@@ -25994,7 +26679,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperationsWithResponse(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*ListOperationsResponse, error)
 
-	// ListEnvironmentsWithResponse List Environments
+	// ListEnvironmentsWithResponse Deprecated: use search_environments instead, which pages with a cursor. List Environments
 	//
 	// Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 	//
@@ -26124,7 +26809,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListPermissionsWithResponse List Available Permissions
 	//
-	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
+	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -26346,7 +27031,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /runners (the `ListLiveRunners` operationId).
 	ListLiveRunnersWithResponse(ctx context.Context, params *ListLiveRunnersParams, reqEditors ...RequestEditorFn) (*ListLiveRunnersResponse, error)
 
-	// ListSpecsWithResponse List Specs
+	// ListSpecsWithResponse Deprecated: use search_specs instead, which pages with a cursor. List Specs
 	//
 	// Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 	//
@@ -26481,7 +27166,7 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /specs/{slug}/document (the `PullSpec` operationId).
 	PullSpecWithResponse(ctx context.Context, slug SpecSlugParameter, params *PullSpecParams, reqEditors ...RequestEditorFn) (*PullSpecResponse, error)
 
-	// ListSpecVersionsWithResponse List Spec Versions
+	// ListSpecVersionsWithResponse Deprecated: use search_spec_versions instead, which pages with a cursor. List Spec Versions
 	//
 	// Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 	//
@@ -31695,6 +32380,68 @@ func (r CreateOrganizationInvitationResponse) ContentType() string {
 	return ""
 }
 
+type SearchOrganizationInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OrganizationInvitationSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchOrganizationInvitationsResponse) GetJSON200() *OrganizationInvitationSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchOrganizationInvitationsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchOrganizationInvitationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchOrganizationInvitationsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchOrganizationInvitationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchOrganizationInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchOrganizationInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchOrganizationInvitationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type DeleteOrganizationInvitationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -32074,6 +32821,68 @@ func (r ListMyInvitationsResponse) ContentType() string {
 	return ""
 }
 
+type SearchMyInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ReceivedInvitationSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchMyInvitationsResponse) GetJSON200() *ReceivedInvitationSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchMyInvitationsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchMyInvitationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SearchMyInvitationsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchMyInvitationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchMyInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchMyInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchMyInvitationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListOrganizationMembersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -32130,6 +32939,68 @@ func (r ListOrganizationMembersResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListOrganizationMembersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchOrganizationMembersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OrganizationMemberSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchOrganizationMembersResponse) GetJSON200() *OrganizationMemberSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchOrganizationMembersResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchOrganizationMembersResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchOrganizationMembersResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchOrganizationMembersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchOrganizationMembersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchOrganizationMembersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchOrganizationMembersResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -36708,13 +37579,15 @@ func (c *ClientWithResponses) GetExecutionAnalyticsSummaryWithResponse(ctx conte
 	return ParseGetExecutionAnalyticsSummaryResponse(rsp)
 }
 
-// ListAPIKeysWithResponse List API Keys
+// ListAPIKeysWithResponse Deprecated: use search_api_keys instead, which pages with a cursor. List API Keys
 //
-// Lists API keys for the current organization.
+// Deprecated: use `searchAPIKeys`, which pages with a cursor. Lists API keys for the current organization.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /api-keys (the `ListAPIKeys` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListAPIKeysWithResponse(ctx context.Context, params *ListAPIKeysParams, reqEditors ...RequestEditorFn) (*ListAPIKeysResponse, error) {
 	rsp, err := c.ListAPIKeys(ctx, params, reqEditors...)
 	if err != nil {
@@ -36755,7 +37628,7 @@ func (c *ClientWithResponses) CreateAPIKeyWithResponse(ctx context.Context, para
 
 // SearchAPIKeysWithBodyWithResponse Search API Keys
 //
-// Server-side search with pagination, filtering and sorting for organization API keys.
+// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -36770,7 +37643,7 @@ func (c *ClientWithResponses) SearchAPIKeysWithBodyWithResponse(ctx context.Cont
 
 // SearchAPIKeysWithResponse Search API Keys
 //
-// Server-side search with pagination, filtering and sorting for organization API keys.
+// Searches the API keys of the organization and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. A key that was never used has no last_used_at: it sorts last when ascending and first when descending. full_text_search matches the key name or description, case-sensitively. Anchor owns the keys: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -37100,7 +37973,7 @@ func (c *ClientWithResponses) ExecuteCollectionRequestWithResponse(ctx context.C
 	return ParseExecuteCollectionRequestResponse(rsp)
 }
 
-// ListCollectionRequestOpenAPISyncHistoryWithResponse List Request OpenAPI Sync History
+// ListCollectionRequestOpenAPISyncHistoryWithResponse Deprecated: use search_collection_request_open_api_sync_history instead, which pages with a cursor. List Request OpenAPI Sync History
 //
 // Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.
 //
@@ -37207,7 +38080,7 @@ func (c *ClientWithResponses) UpdateCollectionWithResponse(ctx context.Context, 
 	return ParseUpdateCollectionResponse(rsp)
 }
 
-// ListCollectionFoldersWithResponse List Collection Folders
+// ListCollectionFoldersWithResponse Deprecated: use search_collection_folders instead, which pages with a cursor. List Collection Folders
 //
 // Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.
 //
@@ -37314,7 +38187,7 @@ func (c *ClientWithResponses) DeleteOpenAPISyncConfigWithResponse(ctx context.Co
 	return ParseDeleteOpenAPISyncConfigResponse(rsp)
 }
 
-// ListOpenAPISyncHistoryWithResponse List OpenAPI Sync History
+// ListOpenAPISyncHistoryWithResponse Deprecated: use search_open_api_sync_history instead, which pages with a cursor. List OpenAPI Sync History
 //
 // Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.
 //
@@ -37451,7 +38324,7 @@ func (c *ClientWithResponses) RunOpenAPISyncNowWithResponse(ctx context.Context,
 	return ParseRunOpenAPISyncNowResponse(rsp)
 }
 
-// ListCollectionRequestsWithResponse List Collection Requests
+// ListCollectionRequestsWithResponse Deprecated: use search_collection_requests instead, which pages with a cursor. List Collection Requests
 //
 // Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.
 //
@@ -37528,7 +38401,7 @@ func (c *ClientWithResponses) SearchCollectionRequestsWithResponse(ctx context.C
 	return ParseSearchCollectionRequestsResponse(rsp)
 }
 
-// ListExecutionsWithResponse List Organization Executions
+// ListExecutionsWithResponse Deprecated: use search_executions instead, which pages with a cursor. List Organization Executions
 //
 // Deprecated: use `searchExecutions`, which pages with a cursor.
 // Retrieves org-wide execution activity, newest first. Rows are slim
@@ -37927,7 +38800,7 @@ func (c *ClientWithResponses) StreamExecutionWithResponse(ctx context.Context, f
 	return ParseStreamExecutionResponse(rsp)
 }
 
-// GetNodeExecutionHistoryWithResponse Get Node Execution History
+// GetNodeExecutionHistoryWithResponse Deprecated: use search_node_execution_history instead, which pages with a cursor. Get Node Execution History
 //
 // Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.
 //
@@ -38034,7 +38907,7 @@ func (c *ClientWithResponses) UpdateFlowWithResponse(ctx context.Context, id ope
 	return ParseUpdateFlowResponse(rsp)
 }
 
-// ListFlowExecutionsWithResponse List Flow Executions
+// ListFlowExecutionsWithResponse Deprecated: use search_executions instead, which pages with a cursor. List Flow Executions
 //
 // Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.
 //
@@ -38228,7 +39101,7 @@ func (c *ClientWithResponses) SetFlowVariableWithResponse(ctx context.Context, i
 	return ParseSetFlowVariableResponse(rsp)
 }
 
-// ListFlowVersionsWithResponse List Flow Versions
+// ListFlowVersionsWithResponse Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
 //
 // Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
 //
@@ -38321,7 +39194,10 @@ func (c *ClientWithResponses) InitUserWithResponse(ctx context.Context, reqEdito
 	return ParseInitUserResponse(rsp)
 }
 
-// ListOrganizationInvitationsWithResponse List Pending Organization Invitations
+// ListOrganizationInvitationsWithResponse Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
+//
+// Deprecated: use `searchOrganizationInvitations`, which pages with a
+// cursor.
 //
 // Lists the pending invitations of the current organization: invited, not
 // accepted, not expired. An expired or accepted invitation is not listed.
@@ -38330,6 +39206,8 @@ func (c *ClientWithResponses) InitUserWithResponse(ctx context.Context, reqEdito
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /invitations (the `ListOrganizationInvitations` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListOrganizationInvitationsWithResponse(ctx context.Context, params *ListOrganizationInvitationsParams, reqEditors ...RequestEditorFn) (*ListOrganizationInvitationsResponse, error) {
 	rsp, err := c.ListOrganizationInvitations(ctx, params, reqEditors...)
 	if err != nil {
@@ -38396,6 +39274,52 @@ func (c *ClientWithResponses) CreateOrganizationInvitationWithResponse(ctx conte
 		return nil, err
 	}
 	return ParseCreateOrganizationInvitationResponse(rsp)
+}
+
+// SearchOrganizationInvitationsWithBodyWithResponse Search Pending Organization Invitations
+//
+// Searches the pending invitations of the current organization and pages
+// with a cursor: invited, not accepted, not expired. An expired or
+// accepted invitation is not found. The invitation token is never part of
+// a response.
+//
+// Default order: created_at DESC, then id DESC. A sort_by without
+// sort_direction sorts DESC. full_text_search is not used by this search.
+// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+// answers 400 INVALID_CURSOR.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+func (c *ClientWithResponses) SearchOrganizationInvitationsWithBodyWithResponse(ctx context.Context, params *SearchOrganizationInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchOrganizationInvitationsResponse, error) {
+	rsp, err := c.SearchOrganizationInvitationsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchOrganizationInvitationsResponse(rsp)
+}
+
+// SearchOrganizationInvitationsWithResponse Search Pending Organization Invitations
+//
+// Searches the pending invitations of the current organization and pages
+// with a cursor: invited, not accepted, not expired. An expired or
+// accepted invitation is not found. The invitation token is never part of
+// a response.
+//
+// Default order: created_at DESC, then id DESC. A sort_by without
+// sort_direction sorts DESC. full_text_search is not used by this search.
+// Anchor owns the invitations: an invalid cursor is refused by Anchor and
+// answers 400 INVALID_CURSOR.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /invitations/search (the `SearchOrganizationInvitations` operationId).
+func (c *ClientWithResponses) SearchOrganizationInvitationsWithResponse(ctx context.Context, params *SearchOrganizationInvitationsParams, body SearchOrganizationInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchOrganizationInvitationsResponse, error) {
+	rsp, err := c.SearchOrganizationInvitations(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchOrganizationInvitationsResponse(rsp)
 }
 
 // DeleteOrganizationInvitationWithResponse Delete An Invitation
@@ -38519,14 +39443,15 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 	return ParseGetMeResponse(rsp)
 }
 
-// ListMyInvitationsWithResponse List My Invitations
+// ListMyInvitationsWithResponse Deprecated: use search_my_invitations instead, which pages with a cursor. List My Invitations
+//
+// Deprecated: use `searchMyInvitations`, which pages with a cursor.
 //
 // Lists the pending invitations addressed to any verified email address
-// of the signed-in user, across every organization, newest first. The app
-// calls it after sign-up and sign-in to offer the invitations waiting for
-// the person, who accepts one with
-// `POST /invitations/{invitationId}/accept`. The request carries no
-// `X-Organization-ID`: the caller need not belong to the organizations.
+// of the signed-in user, across every organization, newest first. It
+// walks the search to its end, so it returns every invitation. The
+// request carries no `X-Organization-ID`: the caller need not belong to
+// the organizations.
 //
 // An email address the sign-in provider has not verified never matches,
 // so nobody sees an invitation by adding someone else's address to their
@@ -38535,6 +39460,8 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /me/invitations (the `ListMyInvitations` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListMyInvitationsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyInvitationsResponse, error) {
 	rsp, err := c.ListMyInvitations(ctx, reqEditors...)
 	if err != nil {
@@ -38543,16 +39470,79 @@ func (c *ClientWithResponses) ListMyInvitationsWithResponse(ctx context.Context,
 	return ParseListMyInvitationsResponse(rsp)
 }
 
-// ListOrganizationMembersWithResponse List Organization Members
+// SearchMyInvitationsWithBodyWithResponse Search My Invitations
 //
-// Lists the members of the current organization (proxied from anchor).
-// Backs the recipient picker for schedule failure alerts; returns each
-// member's email, display name, and role. Supports a full-text `search`
-// term for type-ahead.
+// Searches the pending invitations addressed to any verified email
+// address of the signed-in user, across every organization, and pages
+// with a cursor. The app calls it after sign-up and sign-in to offer the
+// invitations waiting for the person, who accepts one with
+// `POST /invitations/{invitationId}/accept`. The request carries no
+// `X-Organization-ID`: the caller need not belong to the organizations.
+//
+// An email address the sign-in provider has not verified never matches,
+// so nobody sees an invitation by adding someone else's address to their
+// account. A user with no verified address gets an empty page.
+//
+// Default order: created_at DESC, then id DESC; a sort_direction alone
+// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+// is not used by this search. Anchor owns
+// the invitations: an invalid cursor is refused by Anchor and answers 400
+// INVALID_CURSOR.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+func (c *ClientWithResponses) SearchMyInvitationsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchMyInvitationsResponse, error) {
+	rsp, err := c.SearchMyInvitationsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchMyInvitationsResponse(rsp)
+}
+
+// SearchMyInvitationsWithResponse Search My Invitations
+//
+// Searches the pending invitations addressed to any verified email
+// address of the signed-in user, across every organization, and pages
+// with a cursor. The app calls it after sign-up and sign-in to offer the
+// invitations waiting for the person, who accepts one with
+// `POST /invitations/{invitationId}/accept`. The request carries no
+// `X-Organization-ID`: the caller need not belong to the organizations.
+//
+// An email address the sign-in provider has not verified never matches,
+// so nobody sees an invitation by adding someone else's address to their
+// account. A user with no verified address gets an empty page.
+//
+// Default order: created_at DESC, then id DESC; a sort_direction alone
+// reverses it. A sort_by without sort_direction sorts DESC. full_text_search
+// is not used by this search. Anchor owns
+// the invitations: an invalid cursor is refused by Anchor and answers 400
+// INVALID_CURSOR.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /me/invitations/search (the `SearchMyInvitations` operationId).
+func (c *ClientWithResponses) SearchMyInvitationsWithResponse(ctx context.Context, body SearchMyInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchMyInvitationsResponse, error) {
+	rsp, err := c.SearchMyInvitations(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchMyInvitationsResponse(rsp)
+}
+
+// ListOrganizationMembersWithResponse Deprecated: use search_organization_members instead, which pages with a cursor. List Organization Members
+//
+// Deprecated: use `searchOrganizationMembers`, which pages with a cursor.
+//
+// Lists the members of the current organization (proxied from anchor),
+// newest member first. Returns each member's email, display name, and
+// role. Supports a full-text `search` term for type-ahead.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /members (the `ListOrganizationMembers` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Context, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error) {
 	rsp, err := c.ListOrganizationMembers(ctx, params, reqEditors...)
 	if err != nil {
@@ -38561,7 +39551,37 @@ func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Co
 	return ParseListOrganizationMembersResponse(rsp)
 }
 
-// ListFlowSchedulesWithResponse List Monitors
+// SearchOrganizationMembersWithBodyWithResponse Search Organization Members
+//
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+func (c *ClientWithResponses) SearchOrganizationMembersWithBodyWithResponse(ctx context.Context, params *SearchOrganizationMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchOrganizationMembersResponse, error) {
+	rsp, err := c.SearchOrganizationMembersWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchOrganizationMembersResponse(rsp)
+}
+
+// SearchOrganizationMembersWithResponse Search Organization Members
+//
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
+func (c *ClientWithResponses) SearchOrganizationMembersWithResponse(ctx context.Context, params *SearchOrganizationMembersParams, body SearchOrganizationMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchOrganizationMembersResponse, error) {
+	rsp, err := c.SearchOrganizationMembers(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchOrganizationMembersResponse(rsp)
+}
+
+// ListFlowSchedulesWithResponse Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 //
 // Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
 //
@@ -38818,7 +39838,7 @@ func (c *ClientWithResponses) RunMonitorWithResponse(ctx context.Context, monito
 	return ParseRunMonitorResponse(rsp)
 }
 
-// ListFlowScheduleRunsWithResponse List Monitor Runs
+// ListFlowScheduleRunsWithResponse Deprecated: use search_flow_schedule_runs instead, which pages with a cursor. List Monitor Runs
 //
 // Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor's occurrences (scheduled and diagnostic), most recent first.
 //
@@ -38940,7 +39960,7 @@ func (c *ClientWithResponses) ListOperationsWithResponse(ctx context.Context, pa
 	return ParseListOperationsResponse(rsp)
 }
 
-// ListEnvironmentsWithResponse List Environments
+// ListEnvironmentsWithResponse Deprecated: use search_environments instead, which pages with a cursor. List Environments
 //
 // Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization's environments. Variables are not included; read them from the organization variable set.
 //
@@ -39154,7 +40174,7 @@ func (c *ClientWithResponses) SetOrganizationVariableWithResponse(ctx context.Co
 
 // ListPermissionsWithResponse List Available Permissions
 //
-// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search.
+// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -39496,7 +40516,7 @@ func (c *ClientWithResponses) ListLiveRunnersWithResponse(ctx context.Context, p
 	return ParseListLiveRunnersResponse(rsp)
 }
 
-// ListSpecsWithResponse List Specs
+// ListSpecsWithResponse Deprecated: use search_specs instead, which pages with a cursor. List Specs
 //
 // Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization's specs with their Live version, by slug.
 //
@@ -39685,7 +40705,7 @@ func (c *ClientWithResponses) PullSpecWithResponse(ctx context.Context, slug Spe
 	return ParsePullSpecResponse(rsp)
 }
 
-// ListSpecVersionsWithResponse List Spec Versions
+// ListSpecVersionsWithResponse Deprecated: use search_spec_versions instead, which pages with a cursor. List Spec Versions
 //
 // Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec's Live versions, newest first. The first item is the current Live version.
 //
@@ -43890,6 +44910,53 @@ func ParseCreateOrganizationInvitationResponse(rsp *http.Response) (*CreateOrgan
 	return response, nil
 }
 
+// ParseSearchOrganizationInvitationsResponse parses an HTTP response from a SearchOrganizationInvitationsWithResponse call
+func ParseSearchOrganizationInvitationsResponse(rsp *http.Response) (*SearchOrganizationInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchOrganizationInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationInvitationSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteOrganizationInvitationResponse parses an HTTP response from a DeleteOrganizationInvitationWithResponse call
 func ParseDeleteOrganizationInvitationResponse(rsp *http.Response) (*DeleteOrganizationInvitationResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -44182,6 +45249,53 @@ func ParseListMyInvitationsResponse(rsp *http.Response) (*ListMyInvitationsRespo
 	return response, nil
 }
 
+// ParseSearchMyInvitationsResponse parses an HTTP response from a SearchMyInvitationsWithResponse call
+func ParseSearchMyInvitationsResponse(rsp *http.Response) (*SearchMyInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchMyInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ReceivedInvitationSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListOrganizationMembersResponse parses an HTTP response from a ListOrganizationMembersWithResponse call
 func ParseListOrganizationMembersResponse(rsp *http.Response) (*ListOrganizationMembersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -44198,6 +45312,53 @@ func ParseListOrganizationMembersResponse(rsp *http.Response) (*ListOrganization
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest OrganizationMemberListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchOrganizationMembersResponse parses an HTTP response from a SearchOrganizationMembersWithResponse call
+func ParseSearchOrganizationMembersResponse(rsp *http.Response) (*SearchOrganizationMembersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchOrganizationMembersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationMemberSearchResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
