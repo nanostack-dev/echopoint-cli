@@ -158,3 +158,9 @@ public verification.
 supplies plain public text for `operational`, `outage` and `unknown` states. The server
 freezes messages and monitor revisions when publishing; raw diagnostic evidence is not
 part of the anonymous projection. `get_status_page_binding_options` no longer exists.
+
+
+Set `ECHOPOINT_WORKSPACE_ID` or pass `echopoint --workspace <workspace-id> mcp`
+for workspace-scoped tools. The server sends this explicit selection through the
+same request editor as CLI commands. It does not select an implicit workspace.
+Organization-scoped tools remain usable without workspace selection.

@@ -243,3 +243,9 @@ organization, flow, environment key, version ID, runner type, trigger type, and 
 For multiple flow IDs, an explicit or CI-derived key is treated as a *base* key; the CLI derives
 a stable per-flow key so each launch retries safely. If a claim response is lost, the CLI exits
 without running the flow. Inspect that execution before retrying: the Job may already be claimed.
+
+
+Pass `workspace-id: <workspace-id>` to select the workspace used for flow search,
+launch and ephemeral claim. The Action forwards it as `ECHOPOINT_WORKSPACE_ID`.
+This optional input permits consumer preparation before API enforcement. An API
+that enforces workspace selection refuses workspace operations when it is omitted.

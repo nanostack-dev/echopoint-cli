@@ -59,6 +59,7 @@ print('OK')
   local required_inputs=(
     "api-key"
     "organization-id"
+    "workspace-id"
     "flow-id"
     "flow-ids"
     "environment"

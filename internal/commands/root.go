@@ -24,6 +24,7 @@ type AppState struct {
 	Token          string
 	APIKey         string
 	OrganizationID string
+	WorkspaceID    string
 	Client         *client.Client
 	Debug          bool
 	AssumeYes      bool
@@ -46,6 +47,7 @@ func NewRootCmd() *cobra.Command {
 		flagToken          string
 		flagAPIKey         string
 		flagOrganizationID string
+		flagWorkspaceID    string
 		flagDebug          bool
 		flagYes            bool
 	)
@@ -99,6 +101,7 @@ func NewRootCmd() *cobra.Command {
 		state.Token = token
 		state.APIKey = apiKey
 		state.OrganizationID = organizationID
+		state.WorkspaceID = resolveWorkspaceID(flagWorkspaceID)
 		state.Debug = flagDebug
 		state.AssumeYes = flagYes
 
@@ -108,13 +111,25 @@ func NewRootCmd() *cobra.Command {
 		}
 
 		if apiKey != "" {
-			cli, err := client.NewWithAPIKey(cfg.API.BaseURL, apiKey, organizationID, cfg.API.Timeout)
+			cli, err := client.NewWithAPIKey(
+				cfg.API.BaseURL,
+				apiKey,
+				organizationID,
+				cfg.API.Timeout,
+				client.WithWorkspaceHeader(state.WorkspaceID),
+			)
 			if err != nil {
 				return err
 			}
 			state.Client = cli
 		} else {
-			cli, err := client.New(cfg.API.BaseURL, token, organizationID, cfg.API.Timeout)
+			cli, err := client.New(
+				cfg.API.BaseURL,
+				token,
+				organizationID,
+				cfg.API.Timeout,
+				client.WithWorkspaceHeader(state.WorkspaceID),
+			)
 			if err != nil {
 				return err
 			}
@@ -152,6 +167,8 @@ operates: 'echopoint flow run' makes this CLI one).`,
 	cmd.PersistentFlags().StringVar(&flagAPIKey, "api-key", "",
 		"Organization API key (overrides ECHOPOINT_API_KEY env; takes precedence over Bearer token)")
 	addOrganizationFlag(cmd.PersistentFlags(), &flagOrganizationID)
+	cmd.PersistentFlags().
+		StringVar(&flagWorkspaceID, "workspace", "", "Workspace ID (overrides ECHOPOINT_WORKSPACE_ID)")
 	cmd.PersistentFlags().BoolVar(&flagDebug, "debug", false, "Enable debug logging")
 	cmd.PersistentFlags().BoolVarP(&flagYes, "yes", "y", false,
 		"Skip the confirmation of a command that deletes a whole resource")
@@ -349,4 +366,11 @@ func exampleCompletionCommands(root *cobra.Command) {
 	for _, shell := range completion.Commands() {
 		shell.Example = completionExamples[shell.Name()]
 	}
+}
+
+func resolveWorkspaceID(flagValue string) string {
+	if value := strings.TrimSpace(flagValue); value != "" {
+		return value
+	}
+	return strings.TrimSpace(os.Getenv("ECHOPOINT_WORKSPACE_ID"))
 }

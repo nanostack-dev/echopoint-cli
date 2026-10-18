@@ -349,6 +349,21 @@ func (e CollectionSource) Valid() bool {
 	}
 }
 
+// Defines values for CurrentUserInclude.
+const (
+	Workspace CurrentUserInclude = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the CurrentUserInclude enum.
+func (e CurrentUserInclude) Valid() bool {
+	switch e {
+	case Workspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DelayFlowNodeType.
 const (
 	DelayFlowNodeTypeDelay DelayFlowNodeType = "delay"
@@ -2486,6 +2501,9 @@ type Collection struct {
 
 	// UpdatedAt Timestamp when the collection was last updated
 	UpdatedAt time.Time `json:"updated_at"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // CollectionFolder defines model for CollectionFolder.
@@ -3012,6 +3030,9 @@ type CurrentUser struct {
 	UserId *string `json:"user_id,omitempty"`
 }
 
+// CurrentUserInclude defines model for CurrentUserInclude.
+type CurrentUserInclude string
+
 // CurrentUserOrganization defines model for CurrentUserOrganization.
 type CurrentUserOrganization struct {
 	// Description Optional organization description.
@@ -3023,6 +3044,9 @@ type CurrentUserOrganization struct {
 	// Name Organization display name.
 	Name string                      `json:"name"`
 	Role CurrentUserOrganizationRole `json:"role"`
+
+	// Workspaces Ordinary workspaces linked to this organization, returned only with include=workspace. An empty array means the organization has none. Selection does not enable resource isolation in this rollout.
+	Workspaces *[]CurrentUserWorkspace `json:"workspaces,omitempty"`
 }
 
 // CurrentUserOrganizationRole defines model for CurrentUserOrganizationRole.
@@ -3041,6 +3065,15 @@ type CurrentUserOrganizationRole struct {
 type CurrentUserResponse struct {
 	MembershipStatus MembershipStatus `json:"membership_status"`
 	User             CurrentUser      `json:"user"`
+}
+
+// CurrentUserWorkspace defines model for CurrentUserWorkspace.
+type CurrentUserWorkspace struct {
+	// Id Anchor workspace identifier.
+	Id string `json:"id"`
+
+	// Name Workspace display name.
+	Name string `json:"name"`
 }
 
 // DefinitionBase defines model for DefinitionBase.
@@ -3546,6 +3579,9 @@ type Flow struct {
 	//
 	// Examples: 1.0
 	Version string `json:"version"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // FlowAnalytics One flow's finished runs in the window.
@@ -3730,6 +3766,9 @@ type FlowExecution struct {
 	// by this value.
 	TriggerType *TriggerType `json:"trigger_type,omitempty"`
 	UpdatedAt   time.Time    `json:"updated_at"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // FlowExecutionActivity Slim org-wide execution row for activity surfaces. Omits flow_snapshot, runner_inputs, referenced_flows, trigger_metadata, and execution_result.
@@ -3805,6 +3844,9 @@ type FlowFolder struct {
 	// ParentId Parent folder, or null for a root folder.
 	ParentId  *openapi_types.UUID `json:"parent_id,omitempty"`
 	UpdatedAt time.Time           `json:"updated_at"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // FlowFolderDeletionResult Summary of a folder subtree deletion.
@@ -4012,6 +4054,9 @@ type FlowVersion struct {
 
 	// PublishedAt When this version was published.
 	PublishedAt time.Time `json:"published_at"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // FlowVersionListResponse defines model for FlowVersionListResponse.
@@ -4512,6 +4557,9 @@ type Monitor struct {
 	// Timezone IANA timezone name stored for display and anchoring; due times remain UTC.
 	Timezone  string    `json:"timezone"`
 	UpdatedAt time.Time `json:"updated_at"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // MonitorCloudBudget Cloud executions per day planned by the organization's enabled Cloud monitors against the license limit. Self-hosted and paused monitors never count.
@@ -6134,6 +6182,9 @@ type Spec struct {
 	// Title The Live version's `info.title`.
 	Title     string    `json:"title"`
 	UpdatedAt time.Time `json:"updated_at"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // SpecActor The member or API key that did something.
@@ -6574,6 +6625,9 @@ type StatusPageEditor struct {
 	// Slug Complete immutable public address. New pages include a server-generated suffix; existing addresses are preserved. Use this value for public reads and subsequent saves.
 	Slug      string    `json:"slug"`
 	UpdatedAt time.Time `json:"updated_at"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // StatusPageHealth defines model for StatusPageHealth.
@@ -6925,6 +6979,9 @@ type Webhook struct {
 	//
 	// Examples: https://api.echopoint.com/webhook/wh_abc123def456
 	Url string `json:"url"`
+
+	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
 // WebhookExpectation One event the wait expects, described by the assertions it must pass.
@@ -7189,6 +7246,9 @@ type ApiKeyIdParameter = string
 // ApiKeyPermissionTypeParameter The API key permission catalog to return. `custom` is the full grantable catalog, `runner` is runner-only scopes, and `ci` is the curated preset for CI/CD (flow execution + ephemeral runner completion).
 type ApiKeyPermissionTypeParameter = ApiKeyPermissionType
 
+// CurrentUserIncludeParameter defines model for CurrentUserIncludeParameter.
+type CurrentUserIncludeParameter = []CurrentUserInclude
+
 // EnvironmentPath defines model for EnvironmentPath.
 type EnvironmentPath = string
 
@@ -7203,6 +7263,9 @@ type OffsetParameter = int32
 
 // RequiredOrganizationIDHeader Examples: org_abc123
 type RequiredOrganizationIDHeader = string
+
+// RequiredWorkspaceIDHeader defines model for RequiredWorkspaceIDHeader.
+type RequiredWorkspaceIDHeader = string
 
 // RunnerJobIDParameter defines model for RunnerJobIDParameter.
 type RunnerJobIDParameter = openapi_types.UUID
@@ -7263,6 +7326,9 @@ type ListEndpointAnalyticsParams struct {
 	// FlowId Keep only the calls this flow's runs sent.
 	FlowId *openapi_types.UUID `form:"flow_id,omitempty" json:"flow_id,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7272,6 +7338,9 @@ type ListFlowAnalyticsParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7280,6 +7349,9 @@ type ListFlowAnalyticsParams struct {
 type GetExecutionAnalyticsSummaryParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
+
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7323,6 +7395,9 @@ type GetAPIKeyParams struct {
 
 // ChatWithAssistantParams defines parameters for ChatWithAssistant.
 type ChatWithAssistantParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7335,60 +7410,90 @@ type ListCollectionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CreateCollectionParams defines parameters for CreateCollection.
 type CreateCollectionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ImportFromOpenAPIParams defines parameters for ImportFromOpenAPI.
 type ImportFromOpenAPIParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchCollectionsParams defines parameters for SearchCollections.
 type SearchCollectionsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteFolderParams defines parameters for DeleteFolder.
 type DeleteFolderParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // UpdateFolderParams defines parameters for UpdateFolder.
 type UpdateFolderParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteRequestParams defines parameters for DeleteRequest.
 type DeleteRequestParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetCollectionRequestParams defines parameters for GetCollectionRequest.
 type GetCollectionRequestParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // UpdateRequestParams defines parameters for UpdateRequest.
 type UpdateRequestParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ExecuteCollectionRequestParams defines parameters for ExecuteCollectionRequest.
 type ExecuteCollectionRequestParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7401,60 +7506,90 @@ type ListCollectionRequestOpenAPISyncHistoryParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchCollectionRequestOpenAPISyncHistoryParams defines parameters for SearchCollectionRequestOpenAPISyncHistory.
 type SearchCollectionRequestOpenAPISyncHistoryParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteCollectionParams defines parameters for DeleteCollection.
 type DeleteCollectionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetCollectionParams defines parameters for GetCollection.
 type GetCollectionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // UpdateCollectionParams defines parameters for UpdateCollection.
 type UpdateCollectionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ListCollectionFoldersParams defines parameters for ListCollectionFolders.
 type ListCollectionFoldersParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // AddFolderParams defines parameters for AddFolder.
 type AddFolderParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchCollectionFoldersParams defines parameters for SearchCollectionFolders.
 type SearchCollectionFoldersParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetOpenAPISyncConfigParams defines parameters for GetOpenAPISyncConfig.
 type GetOpenAPISyncConfigParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteOpenAPISyncConfigParams defines parameters for DeleteOpenAPISyncConfig.
 type DeleteOpenAPISyncConfigParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7467,30 +7602,45 @@ type ListOpenAPISyncHistoryParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CreateOrUpdateOpenAPISyncConfigParams defines parameters for CreateOrUpdateOpenAPISyncConfig.
 type CreateOrUpdateOpenAPISyncConfigParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchOpenAPISyncHistoryParams defines parameters for SearchOpenAPISyncHistory.
 type SearchOpenAPISyncHistoryParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchOpenAPISyncOperationsParams defines parameters for SearchOpenAPISyncOperations.
 type SearchOpenAPISyncOperationsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // RunOpenAPISyncNowParams defines parameters for RunOpenAPISyncNow.
 type RunOpenAPISyncNowParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7512,18 +7662,27 @@ type ListCollectionRequestsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // AddRequestParams defines parameters for AddRequest.
 type AddRequestParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchCollectionRequestsParams defines parameters for SearchCollectionRequests.
 type SearchCollectionRequestsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7548,12 +7707,18 @@ type ListExecutionsParams struct {
 	// Since Inclusive lower bound on started_at (RFC3339).
 	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchExecutionsParams defines parameters for SearchExecutions.
 type SearchExecutionsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7562,6 +7727,9 @@ type SearchExecutionsParams struct {
 type GetExecutionsSummaryParams struct {
 	// Window Lookback window for runs and failed. Defaults to 24h.
 	Window *ExecutionSummaryWindow `form:"window,omitempty" json:"window,omitempty"`
+
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7575,36 +7743,54 @@ type ListFlowsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CreateFlowParams defines parameters for CreateFlow.
 type CreateFlowParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ListFlowFoldersParams defines parameters for ListFlowFolders.
 type ListFlowFoldersParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CreateFlowFolderParams defines parameters for CreateFlowFolder.
 type CreateFlowFolderParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // BulkMoveFlowsParams defines parameters for BulkMoveFlows.
 type BulkMoveFlowsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchFlowFoldersParams defines parameters for SearchFlowFolders.
 type SearchFlowFoldersParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7614,54 +7800,81 @@ type DeleteFlowFolderParams struct {
 	// DeleteFlows When true, permanently deletes every flow in the deleted subtree (including execution history). Irreversible. When false or omitted, flows move to the Uncategorized bucket.
 	DeleteFlows *bool `form:"delete_flows,omitempty" json:"delete_flows,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // UpdateFlowFolderParams defines parameters for UpdateFlowFolder.
 type UpdateFlowFolderParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // MoveFlowFolderParams defines parameters for MoveFlowFolder.
 type MoveFlowFolderParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchFlowsParams defines parameters for SearchFlows.
 type SearchFlowsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ListFlowTagsParams defines parameters for ListFlowTags.
 type ListFlowTagsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetExecutionParams defines parameters for GetExecution.
 type GetExecutionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetExecutionNodeResultsParams defines parameters for GetExecutionNodeResults.
 type GetExecutionNodeResultsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetNodeExecutionResultParams defines parameters for GetNodeExecutionResult.
 type GetNodeExecutionResultParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // StreamExecutionParams defines parameters for StreamExecution.
 type StreamExecutionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7674,30 +7887,45 @@ type GetNodeExecutionHistoryParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchNodeExecutionHistoryParams defines parameters for SearchNodeExecutionHistory.
 type SearchNodeExecutionHistoryParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteFlowParams defines parameters for DeleteFlow.
 type DeleteFlowParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetFlowParams defines parameters for GetFlow.
 type GetFlowParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // UpdateFlowParams defines parameters for UpdateFlow.
 type UpdateFlowParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7710,6 +7938,9 @@ type ListFlowExecutionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7719,12 +7950,18 @@ type ExportFlowParams struct {
 	// VersionId Optional flow version ID to export. When omitted, the current flow definition is used.
 	VersionId *openapi_types.UUID `form:"version_id,omitempty" json:"version_id,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // LaunchFlowParams defines parameters for LaunchFlow.
 type LaunchFlowParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// IdempotencyKey Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
 	// by organization, flow, environment key, version ID, runner type, trigger type, and the
 	// key digest. A matching launch returns the original execution; reusing the key
@@ -7737,30 +7974,45 @@ type LaunchFlowParams struct {
 
 // PublishFlowParams defines parameters for PublishFlow.
 type PublishFlowParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteFlowVariablesParams defines parameters for DeleteFlowVariables.
 type DeleteFlowVariablesParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetFlowVariablesParams defines parameters for GetFlowVariables.
 type GetFlowVariablesParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteFlowVariableParams defines parameters for DeleteFlowVariable.
 type DeleteFlowVariableParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SetFlowVariableParams defines parameters for SetFlowVariable.
 type SetFlowVariableParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7773,24 +8025,36 @@ type ListFlowVersionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchFlowVersionsParams defines parameters for SearchFlowVersions.
 type SearchFlowVersionsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetFlowVersionParams defines parameters for GetFlowVersion.
 type GetFlowVersionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // RestoreFlowVersionParams defines parameters for RestoreFlowVersion.
 type RestoreFlowVersionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7837,6 +8101,12 @@ type GetLicenseUsageParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// GetMeParams defines parameters for GetMe.
+type GetMeParams struct {
+	// Include Linked data to expand for each organization belonging to the current user. Unrequested data is omitted; requested organizations with no workspaces return an empty array.
+	Include *CurrentUserIncludeParameter `form:"include,omitempty" json:"include,omitempty"`
+}
+
 // ListOrganizationMembersParams defines parameters for ListOrganizationMembers.
 type ListOrganizationMembersParams struct {
 	// Limit Maximum number of items per page.
@@ -7872,12 +8142,18 @@ type ListFlowSchedulesParams struct {
 	// HasHealthPolicy Only monitors with (true) or without (false) a health policy.
 	HasHealthPolicy *bool `form:"has_health_policy,omitempty" json:"has_health_policy,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CreateFlowScheduleParams defines parameters for CreateFlowSchedule.
 type CreateFlowScheduleParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7890,54 +8166,81 @@ type GetMonitorCloudBudgetParams struct {
 
 // EstimateMonitorParams defines parameters for EstimateMonitor.
 type EstimateMonitorParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // PreviewScheduleTagsParams defines parameters for PreviewScheduleTags.
 type PreviewScheduleTagsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchFlowSchedulesParams defines parameters for SearchFlowSchedules.
 type SearchFlowSchedulesParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteFlowScheduleParams defines parameters for DeleteFlowSchedule.
 type DeleteFlowScheduleParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetFlowScheduleParams defines parameters for GetFlowSchedule.
 type GetFlowScheduleParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // UpdateFlowScheduleParams defines parameters for UpdateFlowSchedule.
 type UpdateFlowScheduleParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // PauseFlowScheduleParams defines parameters for PauseFlowSchedule.
 type PauseFlowScheduleParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ResumeFlowScheduleParams defines parameters for ResumeFlowSchedule.
 type ResumeFlowScheduleParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // RunMonitorParams defines parameters for RunMonitor.
 type RunMonitorParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7950,18 +8253,27 @@ type ListFlowScheduleRunsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchFlowScheduleRunsParams defines parameters for SearchFlowScheduleRuns.
 type SearchFlowScheduleRunsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetFlowScheduleRunParams defines parameters for GetFlowScheduleRun.
 type GetFlowScheduleRunParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -7974,6 +8286,9 @@ type ListNodesParams struct {
 
 // SearchOpenAPISyncConfigsParams defines parameters for SearchOpenAPISyncConfigs.
 type SearchOpenAPISyncConfigsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8055,18 +8370,27 @@ type ListPermissionsParams struct {
 
 // SearchResourcesParams defines parameters for SearchResources.
 type SearchResourcesParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ClaimEphemeralJobParams defines parameters for ClaimEphemeralJob.
 type ClaimEphemeralJobParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CompleteEphemeralExecutionParams defines parameters for CompleteEphemeralExecution.
 type CompleteEphemeralExecutionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8085,30 +8409,45 @@ type ListSpecsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CreateSpecParams defines parameters for CreateSpec.
 type CreateSpecParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchSpecsParams defines parameters for SearchSpecs.
 type SearchSpecsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetSpecParams defines parameters for GetSpec.
 type GetSpecParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // ApplySpecCommandsParams defines parameters for ApplySpecCommands.
 type ApplySpecCommandsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8117,6 +8456,9 @@ type ApplySpecCommandsParams struct {
 type PullSpecParams struct {
 	// Version A Live version's semantic version. Absent means the current Live version.
 	Version *string `form:"version,omitempty" json:"version,omitempty"`
+
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8130,24 +8472,36 @@ type ListSpecVersionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // PushSpecVersionParams defines parameters for PushSpecVersion.
 type PushSpecVersionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchSpecVersionsParams defines parameters for SearchSpecVersions.
 type SearchSpecVersionsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetSpecVersionParams defines parameters for GetSpecVersion.
 type GetSpecVersionParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8178,30 +8532,45 @@ type UnpublishStatusPageParams struct {
 
 // ListWebhooksParams defines parameters for ListWebhooks.
 type ListWebhooksParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // CreateWebhookParams defines parameters for CreateWebhook.
 type CreateWebhookParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchWebhooksParams defines parameters for SearchWebhooks.
 type SearchWebhooksParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // DeleteWebhookParams defines parameters for DeleteWebhook.
 type DeleteWebhookParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // GetWebhookParams defines parameters for GetWebhook.
 type GetWebhookParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8213,6 +8582,9 @@ type GetWebhookMethodDistributionParams struct {
 
 	// To End datetime for analytics data (ISO 8601 format).
 	To time.Time `form:"to" json:"to"`
+
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8226,12 +8598,18 @@ type GetWebhookRequestVolumesParams struct {
 	// To End datetime for analytics data (ISO 8601 format).
 	To time.Time `form:"to" json:"to"`
 
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
 // SearchWebhookRequestsParams defines parameters for SearchWebhookRequests.
 type SearchWebhookRequestsParams struct {
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8239,6 +8617,9 @@ type SearchWebhookRequestsParams struct {
 // StreamWebhookRequestsParams defines parameters for StreamWebhookRequests.
 type StreamWebhookRequestsParams struct {
 	Limit int32 `form:"limit" json:"limit"`
+
+	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -10740,7 +11121,7 @@ type ClientInterface interface {
 	// Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
 	//
 	// Corresponds with GET /me (the `GetMe` operationId).
-	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetMe(ctx context.Context, params *GetMeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListMyInvitations Deprecated: use search_my_invitations instead, which pages with a cursor. List My Invitations
 	//
@@ -14172,8 +14553,8 @@ func (c *Client) GetLicenseUsage(ctx context.Context, params *GetLicenseUsagePar
 // Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
 //
 // Corresponds with GET /me (the `GetMe` operationId).
-func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetMeRequest(c.Server)
+func (c *Client) GetMe(ctx context.Context, params *GetMeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMeRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -16517,12 +16898,21 @@ func NewListEndpointAnalyticsRequest(server string, params *ListEndpointAnalytic
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -16584,12 +16974,21 @@ func NewListFlowAnalyticsRequest(server string, params *ListFlowAnalyticsParams)
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -16651,12 +17050,21 @@ func NewGetExecutionAnalyticsSummaryRequest(server string, params *GetExecutionA
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17002,12 +17410,21 @@ func NewChatWithAssistantRequestWithBody(server string, params *ChatWithAssistan
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17073,12 +17490,21 @@ func NewListCollectionsRequest(server string, params *ListCollectionsParams) (*h
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17126,12 +17552,21 @@ func NewCreateCollectionRequestWithBody(server string, params *CreateCollectionP
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17179,12 +17614,21 @@ func NewImportFromOpenAPIRequestWithBody(server string, params *ImportFromOpenAP
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17232,12 +17676,21 @@ func NewSearchCollectionsRequestWithBody(server string, params *SearchCollection
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17286,12 +17739,21 @@ func NewDeleteFolderRequest(server string, collectionId openapi_types.UUID, fold
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17353,12 +17815,21 @@ func NewUpdateFolderRequestWithBody(server string, collectionId openapi_types.UU
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17407,12 +17878,21 @@ func NewDeleteRequestRequest(server string, collectionId openapi_types.UUID, req
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17461,12 +17941,21 @@ func NewGetCollectionRequestRequest(server string, collectionId openapi_types.UU
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17528,12 +18017,21 @@ func NewUpdateRequestRequestWithBody(server string, collectionId openapi_types.U
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17595,12 +18093,21 @@ func NewExecuteCollectionRequestRequestWithBody(server string, collectionId open
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17680,12 +18187,21 @@ func NewListCollectionRequestOpenAPISyncHistoryRequest(server string, collection
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17747,12 +18263,21 @@ func NewSearchCollectionRequestOpenAPISyncHistoryRequestWithBody(server string, 
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17794,12 +18319,21 @@ func NewDeleteCollectionRequest(server string, id openapi_types.UUID, params *De
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17841,12 +18375,21 @@ func NewGetCollectionRequest(server string, id openapi_types.UUID, params *GetCo
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17901,12 +18444,21 @@ func NewUpdateCollectionRequestWithBody(server string, id openapi_types.UUID, pa
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -17948,12 +18500,21 @@ func NewListCollectionFoldersRequest(server string, id openapi_types.UUID, param
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18008,12 +18569,21 @@ func NewAddFolderRequestWithBody(server string, id openapi_types.UUID, params *A
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18068,12 +18638,21 @@ func NewSearchCollectionFoldersRequestWithBody(server string, id openapi_types.U
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18115,12 +18694,21 @@ func NewGetOpenAPISyncConfigRequest(server string, id openapi_types.UUID, params
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18162,12 +18750,21 @@ func NewDeleteOpenAPISyncConfigRequest(server string, id openapi_types.UUID, par
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18240,12 +18837,21 @@ func NewListOpenAPISyncHistoryRequest(server string, id openapi_types.UUID, para
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18300,12 +18906,21 @@ func NewCreateOrUpdateOpenAPISyncConfigRequestWithBody(server string, id openapi
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18360,12 +18975,21 @@ func NewSearchOpenAPISyncHistoryRequestWithBody(server string, id openapi_types.
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18420,12 +19044,21 @@ func NewSearchOpenAPISyncOperationsRequestWithBody(server string, id openapi_typ
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18480,12 +19113,21 @@ func NewRunOpenAPISyncNowRequestWithBody(server string, id openapi_types.UUID, p
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18594,12 +19236,21 @@ func NewListCollectionRequestsRequest(server string, id openapi_types.UUID, para
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18654,12 +19305,21 @@ func NewAddRequestRequestWithBody(server string, id openapi_types.UUID, params *
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18714,12 +19374,21 @@ func NewSearchCollectionRequestsRequestWithBody(server string, id openapi_types.
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18833,12 +19502,21 @@ func NewListExecutionsRequest(server string, params *ListExecutionsParams) (*htt
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18886,12 +19564,21 @@ func NewSearchExecutionsRequestWithBody(server string, params *SearchExecutionsP
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -18953,12 +19640,21 @@ func NewGetExecutionsSummaryRequest(server string, params *GetExecutionsSummaryP
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19024,12 +19720,21 @@ func NewListFlowsRequest(server string, params *ListFlowsParams) (*http.Request,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19077,12 +19782,21 @@ func NewCreateFlowRequestWithBody(server string, params *CreateFlowParams, conte
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19117,12 +19831,21 @@ func NewListFlowFoldersRequest(server string, params *ListFlowFoldersParams) (*h
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19170,12 +19893,21 @@ func NewCreateFlowFolderRequestWithBody(server string, params *CreateFlowFolderP
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19223,12 +19955,21 @@ func NewBulkMoveFlowsRequestWithBody(server string, params *BulkMoveFlowsParams,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19276,12 +20017,21 @@ func NewSearchFlowFoldersRequestWithBody(server string, params *SearchFlowFolder
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19350,12 +20100,21 @@ func NewDeleteFlowFolderRequest(server string, folderId openapi_types.UUID, para
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19410,12 +20169,21 @@ func NewUpdateFlowFolderRequestWithBody(server string, folderId openapi_types.UU
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19470,12 +20238,21 @@ func NewMoveFlowFolderRequestWithBody(server string, folderId openapi_types.UUID
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19523,12 +20300,21 @@ func NewSearchFlowsRequestWithBody(server string, params *SearchFlowsParams, con
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19563,12 +20349,21 @@ func NewListFlowTagsRequest(server string, params *ListFlowTagsParams) (*http.Re
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19617,12 +20412,21 @@ func NewGetExecutionRequest(server string, flowId openapi_types.UUID, executionI
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19671,12 +20475,21 @@ func NewGetExecutionNodeResultsRequest(server string, flowId openapi_types.UUID,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19732,12 +20545,21 @@ func NewGetNodeExecutionResultRequest(server string, flowId openapi_types.UUID, 
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19786,12 +20608,21 @@ func NewStreamExecutionRequest(server string, flowId openapi_types.UUID, executi
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19871,12 +20702,21 @@ func NewGetNodeExecutionHistoryRequest(server string, flowId openapi_types.UUID,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19938,12 +20778,21 @@ func NewSearchNodeExecutionHistoryRequestWithBody(server string, flowId openapi_
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -19985,12 +20834,21 @@ func NewDeleteFlowRequest(server string, id openapi_types.UUID, params *DeleteFl
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20032,12 +20890,21 @@ func NewGetFlowRequest(server string, id openapi_types.UUID, params *GetFlowPara
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20092,12 +20959,21 @@ func NewUpdateFlowRequestWithBody(server string, id openapi_types.UUID, params *
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20170,12 +21046,21 @@ func NewListFlowExecutionsRequest(server string, id openapi_types.UUID, params *
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20244,12 +21129,21 @@ func NewExportFlowRequest(server string, id openapi_types.UUID, params *ExportFl
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20302,25 +21196,34 @@ func NewLaunchFlowRequestWithBody(server string, id openapi_types.UUID, params *
 
 	if params != nil {
 
-		if params.IdempotencyKey != nil {
-			var headerParam0 string
+		var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("Idempotency-Key", headerParam0)
-		}
-
-		var headerParam1 string
-
-		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam1)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		if params.IdempotencyKey != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("Idempotency-Key", headerParam1)
+		}
+
+		var headerParam2 string
+
+		headerParam2, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam2)
 
 	}
 
@@ -20362,12 +21265,21 @@ func NewPublishFlowRequest(server string, id openapi_types.UUID, params *Publish
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20409,12 +21321,21 @@ func NewDeleteFlowVariablesRequest(server string, id openapi_types.UUID, params 
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20456,12 +21377,21 @@ func NewGetFlowVariablesRequest(server string, id openapi_types.UUID, params *Ge
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20510,12 +21440,21 @@ func NewDeleteFlowVariableRequest(server string, id openapi_types.UUID, key Vari
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20577,12 +21516,21 @@ func NewSetFlowVariableRequestWithBody(server string, id openapi_types.UUID, key
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20655,12 +21603,21 @@ func NewListFlowVersionsRequest(server string, id openapi_types.UUID, params *Li
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20715,12 +21672,21 @@ func NewSearchFlowVersionsRequestWithBody(server string, id openapi_types.UUID, 
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20769,12 +21735,21 @@ func NewGetFlowVersionRequest(server string, id openapi_types.UUID, versionId op
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -20823,12 +21798,21 @@ func NewRestoreFlowVersionRequest(server string, id openapi_types.UUID, versionI
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21208,7 +22192,7 @@ func NewGetLicenseUsageRequest(server string, params *GetLicenseUsageParams) (*h
 }
 
 // NewGetMeRequest constructs an http.Request for the GetMe method
-func NewGetMeRequest(server string) (*http.Request, error) {
+func NewGetMeRequest(server string, params *GetMeParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -21224,6 +22208,33 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Include != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "include", *params.Include, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -21520,12 +22531,21 @@ func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams)
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21573,12 +22593,21 @@ func NewCreateFlowScheduleRequestWithBody(server string, params *CreateFlowSched
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21666,12 +22695,21 @@ func NewEstimateMonitorRequestWithBody(server string, params *EstimateMonitorPar
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21719,12 +22757,21 @@ func NewPreviewScheduleTagsRequestWithBody(server string, params *PreviewSchedul
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21772,12 +22819,21 @@ func NewSearchFlowSchedulesRequestWithBody(server string, params *SearchFlowSche
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21819,12 +22875,21 @@ func NewDeleteFlowScheduleRequest(server string, monitorId openapi_types.UUID, p
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21866,12 +22931,21 @@ func NewGetFlowScheduleRequest(server string, monitorId openapi_types.UUID, para
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21926,12 +23000,21 @@ func NewUpdateFlowScheduleRequestWithBody(server string, monitorId openapi_types
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -21973,12 +23056,21 @@ func NewPauseFlowScheduleRequest(server string, monitorId openapi_types.UUID, pa
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -22020,12 +23112,21 @@ func NewResumeFlowScheduleRequest(server string, monitorId openapi_types.UUID, p
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -22067,12 +23168,21 @@ func NewRunMonitorRequest(server string, monitorId openapi_types.UUID, params *R
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -22145,12 +23255,21 @@ func NewListFlowScheduleRunsRequest(server string, monitorId openapi_types.UUID,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -22205,12 +23324,21 @@ func NewSearchFlowScheduleRunsRequestWithBody(server string, monitorId openapi_t
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -22259,12 +23387,21 @@ func NewGetFlowScheduleRunRequest(server string, monitorId openapi_types.UUID, r
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -22352,12 +23489,21 @@ func NewSearchOpenAPISyncConfigsRequestWithBody(server string, params *SearchOpe
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23077,12 +24223,21 @@ func NewSearchResourcesRequestWithBody(server string, params *SearchResourcesPar
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23137,12 +24292,21 @@ func NewClaimEphemeralJobRequestWithBody(server string, executionId openapi_type
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23197,12 +24361,21 @@ func NewCompleteEphemeralExecutionRequestWithBody(server string, executionId ope
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23550,12 +24723,21 @@ func NewListSpecsRequest(server string, params *ListSpecsParams) (*http.Request,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23603,12 +24785,21 @@ func NewCreateSpecRequestWithBody(server string, params *CreateSpecParams, conte
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23656,12 +24847,21 @@ func NewSearchSpecsRequestWithBody(server string, params *SearchSpecsParams, con
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23703,12 +24903,21 @@ func NewGetSpecRequest(server string, slug SpecSlugParameter, params *GetSpecPar
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23763,12 +24972,21 @@ func NewApplySpecCommandsRequestWithBody(server string, slug SpecSlugParameter, 
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23837,12 +25055,21 @@ func NewPullSpecRequest(server string, slug SpecSlugParameter, params *PullSpecP
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23915,12 +25142,21 @@ func NewListSpecVersionsRequest(server string, slug SpecSlugParameter, params *L
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -23975,12 +25211,21 @@ func NewPushSpecVersionRequestWithBody(server string, slug SpecSlugParameter, pa
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24035,12 +25280,21 @@ func NewSearchSpecVersionsRequestWithBody(server string, slug SpecSlugParameter,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24089,12 +25343,21 @@ func NewGetSpecVersionRequest(server string, slug SpecSlugParameter, version str
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24508,12 +25771,21 @@ func NewListWebhooksRequest(server string, params *ListWebhooksParams) (*http.Re
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24561,12 +25833,21 @@ func NewCreateWebhookRequestWithBody(server string, params *CreateWebhookParams,
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24614,12 +25895,21 @@ func NewSearchWebhooksRequestWithBody(server string, params *SearchWebhooksParam
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24661,12 +25951,21 @@ func NewDeleteWebhookRequest(server string, id WebhookIdParameter, params *Delet
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24708,12 +26007,21 @@ func NewGetWebhookRequest(server string, id WebhookIdParameter, params *GetWebho
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24786,12 +26094,21 @@ func NewGetWebhookMethodDistributionRequest(server string, id WebhookIdParameter
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24864,12 +26181,21 @@ func NewGetWebhookRequestVolumesRequest(server string, id WebhookIdParameter, pa
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24924,12 +26250,21 @@ func NewSearchWebhookRequestsRequestWithBody(server string, id WebhookIdParamete
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -24994,12 +26329,21 @@ func NewStreamWebhookRequestsRequest(server string, id WebhookIdParameter, param
 
 		var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam0)
+		req.Header.Set("X-Workspace-Id", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -26346,7 +27690,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /me (the `GetMe` operationId).
-	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
+	GetMeWithResponse(ctx context.Context, params *GetMeParams, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
 
 	// ListMyInvitationsWithResponse Deprecated: use search_my_invitations instead, which pages with a cursor. List My Invitations
 	//
@@ -28366,6 +29710,8 @@ type ChatWithAssistantResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 }
 
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
@@ -28376,6 +29722,11 @@ func (r ChatWithAssistantResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ChatWithAssistantResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ChatWithAssistantResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetBody returns the raw response body bytes
@@ -28416,6 +29767,8 @@ type ListCollectionsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -28431,6 +29784,11 @@ func (r ListCollectionsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListCollectionsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListCollectionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetBody returns the raw response body bytes
@@ -28471,6 +29829,8 @@ type CreateCollectionResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -28486,6 +29846,11 @@ func (r CreateCollectionResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r CreateCollectionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateCollectionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetBody returns the raw response body bytes
@@ -28526,6 +29891,8 @@ type ImportFromOpenAPIResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalServerError
 }
@@ -28543,6 +29910,11 @@ func (r ImportFromOpenAPIResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ImportFromOpenAPIResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ImportFromOpenAPIResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -28588,6 +29960,8 @@ type SearchCollectionsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -28603,6 +29977,11 @@ func (r SearchCollectionsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchCollectionsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchCollectionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetBody returns the raw response body bytes
@@ -28637,15 +30016,29 @@ func (r SearchCollectionsResponse) ContentType() string {
 type DeleteFolderResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteFolderResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r DeleteFolderResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteFolderResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -28691,6 +30084,8 @@ type UpdateFolderResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 	// JSON409 the response for an HTTP 409 `application/json` response
@@ -28710,6 +30105,11 @@ func (r UpdateFolderResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r UpdateFolderResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateFolderResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -28754,15 +30154,29 @@ func (r UpdateFolderResponse) ContentType() string {
 type DeleteRequestResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteRequestResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r DeleteRequestResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteRequestResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -28804,8 +30218,12 @@ type GetCollectionRequestResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *CollectionRequest
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -28815,9 +30233,19 @@ func (r GetCollectionRequestResponse) GetJSON200() *CollectionRequest {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetCollectionRequestResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetCollectionRequestResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetCollectionRequestResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -28863,6 +30291,8 @@ type UpdateRequestResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -28880,6 +30310,11 @@ func (r UpdateRequestResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r UpdateRequestResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateRequestResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -28925,6 +30360,8 @@ type ExecuteCollectionRequestResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -28942,6 +30379,11 @@ func (r ExecuteCollectionRequestResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ExecuteCollectionRequestResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ExecuteCollectionRequestResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -28983,8 +30425,12 @@ type ListCollectionRequestOpenAPISyncHistoryResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *OpenAPISyncChangeListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -28994,9 +30440,19 @@ func (r ListCollectionRequestOpenAPISyncHistoryResponse) GetJSON200() *OpenAPISy
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListCollectionRequestOpenAPISyncHistoryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListCollectionRequestOpenAPISyncHistoryResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListCollectionRequestOpenAPISyncHistoryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29042,6 +30498,8 @@ type SearchCollectionRequestOpenAPISyncHistoryResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29059,6 +30517,11 @@ func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetJSON400() *BadRequ
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchCollectionRequestOpenAPISyncHistoryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29098,13 +30561,27 @@ func (r SearchCollectionRequestOpenAPISyncHistoryResponse) ContentType() string 
 type DeleteCollectionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteCollectionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r DeleteCollectionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteCollectionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetBody returns the raw response body bytes
@@ -29141,8 +30618,12 @@ type GetCollectionResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *Collection
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29152,9 +30633,19 @@ func (r GetCollectionResponse) GetJSON200() *Collection {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetCollectionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetCollectionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetCollectionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29200,6 +30691,8 @@ type UpdateCollectionResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29217,6 +30710,11 @@ func (r UpdateCollectionResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r UpdateCollectionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateCollectionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29258,8 +30756,12 @@ type ListCollectionFoldersResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *CollectionFolderListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29269,9 +30771,19 @@ func (r ListCollectionFoldersResponse) GetJSON200() *CollectionFolderListRespons
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListCollectionFoldersResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListCollectionFoldersResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListCollectionFoldersResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29317,6 +30829,8 @@ type AddFolderResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29334,6 +30848,11 @@ func (r AddFolderResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r AddFolderResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r AddFolderResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29379,6 +30898,8 @@ type SearchCollectionFoldersResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29396,6 +30917,11 @@ func (r SearchCollectionFoldersResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchCollectionFoldersResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchCollectionFoldersResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29437,8 +30963,12 @@ type GetOpenAPISyncConfigResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *OpenAPISyncConfig
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29448,9 +30978,19 @@ func (r GetOpenAPISyncConfigResponse) GetJSON200() *OpenAPISyncConfig {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetOpenAPISyncConfigResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetOpenAPISyncConfigResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetOpenAPISyncConfigResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29490,15 +31030,29 @@ func (r GetOpenAPISyncConfigResponse) ContentType() string {
 type DeleteOpenAPISyncConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteOpenAPISyncConfigResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r DeleteOpenAPISyncConfigResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteOpenAPISyncConfigResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29540,8 +31094,12 @@ type ListOpenAPISyncHistoryResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *OpenAPISyncChangeListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29551,9 +31109,19 @@ func (r ListOpenAPISyncHistoryResponse) GetJSON200() *OpenAPISyncChangeListRespo
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListOpenAPISyncHistoryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListOpenAPISyncHistoryResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListOpenAPISyncHistoryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29599,6 +31167,8 @@ type CreateOrUpdateOpenAPISyncConfigResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29616,6 +31186,11 @@ func (r CreateOrUpdateOpenAPISyncConfigResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r CreateOrUpdateOpenAPISyncConfigResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateOrUpdateOpenAPISyncConfigResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29661,6 +31236,8 @@ type SearchOpenAPISyncHistoryResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29678,6 +31255,11 @@ func (r SearchOpenAPISyncHistoryResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchOpenAPISyncHistoryResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchOpenAPISyncHistoryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29723,6 +31305,8 @@ type SearchOpenAPISyncOperationsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29740,6 +31324,11 @@ func (r SearchOpenAPISyncOperationsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchOpenAPISyncOperationsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchOpenAPISyncOperationsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29781,8 +31370,12 @@ type RunOpenAPISyncNowResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *OpenAPISyncConfig
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 	// JSON409 the response for an HTTP 409 `application/json` response
@@ -29796,9 +31389,19 @@ func (r RunOpenAPISyncNowResponse) GetJSON200() *OpenAPISyncConfig {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RunOpenAPISyncNowResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r RunOpenAPISyncNowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RunOpenAPISyncNowResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29850,8 +31453,12 @@ type ListCollectionRequestsResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *CollectionRequestListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29861,9 +31468,19 @@ func (r ListCollectionRequestsResponse) GetJSON200() *CollectionRequestListRespo
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListCollectionRequestsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListCollectionRequestsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListCollectionRequestsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29909,6 +31526,8 @@ type AddRequestResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29926,6 +31545,11 @@ func (r AddRequestResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r AddRequestResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r AddRequestResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -29971,6 +31595,8 @@ type SearchCollectionRequestsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -29988,6 +31614,11 @@ func (r SearchCollectionRequestsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchCollectionRequestsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchCollectionRequestsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -30219,6 +31850,8 @@ type ListFlowsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -30234,6 +31867,11 @@ func (r ListFlowsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListFlowsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListFlowsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetBody returns the raw response body bytes
@@ -30274,6 +31912,8 @@ type CreateFlowResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *Conflict
 }
@@ -30291,6 +31931,11 @@ func (r CreateFlowResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r CreateFlowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateFlowResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
@@ -30919,6 +32564,8 @@ type ListFlowTagsResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *FlowTagListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -30928,6 +32575,11 @@ type ListFlowTagsResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r ListFlowTagsResponse) GetJSON200() *FlowTagListResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListFlowTagsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -30974,8 +32626,12 @@ type GetExecutionResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *FlowExecution
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -30985,9 +32641,19 @@ func (r GetExecutionResponse) GetJSON200() *FlowExecution {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetExecutionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetExecutionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetExecutionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31029,8 +32695,12 @@ type GetExecutionNodeResultsResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *[]NodeExecutionResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31040,9 +32710,19 @@ func (r GetExecutionNodeResultsResponse) GetJSON200() *[]NodeExecutionResult {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetExecutionNodeResultsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetExecutionNodeResultsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetExecutionNodeResultsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31084,8 +32764,12 @@ type GetNodeExecutionResultResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *NodeExecutionResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31095,9 +32779,19 @@ func (r GetNodeExecutionResultResponse) GetJSON200() *NodeExecutionResult {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetNodeExecutionResultResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetNodeExecutionResultResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetNodeExecutionResultResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31137,15 +32831,29 @@ func (r GetNodeExecutionResultResponse) ContentType() string {
 type StreamExecutionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r StreamExecutionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r StreamExecutionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r StreamExecutionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31187,8 +32895,12 @@ type GetNodeExecutionHistoryResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *NodeExecutionHistoryResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31198,9 +32910,19 @@ func (r GetNodeExecutionHistoryResponse) GetJSON200() *NodeExecutionHistoryRespo
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetNodeExecutionHistoryResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetNodeExecutionHistoryResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetNodeExecutionHistoryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31246,6 +32968,8 @@ type SearchNodeExecutionHistoryResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31263,6 +32987,11 @@ func (r SearchNodeExecutionHistoryResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchNodeExecutionHistoryResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchNodeExecutionHistoryResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31302,13 +33031,27 @@ func (r SearchNodeExecutionHistoryResponse) ContentType() string {
 type DeleteFlowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteFlowResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r DeleteFlowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteFlowResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetBody returns the raw response body bytes
@@ -31345,8 +33088,12 @@ type GetFlowResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *Flow
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31356,9 +33103,19 @@ func (r GetFlowResponse) GetJSON200() *Flow {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetFlowResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetFlowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetFlowResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31404,6 +33161,8 @@ type UpdateFlowResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 	// JSON409 the response for an HTTP 409 `application/json` response
@@ -31423,6 +33182,11 @@ func (r UpdateFlowResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r UpdateFlowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateFlowResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31473,6 +33237,8 @@ type ListFlowExecutionsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31490,6 +33256,11 @@ func (r ListFlowExecutionsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListFlowExecutionsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListFlowExecutionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31531,8 +33302,12 @@ type ExportFlowResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *ExportedFlow
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 	// JSON500 the response for an HTTP 500 `application/json` response
@@ -31544,9 +33319,19 @@ func (r ExportFlowResponse) GetJSON200() *ExportedFlow {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ExportFlowResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ExportFlowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ExportFlowResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31687,6 +33472,8 @@ type PublishFlowResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31704,6 +33491,11 @@ func (r PublishFlowResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r PublishFlowResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PublishFlowResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31743,15 +33535,29 @@ func (r PublishFlowResponse) ContentType() string {
 type DeleteFlowVariablesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteFlowVariablesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r DeleteFlowVariablesResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteFlowVariablesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31793,8 +33599,12 @@ type GetFlowVariablesResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *VariableSet
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31804,9 +33614,19 @@ func (r GetFlowVariablesResponse) GetJSON200() *VariableSet {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetFlowVariablesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetFlowVariablesResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetFlowVariablesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31846,15 +33666,29 @@ func (r GetFlowVariablesResponse) ContentType() string {
 type DeleteFlowVariableResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteFlowVariableResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r DeleteFlowVariableResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteFlowVariableResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31900,6 +33734,8 @@ type SetFlowVariableResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31917,6 +33753,11 @@ func (r SetFlowVariableResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SetFlowVariableResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetFlowVariableResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -31958,8 +33799,12 @@ type ListFlowVersionsResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *FlowVersionListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -31969,9 +33814,19 @@ func (r ListFlowVersionsResponse) GetJSON200() *FlowVersionListResponse {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListFlowVersionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r ListFlowVersionsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListFlowVersionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -32017,6 +33872,8 @@ type SearchFlowVersionsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -32034,6 +33891,11 @@ func (r SearchFlowVersionsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchFlowVersionsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchFlowVersionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -32075,8 +33937,12 @@ type GetFlowVersionResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *FlowVersion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -32086,9 +33952,19 @@ func (r GetFlowVersionResponse) GetJSON200() *FlowVersion {
 	return r.JSON200
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetFlowVersionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r GetFlowVersionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetFlowVersionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -32134,6 +34010,8 @@ type RestoreFlowVersionResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -32151,6 +34029,11 @@ func (r RestoreFlowVersionResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r RestoreFlowVersionResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RestoreFlowVersionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -32709,6 +34592,8 @@ type GetMeResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *CurrentUserResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON409 the response for an HTTP 409 `application/json` response
@@ -32720,6 +34605,11 @@ type GetMeResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetMeResponse) GetJSON200() *CurrentUserResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetMeResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -33403,10 +35293,17 @@ func (r SearchFlowSchedulesResponse) ContentType() string {
 type DeleteFlowScheduleResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
 	JSON403 *Forbidden
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteFlowScheduleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -33453,6 +35350,8 @@ type GetFlowScheduleResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *Monitor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -33464,6 +35363,11 @@ type GetFlowScheduleResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetFlowScheduleResponse) GetJSON200() *Monitor {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetFlowScheduleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -33591,6 +35495,8 @@ type PauseFlowScheduleResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *Monitor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -33604,6 +35510,11 @@ type PauseFlowScheduleResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r PauseFlowScheduleResponse) GetJSON200() *Monitor {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PauseFlowScheduleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -33660,6 +35571,8 @@ type ResumeFlowScheduleResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *Monitor
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -33673,6 +35586,11 @@ type ResumeFlowScheduleResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r ResumeFlowScheduleResponse) GetJSON200() *Monitor {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ResumeFlowScheduleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -33805,6 +35723,8 @@ type ListFlowScheduleRunsResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *MonitorRunListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -33816,6 +35736,11 @@ type ListFlowScheduleRunsResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r ListFlowScheduleRunsResponse) GetJSON200() *MonitorRunListResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListFlowScheduleRunsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -33867,6 +35792,8 @@ type SearchFlowScheduleRunsResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *MonitorRunListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -33878,6 +35805,11 @@ type SearchFlowScheduleRunsResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r SearchFlowScheduleRunsResponse) GetJSON200() *MonitorRunListResponse {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchFlowScheduleRunsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -33929,6 +35861,8 @@ type GetFlowScheduleRunResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *MonitorRunDetail
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -33940,6 +35874,11 @@ type GetFlowScheduleRunResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetFlowScheduleRunResponse) GetJSON200() *MonitorRunDetail {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetFlowScheduleRunResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -34043,6 +35982,8 @@ type SearchOpenAPISyncConfigsResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -34060,6 +36001,11 @@ func (r SearchOpenAPISyncConfigsResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r SearchOpenAPISyncConfigsResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchOpenAPISyncConfigsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -35812,6 +37758,8 @@ type GetSpecResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *Spec
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -35823,6 +37771,11 @@ type GetSpecResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetSpecResponse) GetJSON200() *Spec {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSpecResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -35957,6 +37910,8 @@ type PullSpecResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *SpecDocument
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -35968,6 +37923,11 @@ type PullSpecResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r PullSpecResponse) GetJSON200() *SpecDocument {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PullSpecResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -36233,6 +38193,8 @@ type GetSpecVersionResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *SpecVersion
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -36244,6 +38206,11 @@ type GetSpecVersionResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetSpecVersionResponse) GetJSON200() *SpecVersion {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSpecVersionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -36961,6 +38928,8 @@ type CreateWebhookResponse struct {
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *Conflict
 }
@@ -36978,6 +38947,11 @@ func (r CreateWebhookResponse) GetJSON400() *BadRequest {
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
 func (r CreateWebhookResponse) GetJSON401() *Unauthorized {
 	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateWebhookResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
@@ -37079,12 +39053,19 @@ func (r SearchWebhooksResponse) ContentType() string {
 type DeleteWebhookResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeleteWebhookResponse) GetJSON400() *BadRequest {
+	return r.JSON400
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -37136,6 +39117,10 @@ type GetWebhookResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *Webhook
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -37143,6 +39128,16 @@ type GetWebhookResponse struct {
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetWebhookResponse) GetJSON200() *Webhook {
 	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetWebhookResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetWebhookResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -37324,6 +39319,8 @@ type SearchWebhookRequestsResponse struct {
 	JSON200 *WebhookRequestListResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
 }
@@ -37336,6 +39333,11 @@ func (r SearchWebhookRequestsResponse) GetJSON200() *WebhookRequestListResponse 
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
 func (r SearchWebhookRequestsResponse) GetJSON400() *BadRequest {
 	return r.JSON400
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchWebhookRequestsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -37375,8 +39377,22 @@ func (r SearchWebhookRequestsResponse) ContentType() string {
 type StreamWebhookRequestsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r StreamWebhookRequestsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r StreamWebhookRequestsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
 }
 
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
@@ -39435,8 +41451,8 @@ func (c *ClientWithResponses) GetLicenseUsageWithResponse(ctx context.Context, p
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /me (the `GetMe` operationId).
-func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error) {
-	rsp, err := c.GetMe(ctx, reqEditors...)
+func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, params *GetMeParams, reqEditors ...RequestEditorFn) (*GetMeResponse, error) {
+	rsp, err := c.GetMe(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -41901,6 +43917,13 @@ func ParseChatWithAssistantResponse(rsp *http.Response) (*ChatWithAssistantRespo
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	}
 
 	return response, nil
@@ -41940,6 +43963,13 @@ func ParseListCollectionsResponse(rsp *http.Response) (*ListCollectionsResponse,
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
@@ -41981,6 +44011,13 @@ func ParseCreateCollectionResponse(rsp *http.Response) (*CreateCollectionRespons
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	}
 
 	return response, nil
@@ -42020,6 +44057,13 @@ func ParseImportFromOpenAPIResponse(rsp *http.Response) (*ImportFromOpenAPIRespo
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
@@ -42068,6 +44112,13 @@ func ParseSearchCollectionsResponse(rsp *http.Response) (*SearchCollectionsRespo
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	}
 
 	return response, nil
@@ -42090,12 +44141,26 @@ func ParseDeleteFolderResponse(rsp *http.Response) (*DeleteFolderResponse, error
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42144,6 +44209,13 @@ func ParseUpdateFolderResponse(rsp *http.Response) (*UpdateFolderResponse, error
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42180,12 +44252,26 @@ func ParseDeleteRequestResponse(rsp *http.Response) (*DeleteRequestResponse, err
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42220,12 +44306,26 @@ func ParseGetCollectionRequestResponse(rsp *http.Response) (*GetCollectionReques
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42274,6 +44374,13 @@ func ParseUpdateRequestResponse(rsp *http.Response) (*UpdateRequestResponse, err
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42321,6 +44428,13 @@ func ParseExecuteCollectionRequestResponse(rsp *http.Response) (*ExecuteCollecti
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42354,12 +44468,26 @@ func ParseListCollectionRequestOpenAPISyncHistoryResponse(rsp *http.Response) (*
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42408,6 +44536,13 @@ func ParseSearchCollectionRequestOpenAPISyncHistoryResponse(rsp *http.Response) 
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42437,12 +44572,26 @@ func ParseDeleteCollectionResponse(rsp *http.Response) (*DeleteCollectionRespons
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
@@ -42470,12 +44619,26 @@ func ParseGetCollectionResponse(rsp *http.Response) (*GetCollectionResponse, err
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42524,6 +44687,13 @@ func ParseUpdateCollectionResponse(rsp *http.Response) (*UpdateCollectionRespons
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42557,12 +44727,26 @@ func ParseListCollectionFoldersResponse(rsp *http.Response) (*ListCollectionFold
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42611,6 +44795,13 @@ func ParseAddFolderResponse(rsp *http.Response) (*AddFolderResponse, error) {
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42658,6 +44849,13 @@ func ParseSearchCollectionFoldersResponse(rsp *http.Response) (*SearchCollection
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42691,12 +44889,26 @@ func ParseGetOpenAPISyncConfigResponse(rsp *http.Response) (*GetOpenAPISyncConfi
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42727,12 +44939,26 @@ func ParseDeleteOpenAPISyncConfigResponse(rsp *http.Response) (*DeleteOpenAPISyn
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42767,12 +44993,26 @@ func ParseListOpenAPISyncHistoryResponse(rsp *http.Response) (*ListOpenAPISyncHi
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42821,6 +45061,13 @@ func ParseCreateOrUpdateOpenAPISyncConfigResponse(rsp *http.Response) (*CreateOr
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42867,6 +45114,13 @@ func ParseSearchOpenAPISyncHistoryResponse(rsp *http.Response) (*SearchOpenAPISy
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -42915,6 +45169,13 @@ func ParseSearchOpenAPISyncOperationsResponse(rsp *http.Response) (*SearchOpenAP
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -42948,12 +45209,26 @@ func ParseRunOpenAPISyncNowResponse(rsp *http.Response) (*RunOpenAPISyncNowRespo
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -43002,12 +45277,26 @@ func ParseListCollectionRequestsResponse(rsp *http.Response) (*ListCollectionReq
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -43056,6 +45345,13 @@ func ParseAddRequestResponse(rsp *http.Response) (*AddRequestResponse, error) {
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -43102,6 +45398,13 @@ func ParseSearchCollectionRequestsResponse(rsp *http.Response) (*SearchCollectio
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -43291,6 +45594,13 @@ func ParseListFlowsResponse(rsp *http.Response) (*ListFlowsResponse, error) {
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	}
 
 	return response, nil
@@ -43330,6 +45640,13 @@ func ParseCreateFlowResponse(rsp *http.Response) (*CreateFlowResponse, error) {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
 		var dest Conflict
@@ -43831,6 +46148,13 @@ func ParseListFlowTagsResponse(rsp *http.Response) (*ListFlowTagsResponse, error
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -43871,12 +46195,26 @@ func ParseGetExecutionResponse(rsp *http.Response) (*GetExecutionResponse, error
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -43911,12 +46249,26 @@ func ParseGetExecutionNodeResultsResponse(rsp *http.Response) (*GetExecutionNode
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -43951,12 +46303,26 @@ func ParseGetNodeExecutionResultResponse(rsp *http.Response) (*GetNodeExecutionR
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -43984,12 +46350,26 @@ func ParseStreamExecutionResponse(rsp *http.Response) (*StreamExecutionResponse,
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44024,12 +46404,26 @@ func ParseGetNodeExecutionHistoryResponse(rsp *http.Response) (*GetNodeExecution
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44078,6 +46472,13 @@ func ParseSearchNodeExecutionHistoryResponse(rsp *http.Response) (*SearchNodeExe
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -44107,12 +46508,26 @@ func ParseDeleteFlowResponse(rsp *http.Response) (*DeleteFlowResponse, error) {
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
@@ -44140,12 +46555,26 @@ func ParseGetFlowResponse(rsp *http.Response) (*GetFlowResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44193,6 +46622,13 @@ func ParseUpdateFlowResponse(rsp *http.Response) (*UpdateFlowResponse, error) {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44248,6 +46684,13 @@ func ParseListFlowExecutionsResponse(rsp *http.Response) (*ListFlowExecutionsRes
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -44281,12 +46724,26 @@ func ParseExportFlowResponse(rsp *http.Response) (*ExportFlowResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44417,6 +46874,13 @@ func ParsePublishFlowResponse(rsp *http.Response) (*PublishFlowResponse, error) 
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -44446,12 +46910,26 @@ func ParseDeleteFlowVariablesResponse(rsp *http.Response) (*DeleteFlowVariablesR
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44486,12 +46964,26 @@ func ParseGetFlowVariablesResponse(rsp *http.Response) (*GetFlowVariablesRespons
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44522,12 +47014,26 @@ func ParseDeleteFlowVariableResponse(rsp *http.Response) (*DeleteFlowVariableRes
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44576,6 +47082,13 @@ func ParseSetFlowVariableResponse(rsp *http.Response) (*SetFlowVariableResponse,
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -44609,12 +47122,26 @@ func ParseListFlowVersionsResponse(rsp *http.Response) (*ListFlowVersionsRespons
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44663,6 +47190,13 @@ func ParseSearchFlowVersionsResponse(rsp *http.Response) (*SearchFlowVersionsRes
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -44696,12 +47230,26 @@ func ParseGetFlowVersionResponse(rsp *http.Response) (*GetFlowVersionResponse, e
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -44749,6 +47297,13 @@ func ParseRestoreFlowVersionResponse(rsp *http.Response) (*RestoreFlowVersionRes
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -45182,6 +47737,13 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -45710,6 +48272,13 @@ func ParseDeleteFlowScheduleResponse(rsp *http.Response) (*DeleteFlowScheduleRes
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -45749,6 +48318,13 @@ func ParseGetFlowScheduleResponse(rsp *http.Response) (*GetFlowScheduleResponse,
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -45858,6 +48434,13 @@ func ParsePauseFlowScheduleResponse(rsp *http.Response) (*PauseFlowScheduleRespo
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -45911,6 +48494,13 @@ func ParseResumeFlowScheduleResponse(rsp *http.Response) (*ResumeFlowScheduleRes
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -46027,6 +48617,13 @@ func ParseListFlowScheduleRunsResponse(rsp *http.Response) (*ListFlowScheduleRun
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -46074,6 +48671,13 @@ func ParseSearchFlowScheduleRunsResponse(rsp *http.Response) (*SearchFlowSchedul
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -46120,6 +48724,13 @@ func ParseGetFlowScheduleRunResponse(rsp *http.Response) (*GetFlowScheduleRunRes
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -46214,6 +48825,13 @@ func ParseSearchOpenAPISyncConfigsResponse(rsp *http.Response) (*SearchOpenAPISy
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -47596,6 +50214,13 @@ func ParseGetSpecResponse(rsp *http.Response) (*GetSpecResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -47710,6 +50335,13 @@ func ParsePullSpecResponse(rsp *http.Response) (*PullSpecResponse, error) {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -47926,6 +50558,13 @@ func ParseGetSpecVersionResponse(rsp *http.Response) (*GetSpecVersionResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -48524,6 +51163,13 @@ func ParseCreateWebhookResponse(rsp *http.Response) (*CreateWebhookResponse, err
 		}
 		response.JSON401 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
 		var dest Conflict
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -48600,6 +51246,13 @@ func ParseDeleteWebhookResponse(rsp *http.Response) (*DeleteWebhookResponse, err
 	case rsp.StatusCode == 204:
 		break // No content-type
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -48646,6 +51299,20 @@ func ParseGetWebhookResponse(rsp *http.Response) (*GetWebhookResponse, error) {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
@@ -48795,6 +51462,13 @@ func ParseSearchWebhookRequestsResponse(rsp *http.Response) (*SearchWebhookReque
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -48821,6 +51495,20 @@ func ParseStreamWebhookRequestsResponse(rsp *http.Response) (*StreamWebhookReque
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest NotFound
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

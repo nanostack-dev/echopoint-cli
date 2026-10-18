@@ -26,18 +26,31 @@ type Client struct {
 
 // New creates a new API client with Bearer token auth (for interactive/UI flows).
 // organizationID may be empty; when set it is sent as the X-Organization-Id header.
-func New(baseURL string, token string, organizationID string, timeout time.Duration) (*Client, error) {
-	return newClient(baseURL, token, organizationID, "", timeout)
+func New(
+	baseURL string,
+	token string,
+	organizationID string,
+	timeout time.Duration,
+	editors ...api.RequestEditorFn,
+) (*Client, error) {
+	return newClient(baseURL, token, organizationID, "", timeout, editors...)
 }
 
 // NewWithAPIKey creates a new API client that uses API key auth instead of Bearer token.
 // When apiKey is non-empty it takes precedence: X-Api-Key + X-Organization-Id headers are
 // sent and the Authorization header is omitted entirely.
-func NewWithAPIKey(baseURL string, apiKey string, organizationID string, timeout time.Duration) (*Client, error) {
+func NewWithAPIKey(
+	baseURL string,
+	apiKey string,
+	organizationID string,
+	timeout time.Duration,
+	editors ...api.RequestEditorFn,
+) (*Client, error) {
 	httpClient := &http.Client{Timeout: timeout}
 	debug := os.Getenv("ECHOPOINT_DEBUG") != ""
 
-	editor := apiKeyRequestEditor(apiKey, organizationID, debug)
+	editor := combineRequestEditors(
+		append([]api.RequestEditorFn{apiKeyRequestEditor(apiKey, organizationID, debug)}, editors...)...)
 	options := []api.ClientOption{
 		api.WithHTTPClient(httpClient),
 		api.WithRequestEditorFn(editor),
@@ -64,6 +77,7 @@ func newClient(
 	organizationID string,
 	apiKey string,
 	timeout time.Duration,
+	editors ...api.RequestEditorFn,
 ) (*Client, error) {
 	httpClient := &http.Client{Timeout: timeout}
 	debug := os.Getenv("ECHOPOINT_DEBUG") != ""
@@ -78,8 +92,9 @@ func newClient(
 			organizationID = strings.TrimSpace(os.Getenv("ECHOPOINT_ORGANIZATION_ID"))
 		}
 		editor = bearerTokenRequestEditor(token, organizationID, debug)
-		options = append(options, api.WithRequestEditorFn(editor))
 	}
+	editor = combineRequestEditors(append([]api.RequestEditorFn{editor}, editors...)...)
+	options = append(options, api.WithRequestEditorFn(editor))
 
 	apiClient, err := api.NewClientWithResponses(baseURL, options...)
 	if err != nil {
@@ -210,4 +225,27 @@ func (c *Client) Do(
 		return resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
 	}
 	return resp.StatusCode, respBody, nil
+}
+
+// WithWorkspaceHeader carries an explicitly selected workspace through generated and raw requests.
+func WithWorkspaceHeader(workspaceID string) api.RequestEditorFn {
+	return func(_ context.Context, request *http.Request) error {
+		if workspaceID != "" {
+			request.Header.Set("X-Workspace-Id", workspaceID)
+		}
+		return nil
+	}
+}
+
+func combineRequestEditors(editors ...api.RequestEditorFn) api.RequestEditorFn {
+	return func(ctx context.Context, request *http.Request) error {
+		for _, editor := range editors {
+			if editor != nil {
+				if err := editor(ctx, request); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
 }
