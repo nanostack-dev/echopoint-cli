@@ -5,7 +5,7 @@ info:
     API for webhook testing and monitoring service.
     Provides endpoints for creating webhook endpoints, capturing requests,
     and analyzing webhook traffic with real-time streaming and analytics.
-  version: 13.0.0
+  version: 14.0.0
 paths:
   /webhooks:
     parameters:
@@ -5374,42 +5374,6 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
-  /assistant/chat:
-    parameters:
-      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
-    post:
-      tags:
-        - Assistant
-      summary: Chat With Assistant
-      description: |
-        Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-      operationId: chatWithAssistant
-      parameters:
-        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
-      requestBody:
-        description: The chat message and its conversation scope.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssistantChatRequest'
-        required: true
-      responses:
-        "403":
-          $ref: '#/components/responses/Forbidden'
-        "200":
-          description: Server-Sent Events stream of assistant reply events.
-          content:
-            text/event-stream:
-              schema:
-                description: Stream of JSON event payloads prefixed with `data:`.
-                type: string
-        "400":
-          $ref: '#/components/responses/BadRequest'
-        "401":
-          $ref: '#/components/responses/Unauthorized'
-      security:
-        - BearerAuth: []
-      x-ai-danger: SSE stream - long-lived, incompatible with request/response tools.
   /specs:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -6194,63 +6158,6 @@ components:
           type: integer
           format: int64
           minimum: 0
-    AssistantChatScope:
-      description: |
-        Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.
-      type: string
-      enum:
-        - general
-        - page
-    AssistantPageContext:
-      description: The page the user has open when asking from the page scope.
-      type: object
-      required:
-        - title
-        - pathname
-      properties:
-        title:
-          description: Human title of the open page (e.g. "Webhooks").
-          type: string
-          maxLength: 200
-        pathname:
-          description: Route pathname of the open page.
-          type: string
-          maxLength: 500
-        details:
-          description: |
-            Live per-view details contributed by the page, e.g. the entity a detail page displays ("Endpoint: Stripe events").
-          type: array
-          items:
-            type: string
-            maxLength: 300
-          maxItems: 20
-    AssistantChatRequest:
-      type: object
-      required:
-        - message
-        - scope
-      properties:
-        message:
-          description: The user's chat message.
-          type: string
-          minLength: 1
-          maxLength: 4000
-        scope:
-          $ref: '#/components/schemas/AssistantChatScope'
-        page_context:
-          $ref: '#/components/schemas/AssistantPageContext'
-    AssistantAction:
-      description: A navigation action the assistant offers under a reply.
-      type: object
-      required:
-        - label
-        - path
-      properties:
-        label:
-          type: string
-        path:
-          description: Frontend route path the action navigates to.
-          type: string
     ApiError:
       type: object
       required:
@@ -14070,8 +13977,6 @@ tags:
     description: Special flow control nodes like delay
   - name: Runner
     description: Self-hosted runner control-plane operations
-  - name: Assistant
-    description: Workspace AI assistant chat operations.
   - name: Members
     description: Organization members.
   - name: Invitations

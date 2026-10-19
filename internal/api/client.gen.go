@@ -118,24 +118,6 @@ func (e AssertFlowNodeType) Valid() bool {
 	}
 }
 
-// Defines values for AssistantChatScope.
-const (
-	General AssistantChatScope = "general"
-	Page    AssistantChatScope = "page"
-)
-
-// Valid indicates whether the value is a known member of the AssistantChatScope enum.
-func (e AssistantChatScope) Valid() bool {
-	switch e {
-	case General:
-		return true
-	case Page:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for BodyExtractorConfigFormat.
 const (
 	BodyExtractorConfigFormatJson BodyExtractorConfigFormat = "json"
@@ -2240,33 +2222,6 @@ type AssertNodeData struct {
 	//
 	// Examples: {{{create-user.payload}}}
 	Target interface{} `json:"target,omitempty"`
-}
-
-// AssistantChatRequest defines model for AssistantChatRequest.
-type AssistantChatRequest struct {
-	// Message The user's chat message.
-	Message string `json:"message"`
-
-	// PageContext The page the user has open when asking from the page scope.
-	PageContext *AssistantPageContext `json:"page_context,omitempty"`
-
-	// Scope Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.
-	Scope AssistantChatScope `json:"scope"`
-}
-
-// AssistantChatScope Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.
-type AssistantChatScope string
-
-// AssistantPageContext The page the user has open when asking from the page scope.
-type AssistantPageContext struct {
-	// Details Live per-view details contributed by the page, e.g. the entity a detail page displays ("Endpoint: Stripe events").
-	Details *[]string `json:"details,omitempty"`
-
-	// Pathname Route pathname of the open page.
-	Pathname string `json:"pathname"`
-
-	// Title Human title of the open page (e.g. "Webhooks").
-	Title string `json:"title"`
 }
 
 // BaseFlowNode defines model for BaseFlowNode.
@@ -7393,15 +7348,6 @@ type GetAPIKeyParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// ChatWithAssistantParams defines parameters for ChatWithAssistant.
-type ChatWithAssistantParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
 // ListCollectionsParams defines parameters for ListCollections.
 type ListCollectionsParams struct {
 	// Limit Maximum number of items per page.
@@ -8633,9 +8579,6 @@ type CreateAPIKeyJSONRequestBody = ApiKeyCreateRequest
 
 // SearchAPIKeysJSONRequestBody defines body for SearchAPIKeys for application/json ContentType.
 type SearchAPIKeysJSONRequestBody = ApiKeySearchRequest
-
-// ChatWithAssistantJSONRequestBody defines body for ChatWithAssistant for application/json ContentType.
-type ChatWithAssistantJSONRequestBody = AssistantChatRequest
 
 // CreateCollectionJSONRequestBody defines body for CreateCollection for application/json ContentType.
 type CreateCollectionJSONRequestBody = CreateCollectionRequest
@@ -10092,24 +10035,6 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api-keys/{id} (the `GetAPIKey` operationId).
 	GetAPIKey(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ChatWithAssistantWithBody Chat With Assistant
-	//
-	// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-	//
-	// Takes any type of body and a specified content type.
-	//
-	// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-	ChatWithAssistantWithBody(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ChatWithAssistant Chat With Assistant
-	//
-	// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-	//
-	// Takes a body of the `application/json` content type.
-	//
-	// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-	ChatWithAssistant(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListCollections List Collections
 	//
@@ -12487,44 +12412,6 @@ func (c *Client) DeleteAPIKey(ctx context.Context, id ApiKeyIdParameter, params 
 // Corresponds with GET /api-keys/{id} (the `GetAPIKey` operationId).
 func (c *Client) GetAPIKey(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAPIKeyRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ChatWithAssistantWithBody Chat With Assistant
-//
-// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-//
-// Takes any type of body and a specified content type.
-//
-// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-func (c *Client) ChatWithAssistantWithBody(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewChatWithAssistantRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// ChatWithAssistant Chat With Assistant
-//
-// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-//
-// Takes a body of the `application/json` content type.
-//
-// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-func (c *Client) ChatWithAssistant(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewChatWithAssistantRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -17363,68 +17250,6 @@ func NewGetAPIKeyRequest(server string, id ApiKeyIdParameter, params *GetAPIKeyP
 		}
 
 		req.Header.Set("X-Organization-ID", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewChatWithAssistantRequest calls the generic ChatWithAssistant builder with application/json body
-func NewChatWithAssistantRequest(server string, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewChatWithAssistantRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewChatWithAssistantRequestWithBody constructs an http.Request for the ChatWithAssistant method, with any body, and a specified content type
-func NewChatWithAssistantRequestWithBody(server string, params *ChatWithAssistantParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/assistant/chat")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
-
-		var headerParam1 string
-
-		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam1)
 
 	}
 
@@ -26580,24 +26405,6 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /api-keys/{id} (the `GetAPIKey` operationId).
 	GetAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*GetAPIKeyResponse, error)
 
-	// ChatWithAssistantWithBodyWithResponse Chat With Assistant
-	//
-	// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-	//
-	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-	ChatWithAssistantWithBodyWithResponse(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error)
-
-	// ChatWithAssistantWithResponse Chat With Assistant
-	//
-	// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-	//
-	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-	ChatWithAssistantWithResponse(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error)
-
 	// ListCollectionsWithResponse List Collections
 	//
 	// Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.
@@ -29697,61 +29504,6 @@ func (r GetAPIKeyResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAPIKeyResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ChatWithAssistantResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r ChatWithAssistantResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ChatWithAssistantResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ChatWithAssistantResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetBody returns the raw response body bytes
-func (r ChatWithAssistantResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ChatWithAssistantResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ChatWithAssistantResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ChatWithAssistantResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -39717,36 +39469,6 @@ func (c *ClientWithResponses) GetAPIKeyWithResponse(ctx context.Context, id ApiK
 	return ParseGetAPIKeyResponse(rsp)
 }
 
-// ChatWithAssistantWithBodyWithResponse Chat With Assistant
-//
-// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-//
-// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-func (c *ClientWithResponses) ChatWithAssistantWithBodyWithResponse(ctx context.Context, params *ChatWithAssistantParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error) {
-	rsp, err := c.ChatWithAssistantWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseChatWithAssistantResponse(rsp)
-}
-
-// ChatWithAssistantWithResponse Chat With Assistant
-//
-// Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-//
-// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /assistant/chat (the `ChatWithAssistant` operationId).
-func (c *ClientWithResponses) ChatWithAssistantWithResponse(ctx context.Context, params *ChatWithAssistantParams, body ChatWithAssistantJSONRequestBody, reqEditors ...RequestEditorFn) (*ChatWithAssistantResponse, error) {
-	rsp, err := c.ChatWithAssistant(ctx, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseChatWithAssistantResponse(rsp)
-}
-
 // ListCollectionsWithResponse List Collections
 //
 // Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.
@@ -43883,46 +43605,6 @@ func ParseGetAPIKeyResponse(rsp *http.Response) (*GetAPIKeyResponse, error) {
 			return nil, err
 		}
 		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseChatWithAssistantResponse parses an HTTP response from a ChatWithAssistantWithResponse call
-func ParseChatWithAssistantResponse(rsp *http.Response) (*ChatWithAssistantResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ChatWithAssistantResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
 
 	}
 
