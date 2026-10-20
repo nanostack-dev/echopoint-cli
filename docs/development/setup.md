@@ -1,6 +1,6 @@
 # Local setup
 
-Use the Go version in [go.mod](../../go.mod), currently 1.26.5. Ordinary builds use pinned remote modules and the local embedded API contract; a sibling workspace checkout is optional. Python 3 is needed only for [contract refresh](../technical/integration-contracts.md), and Bats is needed for Action shell tests.
+Use the Go version in [go.mod](../../go.mod), currently 1.26.10. Ordinary builds use pinned remote modules and the local embedded API contract; a sibling workspace checkout is optional. Python 3 is needed only for [contract refresh](../technical/integration-contracts.md), and Bats is needed for Action shell tests.
 
 ```sh
 go mod download
