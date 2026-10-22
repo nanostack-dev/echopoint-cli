@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"echopoint-cli/internal/api"
 )
 
 func TestWorkspaceSelectionReachesGeneratedAndRawRequests(t *testing.T) {
@@ -79,4 +81,30 @@ func TestMissingWorkspaceDoesNotInventSelection(t *testing.T) {
 	if got := request.Header.Values("X-Workspace-Id"); len(got) != 0 {
 		t.Fatalf("unexpected selection: %v", got)
 	}
+}
+
+// Generated params structs carry X-Workspace-Id as a plain string, so a call that passes
+// params always sets the header, blank when no workspace is selected. The API answers a
+// blank header with 400, while an omitted one uses the organization's only workspace.
+func TestMissingWorkspaceOmitsBlankGeneratedHeader(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Values("X-Workspace-Id"); len(got) != 0 {
+			t.Errorf("workspace header sent: %q", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	c, err := New(server.URL, "test-token", "org_selected", time.Second, WithWorkspaceHeader(""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := c.API().ClaimEphemeralJob(
+		context.Background(), uuid.Nil, &api.ClaimEphemeralJobParams{XOrganizationID: "org_selected"},
+		api.EphemeralJobClaimRequest{RunnerId: "echopoint-cli"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.Copy(io.Discard, response.Body)
+	_ = response.Body.Close()
 }

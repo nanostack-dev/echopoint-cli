@@ -228,10 +228,14 @@ func (c *Client) Do(
 }
 
 // WithWorkspaceHeader carries an explicitly selected workspace through generated and raw requests.
+// Without a selection it drops the blank header generated params set, so the API can use the
+// organization's only workspace instead of refusing the blank value.
 func WithWorkspaceHeader(workspaceID string) api.RequestEditorFn {
 	return func(_ context.Context, request *http.Request) error {
 		if workspaceID != "" {
 			request.Header.Set("X-Workspace-Id", workspaceID)
+		} else if request.Header.Get("X-Workspace-Id") == "" {
+			request.Header.Del("X-Workspace-Id")
 		}
 		return nil
 	}
