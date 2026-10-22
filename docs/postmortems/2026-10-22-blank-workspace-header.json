@@ -91,10 +91,16 @@
     "link": "https://github.com/nanostack-dev/echopoint-cli/pull/77"
    },
    {
-    "t": "2026-10-22T05:45:00Z",
-    "approx": true,
+    "t": "2026-10-22T05:23:24Z",
     "kind": "resolve",
-    "label": "v3.3.1 released with the fix"
+    "label": "v3.3.1 released; Action v1 moves to it",
+    "link": "https://github.com/nanostack-dev/echopoint-cli/releases/tag/v3.3.1"
+   },
+   {
+    "t": "2026-10-22T05:40:00Z",
+    "approx": true,
+    "kind": "followup",
+    "label": "Both suites green on released v3.3.1, no workspace set"
    }
   ]
  },
