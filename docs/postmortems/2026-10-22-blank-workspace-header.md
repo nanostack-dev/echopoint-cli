@@ -7,7 +7,7 @@
 | **Status** | In review |
 | **Service** | echopoint-cli (CLI, MCP, GitHub Action) |
 | **Authors** | Nanostack routine (echopoint-investigation) |
-| **Duration** | ~3h 47m (trigger to resolution) |
+| **Duration** | 3h 26m (trigger to resolution) |
 | **Time to detect** | 3h 16m |
 | **Time to mitigate** | ~3h 22m |
 
@@ -50,7 +50,8 @@ echopoint-cli#77 makes `WithWorkspaceHeader("")` delete the blank header generat
 | 02:01:08 | T+3m 44s | **Next gate green with explicit workspace** ([link](https://github.com/nanostack-dev/infra/actions/runs/39708813975)) |
 | 05:13:36 | T+3h 16m | **Routine: new flow fails at ephemeral claim (v3.3.0)** `claim ephemeral Job: status 400 ... minLength: got 0`; same flow green on v3.2.1. |
 | ~05:19 | T+3h 22m | **echopoint-cli#77 opened, fix verified live on prod** ([link](https://github.com/nanostack-dev/echopoint-cli/pull/77)) |
-| ~05:45 | T+3h 47m | **v3.3.1 released with the fix** |
+| 05:23:24 | T+3h 26m | **v3.3.1 released; Action v1 moves to it** ([link](https://github.com/nanostack-dev/echopoint-cli/releases/tag/v3.3.1)) |
+| ~05:40 | T+3h 42m | **Both suites green on released v3.3.1, no workspace set** |
 
 ## Root cause analysis: the five whys
 
