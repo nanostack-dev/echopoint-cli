@@ -15,6 +15,9 @@ inputs:
   organization-id:
     description: Echopoint organization ID.
     required: true
+  workspace-id:
+    description: Explicit workspace ID for workspace-scoped flow operations.
+    required: false
   flow-id:
     description: Single flow ID to run. Mutually exclusive with flow-ids.
     required: false
@@ -318,6 +321,7 @@ runs:
       env:
         ECHOPOINT_API_KEY: ${{ inputs.api-key }}
         ECHOPOINT_ORGANIZATION_ID: ${{ inputs.organization-id }}
+        ECHOPOINT_WORKSPACE_ID: ${{ inputs.workspace-id }}
         ECHOPOINT_API_URL: ${{ inputs.api-url }}
       run: |
         set -uo pipefail

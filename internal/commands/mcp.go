@@ -57,7 +57,13 @@ func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, erro
 	cfg := state.Config
 
 	if state.APIKey != "" {
-		return client.NewWithAPIKey(cfg.API.BaseURL, state.APIKey, state.OrganizationID, cfg.API.Timeout)
+		return client.NewWithAPIKey(
+			cfg.API.BaseURL,
+			state.APIKey,
+			state.OrganizationID,
+			cfg.API.Timeout,
+			client.WithWorkspaceHeader(state.WorkspaceID),
+		)
 	}
 
 	creds := loadOrEmptyCredentials(state.Profile)
@@ -66,11 +72,23 @@ func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, erro
 
 	if creds.APIKey != "" && (creds.PreferAPIKey || !sessionValid) {
 		orgID := firstNonEmpty(state.OrganizationID, creds.OrganizationID)
-		return client.NewWithAPIKey(cfg.API.BaseURL, creds.APIKey, orgID, cfg.API.Timeout)
+		return client.NewWithAPIKey(
+			cfg.API.BaseURL,
+			creds.APIKey,
+			orgID,
+			cfg.API.Timeout,
+			client.WithWorkspaceHeader(state.WorkspaceID),
+		)
 	}
 	if sessionValid {
 		orgID := firstNonEmpty(state.OrganizationID, creds.OrganizationID)
-		return client.New(cfg.API.BaseURL, creds.AccessToken, orgID, cfg.API.Timeout)
+		return client.New(
+			cfg.API.BaseURL,
+			creds.AccessToken,
+			orgID,
+			cfg.API.Timeout,
+			client.WithWorkspaceHeader(state.WorkspaceID),
+		)
 	}
 
 	fmt.Fprintln(os.Stderr, "No valid echopoint credentials found; starting browser sign-in...")
@@ -79,7 +97,13 @@ func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, erro
 		return nil, fmt.Errorf("sign-in failed: %w", err)
 	}
 	orgID := firstNonEmpty(state.OrganizationID, signedIn.OrganizationID)
-	return client.New(cfg.API.BaseURL, signedIn.AccessToken, orgID, cfg.API.Timeout)
+	return client.New(
+		cfg.API.BaseURL,
+		signedIn.AccessToken,
+		orgID,
+		cfg.API.Timeout,
+		client.WithWorkspaceHeader(state.WorkspaceID),
+	)
 }
 
 // loginForMcp runs the browser sign-in, persists the resulting session

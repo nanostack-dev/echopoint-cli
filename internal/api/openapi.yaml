@@ -1,8 +1,11 @@
 openapi: 3.1.1
 info:
   title: Echopoint Webhook Testing Service API
-  description: "API for webhook testing and monitoring service. \nProvides endpoints for creating webhook endpoints, capturing requests,\nand analyzing webhook traffic with real-time streaming and analytics."
-  version: 11.0.1
+  description: |-
+    API for webhook testing and monitoring service.
+    Provides endpoints for creating webhook endpoints, capturing requests,
+    and analyzing webhook traffic with real-time streaming and analytics.
+  version: 14.0.0
 paths:
   /webhooks:
     parameters:
@@ -13,7 +16,8 @@ paths:
       summary: List Webhook Endpoints
       description: 'Deprecated: use `searchWebhooks`, which pages with a cursor. Lists webhook endpoints for the current organization.'
       operationId: listWebhooks
-      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
         "200":
           description: Webhook endpoints retrieved successfully.
@@ -27,6 +31,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+      deprecated: true
       security:
         - BearerAuth:
             - webhooks:read
@@ -40,6 +45,8 @@ paths:
       summary: Create Webhook Endpoint
       description: Creates a new webhook endpoint for receiving webhook requests.
       operationId: createWebhook
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Webhook endpoint details.
         content:
@@ -48,6 +55,8 @@ paths:
               $ref: '#/components/schemas/CreateWebhookRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "201":
           description: Webhook endpoint created successfully.
           content:
@@ -76,7 +85,13 @@ paths:
       summary: Get Webhook Endpoint
       description: Retrieves details of a specific webhook endpoint.
       operationId: getWebhook
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Webhook endpoint details retrieved successfully.
           content:
@@ -97,7 +112,11 @@ paths:
       summary: Delete Webhook Endpoint
       description: Deletes a webhook endpoint. This is a destructive operation.
       operationId: deleteWebhook
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "204":
           description: Webhook endpoint deleted successfully or already deleted.
         "401":
@@ -121,6 +140,8 @@ paths:
       summary: Search Resources
       description: 'Cross-domain resource discovery across persisted flow-relevant resources and API specs. A spec matches on its unique name and its title, and its domain needs `specs:read`. Each domain group pages on its own and carries its own next_cursor. Default order of a group: updated_at DESC, then resource id; with full_text_search: title ASC, then updated_at DESC, then resource id; sort_direction sets the direction of title and updated_at. To follow a group''s next_cursor, send it as pagination.cursor with domains set to that single domain; a cursor on a request with several domains answers 400 INVALID_CURSOR. Ordering by title uses the first 255 characters of the title, so a cursor stays small however long a title is.'
       operationId: searchResources
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for cross-domain resources.
         content:
@@ -300,6 +321,8 @@ paths:
       summary: Search Webhook Requests
       description: 'Server-side search with pagination, filtering and sorting for a webhook''s requests. Default order: received_at DESC, then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.'
       operationId: searchWebhookRequests
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for webhook requests.
         content:
@@ -308,6 +331,8 @@ paths:
               $ref: '#/components/schemas/WebhookRequestSearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Search results retrieved successfully.
           content:
@@ -333,6 +358,8 @@ paths:
       summary: Search Webhook Endpoints
       description: 'Server-side search with pagination, filtering and sorting for webhook endpoints. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. request_count orders by the number of captured requests at query time. Page with pagination.cursor.'
       operationId: searchWebhooks
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for webhook endpoints.
         content:
@@ -378,7 +405,13 @@ paths:
       summary: Stream Webhook Requests
       description: Stream webhook requests in real-time using Server-Sent Events.
       operationId: streamWebhookRequests
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Server-Sent Events stream of webhook requests.
           content:
@@ -404,6 +437,7 @@ paths:
       description: Returns request counts over time for the selected datetime range.
       operationId: getWebhookRequestVolumes
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: from
           in: query
           description: Start datetime for analytics data (ISO 8601 format).
@@ -454,6 +488,7 @@ paths:
       description: Returns distribution of HTTP methods for the selected datetime range.
       operationId: getWebhookMethodDistribution
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: from
           in: query
           description: Start datetime for analytics data (ISO 8601 format).
@@ -625,6 +660,7 @@ paths:
         ephemeral launches, and leaves accepted jobs and idempotent replays valid.
       operationId: launchFlow
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: id
           in: path
           description: The unique identifier of the collection.
@@ -701,6 +737,8 @@ paths:
         one-job token once. A repeated or concurrent claim returns 409; the caller must
         inspect execution state rather than run the flow a second time.
       operationId: claimEphemeralJob
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -755,6 +793,8 @@ paths:
         execution returns 409 Conflict. The response includes the terminal execution and node
         summaries so the CLI/action can report without an extra read.
       operationId: completeEphemeralExecution
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -1019,11 +1059,13 @@ paths:
       summary: List Flows
       description: 'Deprecated: use `searchFlows`, which pages with a cursor. Retrieves a paginated list of flows for the authenticated user.'
       operationId: listFlows
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flows retrieved successfully.
           content:
@@ -1034,6 +1076,7 @@ paths:
           $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -1047,6 +1090,8 @@ paths:
       summary: Create Flow
       description: Creates a new flow for the authenticated user.
       operationId: createFlow
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Flow creation details.
         content:
@@ -1055,6 +1100,8 @@ paths:
               $ref: '#/components/schemas/CreateFlowRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "201":
           description: Flow created successfully.
           content:
@@ -1082,6 +1129,8 @@ paths:
       summary: Search Flows
       description: 'Dedicated flow-domain search against canonical flows with pagination, sorting, full-text search, and exact tag filtering, paged with a cursor. Returns lightweight flow items; flow_definition is omitted unless requested via include_definition. Default order: created_at DESC, then id; sort_direction reverses it. Callable by bearer users and API keys scoped with flows:read.'
       operationId: searchFlows
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Flow search criteria.
         content:
@@ -1120,6 +1169,8 @@ paths:
       summary: Move Flows into a Folder
       description: Moves many flows into one folder in a single transaction. Select the flows either by an explicit flow_ids set or by a search filter (which moves the entire matching set, not just a page). Send folder_id null to move them to the Uncategorized bucket. Serializes on the per-organization flow-tree lock and returns 409 when another tree mutation is in flight.
       operationId: bulkMoveFlows
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Destination folder plus the flow selector (ids or filter).
         content:
@@ -1161,7 +1212,8 @@ paths:
       summary: List Flow Folders
       description: 'Deprecated: use `searchFlowFolders`, which pages with a cursor. Returns every flow folder for the organization so clients can build the tree.'
       operationId: listFlowFolders
-      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
         "200":
           description: Flow folders returned successfully.
@@ -1179,6 +1231,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         "409":
           $ref: '#/components/responses/Conflict'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -1192,6 +1245,8 @@ paths:
       summary: Create Flow Folder
       description: Creates a flow folder, optionally nested under a parent folder.
       operationId: createFlowFolder
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Folder creation details.
         content:
@@ -1231,6 +1286,8 @@ paths:
       summary: Search Flow Folders
       description: 'Searches the organization''s flow folders and pages with a cursor. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.'
       operationId: searchFlowFolders
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for flow folders.
         content:
@@ -1274,6 +1331,8 @@ paths:
       summary: Update Flow Folder
       description: Renames a flow folder or moves it under a different parent.
       operationId: updateFlowFolder
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Folder update details.
         content:
@@ -1311,6 +1370,7 @@ paths:
       description: Deletes a folder and its descendants. By default the flows inside the subtree survive and move to the Uncategorized bucket; with delete_flows=true they are permanently deleted instead.
       operationId: deleteFlowFolder
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: delete_flows
           in: query
           description: When true, permanently deletes every flow in the deleted subtree (including execution history). Irreversible. When false or omitted, flows move to the Uncategorized bucket.
@@ -1358,6 +1418,8 @@ paths:
       summary: Move Flow Folder
       description: Moves a folder under a different parent, or to the root when parent_id is null. This is the single endpoint for reparenting a folder and the only one that can move a folder back to the root. Answers 409 for a move that would form a cycle (a folder into itself or a descendant) or exceed the depth limit, and serializes on the per-organization flow-tree lock.
       operationId: moveFlowFolder
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: The new parent folder (null = root).
         content:
@@ -1399,7 +1461,11 @@ paths:
       summary: List Flow Tags
       description: 'Returns the current canonical flow tags for the authenticated organization. Tags are derived from persisted flow tag arrays and capped at 100 distinct tags per organization so clients can filter locally for autocomplete. Not paginated: aggregated tag suggestions capped at 100, not a persisted collection, so it has no search.'
       operationId: listFlowTags
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Flow tags retrieved successfully.
           content:
@@ -1432,7 +1498,13 @@ paths:
       summary: Get Flow
       description: Retrieves details of a specific flow by ID.
       operationId: getFlow
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow retrieved successfully.
           content:
@@ -1456,6 +1528,8 @@ paths:
       summary: Update Flow
       description: Updates an existing flow.
       operationId: updateFlow
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Flow update details.
         content:
@@ -1464,6 +1538,8 @@ paths:
               $ref: '#/components/schemas/UpdateFlowRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow updated successfully.
           content:
@@ -1490,7 +1566,13 @@ paths:
       summary: Delete Flow
       description: Deletes a flow. This is a destructive operation.
       operationId: deleteFlow
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "204":
           description: Flow deleted successfully or already deleted.
         "401":
@@ -1524,7 +1606,13 @@ paths:
       summary: Export Flow
       description: Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
       operationId: exportFlow
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow definition exported successfully.
           content:
@@ -1550,6 +1638,8 @@ paths:
       summary: Get current user and organization context
       description: 'Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.'
       operationId: getMe
+      parameters:
+        - $ref: '#/components/parameters/CurrentUserIncludeParameter'
       responses:
         "200":
           description: Current user context.
@@ -1557,6 +1647,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CurrentUserResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
         "409":
@@ -1584,7 +1676,6 @@ paths:
         so nobody sees an invitation by adding someone else's address to their
         account. A user with no verified address gets an empty list.
       operationId: listMyInvitations
-      deprecated: true
       responses:
         "200":
           description: The pending invitations of the caller.
@@ -1596,6 +1687,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "500":
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
       security:
         - BearerAuth: []
       x-ai-danger: Invitee flow - requires a human session of the invited person.
@@ -1745,7 +1837,6 @@ paths:
       summary: 'Deprecated: use search_environments instead, which pages with a cursor. List Environments'
       description: 'Deprecated: use `searchEnvironments`, which pages with a cursor. Lists the organization''s environments. Variables are not included; read them from the organization variable set.'
       operationId: listEnvironments
-      deprecated: true
       responses:
         "200":
           description: Environments retrieved successfully.
@@ -1755,6 +1846,7 @@ paths:
                 $ref: '#/components/schemas/EnvironmentListResponse'
         "401":
           $ref: '#/components/responses/Unauthorized'
+      deprecated: true
       security:
         - BearerAuth:
             - environment:read
@@ -1934,7 +2026,6 @@ paths:
       summary: 'Deprecated: use search_api_keys instead, which pages with a cursor. List API Keys'
       description: 'Deprecated: use `searchAPIKeys`, which pages with a cursor. Lists API keys for the current organization.'
       operationId: listAPIKeys
-      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -1953,6 +2044,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "500":
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
       security:
         - BearerAuth:
             - api_key:read
@@ -2136,11 +2228,13 @@ paths:
       summary: List Collections
       description: 'Deprecated: use `searchCollections`, which pages with a cursor. Retrieves a paginated list of collections for the authenticated user.'
       operationId: listCollections
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collections retrieved successfully.
           content:
@@ -2151,6 +2245,7 @@ paths:
           $ref: '#/components/responses/BadRequest'
         "401":
           $ref: '#/components/responses/Unauthorized'
+      deprecated: true
       security:
         - BearerAuth:
             - collections:read
@@ -2164,6 +2259,8 @@ paths:
       summary: Create Collection
       description: Creates a new collection for the authenticated user.
       operationId: createCollection
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Collection creation details.
         content:
@@ -2172,6 +2269,8 @@ paths:
               $ref: '#/components/schemas/CreateCollectionRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "201":
           description: Collection created successfully.
           content:
@@ -2197,6 +2296,8 @@ paths:
       summary: Search Collections
       description: 'Searches the organization''s collections and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the collection name, case-insensitively.'
       operationId: searchCollections
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for collections.
         content:
@@ -2205,6 +2306,8 @@ paths:
               $ref: '#/components/schemas/CollectionSearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collections retrieved successfully.
           content:
@@ -2238,7 +2341,13 @@ paths:
       summary: Get Collection
       description: Retrieves a collection with all folders and requests (flat arrays).
       operationId: getCollection
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collection retrieved successfully.
           content:
@@ -2262,6 +2371,8 @@ paths:
       summary: Update Collection
       description: Updates collection metadata.
       operationId: updateCollection
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Collection update details.
         content:
@@ -2270,6 +2381,8 @@ paths:
               $ref: '#/components/schemas/UpdateCollectionRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collection updated successfully.
           content:
@@ -2294,7 +2407,13 @@ paths:
       summary: Delete Collection
       description: Deletes a collection and all its contents.
       operationId: deleteCollection
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "204":
           description: Collection deleted successfully or already deleted.
         "401":
@@ -2321,7 +2440,13 @@ paths:
       summary: Get OpenAPI Sync Config
       description: Retrieves the OpenAPI sync config for a collection.
       operationId: getOpenAPISyncConfig
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: OpenAPI sync config retrieved successfully.
           content:
@@ -2354,6 +2479,8 @@ paths:
       summary: Run OpenAPI Sync Now
       description: Triggers an immediate OpenAPI sync run for a collection and returns the updated sync config when the run completes.
       operationId: runOpenAPISyncNow
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -2361,6 +2488,10 @@ paths:
               $ref: '#/components/schemas/RunOpenAPISyncNowRequest'
         required: false
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: OpenAPI sync completed and returned the updated sync config.
           content:
@@ -2397,11 +2528,15 @@ paths:
       summary: 'Deprecated: use search_open_api_sync_history instead, which pages with a cursor. List OpenAPI Sync History'
       description: 'Deprecated: use `searchOpenAPISyncHistory`, which pages with a cursor. Lists meaningful OpenAPI sync changes for a collection, ordered from newest to oldest.'
       operationId: listOpenAPISyncHistory
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: OpenAPI sync history returned successfully.
           content:
@@ -2412,6 +2547,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - collections:read
@@ -2424,6 +2560,8 @@ paths:
       summary: Create or Update OpenAPI Sync Config
       description: Creates or updates the OpenAPI sync config for a collection. Sync currently runs every 5 minutes.
       operationId: createOrUpdateOpenAPISyncConfig
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: OpenAPI sync config details.
         content:
@@ -2432,6 +2570,8 @@ paths:
               $ref: '#/components/schemas/UpsertOpenAPISyncConfigRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: OpenAPI sync config updated successfully.
           content:
@@ -2456,7 +2596,13 @@ paths:
       summary: Delete OpenAPI Sync Config
       description: Deletes the OpenAPI sync config for a collection.
       operationId: deleteOpenAPISyncConfig
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "204":
           description: OpenAPI sync config deleted successfully or already deleted.
         "401":
@@ -2485,6 +2631,8 @@ paths:
       summary: Search OpenAPI Sync History
       description: 'Searches the meaningful OpenAPI sync changes of a collection and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchOpenAPISyncHistory
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for OpenAPI sync history.
         content:
@@ -2493,6 +2641,8 @@ paths:
               $ref: '#/components/schemas/OpenAPISyncHistorySearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: OpenAPI sync history returned successfully.
           content:
@@ -2528,6 +2678,8 @@ paths:
       summary: Search OpenAPI Sync Operations
       description: 'Server-side search with pagination and sorting for persisted OpenAPI operations in a collection. Default order: route_name ASC (path, then method), then id. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.'
       operationId: searchOpenAPISyncOperations
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for OpenAPI sync operations.
         content:
@@ -2536,6 +2688,8 @@ paths:
               $ref: '#/components/schemas/OpenAPISyncOperationSearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: OpenAPI sync operations retrieved successfully.
           content:
@@ -2563,6 +2717,8 @@ paths:
       summary: Search OpenAPI Sync Configs
       description: 'Server-side search with pagination and sorting for top-level OpenAPI sync configs. Default order: updated_at DESC, then collection_id. name orders by the collection name. A sort_by without sort_direction sorts DESC. Page with pagination.cursor.'
       operationId: searchOpenAPISyncConfigs
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for top-level OpenAPI sync configs.
         content:
@@ -2571,6 +2727,8 @@ paths:
               $ref: '#/components/schemas/OpenAPISyncConfigSearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: OpenAPI sync configs retrieved successfully.
           content:
@@ -2605,8 +2763,13 @@ paths:
       summary: 'Deprecated: use search_collection_folders instead, which pages with a cursor. List Collection Folders'
       description: 'Deprecated: use `searchCollectionFolders`, which pages with a cursor. Returns all folders for a collection so clients can build the tree lazily.'
       operationId: listCollectionFolders
-      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collection folders returned successfully.
           content:
@@ -2617,6 +2780,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - collections:read
@@ -2629,6 +2793,8 @@ paths:
       summary: Add Folder
       description: Adds a folder to a collection.
       operationId: addFolder
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Folder creation details.
         content:
@@ -2637,6 +2803,8 @@ paths:
               $ref: '#/components/schemas/CreateFolderRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "201":
           description: Folder created successfully.
           content:
@@ -2671,6 +2839,8 @@ paths:
       summary: Search Collection Folders
       description: 'Searches the folders of a collection and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the folder name, case-insensitively.'
       operationId: searchCollectionFolders
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for collection folders.
         content:
@@ -2679,6 +2849,8 @@ paths:
               $ref: '#/components/schemas/CollectionFolderSearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collection folders returned successfully.
           content:
@@ -2721,6 +2893,8 @@ paths:
       summary: Update Folder
       description: Updates a folder.
       operationId: updateFolder
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Folder update details.
         content:
@@ -2729,6 +2903,8 @@ paths:
               $ref: '#/components/schemas/UpdateFolderRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Folder updated successfully.
           content:
@@ -2755,7 +2931,13 @@ paths:
       summary: Delete Folder
       description: Deletes a folder (requests moved to collection root).
       operationId: deleteFolder
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "204":
           description: Folder deleted successfully or already deleted.
         "401":
@@ -2784,8 +2966,8 @@ paths:
       summary: 'Deprecated: use search_collection_requests instead, which pages with a cursor. List Collection Requests'
       description: 'Deprecated: use `searchCollectionRequests`, which pages with a cursor. Returns paginated requests for a collection, optionally filtered by folder and search query.'
       operationId: listCollectionRequests
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: folder_id
           in: query
           description: Restrict results to a specific folder. Omit to list root-level requests only.
@@ -2809,6 +2991,10 @@ paths:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collection requests returned successfully.
           content:
@@ -2819,6 +3005,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - collections:read
@@ -2831,6 +3018,8 @@ paths:
       summary: Add Request
       description: Adds a request to a collection.
       operationId: addRequest
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Request creation details.
         content:
@@ -2839,6 +3028,8 @@ paths:
               $ref: '#/components/schemas/CreateRequestRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "201":
           description: Request created successfully.
           content:
@@ -2873,6 +3064,8 @@ paths:
       summary: Search Collection Requests
       description: 'Searches the requests of a collection, optionally within a folder, and pages with a cursor. Default order: created_at ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the request name or URL, case-insensitively.'
       operationId: searchCollectionRequests
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for collection requests.
         content:
@@ -2881,6 +3074,8 @@ paths:
               $ref: '#/components/schemas/CollectionRequestSearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Collection requests returned successfully.
           content:
@@ -2923,7 +3118,13 @@ paths:
       summary: Get Request
       description: Returns a single request from a collection.
       operationId: getCollectionRequest
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Request returned successfully.
           content:
@@ -2946,6 +3147,8 @@ paths:
       summary: Update Request
       description: Updates a request.
       operationId: updateRequest
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Request update details.
         content:
@@ -2954,6 +3157,8 @@ paths:
               $ref: '#/components/schemas/UpdateRequestRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Request updated successfully.
           content:
@@ -2978,7 +3183,13 @@ paths:
       summary: Delete Request
       description: Deletes a request.
       operationId: deleteRequest
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "204":
           description: Request deleted successfully or already deleted.
         "401":
@@ -3014,6 +3225,8 @@ paths:
       summary: Execute Request
       description: Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
       operationId: executeCollectionRequest
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Optional unsaved request draft overrides to execute.
         content:
@@ -3022,6 +3235,8 @@ paths:
               $ref: '#/components/schemas/ExecuteRequestRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Request executed successfully, including upstream 4xx and 5xx responses.
           content:
@@ -3065,8 +3280,13 @@ paths:
       summary: 'Deprecated: use search_collection_request_open_api_sync_history instead, which pages with a cursor. List Request OpenAPI Sync History'
       description: 'Deprecated: use `searchCollectionRequestOpenAPISyncHistory`, which pages with a cursor. Lists OpenAPI sync changes for the upstream binding currently associated with a request.'
       operationId: listCollectionRequestOpenAPISyncHistory
-      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Request OpenAPI sync history returned successfully.
           content:
@@ -3077,6 +3297,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - collections:read
@@ -3106,6 +3327,8 @@ paths:
       summary: Search Request OpenAPI Sync History
       description: 'Searches the OpenAPI sync changes for the upstream binding currently associated with a request and pages with a cursor. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchCollectionRequestOpenAPISyncHistory
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for request OpenAPI sync history.
         content:
@@ -3114,6 +3337,8 @@ paths:
               $ref: '#/components/schemas/OpenAPISyncHistorySearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Request OpenAPI sync history returned successfully.
           content:
@@ -3142,6 +3367,8 @@ paths:
       summary: Import from OpenAPI
       description: Imports a collection from an OpenAPI specification.
       operationId: importFromOpenAPI
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: OpenAPI spec to import.
         content:
@@ -3150,6 +3377,8 @@ paths:
               $ref: '#/components/schemas/ImportOpenAPIRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "201":
           description: Collection imported successfully.
           content:
@@ -3184,7 +3413,13 @@ paths:
       summary: Get Flow Variables
       description: Retrieves the variable set for a flow.
       operationId: getFlowVariables
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow variable set retrieved successfully.
           content:
@@ -3207,7 +3442,13 @@ paths:
       summary: Delete Flow Variables
       description: Deletes every variable for a flow.
       operationId: deleteFlowVariables
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "204":
           description: Flow variable set deleted successfully or already deleted.
         "401":
@@ -3237,6 +3478,8 @@ paths:
       summary: Set Flow Variable
       description: Creates or replaces one flow variable. This is the only way to write a secret. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable.
       operationId: setFlowVariable
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -3244,6 +3487,8 @@ paths:
               $ref: '#/components/schemas/SetVariableRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Variable stored successfully.
           content:
@@ -3268,7 +3513,13 @@ paths:
       summary: Delete Flow Variable
       description: Deletes one flow variable.
       operationId: deleteFlowVariable
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "204":
           description: Variable deleted successfully or already deleted.
         "401":
@@ -3297,7 +3548,11 @@ paths:
       summary: Publish Flow
       description: Snapshot the current flow definition as an immutable flow version.
       operationId: publishFlow
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "201":
           description: Flow published successfully.
           content:
@@ -3334,8 +3589,13 @@ paths:
       summary: 'Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions'
       description: 'Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.'
       operationId: listFlowVersions
-      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow versions retrieved successfully.
           content:
@@ -3346,6 +3606,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -3368,6 +3629,8 @@ paths:
       summary: Search Flow Versions
       description: 'Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchFlowVersions
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for flow versions.
         content:
@@ -3376,6 +3639,8 @@ paths:
               $ref: '#/components/schemas/FlowVersionSearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow versions retrieved successfully.
           content:
@@ -3418,7 +3683,13 @@ paths:
       summary: Get Flow Version
       description: Retrieves a specific saved version of a flow.
       operationId: getFlowVersion
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow version retrieved successfully.
           content:
@@ -3460,7 +3731,11 @@ paths:
         Copies a saved version's definition and metadata back into the flow.
         The original version is preserved.
       operationId: restoreFlowVersion
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Flow restored from version successfully.
           content:
@@ -3543,6 +3818,7 @@ paths:
         counts for the organization. Running and pending ignore the window.
       operationId: getExecutionsSummary
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: window
           in: query
           description: Lookback window for runs and failed. Defaults to 24h.
@@ -3622,6 +3898,7 @@ paths:
         Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
       operationId: getExecutionAnalyticsSummary
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
       responses:
         "200":
@@ -3656,6 +3933,7 @@ paths:
         Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
       operationId: listFlowAnalytics
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
       responses:
         "200":
@@ -3696,6 +3974,7 @@ paths:
         Not paginated: an aggregate computed per request over the window and capped, not a persisted collection, so it has no search.
       operationId: listEndpointAnalytics
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
         - name: flow_id
           in: query
@@ -3735,8 +4014,8 @@ paths:
         Retrieves org-wide execution activity, newest first. Rows are slim
         activity records and do not include flow snapshots.
       operationId: listExecutions
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
         - name: status
@@ -3778,6 +4057,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -3793,6 +4073,8 @@ paths:
       summary: Search Executions
       description: 'Searches execution activity and pages with a cursor, for the whole organization or for the flows named in the flow_ids filter, optionally by status, trigger_type and since (inclusive lower bound on started_at). Rows are slim activity records and do not include flow snapshots; read one execution with its snapshot through getExecution. Default order: started_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchExecutions
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for executions.
         content:
@@ -3836,11 +4118,13 @@ paths:
       summary: 'Deprecated: use search_executions instead, which pages with a cursor. List Flow Executions'
       description: 'Deprecated: use `searchExecutions` with the `flow_ids` filter, which pages with a cursor. Fetch one execution with its snapshot through `getExecution`. Retrieves execution history for a specific flow with pagination.'
       operationId: listFlowExecutions
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Executions retrieved successfully.
           content:
@@ -3853,6 +4137,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -3882,7 +4167,13 @@ paths:
       summary: Get Execution Details
       description: Retrieves detailed information about a specific flow execution.
       operationId: getExecution
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Execution details retrieved successfully.
           content:
@@ -3949,7 +4240,13 @@ paths:
       summary: Stream execution events
       description: Streams real-time execution events for a specific flow execution using Server-Sent Events.
       operationId: streamExecution
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Server-Sent Events stream of flow execution events.
           content:
@@ -3990,7 +4287,13 @@ paths:
       summary: Get All Node Results
       description: 'Retrieves execution results for all nodes in a flow execution. Not paginated: bounded by the nodes of one execution, so it has no search.'
       operationId: getExecutionNodeResults
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Node results retrieved successfully.
           content:
@@ -4038,7 +4341,13 @@ paths:
       summary: Get Specific Node Result
       description: Retrieves execution result for a specific node in a flow execution.
       operationId: getNodeExecutionResult
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Node result retrieved successfully.
           content:
@@ -4079,8 +4388,13 @@ paths:
       summary: 'Deprecated: use search_node_execution_history instead, which pages with a cursor. Get Node Execution History'
       description: 'Deprecated: use `searchNodeExecutionHistory`, which pages with a cursor. Retrieves execution history for a specific node across all flow executions with pagination.'
       operationId: getNodeExecutionHistory
-      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Node execution history retrieved successfully.
           content:
@@ -4091,6 +4405,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -4119,6 +4434,8 @@ paths:
       summary: Search Node Execution History
       description: 'Searches the execution history of one node across the executions of a flow and pages with a cursor. Default order: created_at DESC, then id DESC. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchNodeExecutionHistory
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for node execution history.
         content:
@@ -4127,6 +4444,8 @@ paths:
               $ref: '#/components/schemas/NodeExecutionHistorySearchRequest'
         required: true
       responses:
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "200":
           description: Node execution history retrieved successfully.
           content:
@@ -4160,7 +4479,6 @@ paths:
         newest member first. Returns each member's email, display name, and
         role. Supports a full-text `search` term for type-ahead.
       operationId: listOrganizationMembers
-      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4183,6 +4501,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -4240,7 +4559,6 @@ paths:
         accepted, not expired. An expired or accepted invitation is not listed.
         The invitation token is never part of a response.
       operationId: listOrganizationInvitations
-      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4257,6 +4575,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+      deprecated: true
       security:
         - BearerAuth:
             - invitations:read
@@ -4485,7 +4804,6 @@ paths:
       summary: 'Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors'
       description: 'Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization''s monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.'
       operationId: listFlowSchedules
-      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
@@ -4501,6 +4819,7 @@ paths:
           required: false
           schema:
             type: boolean
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
         "200":
           description: Monitors retrieved successfully.
@@ -4514,6 +4833,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -4526,6 +4846,8 @@ paths:
       summary: Create Monitor
       description: 'Creates a monitor that runs the selected flows (explicit flow_ids or a tag selector) on a cadence: a cron expression, or an interval in seconds when the monitor has a health policy. Saving is never refused for the Cloud execution budget; use POST /monitors/estimate to see the plan. Callable by bearer users and API keys scoped with flows:update.'
       operationId: createFlowSchedule
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -4564,6 +4886,8 @@ paths:
       summary: Search Monitors
       description: 'Searches the organization''s monitors, optionally only enabled ones or only monitors with a health policy, and pages with a cursor. A monitor with a health policy includes its current health. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. next_run_at sorts monitors without a next run last when ascending. full_text_search matches the monitor name or description, case-insensitively. Callable by bearer users and API keys scoped with flows:read.'
       operationId: searchFlowSchedules
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for monitors.
         content:
@@ -4600,6 +4924,8 @@ paths:
       summary: Estimate Monitor
       description: Resolves a monitor selection without executing it and forecasts its executions and HTTP requests. For a Cloud selection the response also carries the organization's daily Cloud execution limit and the executions per day already planned by its other enabled Cloud monitors; `estimate_notes` says when the total passes the limit. Cloud runs past the limit are refused at launch, not at save. Callable by bearer users and API keys scoped with flows:read.
       operationId: estimateMonitor
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -4662,6 +4988,8 @@ paths:
       summary: Preview Tag-Suite Flows
       description: Resolves which organization flows currently match a tag selector, reporting truncation against an optional fan-out cap. Callable by bearer users and API keys scoped with flows:read.
       operationId: previewScheduleTags
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -4705,7 +5033,11 @@ paths:
       summary: Get Monitor
       description: 'Returns one monitor of the organization: its selection, cadence, runner, environment, health policy and current health, and whether it is enabled.'
       operationId: getFlowSchedule
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Monitor retrieved successfully.
           content:
@@ -4730,6 +5062,8 @@ paths:
       summary: Update Monitor
       description: Replaces the mutable configuration of a monitor. The selection is resolved at each due occurrence, so the change applies from the next one. Any change bumps the monitor revision; a status page bound to it shows Unknown until it is published again.
       operationId: updateFlowSchedule
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -4765,7 +5099,11 @@ paths:
       summary: Delete Monitor
       description: Deletes a monitor and prevents future launches; prior execution history is preserved.
       operationId: deleteFlowSchedule
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "204":
           description: Monitor deleted successfully or already deleted.
         "401":
@@ -4794,7 +5132,11 @@ paths:
       summary: Pause Monitor
       description: Disables a monitor so the scheduler stops launching future occurrences.
       operationId: pauseFlowSchedule
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Monitor paused successfully.
           content:
@@ -4831,7 +5173,11 @@ paths:
       summary: Resume Monitor
       description: Enables a paused monitor and recomputes next_run_at so the next occurrence is in the future.
       operationId: resumeFlowSchedule
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Monitor resumed successfully.
           content:
@@ -4868,6 +5214,8 @@ paths:
       summary: Run Monitor
       description: Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
       operationId: runMonitor
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
         "202":
           description: Diagnostic occurrence started.
@@ -4907,11 +5255,13 @@ paths:
       summary: 'Deprecated: use search_flow_schedule_runs instead, which pages with a cursor. List Monitor Runs'
       description: 'Deprecated: use `searchFlowScheduleRuns`, which pages with a cursor. Lists a monitor''s occurrences (scheduled and diagnostic), most recent first.'
       operationId: listFlowScheduleRuns
-      deprecated: true
       parameters:
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Monitor runs retrieved successfully.
           content:
@@ -4924,6 +5274,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - flows:read
@@ -4946,6 +5297,8 @@ paths:
       summary: Search Monitor Runs
       description: 'Searches a monitor''s occurrences (scheduled and diagnostic) and pages with a cursor. Default order: due_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchFlowScheduleRuns
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for monitor runs.
         content:
@@ -4954,6 +5307,8 @@ paths:
               $ref: '#/components/schemas/MonitorRunSearchRequest'
         required: true
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Monitor runs retrieved successfully.
           content:
@@ -4996,7 +5351,11 @@ paths:
       summary: Get Monitor Run
       description: Returns a monitor run together with the executions it launched.
       operationId: getFlowScheduleRun
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Monitor run retrieved successfully.
           content:
@@ -5015,38 +5374,6 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
-  /assistant/chat:
-    parameters:
-      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
-    post:
-      tags:
-        - Assistant
-      summary: Chat With Assistant
-      description: |
-        Streams the assistant's reply to a chat message as Server-Sent Events. Events are JSON payloads prefixed with `data:` carrying a `type` field: `message.delta` ({text} with the full text so far), `message.completed` ({actions, follow_ups}), and `error` ({error}). The current implementation streams mocked replies; the AI transport replaces the reply source later without changing this contract.
-      operationId: chatWithAssistant
-      requestBody:
-        description: The chat message and its conversation scope.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssistantChatRequest'
-        required: true
-      responses:
-        "200":
-          description: Server-Sent Events stream of assistant reply events.
-          content:
-            text/event-stream:
-              schema:
-                description: Stream of JSON event payloads prefixed with `data:`.
-                type: string
-        "400":
-          $ref: '#/components/responses/BadRequest'
-        "401":
-          $ref: '#/components/responses/Unauthorized'
-      security:
-        - BearerAuth: []
-      x-ai-danger: SSE stream - long-lived, incompatible with request/response tools.
   /specs:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5056,8 +5383,8 @@ paths:
       summary: 'Deprecated: use search_specs instead, which pages with a cursor. List Specs'
       description: 'Deprecated: use `searchSpecs`, which pages with a cursor. Lists the organization''s specs with their Live version, by slug.'
       operationId: listSpecs
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
@@ -5073,6 +5400,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "403":
           $ref: '#/components/responses/Forbidden'
+      deprecated: true
       security:
         - BearerAuth:
             - specs:read
@@ -5095,6 +5423,8 @@ paths:
         `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
         `SPEC_DOCUMENT_INVALID` (400, the metadata lists each problem).
       operationId: createSpec
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -5131,6 +5461,8 @@ paths:
       summary: Search Specs
       description: 'Searches the organization''s specs with their Live version and pages with a cursor. Default order: slug ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the slug or the title, case-insensitively.'
       operationId: searchSpecs
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for specs.
         content:
@@ -5168,7 +5500,11 @@ paths:
       summary: Get Spec
       description: Retrieves a spec and its Live version.
       operationId: getSpec
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Spec retrieved.
           content:
@@ -5197,8 +5533,8 @@ paths:
       summary: 'Deprecated: use search_spec_versions instead, which pages with a cursor. List Spec Versions'
       description: 'Deprecated: use `searchSpecVersions`, which pages with a cursor. Lists a spec''s Live versions, newest first. The first item is the current Live version.'
       operationId: listSpecVersions
-      deprecated: true
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/LimitParameter'
         - $ref: '#/components/parameters/OffsetParameter'
       responses:
@@ -5216,6 +5552,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+      deprecated: true
       security:
         - BearerAuth:
             - specs:read
@@ -5240,6 +5577,8 @@ paths:
         `SPEC_UNSUPPORTED_VERSION`, `SPEC_EXTERNAL_REF`, and
         `SPEC_DOCUMENT_INVALID` (400).
       operationId: pushSpecVersion
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -5279,6 +5618,8 @@ paths:
       summary: Search Spec Versions
       description: 'Searches a spec''s Live versions and pages with a cursor. Default order: number DESC (newest first, so the first item of the first page is the current Live version), then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchSpecVersions
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         description: Search criteria for spec versions.
         content:
@@ -5326,7 +5667,11 @@ paths:
       summary: Get Spec Version
       description: Retrieves one Live version with what changed from the version before it.
       operationId: getSpecVersion
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Live version retrieved.
           content:
@@ -5372,6 +5717,8 @@ paths:
         `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
         document), and `SPEC_COMPARISON_FAILED` (400).
       operationId: applySpecCommands
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
         content:
           application/json:
@@ -5421,6 +5768,7 @@ paths:
         version. `echopoint spec pull <slug>` writes `document` as is.
       operationId: pullSpec
       parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: version
           in: query
           description: A Live version's semantic version. Absent means the current Live version.
@@ -5430,6 +5778,8 @@ paths:
             examples:
               - 1.4.0
       responses:
+        "400":
+          $ref: '#/components/responses/BadRequest'
         "200":
           description: Document retrieved.
           content:
@@ -5808,63 +6158,6 @@ components:
           type: integer
           format: int64
           minimum: 0
-    AssistantChatScope:
-      description: |
-        Which assistant conversation the message belongs to: the general workspace-wide chat or the page-scoped side panel.
-      type: string
-      enum:
-        - general
-        - page
-    AssistantPageContext:
-      description: The page the user has open when asking from the page scope.
-      type: object
-      required:
-        - title
-        - pathname
-      properties:
-        title:
-          description: Human title of the open page (e.g. "Webhooks").
-          type: string
-          maxLength: 200
-        pathname:
-          description: Route pathname of the open page.
-          type: string
-          maxLength: 500
-        details:
-          description: |
-            Live per-view details contributed by the page, e.g. the entity a detail page displays ("Endpoint: Stripe events").
-          type: array
-          items:
-            type: string
-            maxLength: 300
-          maxItems: 20
-    AssistantChatRequest:
-      type: object
-      required:
-        - message
-        - scope
-      properties:
-        message:
-          description: The user's chat message.
-          type: string
-          minLength: 1
-          maxLength: 4000
-        scope:
-          $ref: '#/components/schemas/AssistantChatScope'
-        page_context:
-          $ref: '#/components/schemas/AssistantPageContext'
-    AssistantAction:
-      description: A navigation action the assistant offers under a reply.
-      type: object
-      required:
-        - label
-        - path
-      properties:
-        label:
-          type: string
-        path:
-          description: Frontend route path the action navigates to.
-          type: string
     ApiError:
       type: object
       required:
@@ -5944,6 +6237,11 @@ components:
             - "null"
         role:
           $ref: '#/components/schemas/CurrentUserOrganizationRole'
+        workspaces:
+          description: Ordinary workspaces linked to this organization, returned only with include=workspace. An empty array means the organization has none. Selection does not enable resource isolation in this rollout.
+          type: array
+          items:
+            $ref: '#/components/schemas/CurrentUserWorkspace'
     CurrentUser:
       type: object
       required:
@@ -6222,10 +6520,7 @@ components:
           type: string
           maxLength: 8192
     SortDirection:
-      description: >-
-        Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC
-        when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is
-        filled in before the server reads the request, which would make an omitted direction look like DESC.
+      description: 'Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.'
       type: string
       enum:
         - ASC
@@ -6554,6 +6849,12 @@ components:
           type: integer
           examples:
             - 1247
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     WebhookSortField:
       description: Field to sort webhook endpoint search results by.
       type: string
@@ -7806,6 +8107,12 @@ components:
           description: Timestamp when the flow was last updated.
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     CreateFlowRequest:
       type: object
       required:
@@ -7932,6 +8239,12 @@ components:
         updated_at:
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     FlowFolderListResponse:
       allOf:
         - $ref: '#/components/schemas/PagedListResponse'
@@ -8240,6 +8553,12 @@ components:
           description: When this record was created.
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     FlowVersionListResponse:
       allOf:
         - $ref: '#/components/schemas/PagedListResponse'
@@ -9007,6 +9326,12 @@ components:
         updated_at:
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     AssertionResult:
       description: |
         Outcome of evaluating a single node assertion. Recorded for every assertion
@@ -9232,10 +9557,10 @@ components:
         flow_ids:
           description: Keep the executions of these flows. Omit or leave empty for every flow of the organization.
           type: array
-          maxItems: 100
           items:
             type: string
             format: uuid
+          maxItems: 100
           x-go-type-skip-optional-pointer: true
         status:
           $ref: '#/components/schemas/ExecutionStatus'
@@ -9721,6 +10046,12 @@ components:
           description: Timestamp when the collection was last updated
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     CollectionFolderListResponse:
       allOf:
         - $ref: '#/components/schemas/PagedListResponse'
@@ -10538,7 +10869,7 @@ components:
               $ref: '#/components/schemas/OpenAPISyncChangeSortField'
               description: Field to sort by.
     OpenAPISyncOperationSortField:
-      description: 'Field to sort OpenAPI sync operations by. route_name, operation_key and source_operation_id order by their first 255 characters, so a cursor stays small however long a path or key is.'
+      description: Field to sort OpenAPI sync operations by. route_name, operation_key and source_operation_id order by their first 255 characters, so a cursor stays small however long a path or key is.
       type: string
       enum:
         - route_name
@@ -11427,6 +11758,12 @@ components:
         updated_at:
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     CreateMonitorRequest:
       description: Create a monitor. Choose either flow_ids or tags. Use cron_expression for a monitor without a health policy (at most every 15 minutes) or interval_seconds (60-86400) with a health policy.
       type: object
@@ -12235,6 +12572,12 @@ components:
         updated_at:
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
     SpecListResponse:
       type: object
       required:
@@ -12839,6 +13182,12 @@ components:
         updated_at:
           type: string
           format: date-time
+        workspace_id:
+          description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
+          type:
+            - string
+            - "null"
+          readOnly: true
       additionalProperties: false
     StatusPageHealth:
       type: object
@@ -13378,6 +13727,22 @@ components:
           description: Executions finished from this time on are recorded again.
           type: string
           format: date-time
+    CurrentUserInclude:
+      type: string
+      enum:
+        - workspace
+    CurrentUserWorkspace:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          description: Anchor workspace identifier.
+          type: string
+        name:
+          description: Workspace display name.
+          type: string
   responses:
     BadRequest:
       description: The request is well-formed HTTP but the server will not process it. An entity named in the request body or the query string does not resolve, a field failed validation, or a non-credential header is absent or malformed. The `code` field says which.
@@ -13538,6 +13903,26 @@ components:
       schema:
         type: string
         format: uuid
+    RequiredWorkspaceIDHeader:
+      name: X-Workspace-Id
+      in: header
+      description: Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    CurrentUserIncludeParameter:
+      name: include
+      in: query
+      description: Linked data to expand for each organization belonging to the current user. Unrequested data is omitted; requested organizations with no workspaces return an empty array.
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/CurrentUserInclude'
   requestBodies:
     WebhookAnyPayload:
       description: 'Webhook payload in any format. The body is stored byte for byte and is never parsed, so any media type is accepted, including none: a request without a Content-Type header, or with a body that does not match its declared Content-Type, is still received. Only the first 1 MiB of a body is stored.'
@@ -13592,8 +13977,6 @@ tags:
     description: Special flow control nodes like delay
   - name: Runner
     description: Self-hosted runner control-plane operations
-  - name: Assistant
-    description: Workspace AI assistant chat operations.
   - name: Members
     description: Organization members.
   - name: Invitations

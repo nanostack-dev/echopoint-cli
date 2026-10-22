@@ -250,6 +250,7 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
 | Flag | |
 |------|-|
 | `-o, --output` | `table` (default), `json`, `yaml` |
+| `--workspace` | Workspace ID (`ECHOPOINT_WORKSPACE_ID`); required by workspace-scoped API operations |
 | `--org` | Organization ID (`ECHOPOINT_ORGANIZATION_ID`); `--organization-id` is a hidden alias |
 | `--profile` | API target, for one command |
 | `--api-url`, `--api-key`, `--token`, `--config`, `--debug` | |
@@ -569,6 +570,7 @@ defaults:
 | `ECHOPOINT_OUTPUT_FORMAT` | Default output format (table/json/yaml) (`-o` wins) |
 | `ECHOPOINT_TOKEN` | Session token |
 | `ECHOPOINT_API_KEY` | Organization API key |
+| `ECHOPOINT_WORKSPACE_ID` | Explicit workspace selection (same as `--workspace`); the CLI never chooses one |
 | `ECHOPOINT_ORGANIZATION_ID` | Organization ID (same as `--org`) |
 | `ECHOPOINT_PROFILE` | Profile to use |
 | `ECHOPOINT_CONFIG` | Config file path |
@@ -618,3 +620,9 @@ See the [docs/](./docs/) directory for detailed documentation:
 ## License
 
 MIT
+
+
+Workspace operations require an explicit workspace ID with `--workspace` or
+`ECHOPOINT_WORKSPACE_ID`. The flag takes precedence. Selection applies to generated
+requests, MCP tools and ephemeral launch/claim calls. Job-token completion retains
+its existing runner protocol. Organization settings and status pages need no workspace.
