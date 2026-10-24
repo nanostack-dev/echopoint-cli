@@ -30,7 +30,8 @@ even if it is otherwise annotated.
 The server uses the same credentials as every other command:
 
 - **Browser login** (recommended): run `echopoint auth login` once. The server
-  reuses the stored session.
+  reuses the stored session and its organization; a session stored without one
+  gets your only organization from `/me`, as every command does.
 - **API key**: set `ECHOPOINT_API_KEY` (and `ECHOPOINT_ORGANIZATION_ID`).
 
 The server refuses to start without one of these.

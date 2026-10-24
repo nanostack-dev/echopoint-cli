@@ -264,38 +264,54 @@ func newAuthStatusCmd(state *AppState) *cobra.Command {
 }
 
 func resolveDefaultOrganizationID(baseURL string, token string, timeout time.Duration) (string, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/me", nil)
+	organizations, err := sessionOrganizations(context.Background(), baseURL, token, timeout)
 	if err != nil {
 		return "", err
+	}
+	if len(organizations) == 0 {
+		return "", nil
+	}
+
+	return organizations[0].ID, nil
+}
+
+type sessionOrganization struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// sessionOrganizations lists the organizations the session's user belongs to, from /me.
+func sessionOrganizations(
+	ctx context.Context,
+	baseURL, token string,
+	timeout time.Duration,
+) ([]sessionOrganization, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/me", nil)
+	if err != nil {
+		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	httpClient := &http.Client{Timeout: timeout}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("resolve default organization failed with status %d", resp.StatusCode)
+		return nil, fmt.Errorf("resolve default organization failed with status %d", resp.StatusCode)
 	}
 
 	var payload struct {
 		User struct {
-			Organizations []struct {
-				Id string `json:"id"`
-			} `json:"organizations"`
+			Organizations []sessionOrganization `json:"organizations"`
 		} `json:"user"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", err
+		return nil, err
 	}
-	if len(payload.User.Organizations) == 0 {
-		return "", nil
-	}
-
-	return payload.User.Organizations[0].Id, nil
+	return payload.User.Organizations, nil
 }
 
 // resolveAPIKeyOrganizationID asks /api-keys/self for the organization the API
