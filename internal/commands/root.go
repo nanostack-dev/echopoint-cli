@@ -93,6 +93,9 @@ func NewRootCmd() *cobra.Command {
 			// unless the API key is marked preferred or no session is available.
 			apiKey = resolveStoredAPIKey(cfg.Profile, token)
 		}
+		if organizationID == "" && apiKey == "" && token != "" {
+			organizationID = recoverSessionOrganizationID(contextOf(cmd), cfg, token)
+		}
 
 		state.Config = cfg
 		state.ConfigPath = cfgPath

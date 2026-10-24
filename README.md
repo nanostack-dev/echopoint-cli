@@ -129,6 +129,11 @@ echopoint auth login
 ```
 
 This opens a browser window to authenticate via Google, GitHub, or email/password.
+Login saves your first organization as the profile's default. A stored session
+saved without one (because `/me` failed or listed no organization at login) picks
+it up later: the first command needing it asks `/me`, uses your only organization
+and saves it. If you belong to several, the command names them and asks for
+`--org`.
 
 ### Token-based Login
 
@@ -243,7 +248,8 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
 - **Output.** `-o table|json|yaml` is global. YAML uses the key names of the JSON.
 - **Precedence.** A flag beats an environment variable, which beats the config:
   `--api-url` over `ECHOPOINT_API_URL`, `-o` over `ECHOPOINT_OUTPUT_FORMAT`, `--profile`
-  over `ECHOPOINT_PROFILE`, `--org` over `ECHOPOINT_ORGANIZATION_ID`.
+  over `ECHOPOINT_PROFILE`, `--org` over `ECHOPOINT_ORGANIZATION_ID` over the stored
+  session's organization.
 
 ### Global flags
 

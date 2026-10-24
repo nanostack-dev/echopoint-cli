@@ -82,6 +82,9 @@ func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, erro
 	}
 	if sessionValid {
 		orgID := firstNonEmpty(state.OrganizationID, creds.OrganizationID)
+		if orgID == "" {
+			orgID = recoverSessionOrganizationID(contextOf(cmd), cfg, creds.AccessToken)
+		}
 		return client.New(
 			cfg.API.BaseURL,
 			creds.AccessToken,
