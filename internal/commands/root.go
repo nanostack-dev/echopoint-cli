@@ -84,14 +84,10 @@ func NewRootCmd() *cobra.Command {
 		// an API key is present.
 		var token string
 		if apiKey == "" && requiresToken(cmd) {
-			token, err = resolveToken(flagToken, cfg.Profile)
+			token, apiKey, err = resolveStoredCredentials(flagToken, cfg.Profile)
 			if err != nil {
 				return err
 			}
-			// Fall back to a stored API key per the profile's preference: a
-			// stored session (Bearer) is the default when both are present,
-			// unless the API key is marked preferred or no session is available.
-			apiKey = resolveStoredAPIKey(cfg.Profile, token)
 		}
 		if organizationID == "" && apiKey == "" && token != "" {
 			organizationID = recoverSessionOrganizationID(contextOf(cmd), cfg, token)
@@ -288,6 +284,20 @@ func resolveToken(flagToken, profile string) (string, error) {
 		return creds.AccessToken, nil
 	}
 	return "", nil
+}
+
+// resolveStoredCredentials picks the Bearer token and the stored API key for a
+// command. A stored session (Bearer) is the default when both are present,
+// unless the API key is marked preferred or no session is available. An
+// expired session falls back to a stored API key, as `echopoint mcp` does,
+// and is an error only when no API key is stored.
+func resolveStoredCredentials(flagToken, profile string) (string, string, error) {
+	token, err := resolveToken(flagToken, profile)
+	apiKey := resolveStoredAPIKey(profile, token)
+	if err != nil && apiKey == "" {
+		return "", "", err
+	}
+	return token, apiKey, nil
 }
 
 func requireToken(state *AppState) error {
