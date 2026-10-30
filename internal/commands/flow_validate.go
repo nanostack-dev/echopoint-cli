@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -115,7 +117,7 @@ func validateReferences(nodes []api.FlowNode, nodeIDs map[string]bool, adj map[s
 		if err != nil {
 			continue
 		}
-		seen := map[string]bool{}
+		seen := loopLocalNames(raw)
 		for _, m := range templateRefPattern.FindAllStringSubmatch(string(raw), -1) {
 			ref := strings.TrimSpace(m[1])
 			dot := strings.IndexByte(ref, '.')
@@ -143,6 +145,34 @@ func validateReferences(nodes []api.FlowNode, nodeIDs map[string]bool, adj map[s
 		}
 	}
 	return problems
+}
+
+// loopLocalNames returns the names a loop body resolves on its own: the item
+// and index variables (runner defaults "item" and "index") and the body's node
+// ids. A {{perm.url}} in a body reads the current item, not a node "perm".
+func loopLocalNames(raw []byte) map[string]bool {
+	var loop struct {
+		Type string `json:"type"`
+		Data struct {
+			ItemVar  string `json:"item_var"`
+			IndexVar string `json:"index_var"`
+			Body     struct {
+				Nodes []struct {
+					ID string `json:"id"`
+				} `json:"nodes"`
+			} `json:"body"`
+		} `json:"data"`
+	}
+	names := map[string]bool{}
+	if json.Unmarshal(raw, &loop) != nil || loop.Type != "loop" {
+		return names
+	}
+	names[cmp.Or(loop.Data.ItemVar, "item")] = true
+	names[cmp.Or(loop.Data.IndexVar, "index")] = true
+	for _, n := range loop.Data.Body.Nodes {
+		names[n.ID] = true
+	}
+	return names
 }
 
 // reachable reports whether target is reachable from source following edges.

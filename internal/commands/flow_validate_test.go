@@ -75,3 +75,21 @@ func TestValidateReferencesAcceptsLaunchInputs(t *testing.T) {
 		t.Errorf("expected only the {{missing.url}} problem, got %v", got)
 	}
 }
+
+func TestValidateReferencesAcceptsLoopLocals(t *testing.T) {
+	var loop api.FlowNode
+	if err := loop.UnmarshalJSON([]byte(`{"id":"fill","type":"loop","display_name":"fill","run_when":"on_success",
+		"data":{"items":"{{seed.perms}}","item_var":"perm","body":{"nodes":[
+		{"id":"create","type":"request","display_name":"create","data":{"method":"POST","url":"{{perm.url}}"}},
+		{"id":"read","type":"request","display_name":"read","data":{"method":"GET","url":"{{create.self}}/{{index}}"}},
+		{"id":"typo","type":"request","display_name":"typo","data":{"method":"GET","url":"{{item.url}}"}}],"edges":[]}}}`)); err != nil {
+		t.Fatal(err)
+	}
+	nodes := []api.FlowNode{requestNodeWithURL("seed", "https://x/seed"), loop}
+	ids := map[string]bool{"seed": true, "fill": true}
+
+	got := validateReferences(nodes, ids, map[string][]string{"seed": {"fill"}})
+	if len(got) != 1 || !strings.Contains(got[0], `no node "item" exists`) {
+		t.Errorf("expected only the {{item.url}} problem (item_var is perm), got %v", got)
+	}
+}
