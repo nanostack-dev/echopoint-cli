@@ -482,6 +482,25 @@ echopoint collection delete <id>
 echopoint collection import -f ./openapi.json --name "My API"
 ```
 
+### Workspaces
+
+A workspace holds flows, collections, webhooks, monitors and specs. A member
+reaches it through their organization role (every workspace) or a role held on
+it alone. `workspace list` reads your session, so it needs `auth login`.
+
+```bash
+echopoint workspace list                                   # the workspaces you can open, with your role
+echopoint workspace create --name Payments                 # you become its workspace_admin
+echopoint workspace rename <workspace-id> --name "Payments EU"
+echopoint workspace role list <workspace-id>               # workspace_admin, workspace_editor, workspace_viewer
+echopoint workspace member list <workspace-id>
+echopoint workspace member set <workspace-id> <user-id> --role workspace_editor
+echopoint workspace member remove <workspace-id> <user-id>
+```
+
+Adding an organization member to a workspace takes effect at once, with no
+invitation. Nobody changes or removes their own role.
+
 ### Monitors
 
 ```bash

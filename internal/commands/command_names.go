@@ -23,4 +23,5 @@ const (
 	updateCommandName     = "update"
 	versionCommandName    = "version"
 	viewVerb              = "view"
+	workspaceCommandName  = "workspace"
 )

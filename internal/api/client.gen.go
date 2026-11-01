@@ -333,13 +333,13 @@ func (e CollectionSource) Valid() bool {
 
 // Defines values for CurrentUserInclude.
 const (
-	Workspace CurrentUserInclude = "workspace"
+	CurrentUserIncludeWorkspace CurrentUserInclude = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the CurrentUserInclude enum.
 func (e CurrentUserInclude) Valid() bool {
 	switch e {
-	case Workspace:
+	case CurrentUserIncludeWorkspace:
 		return true
 	default:
 		return false
@@ -607,6 +607,24 @@ func (e HttpMethod) Valid() bool {
 	case POST:
 		return true
 	case PUT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InvitationOrganizationRole.
+const (
+	InvitationOrganizationRoleAdmin  InvitationOrganizationRole = "admin"
+	InvitationOrganizationRoleMember InvitationOrganizationRole = "member"
+)
+
+// Valid indicates whether the value is a known member of the InvitationOrganizationRole enum.
+func (e InvitationOrganizationRole) Valid() bool {
+	switch e {
+	case InvitationOrganizationRoleAdmin:
+		return true
+	case InvitationOrganizationRoleMember:
 		return true
 	default:
 		return false
@@ -2901,8 +2919,14 @@ type CreateMonitorRequest struct {
 
 // CreateOrganizationInvitationRequest defines model for CreateOrganizationInvitationRequest.
 type CreateOrganizationInvitationRequest struct {
-	// Email The email address to invite. The role is always admin.
+	// Email The email address to invite.
 	Email openapi_types.Email `json:"email"`
+
+	// Role The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.
+	Role *InvitationOrganizationRole `json:"role,omitempty"`
+
+	// Workspaces Workspace roles the invited person gets when they accept, one per workspace. Each workspace must belong to the organization, the caller must hold workspace.access:manage on it, and the role must be a workspace role (400 WORKSPACE_ROLE_NOT_FOUND otherwise). Empty or omitted gives none.
+	Workspaces *[]InvitationWorkspaceRole `json:"workspaces,omitempty"`
 }
 
 // CreateRequestRequest defines model for CreateRequestRequest.
@@ -3000,7 +3024,7 @@ type CurrentUserOrganization struct {
 	Name string                      `json:"name"`
 	Role CurrentUserOrganizationRole `json:"role"`
 
-	// Workspaces Ordinary workspaces linked to this organization, returned only with include=workspace. An empty array means the organization has none. Selection does not enable resource isolation in this rollout.
+	// Workspaces The workspaces of this organization the user can open, oldest first, each with the user's role and workspace permissions there; returned only with include=workspace. An organization role holding workspace permissions opens every workspace; otherwise only the workspaces the user holds a role on are listed. An empty array means the user can open none.
 	Workspaces *[]CurrentUserWorkspace `json:"workspaces,omitempty"`
 }
 
@@ -3029,6 +3053,12 @@ type CurrentUserWorkspace struct {
 
 	// Name Workspace display name.
 	Name string `json:"name"`
+
+	// Permissions The workspace permissions the user holds in this workspace, from their role on it and from their organization role. Never empty. Organization permissions are on the organization's role.
+	Permissions []string `json:"permissions"`
+
+	// Role The role the user holds on this workspace, or null when only their organization role reaches it.
+	Role *WorkspaceRoleRef `json:"role"`
 }
 
 // DefinitionBase defines model for DefinitionBase.
@@ -4148,6 +4178,16 @@ type InlineFlowDefinition struct {
 	Nodes []FlowNode  `json:"nodes"`
 }
 
+// InvitationOrganizationRole The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.
+type InvitationOrganizationRole string
+
+// InvitationWorkspaceRole A role the invited person gets on one workspace when they accept.
+type InvitationWorkspaceRole struct {
+	// RoleId A workspace role, from GET /workspaces/{workspaceId}/roles.
+	RoleId      string `json:"role_id"`
+	WorkspaceId string `json:"workspace_id"`
+}
+
 // JSONPathExtractorConfig defines model for JSONPathExtractorConfig.
 type JSONPathExtractorConfig struct {
 	// DefaultValue Default value if path not found
@@ -5156,6 +5196,12 @@ type OrganizationInvitation struct {
 
 	// Id Unique identifier of the invitation.
 	Id string `json:"id"`
+
+	// Role The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.
+	Role InvitationOrganizationRole `json:"role"`
+
+	// Workspaces The workspace roles the invited person gets when they accept.
+	Workspaces []InvitationWorkspaceRole `json:"workspaces"`
 }
 
 // OrganizationInvitationListResponse defines model for OrganizationInvitationListResponse.
@@ -7177,6 +7223,77 @@ type WebhookWaitNodeData struct {
 	TimeoutMs *int `json:"timeout_ms,omitempty"`
 }
 
+// Workspace A workspace of the current organization.
+type Workspace struct {
+	// Id Workspace identifier.
+	Id string `json:"id"`
+
+	// Name Workspace display name.
+	Name string `json:"name"`
+}
+
+// WorkspaceMember An organization member holding a role on a workspace.
+type WorkspaceMember struct {
+	Email openapi_types.Email `json:"email"`
+	Name  *string             `json:"name,omitempty"`
+
+	// Role The role a member holds on a workspace.
+	Role WorkspaceRoleRef `json:"role"`
+
+	// UserId Product user identifier.
+	UserId string `json:"user_id"`
+}
+
+// WorkspaceMemberRoleRequest defines model for WorkspaceMemberRoleRequest.
+type WorkspaceMemberRoleRequest struct {
+	// RoleId A workspace role, from GET /workspaces/{workspaceId}/roles.
+	RoleId string `json:"role_id"`
+}
+
+// WorkspaceMemberSearchRequest defines model for WorkspaceMemberSearchRequest.
+type WorkspaceMemberSearchRequest struct {
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
+}
+
+// WorkspaceMemberSearchResponse defines model for WorkspaceMemberSearchResponse.
+type WorkspaceMemberSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int               `json:"count"`
+	Items []WorkspaceMember `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
+// WorkspaceRole A role a member can hold on a workspace.
+type WorkspaceRole struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+
+	// Permissions The workspace permissions the role grants on the workspace it is held on.
+	Permissions []string `json:"permissions"`
+}
+
+// WorkspaceRoleListResponse defines model for WorkspaceRoleListResponse.
+type WorkspaceRoleListResponse struct {
+	Items []WorkspaceRole `json:"items"`
+}
+
+// WorkspaceRoleRef The role a member holds on a workspace.
+type WorkspaceRoleRef struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// WorkspaceWriteRequest defines model for WorkspaceWriteRequest.
+type WorkspaceWriteRequest struct {
+	// Name Workspace display name.
+	Name string `json:"name"`
+}
+
 // XMLPathExtractorConfig defines model for XMLPathExtractorConfig.
 type XMLPathExtractorConfig struct {
 	// DefaultValue Default value if path not found
@@ -7234,6 +7351,12 @@ type VariableKey = string
 // WebhookIdParameter Examples: wh_abc123def456
 type WebhookIdParameter = string
 
+// WorkspaceIDPathParameter defines model for WorkspaceIDPathParameter.
+type WorkspaceIDPathParameter = string
+
+// WorkspaceMemberUserIDPathParameter defines model for WorkspaceMemberUserIDPathParameter.
+type WorkspaceMemberUserIDPathParameter = string
+
 // BadRequest defines model for BadRequest.
 type BadRequest = ApiErrorResponse
 
@@ -7281,8 +7404,8 @@ type ListEndpointAnalyticsParams struct {
 	// FlowId Keep only the calls this flow's runs sent.
 	FlowId *openapi_types.UUID `form:"flow_id,omitempty" json:"flow_id,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7293,8 +7416,8 @@ type ListFlowAnalyticsParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7305,8 +7428,8 @@ type GetExecutionAnalyticsSummaryParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7356,8 +7479,8 @@ type ListCollectionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7365,8 +7488,8 @@ type ListCollectionsParams struct {
 
 // CreateCollectionParams defines parameters for CreateCollection.
 type CreateCollectionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7374,8 +7497,8 @@ type CreateCollectionParams struct {
 
 // ImportFromOpenAPIParams defines parameters for ImportFromOpenAPI.
 type ImportFromOpenAPIParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7383,8 +7506,8 @@ type ImportFromOpenAPIParams struct {
 
 // SearchCollectionsParams defines parameters for SearchCollections.
 type SearchCollectionsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7392,8 +7515,8 @@ type SearchCollectionsParams struct {
 
 // DeleteFolderParams defines parameters for DeleteFolder.
 type DeleteFolderParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7401,8 +7524,8 @@ type DeleteFolderParams struct {
 
 // UpdateFolderParams defines parameters for UpdateFolder.
 type UpdateFolderParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7410,8 +7533,8 @@ type UpdateFolderParams struct {
 
 // DeleteRequestParams defines parameters for DeleteRequest.
 type DeleteRequestParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7419,8 +7542,8 @@ type DeleteRequestParams struct {
 
 // GetCollectionRequestParams defines parameters for GetCollectionRequest.
 type GetCollectionRequestParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7428,8 +7551,8 @@ type GetCollectionRequestParams struct {
 
 // UpdateRequestParams defines parameters for UpdateRequest.
 type UpdateRequestParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7437,8 +7560,8 @@ type UpdateRequestParams struct {
 
 // ExecuteCollectionRequestParams defines parameters for ExecuteCollectionRequest.
 type ExecuteCollectionRequestParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7452,8 +7575,8 @@ type ListCollectionRequestOpenAPISyncHistoryParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7461,8 +7584,8 @@ type ListCollectionRequestOpenAPISyncHistoryParams struct {
 
 // SearchCollectionRequestOpenAPISyncHistoryParams defines parameters for SearchCollectionRequestOpenAPISyncHistory.
 type SearchCollectionRequestOpenAPISyncHistoryParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7470,8 +7593,8 @@ type SearchCollectionRequestOpenAPISyncHistoryParams struct {
 
 // DeleteCollectionParams defines parameters for DeleteCollection.
 type DeleteCollectionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7479,8 +7602,8 @@ type DeleteCollectionParams struct {
 
 // GetCollectionParams defines parameters for GetCollection.
 type GetCollectionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7488,8 +7611,8 @@ type GetCollectionParams struct {
 
 // UpdateCollectionParams defines parameters for UpdateCollection.
 type UpdateCollectionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7497,8 +7620,8 @@ type UpdateCollectionParams struct {
 
 // ListCollectionFoldersParams defines parameters for ListCollectionFolders.
 type ListCollectionFoldersParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7506,8 +7629,8 @@ type ListCollectionFoldersParams struct {
 
 // AddFolderParams defines parameters for AddFolder.
 type AddFolderParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7515,8 +7638,8 @@ type AddFolderParams struct {
 
 // SearchCollectionFoldersParams defines parameters for SearchCollectionFolders.
 type SearchCollectionFoldersParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7524,8 +7647,8 @@ type SearchCollectionFoldersParams struct {
 
 // GetOpenAPISyncConfigParams defines parameters for GetOpenAPISyncConfig.
 type GetOpenAPISyncConfigParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7533,8 +7656,8 @@ type GetOpenAPISyncConfigParams struct {
 
 // DeleteOpenAPISyncConfigParams defines parameters for DeleteOpenAPISyncConfig.
 type DeleteOpenAPISyncConfigParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7548,8 +7671,8 @@ type ListOpenAPISyncHistoryParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7557,8 +7680,8 @@ type ListOpenAPISyncHistoryParams struct {
 
 // CreateOrUpdateOpenAPISyncConfigParams defines parameters for CreateOrUpdateOpenAPISyncConfig.
 type CreateOrUpdateOpenAPISyncConfigParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7566,8 +7689,8 @@ type CreateOrUpdateOpenAPISyncConfigParams struct {
 
 // SearchOpenAPISyncHistoryParams defines parameters for SearchOpenAPISyncHistory.
 type SearchOpenAPISyncHistoryParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7575,8 +7698,8 @@ type SearchOpenAPISyncHistoryParams struct {
 
 // SearchOpenAPISyncOperationsParams defines parameters for SearchOpenAPISyncOperations.
 type SearchOpenAPISyncOperationsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7584,8 +7707,8 @@ type SearchOpenAPISyncOperationsParams struct {
 
 // RunOpenAPISyncNowParams defines parameters for RunOpenAPISyncNow.
 type RunOpenAPISyncNowParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7608,8 +7731,8 @@ type ListCollectionRequestsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7617,8 +7740,8 @@ type ListCollectionRequestsParams struct {
 
 // AddRequestParams defines parameters for AddRequest.
 type AddRequestParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7626,8 +7749,8 @@ type AddRequestParams struct {
 
 // SearchCollectionRequestsParams defines parameters for SearchCollectionRequests.
 type SearchCollectionRequestsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7653,8 +7776,8 @@ type ListExecutionsParams struct {
 	// Since Inclusive lower bound on started_at (RFC3339).
 	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7662,8 +7785,8 @@ type ListExecutionsParams struct {
 
 // SearchExecutionsParams defines parameters for SearchExecutions.
 type SearchExecutionsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7674,8 +7797,8 @@ type GetExecutionsSummaryParams struct {
 	// Window Lookback window for runs and failed. Defaults to 24h.
 	Window *ExecutionSummaryWindow `form:"window,omitempty" json:"window,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7689,8 +7812,8 @@ type ListFlowsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7698,8 +7821,8 @@ type ListFlowsParams struct {
 
 // CreateFlowParams defines parameters for CreateFlow.
 type CreateFlowParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7707,8 +7830,8 @@ type CreateFlowParams struct {
 
 // ListFlowFoldersParams defines parameters for ListFlowFolders.
 type ListFlowFoldersParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7716,8 +7839,8 @@ type ListFlowFoldersParams struct {
 
 // CreateFlowFolderParams defines parameters for CreateFlowFolder.
 type CreateFlowFolderParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7725,8 +7848,8 @@ type CreateFlowFolderParams struct {
 
 // BulkMoveFlowsParams defines parameters for BulkMoveFlows.
 type BulkMoveFlowsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7734,8 +7857,8 @@ type BulkMoveFlowsParams struct {
 
 // SearchFlowFoldersParams defines parameters for SearchFlowFolders.
 type SearchFlowFoldersParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7746,8 +7869,8 @@ type DeleteFlowFolderParams struct {
 	// DeleteFlows When true, permanently deletes every flow in the deleted subtree (including execution history). Irreversible. When false or omitted, flows move to the Uncategorized bucket.
 	DeleteFlows *bool `form:"delete_flows,omitempty" json:"delete_flows,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7755,8 +7878,8 @@ type DeleteFlowFolderParams struct {
 
 // UpdateFlowFolderParams defines parameters for UpdateFlowFolder.
 type UpdateFlowFolderParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7764,8 +7887,8 @@ type UpdateFlowFolderParams struct {
 
 // MoveFlowFolderParams defines parameters for MoveFlowFolder.
 type MoveFlowFolderParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7773,8 +7896,8 @@ type MoveFlowFolderParams struct {
 
 // SearchFlowsParams defines parameters for SearchFlows.
 type SearchFlowsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7782,8 +7905,8 @@ type SearchFlowsParams struct {
 
 // ListFlowTagsParams defines parameters for ListFlowTags.
 type ListFlowTagsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7791,8 +7914,8 @@ type ListFlowTagsParams struct {
 
 // GetExecutionParams defines parameters for GetExecution.
 type GetExecutionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7800,8 +7923,8 @@ type GetExecutionParams struct {
 
 // GetExecutionNodeResultsParams defines parameters for GetExecutionNodeResults.
 type GetExecutionNodeResultsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7809,8 +7932,8 @@ type GetExecutionNodeResultsParams struct {
 
 // GetNodeExecutionResultParams defines parameters for GetNodeExecutionResult.
 type GetNodeExecutionResultParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7818,8 +7941,8 @@ type GetNodeExecutionResultParams struct {
 
 // StreamExecutionParams defines parameters for StreamExecution.
 type StreamExecutionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7833,8 +7956,8 @@ type GetNodeExecutionHistoryParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7842,8 +7965,8 @@ type GetNodeExecutionHistoryParams struct {
 
 // SearchNodeExecutionHistoryParams defines parameters for SearchNodeExecutionHistory.
 type SearchNodeExecutionHistoryParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7851,8 +7974,8 @@ type SearchNodeExecutionHistoryParams struct {
 
 // DeleteFlowParams defines parameters for DeleteFlow.
 type DeleteFlowParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7860,8 +7983,8 @@ type DeleteFlowParams struct {
 
 // GetFlowParams defines parameters for GetFlow.
 type GetFlowParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7869,8 +7992,8 @@ type GetFlowParams struct {
 
 // UpdateFlowParams defines parameters for UpdateFlow.
 type UpdateFlowParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7884,8 +8007,8 @@ type ListFlowExecutionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7896,8 +8019,8 @@ type ExportFlowParams struct {
 	// VersionId Optional flow version ID to export. When omitted, the current flow definition is used.
 	VersionId *openapi_types.UUID `form:"version_id,omitempty" json:"version_id,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7905,8 +8028,8 @@ type ExportFlowParams struct {
 
 // LaunchFlowParams defines parameters for LaunchFlow.
 type LaunchFlowParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// IdempotencyKey Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
 	// by organization, flow, environment key, version ID, runner type, trigger type, and the
@@ -7920,8 +8043,8 @@ type LaunchFlowParams struct {
 
 // PublishFlowParams defines parameters for PublishFlow.
 type PublishFlowParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7929,8 +8052,8 @@ type PublishFlowParams struct {
 
 // DeleteFlowVariablesParams defines parameters for DeleteFlowVariables.
 type DeleteFlowVariablesParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7938,8 +8061,8 @@ type DeleteFlowVariablesParams struct {
 
 // GetFlowVariablesParams defines parameters for GetFlowVariables.
 type GetFlowVariablesParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7947,8 +8070,8 @@ type GetFlowVariablesParams struct {
 
 // DeleteFlowVariableParams defines parameters for DeleteFlowVariable.
 type DeleteFlowVariableParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7956,8 +8079,8 @@ type DeleteFlowVariableParams struct {
 
 // SetFlowVariableParams defines parameters for SetFlowVariable.
 type SetFlowVariableParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7971,8 +8094,8 @@ type ListFlowVersionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7980,8 +8103,8 @@ type ListFlowVersionsParams struct {
 
 // SearchFlowVersionsParams defines parameters for SearchFlowVersions.
 type SearchFlowVersionsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7989,8 +8112,8 @@ type SearchFlowVersionsParams struct {
 
 // GetFlowVersionParams defines parameters for GetFlowVersion.
 type GetFlowVersionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -7998,8 +8121,8 @@ type GetFlowVersionParams struct {
 
 // RestoreFlowVersionParams defines parameters for RestoreFlowVersion.
 type RestoreFlowVersionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8088,8 +8211,8 @@ type ListFlowSchedulesParams struct {
 	// HasHealthPolicy Only monitors with (true) or without (false) a health policy.
 	HasHealthPolicy *bool `form:"has_health_policy,omitempty" json:"has_health_policy,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8097,8 +8220,8 @@ type ListFlowSchedulesParams struct {
 
 // CreateFlowScheduleParams defines parameters for CreateFlowSchedule.
 type CreateFlowScheduleParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8112,8 +8235,8 @@ type GetMonitorCloudBudgetParams struct {
 
 // EstimateMonitorParams defines parameters for EstimateMonitor.
 type EstimateMonitorParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8121,8 +8244,8 @@ type EstimateMonitorParams struct {
 
 // PreviewScheduleTagsParams defines parameters for PreviewScheduleTags.
 type PreviewScheduleTagsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8130,8 +8253,8 @@ type PreviewScheduleTagsParams struct {
 
 // SearchFlowSchedulesParams defines parameters for SearchFlowSchedules.
 type SearchFlowSchedulesParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8139,8 +8262,8 @@ type SearchFlowSchedulesParams struct {
 
 // DeleteFlowScheduleParams defines parameters for DeleteFlowSchedule.
 type DeleteFlowScheduleParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8148,8 +8271,8 @@ type DeleteFlowScheduleParams struct {
 
 // GetFlowScheduleParams defines parameters for GetFlowSchedule.
 type GetFlowScheduleParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8157,8 +8280,8 @@ type GetFlowScheduleParams struct {
 
 // UpdateFlowScheduleParams defines parameters for UpdateFlowSchedule.
 type UpdateFlowScheduleParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8166,8 +8289,8 @@ type UpdateFlowScheduleParams struct {
 
 // PauseFlowScheduleParams defines parameters for PauseFlowSchedule.
 type PauseFlowScheduleParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8175,8 +8298,8 @@ type PauseFlowScheduleParams struct {
 
 // ResumeFlowScheduleParams defines parameters for ResumeFlowSchedule.
 type ResumeFlowScheduleParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8184,8 +8307,8 @@ type ResumeFlowScheduleParams struct {
 
 // RunMonitorParams defines parameters for RunMonitor.
 type RunMonitorParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8199,8 +8322,8 @@ type ListFlowScheduleRunsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8208,8 +8331,8 @@ type ListFlowScheduleRunsParams struct {
 
 // SearchFlowScheduleRunsParams defines parameters for SearchFlowScheduleRuns.
 type SearchFlowScheduleRunsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8217,8 +8340,8 @@ type SearchFlowScheduleRunsParams struct {
 
 // GetFlowScheduleRunParams defines parameters for GetFlowScheduleRun.
 type GetFlowScheduleRunParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8232,8 +8355,8 @@ type ListNodesParams struct {
 
 // SearchOpenAPISyncConfigsParams defines parameters for SearchOpenAPISyncConfigs.
 type SearchOpenAPISyncConfigsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8316,8 +8439,8 @@ type ListPermissionsParams struct {
 
 // SearchResourcesParams defines parameters for SearchResources.
 type SearchResourcesParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8325,8 +8448,8 @@ type SearchResourcesParams struct {
 
 // ClaimEphemeralJobParams defines parameters for ClaimEphemeralJob.
 type ClaimEphemeralJobParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8334,8 +8457,8 @@ type ClaimEphemeralJobParams struct {
 
 // CompleteEphemeralExecutionParams defines parameters for CompleteEphemeralExecution.
 type CompleteEphemeralExecutionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8355,8 +8478,8 @@ type ListSpecsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8364,8 +8487,8 @@ type ListSpecsParams struct {
 
 // CreateSpecParams defines parameters for CreateSpec.
 type CreateSpecParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8373,8 +8496,8 @@ type CreateSpecParams struct {
 
 // SearchSpecsParams defines parameters for SearchSpecs.
 type SearchSpecsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8382,8 +8505,8 @@ type SearchSpecsParams struct {
 
 // GetSpecParams defines parameters for GetSpec.
 type GetSpecParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8391,8 +8514,8 @@ type GetSpecParams struct {
 
 // ApplySpecCommandsParams defines parameters for ApplySpecCommands.
 type ApplySpecCommandsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8403,8 +8526,8 @@ type PullSpecParams struct {
 	// Version A Live version's semantic version. Absent means the current Live version.
 	Version *string `form:"version,omitempty" json:"version,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8418,8 +8541,8 @@ type ListSpecVersionsParams struct {
 	// Offset Number of items to skip. Absent means 0.
 	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8427,8 +8550,8 @@ type ListSpecVersionsParams struct {
 
 // PushSpecVersionParams defines parameters for PushSpecVersion.
 type PushSpecVersionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8436,8 +8559,8 @@ type PushSpecVersionParams struct {
 
 // SearchSpecVersionsParams defines parameters for SearchSpecVersions.
 type SearchSpecVersionsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8445,8 +8568,8 @@ type SearchSpecVersionsParams struct {
 
 // GetSpecVersionParams defines parameters for GetSpecVersion.
 type GetSpecVersionParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8478,8 +8601,8 @@ type UnpublishStatusPageParams struct {
 
 // ListWebhooksParams defines parameters for ListWebhooks.
 type ListWebhooksParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8487,8 +8610,8 @@ type ListWebhooksParams struct {
 
 // CreateWebhookParams defines parameters for CreateWebhook.
 type CreateWebhookParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8496,8 +8619,8 @@ type CreateWebhookParams struct {
 
 // SearchWebhooksParams defines parameters for SearchWebhooks.
 type SearchWebhooksParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8505,8 +8628,8 @@ type SearchWebhooksParams struct {
 
 // DeleteWebhookParams defines parameters for DeleteWebhook.
 type DeleteWebhookParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8514,8 +8637,8 @@ type DeleteWebhookParams struct {
 
 // GetWebhookParams defines parameters for GetWebhook.
 type GetWebhookParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8529,8 +8652,8 @@ type GetWebhookMethodDistributionParams struct {
 	// To End datetime for analytics data (ISO 8601 format).
 	To time.Time `form:"to" json:"to"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8544,8 +8667,8 @@ type GetWebhookRequestVolumesParams struct {
 	// To End datetime for analytics data (ISO 8601 format).
 	To time.Time `form:"to" json:"to"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8553,8 +8676,8 @@ type GetWebhookRequestVolumesParams struct {
 
 // SearchWebhookRequestsParams defines parameters for SearchWebhookRequests.
 type SearchWebhookRequestsParams struct {
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -8564,9 +8687,45 @@ type SearchWebhookRequestsParams struct {
 type StreamWebhookRequestsParams struct {
 	Limit int32 `form:"limit" json:"limit"`
 
-	// XWorkspaceId Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-	XWorkspaceId RequiredWorkspaceIDHeader `json:"X-Workspace-Id"`
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// CreateWorkspaceParams defines parameters for CreateWorkspace.
+type CreateWorkspaceParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// RenameWorkspaceParams defines parameters for RenameWorkspace.
+type RenameWorkspaceParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchWorkspaceMembersParams defines parameters for SearchWorkspaceMembers.
+type SearchWorkspaceMembersParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// RemoveWorkspaceMemberParams defines parameters for RemoveWorkspaceMember.
+type RemoveWorkspaceMemberParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetWorkspaceMemberRoleParams defines parameters for SetWorkspaceMemberRole.
+type SetWorkspaceMemberRoleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ListWorkspaceRolesParams defines parameters for ListWorkspaceRoles.
+type ListWorkspaceRolesParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8765,6 +8924,18 @@ type SearchWebhooksJSONRequestBody = WebhookSearchRequest
 
 // SearchWebhookRequestsJSONRequestBody defines body for SearchWebhookRequests for application/json ContentType.
 type SearchWebhookRequestsJSONRequestBody = WebhookRequestSearchRequest
+
+// CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
+type CreateWorkspaceJSONRequestBody = WorkspaceWriteRequest
+
+// RenameWorkspaceJSONRequestBody defines body for RenameWorkspace for application/json ContentType.
+type RenameWorkspaceJSONRequestBody = WorkspaceWriteRequest
+
+// SearchWorkspaceMembersJSONRequestBody defines body for SearchWorkspaceMembers for application/json ContentType.
+type SearchWorkspaceMembersJSONRequestBody = WorkspaceMemberSearchRequest
+
+// SetWorkspaceMemberRoleJSONRequestBody defines body for SetWorkspaceMemberRole for application/json ContentType.
+type SetWorkspaceMemberRoleJSONRequestBody = WorkspaceMemberRoleRequest
 
 // Getter for additional properties for DefinitionBase_Metadata. Returns the specified
 // element and whether it was found
@@ -12087,6 +12258,92 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /webhooks/{id}/stream (the `StreamWebhookRequests` operationId).
 	StreamWebhookRequests(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateWorkspaceWithBody Create Workspace
+	//
+	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+	CreateWorkspaceWithBody(ctx context.Context, params *CreateWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateWorkspace Create Workspace
+	//
+	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+	CreateWorkspace(ctx context.Context, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RenameWorkspaceWithBody Rename Workspace
+	//
+	// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+	RenameWorkspaceWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RenameWorkspace Rename Workspace
+	//
+	// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+	RenameWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchWorkspaceMembersWithBody Search Workspace Members
+	//
+	// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+	SearchWorkspaceMembersWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchWorkspaceMembers Search Workspace Members
+	//
+	// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+	SearchWorkspaceMembers(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, body SearchWorkspaceMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RemoveWorkspaceMember Remove Workspace Member
+	//
+	// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+	//
+	// Corresponds with DELETE /workspaces/{workspaceId}/members/{userId} (the `RemoveWorkspaceMember` operationId).
+	RemoveWorkspaceMember(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *RemoveWorkspaceMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWorkspaceMemberRoleWithBody Set Workspace Member Role
+	//
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+	SetWorkspaceMemberRoleWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWorkspaceMemberRole Set Workspace Member Role
+	//
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+	SetWorkspaceMemberRole(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, body SetWorkspaceMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListWorkspaceRoles List Workspace Roles
+	//
+	// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+	//
+	// Corresponds with GET /workspaces/{workspaceId}/roles (the `ListWorkspaceRoles` operationId).
+	ListWorkspaceRoles(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *ListWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // RebuildExecutionAnalytics Rebuild Execution Analytics
@@ -16524,6 +16781,192 @@ func (c *Client) StreamWebhookRequests(ctx context.Context, id WebhookIdParamete
 	return c.Client.Do(req)
 }
 
+// CreateWorkspaceWithBody Create Workspace
+//
+// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+func (c *Client) CreateWorkspaceWithBody(ctx context.Context, params *CreateWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkspaceRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateWorkspace Create Workspace
+//
+// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+func (c *Client) CreateWorkspace(ctx context.Context, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkspaceRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RenameWorkspaceWithBody Rename Workspace
+//
+// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+func (c *Client) RenameWorkspaceWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRenameWorkspaceRequestWithBody(c.Server, workspaceId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RenameWorkspace Rename Workspace
+//
+// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+func (c *Client) RenameWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRenameWorkspaceRequest(c.Server, workspaceId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchWorkspaceMembersWithBody Search Workspace Members
+//
+// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+func (c *Client) SearchWorkspaceMembersWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspaceMembersRequestWithBody(c.Server, workspaceId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchWorkspaceMembers Search Workspace Members
+//
+// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+func (c *Client) SearchWorkspaceMembers(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, body SearchWorkspaceMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspaceMembersRequest(c.Server, workspaceId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RemoveWorkspaceMember Remove Workspace Member
+//
+// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+//
+// Corresponds with DELETE /workspaces/{workspaceId}/members/{userId} (the `RemoveWorkspaceMember` operationId).
+func (c *Client) RemoveWorkspaceMember(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *RemoveWorkspaceMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveWorkspaceMemberRequest(c.Server, workspaceId, userId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWorkspaceMemberRoleWithBody Set Workspace Member Role
+//
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+func (c *Client) SetWorkspaceMemberRoleWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspaceMemberRoleRequestWithBody(c.Server, workspaceId, userId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWorkspaceMemberRole Set Workspace Member Role
+//
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+func (c *Client) SetWorkspaceMemberRole(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, body SetWorkspaceMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspaceMemberRoleRequest(c.Server, workspaceId, userId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListWorkspaceRoles List Workspace Roles
+//
+// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+//
+// Corresponds with GET /workspaces/{workspaceId}/roles (the `ListWorkspaceRoles` operationId).
+func (c *Client) ListWorkspaceRoles(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *ListWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListWorkspaceRolesRequest(c.Server, workspaceId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // NewRebuildExecutionAnalyticsRequest constructs an http.Request for the RebuildExecutionAnalytics method
 func NewRebuildExecutionAnalyticsRequest(server string, params *RebuildExecutionAnalyticsParams) (*http.Request, error) {
 	var err error
@@ -16783,14 +17226,16 @@ func NewListEndpointAnalyticsRequest(server string, params *ListEndpointAnalytic
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -16859,14 +17304,16 @@ func NewListFlowAnalyticsRequest(server string, params *ListFlowAnalyticsParams)
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -16935,14 +17382,16 @@ func NewGetExecutionAnalyticsSummaryRequest(server string, params *GetExecutionA
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17313,14 +17762,16 @@ func NewListCollectionsRequest(server string, params *ListCollectionsParams) (*h
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17375,14 +17826,16 @@ func NewCreateCollectionRequestWithBody(server string, params *CreateCollectionP
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17437,14 +17890,16 @@ func NewImportFromOpenAPIRequestWithBody(server string, params *ImportFromOpenAP
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17499,14 +17954,16 @@ func NewSearchCollectionsRequestWithBody(server string, params *SearchCollection
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17562,14 +18019,16 @@ func NewDeleteFolderRequest(server string, collectionId openapi_types.UUID, fold
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17638,14 +18097,16 @@ func NewUpdateFolderRequestWithBody(server string, collectionId openapi_types.UU
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17701,14 +18162,16 @@ func NewDeleteRequestRequest(server string, collectionId openapi_types.UUID, req
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17764,14 +18227,16 @@ func NewGetCollectionRequestRequest(server string, collectionId openapi_types.UU
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17840,14 +18305,16 @@ func NewUpdateRequestRequestWithBody(server string, collectionId openapi_types.U
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -17916,14 +18383,16 @@ func NewExecuteCollectionRequestRequestWithBody(server string, collectionId open
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18010,14 +18479,16 @@ func NewListCollectionRequestOpenAPISyncHistoryRequest(server string, collection
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18086,14 +18557,16 @@ func NewSearchCollectionRequestOpenAPISyncHistoryRequestWithBody(server string, 
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18142,14 +18615,16 @@ func NewDeleteCollectionRequest(server string, id openapi_types.UUID, params *De
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18198,14 +18673,16 @@ func NewGetCollectionRequest(server string, id openapi_types.UUID, params *GetCo
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18267,14 +18744,16 @@ func NewUpdateCollectionRequestWithBody(server string, id openapi_types.UUID, pa
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18323,14 +18802,16 @@ func NewListCollectionFoldersRequest(server string, id openapi_types.UUID, param
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18392,14 +18873,16 @@ func NewAddFolderRequestWithBody(server string, id openapi_types.UUID, params *A
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18461,14 +18944,16 @@ func NewSearchCollectionFoldersRequestWithBody(server string, id openapi_types.U
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18517,14 +19002,16 @@ func NewGetOpenAPISyncConfigRequest(server string, id openapi_types.UUID, params
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18573,14 +19060,16 @@ func NewDeleteOpenAPISyncConfigRequest(server string, id openapi_types.UUID, par
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18660,14 +19149,16 @@ func NewListOpenAPISyncHistoryRequest(server string, id openapi_types.UUID, para
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18729,14 +19220,16 @@ func NewCreateOrUpdateOpenAPISyncConfigRequestWithBody(server string, id openapi
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18798,14 +19291,16 @@ func NewSearchOpenAPISyncHistoryRequestWithBody(server string, id openapi_types.
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18867,14 +19362,16 @@ func NewSearchOpenAPISyncOperationsRequestWithBody(server string, id openapi_typ
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -18936,14 +19433,16 @@ func NewRunOpenAPISyncNowRequestWithBody(server string, id openapi_types.UUID, p
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19059,14 +19558,16 @@ func NewListCollectionRequestsRequest(server string, id openapi_types.UUID, para
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19128,14 +19629,16 @@ func NewAddRequestRequestWithBody(server string, id openapi_types.UUID, params *
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19197,14 +19700,16 @@ func NewSearchCollectionRequestsRequestWithBody(server string, id openapi_types.
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19325,14 +19830,16 @@ func NewListExecutionsRequest(server string, params *ListExecutionsParams) (*htt
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19387,14 +19894,16 @@ func NewSearchExecutionsRequestWithBody(server string, params *SearchExecutionsP
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19463,14 +19972,16 @@ func NewGetExecutionsSummaryRequest(server string, params *GetExecutionsSummaryP
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19543,14 +20054,16 @@ func NewListFlowsRequest(server string, params *ListFlowsParams) (*http.Request,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19605,14 +20118,16 @@ func NewCreateFlowRequestWithBody(server string, params *CreateFlowParams, conte
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19654,14 +20169,16 @@ func NewListFlowFoldersRequest(server string, params *ListFlowFoldersParams) (*h
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19716,14 +20233,16 @@ func NewCreateFlowFolderRequestWithBody(server string, params *CreateFlowFolderP
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19778,14 +20297,16 @@ func NewBulkMoveFlowsRequestWithBody(server string, params *BulkMoveFlowsParams,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19840,14 +20361,16 @@ func NewSearchFlowFoldersRequestWithBody(server string, params *SearchFlowFolder
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19923,14 +20446,16 @@ func NewDeleteFlowFolderRequest(server string, folderId openapi_types.UUID, para
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -19992,14 +20517,16 @@ func NewUpdateFlowFolderRequestWithBody(server string, folderId openapi_types.UU
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20061,14 +20588,16 @@ func NewMoveFlowFolderRequestWithBody(server string, folderId openapi_types.UUID
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20123,14 +20652,16 @@ func NewSearchFlowsRequestWithBody(server string, params *SearchFlowsParams, con
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20172,14 +20703,16 @@ func NewListFlowTagsRequest(server string, params *ListFlowTagsParams) (*http.Re
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20235,14 +20768,16 @@ func NewGetExecutionRequest(server string, flowId openapi_types.UUID, executionI
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20298,14 +20833,16 @@ func NewGetExecutionNodeResultsRequest(server string, flowId openapi_types.UUID,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20368,14 +20905,16 @@ func NewGetNodeExecutionResultRequest(server string, flowId openapi_types.UUID, 
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20431,14 +20970,16 @@ func NewStreamExecutionRequest(server string, flowId openapi_types.UUID, executi
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20525,14 +21066,16 @@ func NewGetNodeExecutionHistoryRequest(server string, flowId openapi_types.UUID,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20601,14 +21144,16 @@ func NewSearchNodeExecutionHistoryRequestWithBody(server string, flowId openapi_
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20657,14 +21202,16 @@ func NewDeleteFlowRequest(server string, id openapi_types.UUID, params *DeleteFl
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20713,14 +21260,16 @@ func NewGetFlowRequest(server string, id openapi_types.UUID, params *GetFlowPara
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20782,14 +21331,16 @@ func NewUpdateFlowRequestWithBody(server string, id openapi_types.UUID, params *
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20869,14 +21420,16 @@ func NewListFlowExecutionsRequest(server string, id openapi_types.UUID, params *
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -20952,14 +21505,16 @@ func NewExportFlowRequest(server string, id openapi_types.UUID, params *ExportFl
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21021,14 +21576,16 @@ func NewLaunchFlowRequestWithBody(server string, id openapi_types.UUID, params *
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		if params.IdempotencyKey != nil {
 			var headerParam1 string
@@ -21088,14 +21645,16 @@ func NewPublishFlowRequest(server string, id openapi_types.UUID, params *Publish
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21144,14 +21703,16 @@ func NewDeleteFlowVariablesRequest(server string, id openapi_types.UUID, params 
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21200,14 +21761,16 @@ func NewGetFlowVariablesRequest(server string, id openapi_types.UUID, params *Ge
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21263,14 +21826,16 @@ func NewDeleteFlowVariableRequest(server string, id openapi_types.UUID, key Vari
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21339,14 +21904,16 @@ func NewSetFlowVariableRequestWithBody(server string, id openapi_types.UUID, key
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21426,14 +21993,16 @@ func NewListFlowVersionsRequest(server string, id openapi_types.UUID, params *Li
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21495,14 +22064,16 @@ func NewSearchFlowVersionsRequestWithBody(server string, id openapi_types.UUID, 
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21558,14 +22129,16 @@ func NewGetFlowVersionRequest(server string, id openapi_types.UUID, versionId op
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -21621,14 +22194,16 @@ func NewRestoreFlowVersionRequest(server string, id openapi_types.UUID, versionI
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22354,14 +22929,16 @@ func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams)
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22416,14 +22993,16 @@ func NewCreateFlowScheduleRequestWithBody(server string, params *CreateFlowSched
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22518,14 +23097,16 @@ func NewEstimateMonitorRequestWithBody(server string, params *EstimateMonitorPar
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22580,14 +23161,16 @@ func NewPreviewScheduleTagsRequestWithBody(server string, params *PreviewSchedul
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22642,14 +23225,16 @@ func NewSearchFlowSchedulesRequestWithBody(server string, params *SearchFlowSche
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22698,14 +23283,16 @@ func NewDeleteFlowScheduleRequest(server string, monitorId openapi_types.UUID, p
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22754,14 +23341,16 @@ func NewGetFlowScheduleRequest(server string, monitorId openapi_types.UUID, para
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22823,14 +23412,16 @@ func NewUpdateFlowScheduleRequestWithBody(server string, monitorId openapi_types
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22879,14 +23470,16 @@ func NewPauseFlowScheduleRequest(server string, monitorId openapi_types.UUID, pa
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22935,14 +23528,16 @@ func NewResumeFlowScheduleRequest(server string, monitorId openapi_types.UUID, p
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -22991,14 +23586,16 @@ func NewRunMonitorRequest(server string, monitorId openapi_types.UUID, params *R
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -23078,14 +23675,16 @@ func NewListFlowScheduleRunsRequest(server string, monitorId openapi_types.UUID,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -23147,14 +23746,16 @@ func NewSearchFlowScheduleRunsRequestWithBody(server string, monitorId openapi_t
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -23210,14 +23811,16 @@ func NewGetFlowScheduleRunRequest(server string, monitorId openapi_types.UUID, r
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -23312,14 +23915,16 @@ func NewSearchOpenAPISyncConfigsRequestWithBody(server string, params *SearchOpe
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24046,14 +24651,16 @@ func NewSearchResourcesRequestWithBody(server string, params *SearchResourcesPar
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24115,14 +24722,16 @@ func NewClaimEphemeralJobRequestWithBody(server string, executionId openapi_type
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24184,14 +24793,16 @@ func NewCompleteEphemeralExecutionRequestWithBody(server string, executionId ope
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24546,14 +25157,16 @@ func NewListSpecsRequest(server string, params *ListSpecsParams) (*http.Request,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24608,14 +25221,16 @@ func NewCreateSpecRequestWithBody(server string, params *CreateSpecParams, conte
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24670,14 +25285,16 @@ func NewSearchSpecsRequestWithBody(server string, params *SearchSpecsParams, con
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24726,14 +25343,16 @@ func NewGetSpecRequest(server string, slug SpecSlugParameter, params *GetSpecPar
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24795,14 +25414,16 @@ func NewApplySpecCommandsRequestWithBody(server string, slug SpecSlugParameter, 
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24878,14 +25499,16 @@ func NewPullSpecRequest(server string, slug SpecSlugParameter, params *PullSpecP
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -24965,14 +25588,16 @@ func NewListSpecVersionsRequest(server string, slug SpecSlugParameter, params *L
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25034,14 +25659,16 @@ func NewPushSpecVersionRequestWithBody(server string, slug SpecSlugParameter, pa
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25103,14 +25730,16 @@ func NewSearchSpecVersionsRequestWithBody(server string, slug SpecSlugParameter,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25166,14 +25795,16 @@ func NewGetSpecVersionRequest(server string, slug SpecSlugParameter, version str
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25594,14 +26225,16 @@ func NewListWebhooksRequest(server string, params *ListWebhooksParams) (*http.Re
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25656,14 +26289,16 @@ func NewCreateWebhookRequestWithBody(server string, params *CreateWebhookParams,
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25718,14 +26353,16 @@ func NewSearchWebhooksRequestWithBody(server string, params *SearchWebhooksParam
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25774,14 +26411,16 @@ func NewDeleteWebhookRequest(server string, id WebhookIdParameter, params *Delet
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25830,14 +26469,16 @@ func NewGetWebhookRequest(server string, id WebhookIdParameter, params *GetWebho
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -25917,14 +26558,16 @@ func NewGetWebhookMethodDistributionRequest(server string, id WebhookIdParameter
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -26004,14 +26647,16 @@ func NewGetWebhookRequestVolumesRequest(server string, id WebhookIdParameter, pa
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -26073,14 +26718,16 @@ func NewSearchWebhookRequestsRequestWithBody(server string, id WebhookIdParamete
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -26152,14 +26799,16 @@ func NewStreamWebhookRequestsRequest(server string, id WebhookIdParameter, param
 
 	if params != nil {
 
-		var headerParam0 string
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
 
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
 		}
-
-		req.Header.Set("X-Workspace-Id", headerParam0)
 
 		var headerParam1 string
 
@@ -26169,6 +26818,347 @@ func NewStreamWebhookRequestsRequest(server string, id WebhookIdParameter, param
 		}
 
 		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateWorkspaceRequest calls the generic CreateWorkspace builder with application/json body
+func NewCreateWorkspaceRequest(server string, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateWorkspaceRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateWorkspaceRequestWithBody constructs an http.Request for the CreateWorkspace method, with any body, and a specified content type
+func NewCreateWorkspaceRequestWithBody(server string, params *CreateWorkspaceParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewRenameWorkspaceRequest calls the generic RenameWorkspace builder with application/json body
+func NewRenameWorkspaceRequest(server string, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRenameWorkspaceRequestWithBody(server, workspaceId, params, "application/json", bodyReader)
+}
+
+// NewRenameWorkspaceRequestWithBody constructs an http.Request for the RenameWorkspace method, with any body, and a specified content type
+func NewRenameWorkspaceRequestWithBody(server string, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchWorkspaceMembersRequest calls the generic SearchWorkspaceMembers builder with application/json body
+func NewSearchWorkspaceMembersRequest(server string, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, body SearchWorkspaceMembersJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchWorkspaceMembersRequestWithBody(server, workspaceId, params, "application/json", bodyReader)
+}
+
+// NewSearchWorkspaceMembersRequestWithBody constructs an http.Request for the SearchWorkspaceMembers method, with any body, and a specified content type
+func NewSearchWorkspaceMembersRequestWithBody(server string, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/members/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewRemoveWorkspaceMemberRequest constructs an http.Request for the RemoveWorkspaceMember method
+func NewRemoveWorkspaceMemberRequest(server string, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *RemoveWorkspaceMemberParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/members/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSetWorkspaceMemberRoleRequest calls the generic SetWorkspaceMemberRole builder with application/json body
+func NewSetWorkspaceMemberRoleRequest(server string, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, body SetWorkspaceMemberRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetWorkspaceMemberRoleRequestWithBody(server, workspaceId, userId, params, "application/json", bodyReader)
+}
+
+// NewSetWorkspaceMemberRoleRequestWithBody constructs an http.Request for the SetWorkspaceMemberRole method, with any body, and a specified content type
+func NewSetWorkspaceMemberRoleRequestWithBody(server string, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/members/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewListWorkspaceRolesRequest constructs an http.Request for the ListWorkspaceRoles method
+func NewListWorkspaceRolesRequest(server string, workspaceId WorkspaceIDPathParameter, params *ListWorkspaceRolesParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/roles", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
 
 	}
 
@@ -28612,6 +29602,96 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /webhooks/{id}/stream (the `StreamWebhookRequests` operationId).
 	StreamWebhookRequestsWithResponse(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*StreamWebhookRequestsResponse, error)
+
+	// CreateWorkspaceWithBodyWithResponse Create Workspace
+	//
+	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+	CreateWorkspaceWithBodyWithResponse(ctx context.Context, params *CreateWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceResponse, error)
+
+	// CreateWorkspaceWithResponse Create Workspace
+	//
+	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+	CreateWorkspaceWithResponse(ctx context.Context, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceResponse, error)
+
+	// RenameWorkspaceWithBodyWithResponse Rename Workspace
+	//
+	// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+	RenameWorkspaceWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RenameWorkspaceResponse, error)
+
+	// RenameWorkspaceWithResponse Rename Workspace
+	//
+	// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+	RenameWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameWorkspaceResponse, error)
+
+	// SearchWorkspaceMembersWithBodyWithResponse Search Workspace Members
+	//
+	// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+	SearchWorkspaceMembersWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspaceMembersResponse, error)
+
+	// SearchWorkspaceMembersWithResponse Search Workspace Members
+	//
+	// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+	SearchWorkspaceMembersWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, body SearchWorkspaceMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspaceMembersResponse, error)
+
+	// RemoveWorkspaceMemberWithResponse Remove Workspace Member
+	//
+	// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /workspaces/{workspaceId}/members/{userId} (the `RemoveWorkspaceMember` operationId).
+	RemoveWorkspaceMemberWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *RemoveWorkspaceMemberParams, reqEditors ...RequestEditorFn) (*RemoveWorkspaceMemberResponse, error)
+
+	// SetWorkspaceMemberRoleWithBodyWithResponse Set Workspace Member Role
+	//
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+	SetWorkspaceMemberRoleWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspaceMemberRoleResponse, error)
+
+	// SetWorkspaceMemberRoleWithResponse Set Workspace Member Role
+	//
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+	SetWorkspaceMemberRoleWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, body SetWorkspaceMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspaceMemberRoleResponse, error)
+
+	// ListWorkspaceRolesWithResponse List Workspace Roles
+	//
+	// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /workspaces/{workspaceId}/roles (the `ListWorkspaceRoles` operationId).
+	ListWorkspaceRolesWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *ListWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*ListWorkspaceRolesResponse, error)
 }
 
 type RebuildExecutionAnalyticsResponse struct {
@@ -39181,6 +40261,371 @@ func (r StreamWebhookRequestsResponse) ContentType() string {
 	return ""
 }
 
+type CreateWorkspaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *Workspace
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateWorkspaceResponse) GetJSON201() *Workspace {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateWorkspaceResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateWorkspaceResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateWorkspaceResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateWorkspaceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateWorkspaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateWorkspaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateWorkspaceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RenameWorkspaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Workspace
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RenameWorkspaceResponse) GetJSON200() *Workspace {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RenameWorkspaceResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RenameWorkspaceResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RenameWorkspaceResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r RenameWorkspaceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RenameWorkspaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RenameWorkspaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RenameWorkspaceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchWorkspaceMembersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceMemberSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchWorkspaceMembersResponse) GetJSON200() *WorkspaceMemberSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchWorkspaceMembersResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchWorkspaceMembersResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchWorkspaceMembersResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchWorkspaceMembersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchWorkspaceMembersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchWorkspaceMembersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchWorkspaceMembersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RemoveWorkspaceMemberResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RemoveWorkspaceMemberResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RemoveWorkspaceMemberResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RemoveWorkspaceMemberResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r RemoveWorkspaceMemberResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RemoveWorkspaceMemberResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemoveWorkspaceMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemoveWorkspaceMemberResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetWorkspaceMemberRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceMember
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetWorkspaceMemberRoleResponse) GetJSON200() *WorkspaceMember {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetWorkspaceMemberRoleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetWorkspaceMemberRoleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetWorkspaceMemberRoleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetWorkspaceMemberRoleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SetWorkspaceMemberRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetWorkspaceMemberRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetWorkspaceMemberRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetWorkspaceMemberRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListWorkspaceRolesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceRoleListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListWorkspaceRolesResponse) GetJSON200() *WorkspaceRoleListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListWorkspaceRolesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListWorkspaceRolesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListWorkspaceRolesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListWorkspaceRolesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListWorkspaceRolesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListWorkspaceRolesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // RebuildExecutionAnalyticsWithResponse Rebuild Execution Analytics
 //
 // Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
@@ -42917,6 +44362,156 @@ func (c *ClientWithResponses) StreamWebhookRequestsWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseStreamWebhookRequestsResponse(rsp)
+}
+
+// CreateWorkspaceWithBodyWithResponse Create Workspace
+//
+// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+func (c *ClientWithResponses) CreateWorkspaceWithBodyWithResponse(ctx context.Context, params *CreateWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceResponse, error) {
+	rsp, err := c.CreateWorkspaceWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateWorkspaceResponse(rsp)
+}
+
+// CreateWorkspaceWithResponse Create Workspace
+//
+// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
+func (c *ClientWithResponses) CreateWorkspaceWithResponse(ctx context.Context, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceResponse, error) {
+	rsp, err := c.CreateWorkspace(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateWorkspaceResponse(rsp)
+}
+
+// RenameWorkspaceWithBodyWithResponse Rename Workspace
+//
+// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+func (c *ClientWithResponses) RenameWorkspaceWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RenameWorkspaceResponse, error) {
+	rsp, err := c.RenameWorkspaceWithBody(ctx, workspaceId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRenameWorkspaceResponse(rsp)
+}
+
+// RenameWorkspaceWithResponse Rename Workspace
+//
+// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
+func (c *ClientWithResponses) RenameWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameWorkspaceResponse, error) {
+	rsp, err := c.RenameWorkspace(ctx, workspaceId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRenameWorkspaceResponse(rsp)
+}
+
+// SearchWorkspaceMembersWithBodyWithResponse Search Workspace Members
+//
+// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+func (c *ClientWithResponses) SearchWorkspaceMembersWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspaceMembersResponse, error) {
+	rsp, err := c.SearchWorkspaceMembersWithBody(ctx, workspaceId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspaceMembersResponse(rsp)
+}
+
+// SearchWorkspaceMembersWithResponse Search Workspace Members
+//
+// Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces/{workspaceId}/members/search (the `SearchWorkspaceMembers` operationId).
+func (c *ClientWithResponses) SearchWorkspaceMembersWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceMembersParams, body SearchWorkspaceMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspaceMembersResponse, error) {
+	rsp, err := c.SearchWorkspaceMembers(ctx, workspaceId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspaceMembersResponse(rsp)
+}
+
+// RemoveWorkspaceMemberWithResponse Remove Workspace Member
+//
+// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /workspaces/{workspaceId}/members/{userId} (the `RemoveWorkspaceMember` operationId).
+func (c *ClientWithResponses) RemoveWorkspaceMemberWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *RemoveWorkspaceMemberParams, reqEditors ...RequestEditorFn) (*RemoveWorkspaceMemberResponse, error) {
+	rsp, err := c.RemoveWorkspaceMember(ctx, workspaceId, userId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemoveWorkspaceMemberResponse(rsp)
+}
+
+// SetWorkspaceMemberRoleWithBodyWithResponse Set Workspace Member Role
+//
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+func (c *ClientWithResponses) SetWorkspaceMemberRoleWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspaceMemberRoleResponse, error) {
+	rsp, err := c.SetWorkspaceMemberRoleWithBody(ctx, workspaceId, userId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspaceMemberRoleResponse(rsp)
+}
+
+// SetWorkspaceMemberRoleWithResponse Set Workspace Member Role
+//
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspaces/{workspaceId}/members/{userId} (the `SetWorkspaceMemberRole` operationId).
+func (c *ClientWithResponses) SetWorkspaceMemberRoleWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *SetWorkspaceMemberRoleParams, body SetWorkspaceMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspaceMemberRoleResponse, error) {
+	rsp, err := c.SetWorkspaceMemberRole(ctx, workspaceId, userId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspaceMemberRoleResponse(rsp)
+}
+
+// ListWorkspaceRolesWithResponse List Workspace Roles
+//
+// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /workspaces/{workspaceId}/roles (the `ListWorkspaceRoles` operationId).
+func (c *ClientWithResponses) ListWorkspaceRolesWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *ListWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*ListWorkspaceRolesResponse, error) {
+	rsp, err := c.ListWorkspaceRoles(ctx, workspaceId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListWorkspaceRolesResponse(rsp)
 }
 
 // ParseRebuildExecutionAnalyticsResponse parses an HTTP response from a RebuildExecutionAnalyticsWithResponse call
@@ -51197,6 +52792,284 @@ func ParseStreamWebhookRequestsResponse(rsp *http.Response) (*StreamWebhookReque
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateWorkspaceResponse parses an HTTP response from a CreateWorkspaceWithResponse call
+func ParseCreateWorkspaceResponse(rsp *http.Response) (*CreateWorkspaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateWorkspaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest Workspace
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRenameWorkspaceResponse parses an HTTP response from a RenameWorkspaceWithResponse call
+func ParseRenameWorkspaceResponse(rsp *http.Response) (*RenameWorkspaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RenameWorkspaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Workspace
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchWorkspaceMembersResponse parses an HTTP response from a SearchWorkspaceMembersWithResponse call
+func ParseSearchWorkspaceMembersResponse(rsp *http.Response) (*SearchWorkspaceMembersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchWorkspaceMembersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceMemberSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRemoveWorkspaceMemberResponse parses an HTTP response from a RemoveWorkspaceMemberWithResponse call
+func ParseRemoveWorkspaceMemberResponse(rsp *http.Response) (*RemoveWorkspaceMemberResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemoveWorkspaceMemberResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetWorkspaceMemberRoleResponse parses an HTTP response from a SetWorkspaceMemberRoleWithResponse call
+func ParseSetWorkspaceMemberRoleResponse(rsp *http.Response) (*SetWorkspaceMemberRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetWorkspaceMemberRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceMember
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListWorkspaceRolesResponse parses an HTTP response from a ListWorkspaceRolesWithResponse call
+func ParseListWorkspaceRolesResponse(rsp *http.Response) (*ListWorkspaceRolesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListWorkspaceRolesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceRoleListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 

@@ -34,6 +34,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.webhooks:read
+        - BearerAuth:
             - webhooks:read
         - ApiKeys:
             - webhooks:read
@@ -71,6 +73,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.webhooks:create
+        - BearerAuth:
             - webhooks:create
         - ApiKeys:
             - webhooks:create
@@ -102,6 +106,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.webhooks:read
+        - BearerAuth:
             - webhooks:read
         - ApiKeys:
             - webhooks:read
@@ -126,6 +132,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.webhooks:delete
         - BearerAuth:
             - webhooks:delete
         - ApiKeys:
@@ -345,6 +353,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.webhooks:read
+        - BearerAuth:
             - webhooks:read
         - ApiKeys:
             - webhooks:read
@@ -381,6 +391,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.webhooks:read
         - BearerAuth:
             - webhooks:read
         - ApiKeys:
@@ -421,6 +433,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.webhooks:read
         - BearerAuth:
             - webhooks:read
         - ApiKeys:
@@ -473,6 +487,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.webhooks:read
+        - BearerAuth:
             - webhooks:read
         - ApiKeys:
             - webhooks:read
@@ -523,6 +539,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.webhooks:read
         - BearerAuth:
             - webhooks:read
         - ApiKeys:
@@ -714,6 +732,8 @@ paths:
                 $ref: '#/components/schemas/ApiErrorResponse'
       security:
         - BearerAuth:
+            - workspace.flows:execute
+        - BearerAuth:
             - flows:execute
         - ApiKeys:
             - flows:execute
@@ -765,6 +785,8 @@ paths:
         "500":
           $ref: '#/components/responses/InternalServerError'
       security:
+        - BearerAuth:
+            - workspace.flows:execute
         - BearerAuth:
             - flows:execute
         - ApiKeys:
@@ -824,6 +846,8 @@ paths:
         - ApiKeys:
             - runner:complete
         - BearerAuth:
+            - workspace.flows:execute
+        - BearerAuth:
             - flows:execute
       x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
   /runners:
@@ -856,8 +880,7 @@ paths:
         "500":
           $ref: '#/components/responses/InternalServerError'
       security:
-        - BearerAuth:
-            - flows:read
+        - BearerAuth: []
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -1079,6 +1102,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -1115,6 +1140,8 @@ paths:
         "409":
           $ref: '#/components/responses/Conflict'
       security:
+        - BearerAuth:
+            - workspace.flows:create
         - BearerAuth:
             - flows:create
         - ApiKeys:
@@ -1154,6 +1181,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -1197,6 +1226,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -1233,6 +1264,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -1273,6 +1306,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:create
+        - BearerAuth:
             - flows:create
         - ApiKeys:
             - flows:create
@@ -1309,6 +1344,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -1359,6 +1396,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -1396,6 +1435,8 @@ paths:
         "409":
           $ref: '#/components/responses/Conflict'
       security:
+        - BearerAuth:
+            - workspace.flows:delete
         - BearerAuth:
             - flows:delete
         - ApiKeys:
@@ -1446,6 +1487,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -1477,6 +1520,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -1517,6 +1562,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -1556,6 +1603,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -1578,6 +1627,8 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
       security:
+        - BearerAuth:
+            - workspace.flows:delete
         - BearerAuth:
             - flows:delete
         - ApiKeys:
@@ -1626,6 +1677,8 @@ paths:
         "500":
           $ref: '#/components/responses/InternalServerError'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -2248,6 +2301,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -2282,6 +2337,8 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
       security:
+        - BearerAuth:
+            - workspace.collections:create
         - BearerAuth:
             - collections:create
         - ApiKeys:
@@ -2319,6 +2376,8 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
       security:
+        - BearerAuth:
+            - workspace.collections:read
         - BearerAuth:
             - collections:read
         - ApiKeys:
@@ -2360,6 +2419,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -2397,6 +2458,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:update
+        - BearerAuth:
             - collections:update
         - ApiKeys:
             - collections:update
@@ -2419,6 +2482,8 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
       security:
+        - BearerAuth:
+            - workspace.collections:delete
         - BearerAuth:
             - collections:delete
         - ApiKeys:
@@ -2458,6 +2523,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:read
         - BearerAuth:
             - collections:read
         - ApiKeys:
@@ -2508,6 +2575,8 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth:
+            - workspace.collections:update
+        - BearerAuth:
             - collections:update
         - ApiKeys:
             - collections:update
@@ -2550,6 +2619,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -2586,6 +2657,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:update
+        - BearerAuth:
             - collections:update
         - ApiKeys:
             - collections:update
@@ -2610,6 +2683,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:delete
         - BearerAuth:
             - collections:delete
         - ApiKeys:
@@ -2656,6 +2731,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:read
         - BearerAuth:
             - collections:read
         - ApiKeys:
@@ -2704,6 +2781,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -2742,6 +2821,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:read
         - BearerAuth:
             - collections:read
         - ApiKeys:
@@ -2783,6 +2864,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -2818,6 +2901,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:create
         - BearerAuth:
             - collections:create
         - ApiKeys:
@@ -2864,6 +2949,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:read
         - BearerAuth:
             - collections:read
         - ApiKeys:
@@ -2921,6 +3008,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.collections:update
+        - BearerAuth:
             - collections:update
         - ApiKeys:
             - collections:update
@@ -2945,6 +3034,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:delete
         - BearerAuth:
             - collections:delete
         - ApiKeys:
@@ -3008,6 +3099,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -3043,6 +3136,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:create
         - BearerAuth:
             - collections:create
         - ApiKeys:
@@ -3089,6 +3184,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:read
         - BearerAuth:
             - collections:read
         - ApiKeys:
@@ -3137,6 +3234,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -3173,6 +3272,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:update
+        - BearerAuth:
             - collections:update
         - ApiKeys:
             - collections:update
@@ -3197,6 +3298,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.collections:delete
         - BearerAuth:
             - collections:delete
         - ApiKeys:
@@ -3251,6 +3354,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:update
+        - BearerAuth:
             - collections:update
         - ApiKeys:
             - collections:update
@@ -3299,6 +3404,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.collections:read
         - BearerAuth:
             - collections:read
         - ApiKeys:
@@ -3353,6 +3460,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.collections:read
+        - BearerAuth:
             - collections:read
         - ApiKeys:
             - collections:read
@@ -3393,6 +3502,8 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth:
+            - workspace.collections:create
+        - BearerAuth:
             - collections:create
         - ApiKeys:
             - collections:create
@@ -3432,6 +3543,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -3456,6 +3569,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:delete
         - BearerAuth:
             - flows:delete
         - ApiKeys:
@@ -3503,6 +3618,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -3527,6 +3644,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:delete
         - BearerAuth:
             - flows:delete
         - ApiKeys:
@@ -3566,6 +3685,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:update
         - BearerAuth:
             - flows:update
         - ApiKeys:
@@ -3608,6 +3729,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -3655,6 +3778,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -3701,6 +3826,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -3750,6 +3877,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -3775,8 +3904,7 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
       security:
-        - BearerAuth:
-            - flows:read
+        - BearerAuth: []
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -3801,8 +3929,7 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
       security:
-        - BearerAuth:
-            - flows:read
+        - BearerAuth: []
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -3839,6 +3966,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -3915,6 +4044,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -3949,6 +4080,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -3997,6 +4130,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -4060,6 +4195,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -4096,6 +4233,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -4139,6 +4278,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -4185,6 +4326,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -4260,6 +4403,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -4307,6 +4452,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -4360,6 +4507,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -4407,6 +4556,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -4460,10 +4611,202 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search the execution history of one node across the runs of a flow, newest first, and page with the returned next_cursor.
+      x-ai-tool: true
+  /workspaces:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Workspaces
+      summary: Create Workspace
+      description: Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
+      operationId: createWorkspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceWriteRequest'
+      responses:
+        "201":
+          description: The workspace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspaces:create
+        - ApiKeys:
+            - workspaces:create
+      x-ai-tool: true
+  /workspaces/{workspaceId}:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - $ref: '#/components/parameters/WorkspaceIDPathParameter'
+    patch:
+      tags:
+        - Workspaces
+      summary: Rename Workspace
+      description: Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+      operationId: renameWorkspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceWriteRequest'
+      responses:
+        "200":
+          description: The workspace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.settings:update
+        - ApiKeys:
+            - workspace.settings:update
+      x-ai-tool: true
+  /workspaces/{workspaceId}/members/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - $ref: '#/components/parameters/WorkspaceIDPathParameter'
+    post:
+      tags:
+        - Workspaces
+      summary: Search Workspace Members
+      description: 'Lists the members holding a role on the workspace, with their name, email and role, and pages with a cursor. Organization roles that also reach the workspace are not listed. Default order: when the member joined the workspace, oldest first, then user_id. Requires workspace.access:read on the workspace.'
+      operationId: searchWorkspaceMembers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberSearchRequest'
+      responses:
+        "200":
+          description: The members of the workspace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMemberSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.access:read
+        - ApiKeys:
+            - workspace.access:read
+      x-ai-tool: true
+  /workspaces/{workspaceId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - $ref: '#/components/parameters/WorkspaceIDPathParameter'
+      - $ref: '#/components/parameters/WorkspaceMemberUserIDPathParameter'
+    put:
+      tags:
+        - Workspaces
+      summary: Set Workspace Member Role
+      description: Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+      operationId: setWorkspaceMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberRoleRequest'
+      responses:
+        "200":
+          description: The member with their role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.access:manage
+        - ApiKeys:
+            - workspace.access:manage
+      x-ai-tool: true
+    delete:
+      tags:
+        - Workspaces
+      summary: Remove Workspace Member
+      description: Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+      operationId: removeWorkspaceMember
+      responses:
+        "204":
+          description: The member holds no role on the workspace.
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.access:manage
+        - ApiKeys:
+            - workspace.access:manage
+      x-ai-tool: true
+  /workspaces/{workspaceId}/roles:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - $ref: '#/components/parameters/WorkspaceIDPathParameter'
+    get:
+      tags:
+        - Workspaces
+      summary: List Workspace Roles
+      description: 'Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.'
+      operationId: listWorkspaceRoles
+      responses:
+        "200":
+          description: The workspace roles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoleListResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.access:read
+        - ApiKeys:
+            - workspace.access:read
       x-ai-tool: true
   /members:
     parameters:
@@ -4503,8 +4846,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
       deprecated: true
       security:
-        - BearerAuth:
-            - flows:read
+        - BearerAuth: []
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4538,8 +4880,7 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
-        - BearerAuth:
-            - flows:read
+        - BearerAuth: []
         - ApiKeys:
             - flows:read
       x-ai-description: Search the members of the organization by name or email, with their role. Page with the returned next_cursor.
@@ -4836,6 +5177,8 @@ paths:
       deprecated: true
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -4873,6 +5216,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -4909,6 +5254,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -4948,6 +5295,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -5013,6 +5362,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -5052,6 +5403,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -5089,6 +5442,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -5111,6 +5466,8 @@ paths:
         "403":
           $ref: '#/components/responses/Forbidden'
       security:
+        - BearerAuth:
+            - workspace.flows:update
         - BearerAuth:
             - flows:update
         - ApiKeys:
@@ -5153,6 +5510,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:update
+        - BearerAuth:
             - flows:update
         - ApiKeys:
             - flows:update
@@ -5193,6 +5552,8 @@ paths:
         "409":
           $ref: '#/components/responses/Conflict'
       security:
+        - BearerAuth:
+            - workspace.flows:update
         - BearerAuth:
             - flows:update
         - ApiKeys:
@@ -5235,6 +5596,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.flows:execute
+        - BearerAuth:
             - flows:execute
         - ApiKeys:
             - flows:execute
@@ -5276,6 +5639,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -5322,6 +5687,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.flows:read
         - BearerAuth:
             - flows:read
         - ApiKeys:
@@ -5370,6 +5737,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - BearerAuth:
+            - workspace.flows:read
+        - BearerAuth:
             - flows:read
         - ApiKeys:
             - flows:read
@@ -5402,6 +5771,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.specs:read
         - BearerAuth:
             - specs:read
         - ApiKeys:
@@ -5448,6 +5819,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.specs:write
+        - BearerAuth:
             - specs:write
         - ApiKeys:
             - specs:write
@@ -5485,6 +5858,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - BearerAuth:
+            - workspace.specs:read
+        - BearerAuth:
             - specs:read
         - ApiKeys:
             - specs:read
@@ -5518,6 +5893,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.specs:read
         - BearerAuth:
             - specs:read
         - ApiKeys:
@@ -5554,6 +5931,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       deprecated: true
       security:
+        - BearerAuth:
+            - workspace.specs:read
         - BearerAuth:
             - specs:read
         - ApiKeys:
@@ -5604,6 +5983,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.specs:write
+        - BearerAuth:
             - specs:write
         - ApiKeys:
             - specs:write
@@ -5643,6 +6024,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.specs:read
         - BearerAuth:
             - specs:read
         - ApiKeys:
@@ -5685,6 +6068,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.specs:read
         - BearerAuth:
             - specs:read
         - ApiKeys:
@@ -5750,6 +6135,8 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
+            - workspace.specs:write
+        - BearerAuth:
             - specs:write
         - ApiKeys:
             - specs:write
@@ -5793,6 +6180,8 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
       security:
+        - BearerAuth:
+            - workspace.specs:read
         - BearerAuth:
             - specs:read
         - ApiKeys:
@@ -6238,7 +6627,7 @@ components:
         role:
           $ref: '#/components/schemas/CurrentUserOrganizationRole'
         workspaces:
-          description: Ordinary workspaces linked to this organization, returned only with include=workspace. An empty array means the organization has none. Selection does not enable resource isolation in this rollout.
+          description: 'The workspaces of this organization the user can open, oldest first, each with the user''s role and workspace permissions there; returned only with include=workspace. An organization role holding workspace permissions opens every workspace; otherwise only the workspaces the user holds a role on are listed. An empty array means the user can open none.'
           type: array
           items:
             $ref: '#/components/schemas/CurrentUserWorkspace'
@@ -11472,7 +11861,16 @@ components:
         - email
         - expires_at
         - created_at
+        - role
+        - workspaces
       properties:
+        role:
+          $ref: '#/components/schemas/InvitationOrganizationRole'
+        workspaces:
+          description: The workspace roles the invited person gets when they accept.
+          type: array
+          items:
+            $ref: '#/components/schemas/InvitationWorkspaceRole'
         id:
           description: Unique identifier of the invitation.
           type: string
@@ -11535,10 +11933,40 @@ components:
         - email
       properties:
         email:
-          description: The email address to invite. The role is always admin.
+          description: The email address to invite.
           type: string
           format: email
           maxLength: 254
+        role:
+          $ref: '#/components/schemas/InvitationOrganizationRole'
+        workspaces:
+          description: Workspace roles the invited person gets when they accept, one per workspace. Each workspace must belong to the organization, the caller must hold workspace.access:manage on it, and the role must be a workspace role (400 WORKSPACE_ROLE_NOT_FOUND otherwise). Empty or omitted gives none.
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/InvitationWorkspaceRole'
+    InvitationOrganizationRole:
+      description: 'The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.'
+      type: string
+      enum:
+        - admin
+        - member
+    InvitationWorkspaceRole:
+      description: A role the invited person gets on one workspace when they accept.
+      type: object
+      required:
+        - workspace_id
+        - role_id
+      properties:
+        workspace_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        role_id:
+          description: A workspace role, from GET /workspaces/{workspaceId}/roles.
+          type: string
+          minLength: 1
+          maxLength: 255
     ReceivedInvitation:
       description: A pending invitation addressed to one of the verified email addresses of the signed-in person.
       type: object
@@ -13731,11 +14159,120 @@ components:
       type: string
       enum:
         - workspace
+    Workspace:
+      description: A workspace of the current organization.
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          description: Workspace identifier.
+          type: string
+        name:
+          description: Workspace display name.
+          type: string
+    WorkspaceWriteRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          description: Workspace display name.
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: .*\S.*
+    WorkspaceRole:
+      description: A role a member can hold on a workspace.
+      type: object
+      required:
+        - id
+        - name
+        - permissions
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        permissions:
+          description: The workspace permissions the role grants on the workspace it is held on.
+          type: array
+          items:
+            type: string
+    WorkspaceRoleRef:
+      description: The role a member holds on a workspace.
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    WorkspaceRoleListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceRole'
+    WorkspaceMember:
+      description: An organization member holding a role on a workspace.
+      type: object
+      required:
+        - user_id
+        - email
+        - role
+      properties:
+        user_id:
+          description: Product user identifier.
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type:
+            - string
+            - 'null'
+        role:
+          $ref: '#/components/schemas/WorkspaceRoleRef'
+    WorkspaceMemberRoleRequest:
+      type: object
+      required:
+        - role_id
+      properties:
+        role_id:
+          description: A workspace role, from GET /workspaces/{workspaceId}/roles.
+          type: string
+          minLength: 1
+          maxLength: 255
+    WorkspaceMemberSearchRequest:
+      type: object
+      properties:
+        pagination:
+          $ref: '#/components/schemas/PaginationRequest'
+    WorkspaceMemberSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkspaceMember'
     CurrentUserWorkspace:
       type: object
       required:
         - id
         - name
+        - permissions
+        - role
       properties:
         id:
           description: Anchor workspace identifier.
@@ -13743,6 +14280,16 @@ components:
         name:
           description: Workspace display name.
           type: string
+        permissions:
+          description: The workspace permissions the user holds in this workspace, from their role on it and from their organization role. Never empty. Organization permissions are on the organization's role.
+          type: array
+          items:
+            type: string
+        role:
+          description: The role the user holds on this workspace, or null when only their organization role reaches it.
+          oneOf:
+            - $ref: '#/components/schemas/WorkspaceRoleRef'
+            - type: 'null'
   responses:
     BadRequest:
       description: The request is well-formed HTTP but the server will not process it. An entity named in the request body or the query string does not resolve, a field failed validation, or a non-credential header is absent or malformed. The `code` field says which.
@@ -13903,11 +14450,29 @@ components:
       schema:
         type: string
         format: uuid
+    WorkspaceIDPathParameter:
+      name: workspaceId
+      in: path
+      description: The workspace the operation acts on. Authorization checks it like X-Workspace-Id, and the operation reads no X-Workspace-Id.
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    WorkspaceMemberUserIDPathParameter:
+      name: userId
+      in: path
+      description: The product user identifier of the organization member.
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
     RequiredWorkspaceIDHeader:
       name: X-Workspace-Id
       in: header
-      description: Explicit workspace selection. Authentication verifies that this workspace belongs to the authenticated organization. Organization permissions still apply. This stage does not assign ownership or filter resource data by workspace.
-      required: true
+      description: Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+      required: false
       schema:
         type: string
         minLength: 1

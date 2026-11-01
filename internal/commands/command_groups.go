@@ -25,6 +25,7 @@ var rootCommandGroups = map[string]string{
 	collectionCommandName: resourcesGroupID,
 	statusPageCommandName: resourcesGroupID,
 	orgCommandName:        resourcesGroupID,
+	workspaceCommandName:  resourcesGroupID,
 	authCommandName:       accountGroupID,
 	profileCommandName:    accountGroupID,
 	configCommandName:     accountGroupID,
