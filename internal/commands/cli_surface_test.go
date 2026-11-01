@@ -28,6 +28,7 @@ func TestPluralAliasesReachTheSameCommands(t *testing.T) {
 		"collections":  "collection",
 		"status-pages": "status-page",
 		"monitors":     "monitor",
+		"workspaces":   "workspace",
 	} {
 		group, _, err := root.Find([]string{singular})
 		if err != nil || !slices.Contains(group.Aliases, plural) {
@@ -116,7 +117,7 @@ func TestRootCommandsAreGroupedUnderTheirHeadings(t *testing.T) {
 	}
 
 	want := map[string][]string{
-		"Resources":         {"analytics", "collection", "flow", "monitor", "org", "spec", "status-page"},
+		"Resources":         {"analytics", "collection", "flow", "monitor", "org", "spec", "status-page", "workspace"},
 		"Account and setup": {"auth", "config", "profile"},
 		"Tools":             {"completion", "help", "mcp", "update", "version"},
 	}
