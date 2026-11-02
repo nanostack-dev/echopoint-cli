@@ -6,6 +6,7 @@
 | Organization | Tenant scope selected for API operations; `--org` is the visible flag. |
 | Environment | Named overlay of organization variables. |
 | Flow | Graph identified by an ID and free-text name; it has no slug. |
+| Flow file | YAML file `*.flow.yaml` compiled by `flow compile` into a CreateFlowRequest. It is not stored by the API. |
 | Monitor | Recurring execution configuration selecting flows by tags or explicit IDs, on a cron or interval cadence. It is the API's flow schedule: the `/monitors` paths keep the `FlowSchedule` operation names. |
 | Health policy | The `health_policy` of a monitor (`confirmation_runs`, `recovery_runs`, `freshness_seconds`). A monitor with one runs on an interval of 60 to 86400 seconds, measures health from its scheduled runs and can be bound to a status page. Diagnostic runs never confirm health. A probe was this concept under another name and no longer exists. |
 | Flow role | `standalone` (default) or `module`; set with `flow role <flow-id> --set`. |

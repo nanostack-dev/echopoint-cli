@@ -67,6 +67,80 @@ echopoint flow create --name "Checkout smoke"
 echopoint flow create -f flow-definition.json
 ```
 
+### Compile a flow file
+
+`flow compile` reads a YAML flow file and prints the CreateFlowRequest JSON that `flow create -f` already accepts. It does not call the API. The API stores the JSON.
+
+```bash
+echopoint flow compile -f flows
+echopoint flow compile -f flows/anchor/login.flow.yaml --root flows
+echopoint flow compile -f flows --check
+echopoint flow compile -f flows/anchor/login.flow.yaml > login.json
+echopoint flow create -f login.json
+```
+
+`--check` prints problems and no JSON. A warning still compiles. `-o yaml` prints the same document with the JSON key names.
+
+A file is named `*.flow.yaml`. One file is one flow. Nodes are a mapping keyed by the node id, and `next` / `on_failure` name the nodes they run, so the file has no edges array. `steps` is the same graph written as a list: each step runs after the one before it, unless the step sets `next` or is a branch.
+
+```yaml
+name: "echopoint: organization member role"
+role: standalone
+tags: [echopoint]
+nodes:
+  login:
+    module: anchor/login
+    inputs:
+      email: "{{email}}"
+      password: "{{password}}"
+    next: member
+  member:
+    request:
+      method: GET
+      url: "{{echopointUrl}}/organizations/{{echopointOrgId}}/members"
+      headers:
+        Authorization: "Bearer {{login.accessToken}}"
+    expect: "status: 200"
+```
+
+`module: anchor/login` is the file `anchor/login.flow.yaml` under `--root`. Compile that module, create it, and set its `id` to the flow id the API returned. The caller then compiles to a module node whose `flow_id` is that id. Outputs are inferred from the outputs the module declares. A module addressed by a flow id instead of a file has no file to read, so its outputs are written out: `accessToken: request.accessToken`.
+
+```yaml
+name: "anchor: login (reusable)"
+role: module
+id: eac266b3-2f3f-41b4-b061-f63b92b7b80e
+inputs: [email, password]
+nodes:
+  request:
+    request:
+      method: POST
+      url: "{{nanostackBaseUrl}}/v1/auth/login"
+      body:
+        email: "{{email}}"
+        password: "{{password}}"
+    outputs:
+      accessToken:
+        path: $.accessToken
+        secret: true
+      refreshToken: $.refreshToken
+    expect:
+      status: 200
+```
+
+`expect: "status: 200"` and a `status` mapping are the same check. A list holds several checks: `["status: 200", "$.id not_empty"]`. The other checks are `$.path <operator> [value]`, `header:<name>`, `query:<name>`, `body`, and `status <operator> [value]`. `between` takes two values, `$.n between 1 5` or `status between 200 299`, and compiles to `operator_data.value` as a `[low, high]` pair. That is the pair the runner reads.
+
+An output is `$.path`, `header:<name>`, `body`, or `status`. `status` captures the HTTP status code. Add `secret: true` beside `path`, `header`, or `status: true` when the value must be masked.
+
+A node has exactly one kind: `request`, `module`, `delay`, `set`, `assert`, `branch`, `poll`, `loop`, `webhook_wait`, or `sse`. `delay: 1000` waits that many milliseconds. `set` writes variables, and those names are its outputs. A branch names a `target` node per case and a `default`; compile adds the success edges. `folder` is a folder id. A folder path is a warning and is left unset, because the API wants the id.
+
+`{{node.output}}` must name a node in the same graph and an output that node declares. A longer path walks into that value, the same way the runner does: `{{list.items.0.id}}` is valid when `list` declares `items`. `{{var}}` with no dot is an initial input. `{{webhook.url}}` and `{{webhook.requests_url}}` are provided when a flow waits for a webhook and no node is named `webhook`. An `sse` node always provides `events`, `count`, and `last`. A `webhook_wait` node always provides `id`, `method`, `headers`, `query`, `body`, and `received_at`.
+
+The same output name on two nodes is normal: each one is `{{that-node.id}}`. A module infers one public output per name, so a repeated public name is a warning and that name is not inferred. List `outputs` on the file to choose which names a caller receives.
+
+A JSONPath that contains a space is quoted, so a filter survives: `"$.items[?(@.name == 'a b')].id" equals 1`. A poll or loop body has `nodes` only. Compile rebuilds its edges. A name or version stored on that body is not part of the file.
+
+A poll or loop body does not see the parent flow's node outputs: it sees its own nodes, the flow's initial inputs, and, for a loop, the current item and index (`item` and `index` unless `item_var` / `index_var` set others). The poll's own check reads the body outputs, for example `$["probe.state"] equals ready`. An `on_failure` target needs `run_when: always`, or it does not run after the failure; compile warns.
+
 ### Update a Flow
 Pass a file, or flags; exactly one of the two.
 ```bash
