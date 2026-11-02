@@ -5184,6 +5184,13 @@ type OperationType string
 // OperatorType Operator to apply in assertions
 type OperatorType string
 
+// OrganizationAnalytics Organization-wide execution analytics summary and per-workspace breakdown over the window.
+type OrganizationAnalytics struct {
+	// Summary The organization's finished runs in the window and the HTTP calls they sent.
+	Summary    ExecutionAnalyticsSummary `json:"summary"`
+	Workspaces []WorkspaceAnalytics      `json:"workspaces"`
+}
+
 // OrganizationInvitation A pending invitation to the current organization.
 type OrganizationInvitation struct {
 	CreatedAt time.Time `json:"created_at"`
@@ -5269,6 +5276,12 @@ type OrganizationMemberListResponse struct {
 type OrganizationMemberRole struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
+}
+
+// OrganizationMemberRoleRequest defines model for OrganizationMemberRoleRequest.
+type OrganizationMemberRoleRequest struct {
+	// Role The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.
+	Role InvitationOrganizationRole `json:"role"`
 }
 
 // OrganizationMemberSearchRequest defines model for OrganizationMemberSearchRequest.
@@ -7232,6 +7245,34 @@ type Workspace struct {
 	Name string `json:"name"`
 }
 
+// WorkspaceAnalytics One workspace's finished runs in the window.
+type WorkspaceAnalytics struct {
+	// ActiveFlows Distinct flows in the workspace that finished a run in the window.
+	ActiveFlows     int64     `json:"active_flows"`
+	CloudRunMsTotal int64     `json:"cloud_run_ms_total"`
+	FailedHttpCalls int64     `json:"failed_http_calls"`
+	FailedRuns      int64     `json:"failed_runs"`
+	HttpCalls       int64     `json:"http_calls"`
+	LastCompletedAt time.Time `json:"last_completed_at"`
+
+	// LastStatus Status of a flow execution
+	LastStatus ExecutionStatus `json:"last_status"`
+
+	// MeasuredRuns Runs with a recorded HTTP call count.
+	MeasuredRuns int64 `json:"measured_runs"`
+	RunMsAverage int64 `json:"run_ms_average"`
+	RunMsP95     int64 `json:"run_ms_p95"`
+	RunMsTotal   int64 `json:"run_ms_total"`
+	Runs         int64 `json:"runs"`
+
+	// TopErrorCode The error code its failed runs reported most. Absent when none failed with a code.
+	TopErrorCode *string `json:"top_error_code,omitempty"`
+	WorkspaceId  string  `json:"workspace_id"`
+
+	// WorkspaceName The workspace's current display name; empty when the workspace is no longer found.
+	WorkspaceName string `json:"workspace_name"`
+}
+
 // WorkspaceMember An organization member holding a role on a workspace.
 type WorkspaceMember struct {
 	Email openapi_types.Email `json:"email"`
@@ -7270,8 +7311,10 @@ type WorkspaceMemberSearchResponse struct {
 
 // WorkspaceRole A role a member can hold on a workspace.
 type WorkspaceRole struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
+	// Custom True for a role the organization made, which it can change and delete. False for one of the product's managed roles (workspace_admin, workspace_editor, workspace_viewer).
+	Custom bool   `json:"custom"`
+	Id     string `json:"id"`
+	Name   string `json:"name"`
 
 	// Permissions The workspace permissions the role grants on the workspace it is held on.
 	Permissions []string `json:"permissions"`
@@ -7286,6 +7329,33 @@ type WorkspaceRoleListResponse struct {
 type WorkspaceRoleRef struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
+}
+
+// WorkspaceRoleWriteRequest A custom workspace role.
+type WorkspaceRoleWriteRequest struct {
+	// Name Unique in the organization, and not the name of a managed role.
+	Name string `json:"name"`
+
+	// Permissions Workspace permissions (workspace.flows:read, ...) the role grants on the workspace it is held on.
+	Permissions []string `json:"permissions"`
+}
+
+// WorkspaceSearchRequest defines model for WorkspaceSearchRequest.
+type WorkspaceSearchRequest struct {
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
+}
+
+// WorkspaceSearchResponse defines model for WorkspaceSearchResponse.
+type WorkspaceSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int         `json:"count"`
+	Items []Workspace `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
 }
 
 // WorkspaceWriteRequest defines model for WorkspaceWriteRequest.
@@ -8197,6 +8267,12 @@ type SearchOrganizationMembersParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SetOrganizationMemberRoleParams defines parameters for SetOrganizationMemberRole.
+type SetOrganizationMemberRoleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListFlowSchedulesParams defines parameters for ListFlowSchedules.
 type ListFlowSchedulesParams struct {
 	// Limit Maximum number of items per page.
@@ -8364,6 +8440,15 @@ type SearchOpenAPISyncConfigsParams struct {
 
 // ListOperationsParams defines parameters for ListOperations.
 type ListOperationsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetOrganizationAnalyticsParams defines parameters for GetOrganizationAnalytics.
+type GetOrganizationAnalyticsParams struct {
+	// Window How far back to look. Defaults to 7d.
+	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8694,14 +8779,56 @@ type StreamWebhookRequestsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListOrganizationWorkspaceRolesParams defines parameters for ListOrganizationWorkspaceRoles.
+type ListOrganizationWorkspaceRolesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// CreateWorkspaceRoleParams defines parameters for CreateWorkspaceRole.
+type CreateWorkspaceRoleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteWorkspaceRoleParams defines parameters for DeleteWorkspaceRole.
+type DeleteWorkspaceRoleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// UpdateWorkspaceRoleParams defines parameters for UpdateWorkspaceRole.
+type UpdateWorkspaceRoleParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // CreateWorkspaceParams defines parameters for CreateWorkspace.
 type CreateWorkspaceParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchWorkspacesParams defines parameters for SearchWorkspaces.
+type SearchWorkspacesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteWorkspaceParams defines parameters for DeleteWorkspace.
+type DeleteWorkspaceParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // RenameWorkspaceParams defines parameters for RenameWorkspace.
 type RenameWorkspaceParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// JoinWorkspaceParams defines parameters for JoinWorkspace.
+type JoinWorkspaceParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8838,6 +8965,9 @@ type SearchMyInvitationsJSONRequestBody = ReceivedInvitationSearchRequest
 // SearchOrganizationMembersJSONRequestBody defines body for SearchOrganizationMembers for application/json ContentType.
 type SearchOrganizationMembersJSONRequestBody = OrganizationMemberSearchRequest
 
+// SetOrganizationMemberRoleJSONRequestBody defines body for SetOrganizationMemberRole for application/json ContentType.
+type SetOrganizationMemberRoleJSONRequestBody = OrganizationMemberRoleRequest
+
 // CreateFlowScheduleJSONRequestBody defines body for CreateFlowSchedule for application/json ContentType.
 type CreateFlowScheduleJSONRequestBody = CreateMonitorRequest
 
@@ -8925,8 +9055,17 @@ type SearchWebhooksJSONRequestBody = WebhookSearchRequest
 // SearchWebhookRequestsJSONRequestBody defines body for SearchWebhookRequests for application/json ContentType.
 type SearchWebhookRequestsJSONRequestBody = WebhookRequestSearchRequest
 
+// CreateWorkspaceRoleJSONRequestBody defines body for CreateWorkspaceRole for application/json ContentType.
+type CreateWorkspaceRoleJSONRequestBody = WorkspaceRoleWriteRequest
+
+// UpdateWorkspaceRoleJSONRequestBody defines body for UpdateWorkspaceRole for application/json ContentType.
+type UpdateWorkspaceRoleJSONRequestBody = WorkspaceRoleWriteRequest
+
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = WorkspaceWriteRequest
+
+// SearchWorkspacesJSONRequestBody defines body for SearchWorkspaces for application/json ContentType.
+type SearchWorkspacesJSONRequestBody = WorkspaceSearchRequest
 
 // RenameWorkspaceJSONRequestBody defines body for RenameWorkspace for application/json ContentType.
 type RenameWorkspaceJSONRequestBody = WorkspaceWriteRequest
@@ -11317,6 +11456,24 @@ type ClientInterface interface {
 	// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
 	SearchOrganizationMembers(ctx context.Context, params *SearchOrganizationMembersParams, body SearchOrganizationMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SetOrganizationMemberRoleWithBody Set Organization Member Role
+	//
+	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+	SetOrganizationMemberRoleWithBody(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetOrganizationMemberRole Set Organization Member Role
+	//
+	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+	SetOrganizationMemberRole(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, body SetOrganizationMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListFlowSchedules Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 	//
 	// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
@@ -11523,6 +11680,17 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOrganizationAnalytics Get Organization Execution Analytics
+	//
+	// Organization-wide execution analytics summary and per-workspace breakdown
+	// over the organization's finished runs in the window: totals, time series,
+	// failures, runner and trigger breakdowns, and one row per workspace that
+	// finished a run in the window.
+	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
+	//
+	// Corresponds with GET /organization/analytics (the `GetOrganizationAnalytics` operationId).
+	GetOrganizationAnalytics(ctx context.Context, params *GetOrganizationAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListEnvironments Deprecated: use search_environments instead, which pages with a cursor. List Environments
 	//
@@ -12259,6 +12427,56 @@ type ClientInterface interface {
 	// Corresponds with GET /webhooks/{id}/stream (the `StreamWebhookRequests` operationId).
 	StreamWebhookRequests(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListOrganizationWorkspaceRoles List Organization Workspace Roles
+	//
+	// Lists the workspace roles of the organization: the managed roles and its custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace_roles:manage.
+	//
+	// Corresponds with GET /workspace-roles (the `ListOrganizationWorkspaceRoles` operationId).
+	ListOrganizationWorkspaceRoles(ctx context.Context, params *ListOrganizationWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateWorkspaceRoleWithBody Create Workspace Role
+	//
+	// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+	CreateWorkspaceRoleWithBody(ctx context.Context, params *CreateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateWorkspaceRole Create Workspace Role
+	//
+	// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+	CreateWorkspaceRole(ctx context.Context, params *CreateWorkspaceRoleParams, body CreateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteWorkspaceRole Delete Workspace Role
+	//
+	// Deletes a custom workspace role. A role a member holds or a pending invitation names answers 409 ROLE_IN_USE; a managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+	//
+	// Corresponds with DELETE /workspace-roles/{roleId} (the `DeleteWorkspaceRole` operationId).
+	DeleteWorkspaceRole(ctx context.Context, roleId string, params *DeleteWorkspaceRoleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateWorkspaceRoleWithBody Update Workspace Role
+	//
+	// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+	UpdateWorkspaceRoleWithBody(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateWorkspaceRole Update Workspace Role
+	//
+	// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+	UpdateWorkspaceRole(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, body UpdateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateWorkspaceWithBody Create Workspace
 	//
 	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -12277,6 +12495,31 @@ type ClientInterface interface {
 	// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
 	CreateWorkspace(ctx context.Context, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchWorkspacesWithBody Search Workspaces
+	//
+	// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+	SearchWorkspacesWithBody(ctx context.Context, params *SearchWorkspacesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchWorkspaces Search Workspaces
+	//
+	// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+	SearchWorkspaces(ctx context.Context, params *SearchWorkspacesParams, body SearchWorkspacesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteWorkspace Delete Workspace
+	//
+	// Deletes a workspace with everything it owns: its flows and their runs, folders, collections, webhooks, monitors and specs, and every role held on it. Status pages stay; a monitor they showed is gone from them. Requires workspace.settings:delete on that workspace, from a role on it or from an organization role. The organization's last workspace cannot be deleted (409 LAST_WORKSPACE). A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Corresponds with DELETE /workspaces/{workspaceId} (the `DeleteWorkspace` operationId).
+	DeleteWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *DeleteWorkspaceParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RenameWorkspaceWithBody Rename Workspace
 	//
 	// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
@@ -12294,6 +12537,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
 	RenameWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// JoinWorkspace Join Workspace
+	//
+	// Gives the caller the workspace_admin role on a workspace of the organization, or replaces the role they hold there. An organization role reaches no workspace by itself (ADR-0021); this is how an organization admin opens one. Echopoint logs each join. Requires the organization permission workspaces:join. A session only. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/join (the `JoinWorkspace` operationId).
+	JoinWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *JoinWorkspaceParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SearchWorkspaceMembersWithBody Search Workspace Members
 	//
@@ -12340,7 +12590,7 @@ type ClientInterface interface {
 
 	// ListWorkspaceRoles List Workspace Roles
 	//
-	// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+	// Lists the roles a member can hold on a workspace, with their permissions: the managed roles and the organization's custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace.access:read on the workspace.
 	//
 	// Corresponds with GET /workspaces/{workspaceId}/roles (the `ListWorkspaceRoles` operationId).
 	ListWorkspaceRoles(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *ListWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -14865,6 +15115,44 @@ func (c *Client) SearchOrganizationMembers(ctx context.Context, params *SearchOr
 	return c.Client.Do(req)
 }
 
+// SetOrganizationMemberRoleWithBody Set Organization Member Role
+//
+// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+func (c *Client) SetOrganizationMemberRoleWithBody(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetOrganizationMemberRoleRequestWithBody(c.Server, userId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetOrganizationMemberRole Set Organization Member Role
+//
+// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+func (c *Client) SetOrganizationMemberRole(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, body SetOrganizationMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetOrganizationMemberRoleRequest(c.Server, userId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListFlowSchedules Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 //
 // Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
@@ -15310,6 +15598,27 @@ func (c *Client) SearchOpenAPISyncConfigs(ctx context.Context, params *SearchOpe
 // Corresponds with GET /operations (the `ListOperations` operationId).
 func (c *Client) ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListOperationsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOrganizationAnalytics Get Organization Execution Analytics
+//
+// Organization-wide execution analytics summary and per-workspace breakdown
+// over the organization's finished runs in the window: totals, time series,
+// failures, runner and trigger breakdowns, and one row per workspace that
+// finished a run in the window.
+// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
+//
+// Corresponds with GET /organization/analytics (the `GetOrganizationAnalytics` operationId).
+func (c *Client) GetOrganizationAnalytics(ctx context.Context, params *GetOrganizationAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrganizationAnalyticsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -16781,6 +17090,116 @@ func (c *Client) StreamWebhookRequests(ctx context.Context, id WebhookIdParamete
 	return c.Client.Do(req)
 }
 
+// ListOrganizationWorkspaceRoles List Organization Workspace Roles
+//
+// Lists the workspace roles of the organization: the managed roles and its custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace_roles:manage.
+//
+// Corresponds with GET /workspace-roles (the `ListOrganizationWorkspaceRoles` operationId).
+func (c *Client) ListOrganizationWorkspaceRoles(ctx context.Context, params *ListOrganizationWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOrganizationWorkspaceRolesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateWorkspaceRoleWithBody Create Workspace Role
+//
+// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+func (c *Client) CreateWorkspaceRoleWithBody(ctx context.Context, params *CreateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkspaceRoleRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateWorkspaceRole Create Workspace Role
+//
+// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+func (c *Client) CreateWorkspaceRole(ctx context.Context, params *CreateWorkspaceRoleParams, body CreateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkspaceRoleRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteWorkspaceRole Delete Workspace Role
+//
+// Deletes a custom workspace role. A role a member holds or a pending invitation names answers 409 ROLE_IN_USE; a managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+//
+// Corresponds with DELETE /workspace-roles/{roleId} (the `DeleteWorkspaceRole` operationId).
+func (c *Client) DeleteWorkspaceRole(ctx context.Context, roleId string, params *DeleteWorkspaceRoleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteWorkspaceRoleRequest(c.Server, roleId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateWorkspaceRoleWithBody Update Workspace Role
+//
+// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+func (c *Client) UpdateWorkspaceRoleWithBody(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateWorkspaceRoleRequestWithBody(c.Server, roleId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateWorkspaceRole Update Workspace Role
+//
+// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+func (c *Client) UpdateWorkspaceRole(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, body UpdateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateWorkspaceRoleRequest(c.Server, roleId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // CreateWorkspaceWithBody Create Workspace
 //
 // Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -16819,6 +17238,61 @@ func (c *Client) CreateWorkspace(ctx context.Context, params *CreateWorkspacePar
 	return c.Client.Do(req)
 }
 
+// SearchWorkspacesWithBody Search Workspaces
+//
+// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+func (c *Client) SearchWorkspacesWithBody(ctx context.Context, params *SearchWorkspacesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspacesRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchWorkspaces Search Workspaces
+//
+// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+func (c *Client) SearchWorkspaces(ctx context.Context, params *SearchWorkspacesParams, body SearchWorkspacesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspacesRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteWorkspace Delete Workspace
+//
+// Deletes a workspace with everything it owns: its flows and their runs, folders, collections, webhooks, monitors and specs, and every role held on it. Status pages stay; a monitor they showed is gone from them. Requires workspace.settings:delete on that workspace, from a role on it or from an organization role. The organization's last workspace cannot be deleted (409 LAST_WORKSPACE). A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Corresponds with DELETE /workspaces/{workspaceId} (the `DeleteWorkspace` operationId).
+func (c *Client) DeleteWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *DeleteWorkspaceParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteWorkspaceRequest(c.Server, workspaceId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // RenameWorkspaceWithBody Rename Workspace
 //
 // Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
@@ -16847,6 +17321,23 @@ func (c *Client) RenameWorkspaceWithBody(ctx context.Context, workspaceId Worksp
 // Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
 func (c *Client) RenameWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRenameWorkspaceRequest(c.Server, workspaceId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// JoinWorkspace Join Workspace
+//
+// Gives the caller the workspace_admin role on a workspace of the organization, or replaces the role they hold there. An organization role reaches no workspace by itself (ADR-0021); this is how an organization admin opens one. Echopoint logs each join. Requires the organization permission workspaces:join. A session only. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Corresponds with POST /workspaces/{workspaceId}/join (the `JoinWorkspace` operationId).
+func (c *Client) JoinWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *JoinWorkspaceParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewJoinWorkspaceRequest(c.Server, workspaceId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -16952,7 +17443,7 @@ func (c *Client) SetWorkspaceMemberRole(ctx context.Context, workspaceId Workspa
 
 // ListWorkspaceRoles List Workspace Roles
 //
-// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+// Lists the roles a member can hold on a workspace, with their permissions: the managed roles and the organization's custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace.access:read on the workspace.
 //
 // Corresponds with GET /workspaces/{workspaceId}/roles (the `ListWorkspaceRoles` operationId).
 func (c *Client) ListWorkspaceRoles(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *ListWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -22848,6 +23339,66 @@ func NewSearchOrganizationMembersRequestWithBody(server string, params *SearchOr
 	return req, nil
 }
 
+// NewSetOrganizationMemberRoleRequest calls the generic SetOrganizationMemberRole builder with application/json body
+func NewSetOrganizationMemberRoleRequest(server string, userId string, params *SetOrganizationMemberRoleParams, body SetOrganizationMemberRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetOrganizationMemberRoleRequestWithBody(server, userId, params, "application/json", bodyReader)
+}
+
+// NewSetOrganizationMemberRoleRequestWithBody constructs an http.Request for the SetOrganizationMemberRole method, with any body, and a specified content type
+func NewSetOrganizationMemberRoleRequestWithBody(server string, userId string, params *SetOrganizationMemberRoleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/members/%s/role", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewListFlowSchedulesRequest constructs an http.Request for the ListFlowSchedules method
 func NewListFlowSchedulesRequest(server string, params *ListFlowSchedulesParams) (*http.Request, error) {
 	var err error
@@ -23957,6 +24508,73 @@ func NewListOperationsRequest(server string, params *ListOperationsParams) (*htt
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewGetOrganizationAnalyticsRequest constructs an http.Request for the GetOrganizationAnalytics method
+func NewGetOrganizationAnalyticsRequest(server string, params *GetOrganizationAnalyticsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization/analytics")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Window != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -26824,6 +27442,206 @@ func NewStreamWebhookRequestsRequest(server string, id WebhookIdParameter, param
 	return req, nil
 }
 
+// NewListOrganizationWorkspaceRolesRequest constructs an http.Request for the ListOrganizationWorkspaceRoles method
+func NewListOrganizationWorkspaceRolesRequest(server string, params *ListOrganizationWorkspaceRolesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace-roles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewCreateWorkspaceRoleRequest calls the generic CreateWorkspaceRole builder with application/json body
+func NewCreateWorkspaceRoleRequest(server string, params *CreateWorkspaceRoleParams, body CreateWorkspaceRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateWorkspaceRoleRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateWorkspaceRoleRequestWithBody constructs an http.Request for the CreateWorkspaceRole method, with any body, and a specified content type
+func NewCreateWorkspaceRoleRequestWithBody(server string, params *CreateWorkspaceRoleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace-roles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteWorkspaceRoleRequest constructs an http.Request for the DeleteWorkspaceRole method
+func NewDeleteWorkspaceRoleRequest(server string, roleId string, params *DeleteWorkspaceRoleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "roleId", roleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace-roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUpdateWorkspaceRoleRequest calls the generic UpdateWorkspaceRole builder with application/json body
+func NewUpdateWorkspaceRoleRequest(server string, roleId string, params *UpdateWorkspaceRoleParams, body UpdateWorkspaceRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateWorkspaceRoleRequestWithBody(server, roleId, params, "application/json", bodyReader)
+}
+
+// NewUpdateWorkspaceRoleRequestWithBody constructs an http.Request for the UpdateWorkspaceRole method, with any body, and a specified content type
+func NewUpdateWorkspaceRoleRequestWithBody(server string, roleId string, params *UpdateWorkspaceRoleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "roleId", roleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace-roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewCreateWorkspaceRequest calls the generic CreateWorkspace builder with application/json body
 func NewCreateWorkspaceRequest(server string, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -26860,6 +27678,106 @@ func NewCreateWorkspaceRequestWithBody(server string, params *CreateWorkspacePar
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchWorkspacesRequest calls the generic SearchWorkspaces builder with application/json body
+func NewSearchWorkspacesRequest(server string, params *SearchWorkspacesParams, body SearchWorkspacesJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchWorkspacesRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchWorkspacesRequestWithBody constructs an http.Request for the SearchWorkspaces method, with any body, and a specified content type
+func NewSearchWorkspacesRequestWithBody(server string, params *SearchWorkspacesParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteWorkspaceRequest constructs an http.Request for the DeleteWorkspace method
+func NewDeleteWorkspaceRequest(server string, workspaceId WorkspaceIDPathParameter, params *DeleteWorkspaceParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if params != nil {
 
@@ -26920,6 +27838,53 @@ func NewRenameWorkspaceRequestWithBody(server string, workspaceId WorkspaceIDPat
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewJoinWorkspaceRequest constructs an http.Request for the JoinWorkspace method
+func NewJoinWorkspaceRequest(server string, workspaceId WorkspaceIDPathParameter, params *JoinWorkspaceParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/join", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if params != nil {
 
@@ -28591,6 +29556,24 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /members/search (the `SearchOrganizationMembers` operationId).
 	SearchOrganizationMembersWithResponse(ctx context.Context, params *SearchOrganizationMembersParams, body SearchOrganizationMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchOrganizationMembersResponse, error)
 
+	// SetOrganizationMemberRoleWithBodyWithResponse Set Organization Member Role
+	//
+	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+	SetOrganizationMemberRoleWithBodyWithResponse(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetOrganizationMemberRoleResponse, error)
+
+	// SetOrganizationMemberRoleWithResponse Set Organization Member Role
+	//
+	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+	SetOrganizationMemberRoleWithResponse(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, body SetOrganizationMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*SetOrganizationMemberRoleResponse, error)
+
 	// ListFlowSchedulesWithResponse Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 	//
 	// Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
@@ -28819,6 +29802,19 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperationsWithResponse(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*ListOperationsResponse, error)
+
+	// GetOrganizationAnalyticsWithResponse Get Organization Execution Analytics
+	//
+	// Organization-wide execution analytics summary and per-workspace breakdown
+	// over the organization's finished runs in the window: totals, time series,
+	// failures, runner and trigger breakdowns, and one row per workspace that
+	// finished a run in the window.
+	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /organization/analytics (the `GetOrganizationAnalytics` operationId).
+	GetOrganizationAnalyticsWithResponse(ctx context.Context, params *GetOrganizationAnalyticsParams, reqEditors ...RequestEditorFn) (*GetOrganizationAnalyticsResponse, error)
 
 	// ListEnvironmentsWithResponse Deprecated: use search_environments instead, which pages with a cursor. List Environments
 	//
@@ -29603,6 +30599,60 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /webhooks/{id}/stream (the `StreamWebhookRequests` operationId).
 	StreamWebhookRequestsWithResponse(ctx context.Context, id WebhookIdParameter, params *StreamWebhookRequestsParams, reqEditors ...RequestEditorFn) (*StreamWebhookRequestsResponse, error)
 
+	// ListOrganizationWorkspaceRolesWithResponse List Organization Workspace Roles
+	//
+	// Lists the workspace roles of the organization: the managed roles and its custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace_roles:manage.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /workspace-roles (the `ListOrganizationWorkspaceRoles` operationId).
+	ListOrganizationWorkspaceRolesWithResponse(ctx context.Context, params *ListOrganizationWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*ListOrganizationWorkspaceRolesResponse, error)
+
+	// CreateWorkspaceRoleWithBodyWithResponse Create Workspace Role
+	//
+	// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+	CreateWorkspaceRoleWithBodyWithResponse(ctx context.Context, params *CreateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceRoleResponse, error)
+
+	// CreateWorkspaceRoleWithResponse Create Workspace Role
+	//
+	// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+	CreateWorkspaceRoleWithResponse(ctx context.Context, params *CreateWorkspaceRoleParams, body CreateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceRoleResponse, error)
+
+	// DeleteWorkspaceRoleWithResponse Delete Workspace Role
+	//
+	// Deletes a custom workspace role. A role a member holds or a pending invitation names answers 409 ROLE_IN_USE; a managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /workspace-roles/{roleId} (the `DeleteWorkspaceRole` operationId).
+	DeleteWorkspaceRoleWithResponse(ctx context.Context, roleId string, params *DeleteWorkspaceRoleParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceRoleResponse, error)
+
+	// UpdateWorkspaceRoleWithBodyWithResponse Update Workspace Role
+	//
+	// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+	UpdateWorkspaceRoleWithBodyWithResponse(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkspaceRoleResponse, error)
+
+	// UpdateWorkspaceRoleWithResponse Update Workspace Role
+	//
+	// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+	UpdateWorkspaceRoleWithResponse(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, body UpdateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWorkspaceRoleResponse, error)
+
 	// CreateWorkspaceWithBodyWithResponse Create Workspace
 	//
 	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -29621,6 +30671,33 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /workspaces (the `CreateWorkspace` operationId).
 	CreateWorkspaceWithResponse(ctx context.Context, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceResponse, error)
 
+	// SearchWorkspacesWithBodyWithResponse Search Workspaces
+	//
+	// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+	SearchWorkspacesWithBodyWithResponse(ctx context.Context, params *SearchWorkspacesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspacesResponse, error)
+
+	// SearchWorkspacesWithResponse Search Workspaces
+	//
+	// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+	SearchWorkspacesWithResponse(ctx context.Context, params *SearchWorkspacesParams, body SearchWorkspacesJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspacesResponse, error)
+
+	// DeleteWorkspaceWithResponse Delete Workspace
+	//
+	// Deletes a workspace with everything it owns: its flows and their runs, folders, collections, webhooks, monitors and specs, and every role held on it. Status pages stay; a monitor they showed is gone from them. Requires workspace.settings:delete on that workspace, from a role on it or from an organization role. The organization's last workspace cannot be deleted (409 LAST_WORKSPACE). A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /workspaces/{workspaceId} (the `DeleteWorkspace` operationId).
+	DeleteWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *DeleteWorkspaceParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceResponse, error)
+
 	// RenameWorkspaceWithBodyWithResponse Rename Workspace
 	//
 	// Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
@@ -29638,6 +30715,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
 	RenameWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameWorkspaceResponse, error)
+
+	// JoinWorkspaceWithResponse Join Workspace
+	//
+	// Gives the caller the workspace_admin role on a workspace of the organization, or replaces the role they hold there. An organization role reaches no workspace by itself (ADR-0021); this is how an organization admin opens one. Echopoint logs each join. Requires the organization permission workspaces:join. A session only. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/join (the `JoinWorkspace` operationId).
+	JoinWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *JoinWorkspaceParams, reqEditors ...RequestEditorFn) (*JoinWorkspaceResponse, error)
 
 	// SearchWorkspaceMembersWithBodyWithResponse Search Workspace Members
 	//
@@ -29686,7 +30772,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListWorkspaceRolesWithResponse List Workspace Roles
 	//
-	// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+	// Lists the roles a member can hold on a workspace, with their permissions: the managed roles and the organization's custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace.access:read on the workspace.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -35729,6 +36815,82 @@ func (r SearchOrganizationMembersResponse) ContentType() string {
 	return ""
 }
 
+type SetOrganizationMemberRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OrganizationMember
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetOrganizationMemberRoleResponse) GetJSON200() *OrganizationMember {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetOrganizationMemberRoleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetOrganizationMemberRoleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetOrganizationMemberRoleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetOrganizationMemberRoleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r SetOrganizationMemberRoleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r SetOrganizationMemberRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetOrganizationMemberRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetOrganizationMemberRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetOrganizationMemberRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListFlowSchedulesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -36916,6 +38078,68 @@ func (r ListOperationsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListOperationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetOrganizationAnalyticsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OrganizationAnalytics
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetOrganizationAnalyticsResponse) GetJSON200() *OrganizationAnalytics {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetOrganizationAnalyticsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetOrganizationAnalyticsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetOrganizationAnalyticsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r GetOrganizationAnalyticsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOrganizationAnalyticsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOrganizationAnalyticsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOrganizationAnalyticsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -40261,6 +41485,268 @@ func (r StreamWebhookRequestsResponse) ContentType() string {
 	return ""
 }
 
+type ListOrganizationWorkspaceRolesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceRoleListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListOrganizationWorkspaceRolesResponse) GetJSON200() *WorkspaceRoleListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListOrganizationWorkspaceRolesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListOrganizationWorkspaceRolesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListOrganizationWorkspaceRolesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOrganizationWorkspaceRolesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOrganizationWorkspaceRolesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListOrganizationWorkspaceRolesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateWorkspaceRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *WorkspaceRole
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateWorkspaceRoleResponse) GetJSON201() *WorkspaceRole {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateWorkspaceRoleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateWorkspaceRoleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateWorkspaceRoleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateWorkspaceRoleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateWorkspaceRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateWorkspaceRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateWorkspaceRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateWorkspaceRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteWorkspaceRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteWorkspaceRoleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteWorkspaceRoleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteWorkspaceRoleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteWorkspaceRoleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteWorkspaceRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteWorkspaceRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteWorkspaceRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteWorkspaceRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateWorkspaceRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceRole
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateWorkspaceRoleResponse) GetJSON200() *WorkspaceRole {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateWorkspaceRoleResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateWorkspaceRoleResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateWorkspaceRoleResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateWorkspaceRoleResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateWorkspaceRoleResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateWorkspaceRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateWorkspaceRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateWorkspaceRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateWorkspaceRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type CreateWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -40323,6 +41809,123 @@ func (r CreateWorkspaceResponse) ContentType() string {
 	return ""
 }
 
+type SearchWorkspacesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchWorkspacesResponse) GetJSON200() *WorkspaceSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchWorkspacesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchWorkspacesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchWorkspacesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchWorkspacesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchWorkspacesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchWorkspacesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchWorkspacesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteWorkspaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteWorkspaceResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteWorkspaceResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteWorkspaceResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteWorkspaceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteWorkspaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteWorkspaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteWorkspaceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type RenameWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -40379,6 +41982,61 @@ func (r RenameWorkspaceResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RenameWorkspaceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type JoinWorkspaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceMember
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r JoinWorkspaceResponse) GetJSON200() *WorkspaceMember {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r JoinWorkspaceResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r JoinWorkspaceResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r JoinWorkspaceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r JoinWorkspaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r JoinWorkspaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r JoinWorkspaceResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -42764,6 +44422,36 @@ func (c *ClientWithResponses) SearchOrganizationMembersWithResponse(ctx context.
 	return ParseSearchOrganizationMembersResponse(rsp)
 }
 
+// SetOrganizationMemberRoleWithBodyWithResponse Set Organization Member Role
+//
+// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+func (c *ClientWithResponses) SetOrganizationMemberRoleWithBodyWithResponse(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetOrganizationMemberRoleResponse, error) {
+	rsp, err := c.SetOrganizationMemberRoleWithBody(ctx, userId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetOrganizationMemberRoleResponse(rsp)
+}
+
+// SetOrganizationMemberRoleWithResponse Set Organization Member Role
+//
+// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /members/{userId}/role (the `SetOrganizationMemberRole` operationId).
+func (c *ClientWithResponses) SetOrganizationMemberRoleWithResponse(ctx context.Context, userId string, params *SetOrganizationMemberRoleParams, body SetOrganizationMemberRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*SetOrganizationMemberRoleResponse, error) {
+	rsp, err := c.SetOrganizationMemberRole(ctx, userId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetOrganizationMemberRoleResponse(rsp)
+}
+
 // ListFlowSchedulesWithResponse Deprecated: use search_flow_schedules instead, which pages with a cursor. List Monitors
 //
 // Deprecated: use `searchFlowSchedules`, which pages with a cursor. Lists the organization's monitors, optionally only enabled ones or only monitors with a health policy. A monitor with a health policy includes its current health. Callable by bearer users and API keys scoped with flows:read.
@@ -43141,6 +44829,25 @@ func (c *ClientWithResponses) ListOperationsWithResponse(ctx context.Context, pa
 		return nil, err
 	}
 	return ParseListOperationsResponse(rsp)
+}
+
+// GetOrganizationAnalyticsWithResponse Get Organization Execution Analytics
+//
+// Organization-wide execution analytics summary and per-workspace breakdown
+// over the organization's finished runs in the window: totals, time series,
+// failures, runner and trigger breakdowns, and one row per workspace that
+// finished a run in the window.
+// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /organization/analytics (the `GetOrganizationAnalytics` operationId).
+func (c *ClientWithResponses) GetOrganizationAnalyticsWithResponse(ctx context.Context, params *GetOrganizationAnalyticsParams, reqEditors ...RequestEditorFn) (*GetOrganizationAnalyticsResponse, error) {
+	rsp, err := c.GetOrganizationAnalytics(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOrganizationAnalyticsResponse(rsp)
 }
 
 // ListEnvironmentsWithResponse Deprecated: use search_environments instead, which pages with a cursor. List Environments
@@ -44364,6 +46071,96 @@ func (c *ClientWithResponses) StreamWebhookRequestsWithResponse(ctx context.Cont
 	return ParseStreamWebhookRequestsResponse(rsp)
 }
 
+// ListOrganizationWorkspaceRolesWithResponse List Organization Workspace Roles
+//
+// Lists the workspace roles of the organization: the managed roles and its custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace_roles:manage.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /workspace-roles (the `ListOrganizationWorkspaceRoles` operationId).
+func (c *ClientWithResponses) ListOrganizationWorkspaceRolesWithResponse(ctx context.Context, params *ListOrganizationWorkspaceRolesParams, reqEditors ...RequestEditorFn) (*ListOrganizationWorkspaceRolesResponse, error) {
+	rsp, err := c.ListOrganizationWorkspaceRoles(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOrganizationWorkspaceRolesResponse(rsp)
+}
+
+// CreateWorkspaceRoleWithBodyWithResponse Create Workspace Role
+//
+// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+func (c *ClientWithResponses) CreateWorkspaceRoleWithBodyWithResponse(ctx context.Context, params *CreateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceRoleResponse, error) {
+	rsp, err := c.CreateWorkspaceRoleWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateWorkspaceRoleResponse(rsp)
+}
+
+// CreateWorkspaceRoleWithResponse Create Workspace Role
+//
+// Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspace-roles (the `CreateWorkspaceRole` operationId).
+func (c *ClientWithResponses) CreateWorkspaceRoleWithResponse(ctx context.Context, params *CreateWorkspaceRoleParams, body CreateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceRoleResponse, error) {
+	rsp, err := c.CreateWorkspaceRole(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateWorkspaceRoleResponse(rsp)
+}
+
+// DeleteWorkspaceRoleWithResponse Delete Workspace Role
+//
+// Deletes a custom workspace role. A role a member holds or a pending invitation names answers 409 ROLE_IN_USE; a managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /workspace-roles/{roleId} (the `DeleteWorkspaceRole` operationId).
+func (c *ClientWithResponses) DeleteWorkspaceRoleWithResponse(ctx context.Context, roleId string, params *DeleteWorkspaceRoleParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceRoleResponse, error) {
+	rsp, err := c.DeleteWorkspaceRole(ctx, roleId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteWorkspaceRoleResponse(rsp)
+}
+
+// UpdateWorkspaceRoleWithBodyWithResponse Update Workspace Role
+//
+// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+func (c *ClientWithResponses) UpdateWorkspaceRoleWithBodyWithResponse(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkspaceRoleResponse, error) {
+	rsp, err := c.UpdateWorkspaceRoleWithBody(ctx, roleId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateWorkspaceRoleResponse(rsp)
+}
+
+// UpdateWorkspaceRoleWithResponse Update Workspace Role
+//
+// Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
+func (c *ClientWithResponses) UpdateWorkspaceRoleWithResponse(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, body UpdateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWorkspaceRoleResponse, error) {
+	rsp, err := c.UpdateWorkspaceRole(ctx, roleId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateWorkspaceRoleResponse(rsp)
+}
+
 // CreateWorkspaceWithBodyWithResponse Create Workspace
 //
 // Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -44394,6 +46191,51 @@ func (c *ClientWithResponses) CreateWorkspaceWithResponse(ctx context.Context, p
 	return ParseCreateWorkspaceResponse(rsp)
 }
 
+// SearchWorkspacesWithBodyWithResponse Search Workspaces
+//
+// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+func (c *ClientWithResponses) SearchWorkspacesWithBodyWithResponse(ctx context.Context, params *SearchWorkspacesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspacesResponse, error) {
+	rsp, err := c.SearchWorkspacesWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspacesResponse(rsp)
+}
+
+// SearchWorkspacesWithResponse Search Workspaces
+//
+// Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces/search (the `SearchWorkspaces` operationId).
+func (c *ClientWithResponses) SearchWorkspacesWithResponse(ctx context.Context, params *SearchWorkspacesParams, body SearchWorkspacesJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspacesResponse, error) {
+	rsp, err := c.SearchWorkspaces(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspacesResponse(rsp)
+}
+
+// DeleteWorkspaceWithResponse Delete Workspace
+//
+// Deletes a workspace with everything it owns: its flows and their runs, folders, collections, webhooks, monitors and specs, and every role held on it. Status pages stay; a monitor they showed is gone from them. Requires workspace.settings:delete on that workspace, from a role on it or from an organization role. The organization's last workspace cannot be deleted (409 LAST_WORKSPACE). A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /workspaces/{workspaceId} (the `DeleteWorkspace` operationId).
+func (c *ClientWithResponses) DeleteWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *DeleteWorkspaceParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceResponse, error) {
+	rsp, err := c.DeleteWorkspace(ctx, workspaceId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteWorkspaceResponse(rsp)
+}
+
 // RenameWorkspaceWithBodyWithResponse Rename Workspace
 //
 // Renames a workspace. Requires workspace.settings:update on that workspace, from a role on it or from an organization role. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
@@ -44422,6 +46264,21 @@ func (c *ClientWithResponses) RenameWorkspaceWithResponse(ctx context.Context, w
 		return nil, err
 	}
 	return ParseRenameWorkspaceResponse(rsp)
+}
+
+// JoinWorkspaceWithResponse Join Workspace
+//
+// Gives the caller the workspace_admin role on a workspace of the organization, or replaces the role they hold there. An organization role reaches no workspace by itself (ADR-0021); this is how an organization admin opens one. Echopoint logs each join. Requires the organization permission workspaces:join. A session only. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces/{workspaceId}/join (the `JoinWorkspace` operationId).
+func (c *ClientWithResponses) JoinWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *JoinWorkspaceParams, reqEditors ...RequestEditorFn) (*JoinWorkspaceResponse, error) {
+	rsp, err := c.JoinWorkspace(ctx, workspaceId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseJoinWorkspaceResponse(rsp)
 }
 
 // SearchWorkspaceMembersWithBodyWithResponse Search Workspace Members
@@ -44501,7 +46358,7 @@ func (c *ClientWithResponses) SetWorkspaceMemberRoleWithResponse(ctx context.Con
 
 // ListWorkspaceRolesWithResponse List Workspace Roles
 //
-// Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.
+// Lists the roles a member can hold on a workspace, with their permissions: the managed roles and the organization's custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace.access:read on the workspace.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -49229,6 +51086,67 @@ func ParseSearchOrganizationMembersResponse(rsp *http.Response) (*SearchOrganiza
 	return response, nil
 }
 
+// ParseSetOrganizationMemberRoleResponse parses an HTTP response from a SetOrganizationMemberRoleWithResponse call
+func ParseSetOrganizationMemberRoleResponse(rsp *http.Response) (*SetOrganizationMemberRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetOrganizationMemberRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationMember
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListFlowSchedulesResponse parses an HTTP response from a ListFlowSchedulesWithResponse call
 func ParseListFlowSchedulesResponse(rsp *http.Response) (*ListFlowSchedulesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -50149,6 +52067,53 @@ func ParseListOperationsResponse(rsp *http.Response) (*ListOperationsResponse, e
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOrganizationAnalyticsResponse parses an HTTP response from a GetOrganizationAnalyticsWithResponse call
+func ParseGetOrganizationAnalyticsResponse(rsp *http.Response) (*GetOrganizationAnalyticsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOrganizationAnalyticsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationAnalytics
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
@@ -52798,6 +54763,211 @@ func ParseStreamWebhookRequestsResponse(rsp *http.Response) (*StreamWebhookReque
 	return response, nil
 }
 
+// ParseListOrganizationWorkspaceRolesResponse parses an HTTP response from a ListOrganizationWorkspaceRolesWithResponse call
+func ParseListOrganizationWorkspaceRolesResponse(rsp *http.Response) (*ListOrganizationWorkspaceRolesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOrganizationWorkspaceRolesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceRoleListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateWorkspaceRoleResponse parses an HTTP response from a CreateWorkspaceRoleWithResponse call
+func ParseCreateWorkspaceRoleResponse(rsp *http.Response) (*CreateWorkspaceRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateWorkspaceRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest WorkspaceRole
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteWorkspaceRoleResponse parses an HTTP response from a DeleteWorkspaceRoleWithResponse call
+func ParseDeleteWorkspaceRoleResponse(rsp *http.Response) (*DeleteWorkspaceRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteWorkspaceRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateWorkspaceRoleResponse parses an HTTP response from a UpdateWorkspaceRoleWithResponse call
+func ParseUpdateWorkspaceRoleResponse(rsp *http.Response) (*UpdateWorkspaceRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateWorkspaceRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceRole
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseCreateWorkspaceResponse parses an HTTP response from a CreateWorkspaceWithResponse call
 func ParseCreateWorkspaceResponse(rsp *http.Response) (*CreateWorkspaceResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -52845,6 +55015,96 @@ func ParseCreateWorkspaceResponse(rsp *http.Response) (*CreateWorkspaceResponse,
 	return response, nil
 }
 
+// ParseSearchWorkspacesResponse parses an HTTP response from a SearchWorkspacesWithResponse call
+func ParseSearchWorkspacesResponse(rsp *http.Response) (*SearchWorkspacesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchWorkspacesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteWorkspaceResponse parses an HTTP response from a DeleteWorkspaceWithResponse call
+func ParseDeleteWorkspaceResponse(rsp *http.Response) (*DeleteWorkspaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteWorkspaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseRenameWorkspaceResponse parses an HTTP response from a RenameWorkspaceWithResponse call
 func ParseRenameWorkspaceResponse(rsp *http.Response) (*RenameWorkspaceResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -52872,6 +55132,46 @@ func ParseRenameWorkspaceResponse(rsp *http.Response) (*RenameWorkspaceResponse,
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseJoinWorkspaceResponse parses an HTTP response from a JoinWorkspaceWithResponse call
+func ParseJoinWorkspaceResponse(rsp *http.Response) (*JoinWorkspaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &JoinWorkspaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceMember
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized

@@ -26,12 +26,15 @@ func newWorkspaceCmd(state *AppState) *cobra.Command {
 		Long: `Manage the organization's workspaces.
 
 A workspace holds flows, collections, webhooks, monitors and specs. A member
-reaches it through their organization role, which covers every workspace, or
-through a role held on that workspace alone. --workspace (or
-ECHOPOINT_WORKSPACE_ID) selects the workspace other commands act in.`,
+reaches it only through a role held on it. An organization admin reaches no
+workspace by their organization role: they join one ('workspace join').
+--workspace (or ECHOPOINT_WORKSPACE_ID) selects the workspace other commands
+act in.`,
 	}
 	cmd.AddCommand(
 		newWorkspaceListCmd(state),
+		newWorkspaceSearchCmd(state),
+		newWorkspaceJoinCmd(state),
 		newWorkspaceCreateCmd(state),
 		newWorkspaceRenameCmd(state),
 		newWorkspaceMemberCmd(state),
@@ -54,8 +57,8 @@ func newWorkspaceListCmd(state *AppState) *cobra.Command {
 		Use:   listVerb,
 		Short: "List the workspaces you can open in the organization",
 		Long: `List the organization's workspaces you can open, oldest first, with the
-role you hold on each. A workspace reached only through your organization role
-shows no role.
+role you hold on each. 'workspace search' lists every workspace of the
+organization.
 
 It reads your session, so it needs 'echopoint auth login', not an API key.`,
 		Example: `  echopoint workspace list
@@ -118,6 +121,105 @@ func fetchWorkspaces(ctx context.Context, state *AppState) ([]workspaceRow, erro
 	return []workspaceRow{}, nil
 }
 
+func newWorkspaceSearchCmd(state *AppState) *cobra.Command {
+	var pages pageFlags
+	cmd := &cobra.Command{
+		Use:   "search",
+		Short: "List every workspace of the organization",
+		Long: `List every workspace of the organization, oldest first, whether or not you
+hold a role on it: the ones you can join. It needs the workspaces:join
+permission, which organization admins hold, and your session.`,
+		Example: `  echopoint workspace search
+  echopoint workspace search --all -o json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := requireToken(state); err != nil {
+				return err
+			}
+			if err := requireSession(state, "searching workspaces"); err != nil {
+				return err
+			}
+			page, err := fetchSearch(cmd.Context(), cmd, &pages, searchWorkspaces(state))
+			if err != nil {
+				return err
+			}
+			return printSearchPage(cmd, state, page, func(w io.Writer) error {
+				rows := make([][]string, 0, len(page.Items))
+				for _, workspace := range page.Items {
+					rows = append(rows, []string{workspace.Id, workspace.Name})
+				}
+				fmt.Fprintf(w, "Total: %d\n", page.Total)
+				return output.PrintTableTo(w, []string{columnID, columnName}, rows)
+			})
+		},
+	}
+	pages.bind(cmd, defaultListLimit)
+	return cmd
+}
+
+// searchWorkspaces reads one page of the organization's workspaces.
+func searchWorkspaces(state *AppState) pageFetcher[api.Workspace] {
+	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.Workspace], error) {
+		resp, err := state.Client.API().SearchWorkspacesWithResponse(
+			ctx, nil, api.SearchWorkspacesJSONRequestBody{Pagination: pagination},
+		)
+		if err != nil {
+			return searchPage[api.Workspace]{}, err
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.Workspace]{}, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
+	}
+}
+
+// requireSession refuses an API key: an API key holds no workspace role, so
+// only a signed-in member searches or joins workspaces.
+func requireSession(state *AppState, action string) error {
+	if state.Token == "" {
+		return fmt.Errorf("%s needs your session: sign in with 'echopoint auth login'", action)
+	}
+	return nil
+}
+
+func newWorkspaceJoinCmd(state *AppState) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "join <workspace-id>",
+		Short: "Join a workspace as its admin",
+		Long: `Give yourself the workspace_admin role on a workspace of the organization,
+replacing a role you hold there. Its members then see you in its member list,
+and Echopoint logs the join. It needs the workspaces:join permission, which
+organization admins hold, and your session.`,
+		Example: `  echopoint workspace search
+  echopoint workspace join ws_2abc`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireToken(state); err != nil {
+				return err
+			}
+			if err := requireSession(state, "joining a workspace"); err != nil {
+				return err
+			}
+			resp, err := state.Client.API().JoinWorkspaceWithResponse(cmd.Context(), args[0], nil)
+			if err != nil {
+				return err
+			}
+			if resp.JSON200 == nil {
+				return formatAPIError(resp.HTTPResponse, resp.Body)
+			}
+			switch state.OutputFormat {
+			case output.FormatJSON:
+				return output.PrintJSON(os.Stdout, resp.JSON200)
+			case output.FormatYAML:
+				return output.PrintYAML(os.Stdout, resp.JSON200)
+			}
+			fmt.Fprintf(os.Stdout, "joined %s as %s\n", args[0], resp.JSON200.Role.Name)
+			return nil
+		},
+	}
+	return cmd
+}
+
 func newWorkspaceCreateCmd(state *AppState) *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
@@ -155,7 +257,7 @@ func newWorkspaceRenameCmd(state *AppState) *cobra.Command {
 		Use:   "rename <workspace-id>",
 		Short: "Rename a workspace",
 		Long: `Rename a workspace. It needs workspace.settings:update on that workspace,
-from a role on it or from your organization role.`,
+from the role you hold on it.`,
 		Example: `  echopoint workspace rename ws_2abc --name "Payments EU"`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -216,8 +318,8 @@ func newWorkspaceMemberListCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list <workspace-id>",
 		Short: "List the members who hold a role on a workspace",
-		Long: `List the members who hold a role on a workspace, oldest first. Organization
-admins reach every workspace through their organization role and are not listed.`,
+		Long: `List the members who hold a role on a workspace, oldest first. They are
+everyone who reaches it, organization admins included.`,
 		Example: `  echopoint workspace member list ws_2abc
   echopoint workspace member list ws_2abc --all -o json`,
 		Args: cobra.ExactArgs(1),
@@ -309,9 +411,9 @@ func newWorkspaceMemberRemoveCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove <workspace-id> <user-id>",
 		Short: "Remove the role a member holds on a workspace",
-		Long: `Remove the role a member holds on a workspace. Their organization role does not
-change, so an organization admin keeps reaching it. Removing a member who holds
-no role succeeds.`,
+		Long: `Remove the role a member holds on a workspace: they no longer reach it. An
+organization admin can join it again. Removing a member who holds no role
+succeeds.`,
 		Example: `  echopoint workspace member remove ws_2abc pusr_2def`,
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {

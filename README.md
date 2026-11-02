@@ -521,11 +521,13 @@ echopoint collection import -f ./openapi.json --name "My API"
 ### Workspaces
 
 A workspace holds flows, collections, webhooks, monitors and specs. A member
-reaches it through their organization role (every workspace) or a role held on
-it alone. `workspace list` reads your session, so it needs `auth login`.
+reaches it only through a role held on it; an organization admin joins the
+others. The workspace commands read your session, so they need `auth login`.
 
 ```bash
 echopoint workspace list                                   # the workspaces you can open, with your role
+echopoint workspace search                                 # every workspace of the organization (admins)
+echopoint workspace join <workspace-id>                    # become its workspace_admin (admins)
 echopoint workspace create --name Payments                 # you become its workspace_admin
 echopoint workspace rename <workspace-id> --name "Payments EU"
 echopoint workspace role list <workspace-id>               # workspace_admin, workspace_editor, workspace_viewer
