@@ -2,6 +2,7 @@ package commands
 
 import (
 	"testing"
+	"time"
 
 	"echopoint-cli/internal/auth"
 )
@@ -91,5 +92,43 @@ func TestLoadCredentialsReturnsAPIKeyOnlyCredentials(t *testing.T) {
 	}
 	if loaded == nil || loaded.APIKey != "key-only" {
 		t.Fatalf("expected api-key-only credentials to load, got %+v", loaded)
+	}
+}
+
+func TestResolveStoredCredentialsExpiredSessionUsesStoredAPIKey(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("ECHOPOINT_TOKEN", "")
+	const profile = "default"
+	expired := time.Now().Add(-time.Hour)
+
+	if _, err := auth.SaveCredentials(profile, auth.Credentials{
+		AccessToken: "expired-session", ExpiresAt: &expired, APIKey: "stored-key", PreferAPIKey: true,
+	}); err != nil {
+		t.Fatalf("SaveCredentials: %v", err)
+	}
+
+	token, apiKey, err := resolveStoredCredentials("", profile)
+	if err != nil {
+		t.Fatalf("resolveStoredCredentials: %v", err)
+	}
+	if token != "" || apiKey != "stored-key" {
+		t.Errorf("got token %q, api key %q; want no token and the stored key", token, apiKey)
+	}
+}
+
+func TestResolveStoredCredentialsExpiredSessionWithoutAPIKeyFails(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("ECHOPOINT_TOKEN", "")
+	const profile = "default"
+	expired := time.Now().Add(-time.Hour)
+
+	if _, err := auth.SaveCredentials(profile, auth.Credentials{
+		AccessToken: "expired-session", ExpiresAt: &expired,
+	}); err != nil {
+		t.Fatalf("SaveCredentials: %v", err)
+	}
+
+	if _, _, err := resolveStoredCredentials("", profile); err == nil {
+		t.Fatal("expected the expired-session error")
 	}
 }
