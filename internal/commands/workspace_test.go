@@ -37,6 +37,13 @@ func fakeWorkspaceServer(t *testing.T, gotRole *string) *httptest.Server {
 			*gotRole = body.RoleID
 			_, _ = io.WriteString(w, `{"user_id":"pusr_bob","email":"bob@example.com",
 				"role":{"id":"prole_editor","name":"workspace_editor"},"joined_at":"2026-11-01T00:00:00Z"}`)
+		case r.URL.Path == "/workspaces/search" && r.Method == http.MethodPost:
+			_, _ = io.WriteString(w, `{"items":[{"id":"ws_payments","name":"Payments"},
+				{"id":"ws_secret","name":"Secret"}],"count":2,"total":2}`)
+		case r.URL.Path == "/workspaces/ws_secret/join" && r.Method == http.MethodPost:
+			*gotRole = "joined"
+			_, _ = io.WriteString(w, `{"user_id":"pusr_alice","email":"alice@example.com",
+				"role":{"id":"prole_admin","name":"workspace_admin"},"joined_at":"2026-11-02T00:00:00Z"}`)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -99,5 +106,50 @@ func TestWorkspaceMemberSetRefusesAnUnknownRole(t *testing.T) {
 	_, err := resolveWorkspaceRole(t.Context(), state, "ws_payments", "owner")
 	if err == nil || !strings.Contains(err.Error(), "workspace_editor, workspace_viewer") {
 		t.Fatalf("err = %v, want the role names listed", err)
+	}
+}
+
+func TestWorkspaceSearchListsEveryWorkspaceOfTheOrganization(t *testing.T) {
+	srv := fakeWorkspaceServer(t, new(string))
+	defer srv.Close()
+	state := makeState(t, "", "session-token", srv.URL)
+
+	page, err := searchWorkspaces(state)(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if len(page.Items) != 2 || page.Items[1].Id != "ws_secret" || page.Total != 2 {
+		t.Fatalf("page = %+v, want Payments and Secret", page)
+	}
+}
+
+func TestWorkspaceJoinGivesTheCallerTheAdminRole(t *testing.T) {
+	var joined string
+	srv := fakeWorkspaceServer(t, &joined)
+	defer srv.Close()
+	state := makeState(t, "", "session-token", srv.URL)
+	cmd := newWorkspaceJoinCmd(state)
+	cmd.SetArgs([]string{"ws_secret"})
+	cmd.SetOut(io.Discard)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("join: %v", err)
+	}
+	if joined != "joined" {
+		t.Errorf("the join was not sent")
+	}
+}
+
+func TestWorkspaceJoinNeedsASession(t *testing.T) {
+	srv := fakeWorkspaceServer(t, new(string))
+	defer srv.Close()
+	state := makeState(t, "api-key", "", srv.URL)
+	cmd := newWorkspaceJoinCmd(state)
+	cmd.SetArgs([]string{"ws_secret"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("join with an API key succeeded, want a refusal")
 	}
 }

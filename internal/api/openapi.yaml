@@ -35,8 +35,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:read
-        - BearerAuth:
-            - webhooks:read
         - ApiKeys:
             - webhooks:read
       x-ai-description: 'Deprecated: use search_webhooks instead, which pages with a cursor. List webhook endpoints in the organization.'
@@ -74,8 +72,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:create
-        - BearerAuth:
-            - webhooks:create
         - ApiKeys:
             - webhooks:create
       x-ai-tool: true
@@ -107,8 +103,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:read
-        - BearerAuth:
-            - webhooks:read
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
@@ -134,8 +128,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:delete
-        - BearerAuth:
-            - webhooks:delete
         - ApiKeys:
             - webhooks:delete
       x-ai-tool: true
@@ -354,8 +346,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:read
-        - BearerAuth:
-            - webhooks:read
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
@@ -393,8 +383,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:read
-        - BearerAuth:
-            - webhooks:read
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
@@ -435,8 +423,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:read
-        - BearerAuth:
-            - webhooks:read
         - ApiKeys:
             - webhooks:read
       x-ai-danger: SSE stream - long-lived, incompatible with request/response tools.
@@ -488,8 +474,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:read
-        - BearerAuth:
-            - webhooks:read
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
@@ -541,8 +525,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.webhooks:read
-        - BearerAuth:
-            - webhooks:read
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
@@ -733,8 +715,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:execute
-        - BearerAuth:
-            - flows:execute
         - ApiKeys:
             - flows:execute
       x-ai-description: Launch (run) a flow execution asynchronously by flow id. Returns the created execution. Use when the user asks to run, trigger, or test a flow.
@@ -787,8 +767,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:execute
-        - BearerAuth:
-            - flows:execute
         - ApiKeys:
             - flows:execute
       x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
@@ -847,8 +825,6 @@ paths:
             - runner:complete
         - BearerAuth:
             - workspace.flows:execute
-        - BearerAuth:
-            - flows:execute
       x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
   /runners:
     parameters:
@@ -1103,8 +1079,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: 'Deprecated: use search_flows instead, which pages with a cursor. List flows in the organization. Returns flow ids, names, and metadata. Use to discover available flows.'
@@ -1142,8 +1116,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:create
-        - BearerAuth:
-            - flows:create
         - ApiKeys:
             - flows:create
       x-ai-tool: true
@@ -1183,8 +1155,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search flows by name or attributes with filters and pagination.
@@ -1227,8 +1197,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-danger: Mutates many flows in one call; a broad filter can move the entire organization's flows. Confirm the filter scope first.
@@ -1266,8 +1234,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: 'Deprecated: use search_flow_folders instead, which pages with a cursor. List the organization''s flow folders (id, parent, name) to render the flow tree.'
@@ -1307,8 +1273,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:create
-        - BearerAuth:
-            - flows:create
         - ApiKeys:
             - flows:create
       x-ai-tool: true
@@ -1346,8 +1310,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search the organization's flow folders (id, parent, name) to render the flow tree. Page with the returned next_cursor.
@@ -1397,8 +1359,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -1437,8 +1397,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:delete
-        - BearerAuth:
-            - flows:delete
         - ApiKeys:
             - flows:delete
       x-ai-description: 'Delete a flow folder subtree. Keep delete_flows false unless the user explicitly asked to also delete the flows inside: delete_flows=true irreversibly deletes every flow in the subtree with its execution history.'
@@ -1488,8 +1446,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-danger: Reparents the whole folder subtree; confirm the destination before moving.
@@ -1522,8 +1478,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -1563,8 +1517,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Get a single flow's full definition by id (nodes, edges, configuration).
@@ -1604,8 +1556,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -1629,8 +1579,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:delete
-        - BearerAuth:
-            - flows:delete
         - ApiKeys:
             - flows:delete
       x-ai-tool: true
@@ -1679,8 +1627,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -2302,8 +2248,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-description: 'Deprecated: use search_collections instead, which pages with a cursor. List API request collections in the organization.'
@@ -2339,8 +2283,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:create
-        - BearerAuth:
-            - collections:create
         - ApiKeys:
             - collections:create
       x-ai-tool: true
@@ -2378,8 +2320,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-description: Search API request collections in the organization. Page with the returned next_cursor.
@@ -2420,8 +2360,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-description: Get a single collection by id, including its folders and saved requests.
@@ -2459,8 +2397,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:update
-        - BearerAuth:
-            - collections:update
         - ApiKeys:
             - collections:update
       x-ai-tool: true
@@ -2484,8 +2420,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:delete
-        - BearerAuth:
-            - collections:delete
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
@@ -2525,8 +2459,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -2576,8 +2508,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:update
-        - BearerAuth:
-            - collections:update
         - ApiKeys:
             - collections:update
       x-ai-tool: true
@@ -2620,8 +2550,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -2658,8 +2586,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:update
-        - BearerAuth:
-            - collections:update
         - ApiKeys:
             - collections:update
       x-ai-tool: true
@@ -2685,8 +2611,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:delete
-        - BearerAuth:
-            - collections:delete
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
@@ -2733,8 +2657,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-description: Search the OpenAPI sync change history of a collection, newest first, and page with the returned next_cursor.
@@ -2782,8 +2704,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -2823,8 +2743,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -2865,8 +2783,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -2903,8 +2819,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:create
-        - BearerAuth:
-            - collections:create
         - ApiKeys:
             - collections:create
       x-ai-tool: true
@@ -2951,8 +2865,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-description: Search the folders of a collection to build its tree. Page with the returned next_cursor.
@@ -3009,8 +2921,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:update
-        - BearerAuth:
-            - collections:update
         - ApiKeys:
             - collections:update
       x-ai-tool: true
@@ -3036,8 +2946,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:delete
-        - BearerAuth:
-            - collections:delete
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
@@ -3100,8 +3008,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -3138,8 +3044,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:create
-        - BearerAuth:
-            - collections:create
         - ApiKeys:
             - collections:create
       x-ai-tool: true
@@ -3186,8 +3090,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-description: Search the requests of a collection by folder, name or URL. Page with the returned next_cursor.
@@ -3235,8 +3137,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -3273,8 +3173,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:update
-        - BearerAuth:
-            - collections:update
         - ApiKeys:
             - collections:update
       x-ai-tool: true
@@ -3300,8 +3198,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:delete
-        - BearerAuth:
-            - collections:delete
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
@@ -3355,8 +3251,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:update
-        - BearerAuth:
-            - collections:update
         - ApiKeys:
             - collections:update
       x-ai-tool: true
@@ -3406,8 +3300,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-tool: true
@@ -3461,8 +3353,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:read
-        - BearerAuth:
-            - collections:read
         - ApiKeys:
             - collections:read
       x-ai-description: Search the OpenAPI sync change history of one request, newest first, and page with the returned next_cursor.
@@ -3503,8 +3393,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.collections:create
-        - BearerAuth:
-            - collections:create
         - ApiKeys:
             - collections:create
       x-ai-tool: true
@@ -3544,8 +3432,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -3571,8 +3457,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:delete
-        - BearerAuth:
-            - flows:delete
         - ApiKeys:
             - flows:delete
       x-ai-tool: true
@@ -3619,8 +3503,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -3646,8 +3528,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:delete
-        - BearerAuth:
-            - flows:delete
         - ApiKeys:
             - flows:delete
       x-ai-tool: true
@@ -3687,8 +3567,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -3731,8 +3609,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -3779,8 +3655,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search the saved versions of a flow, newest first, and page with the returned next_cursor.
@@ -3828,8 +3702,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -3878,8 +3750,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -3968,8 +3838,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4002,6 +3870,41 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "500":
           $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /organization/analytics:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Analytics
+      summary: Get Organization Execution Analytics
+      description: |
+        Organization-wide execution analytics summary and per-workspace breakdown
+        over the organization's finished runs in the window: totals, time series,
+        failures, runner and trigger breakdowns, and one row per workspace that
+        finished a run in the window.
+        Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
+      operationId: getOrganizationAnalytics
+      parameters:
+        - $ref: '#/components/parameters/AnalyticsWindowQuery'
+      responses:
+        "200":
+          description: Organization execution analytics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationAnalytics'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
       security:
         - BearerAuth:
             - flows:read
@@ -4045,8 +3948,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4082,8 +3983,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4132,8 +4031,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4196,8 +4093,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4235,8 +4130,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search executions across the organization or for chosen flows, newest first, filtered by status, trigger and start time. Page with the returned next_cursor.
@@ -4280,8 +4173,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4328,8 +4219,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4404,8 +4293,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-danger: SSE stream - long-lived, incompatible with request/response tools.
@@ -4454,8 +4341,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4508,8 +4393,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4558,8 +4441,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -4612,8 +4493,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search the execution history of one node across the runs of a flow, newest first, and page with the returned next_cursor.
@@ -4652,6 +4531,38 @@ paths:
         - ApiKeys:
             - workspaces:create
       x-ai-tool: true
+  /workspaces/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Workspaces
+      summary: Search Workspaces
+      description: 'Lists every workspace of the current organization, whether or not the caller holds a role on it, and pages with a cursor. An organization admin finds here the workspaces they can join; /me?include=workspace lists the ones they can open. Default order: creation, oldest first. Requires the organization permission workspaces:join. A session only.'
+      operationId: searchWorkspaces
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSearchRequest'
+      responses:
+        "200":
+          description: The workspaces of the organization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspaces:join
+      x-ai-tool: true
   /workspaces/{workspaceId}:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4687,6 +4598,27 @@ paths:
         - ApiKeys:
             - workspace.settings:update
       x-ai-tool: true
+    delete:
+      tags:
+        - Workspaces
+      summary: Delete Workspace
+      description: "Deletes a workspace with everything it owns: its flows and their runs, folders, collections, webhooks, monitors and specs, and every role held on it. Status pages stay; a monitor they showed is gone from them. Requires workspace.settings:delete on that workspace, from a role on it or from an organization role. The organization's last workspace cannot be deleted (409 LAST_WORKSPACE). A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED."
+      operationId: deleteWorkspace
+      responses:
+        "204":
+          description: The workspace and what it owned are deleted.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace.settings:delete
+        - ApiKeys:
+            - workspace.settings:delete
+      x-ai-danger: Irreversible - deletes the workspace and every flow, run, collection, webhook, monitor and spec it owns.
   /workspaces/{workspaceId}/members/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4781,6 +4713,31 @@ paths:
         - ApiKeys:
             - workspace.access:manage
       x-ai-tool: true
+  /workspaces/{workspaceId}/join:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - $ref: '#/components/parameters/WorkspaceIDPathParameter'
+    post:
+      tags:
+        - Workspaces
+      summary: Join Workspace
+      description: Gives the caller the workspace_admin role on a workspace of the organization, or replaces the role they hold there. An organization role reaches no workspace by itself (ADR-0021); this is how an organization admin opens one. Echopoint logs each join. Requires the organization permission workspaces:join. A session only. A workspace of another organization, or one that does not exist, answers 403 WORKSPACE_ACCESS_DENIED.
+      operationId: joinWorkspace
+      responses:
+        "200":
+          description: The caller as a member of the workspace, with their role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspaces:join
+      x-ai-tool: true
   /workspaces/{workspaceId}/roles:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4789,7 +4746,7 @@ paths:
       tags:
         - Workspaces
       summary: List Workspace Roles
-      description: 'Lists the roles a member can hold on a workspace, with their permissions. Not paginated: the product declares a handful of workspace roles. Requires workspace.access:read on the workspace.'
+      description: 'Lists the roles a member can hold on a workspace, with their permissions: the managed roles and the organization''s custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace.access:read on the workspace.'
       operationId: listWorkspaceRoles
       responses:
         "200":
@@ -4808,6 +4765,134 @@ paths:
         - ApiKeys:
             - workspace.access:read
       x-ai-tool: true
+  /workspace-roles:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Workspaces
+      summary: List Organization Workspace Roles
+      description: 'Lists the workspace roles of the organization: the managed roles and its custom ones. Not paginated: there are three managed roles and at most 50 custom ones. Requires workspace_roles:manage.'
+      operationId: listOrganizationWorkspaceRoles
+      responses:
+        "200":
+          description: The workspace roles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoleListResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace_roles:manage
+        - ApiKeys:
+            - workspace_roles:manage
+      x-ai-tool: true
+    post:
+      tags:
+        - Workspaces
+      summary: Create Workspace Role
+      description: Creates a custom workspace role from workspace permissions. Members of the organization can then hold it on any of its workspaces. The name must be unique in the organization and not a managed role's (409 ROLE_NAME_DUPLICATE); an organization keeps at most 50 custom roles (409 CUSTOM_ROLE_LIMIT_REACHED). Requires workspace_roles:manage.
+      operationId: createWorkspaceRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRoleWriteRequest'
+      responses:
+        "201":
+          description: The role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRole'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace_roles:manage
+        - ApiKeys:
+            - workspace_roles:manage
+      x-ai-tool: true
+  /workspace-roles/{roleId}:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: roleId
+        in: path
+        required: true
+        description: A custom workspace role of the organization.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 255
+    put:
+      tags:
+        - Workspaces
+      summary: Update Workspace Role
+      description: Renames a custom workspace role and replaces its permissions. Every member holding it is decided with them on their next request. A managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+      operationId: updateWorkspaceRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceRoleWriteRequest'
+      responses:
+        "200":
+          description: The role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRole'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace_roles:manage
+        - ApiKeys:
+            - workspace_roles:manage
+      x-ai-tool: true
+    delete:
+      tags:
+        - Workspaces
+      summary: Delete Workspace Role
+      description: Deletes a custom workspace role. A role a member holds or a pending invitation names answers 409 ROLE_IN_USE; a managed role answers 409 ROLE_NOT_EDITABLE. Requires workspace_roles:manage.
+      operationId: deleteWorkspaceRole
+      responses:
+        "204":
+          description: The role is deleted.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace_roles:manage
+        - ApiKeys:
+            - workspace_roles:manage
+      x-ai-danger: Deletes a role definition; refused while a member holds it.
   /members:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4849,6 +4934,52 @@ paths:
         - BearerAuth: []
         - ApiKeys:
             - flows:read
+      x-ai-tool: true
+  /members/{userId}/role:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - name: userId
+        in: path
+        required: true
+        description: The member's product user id.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 255
+    put:
+      tags:
+        - Members
+      summary: Set Organization Member Role
+      description: 'Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.'
+      operationId: setOrganizationMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationMemberRoleRequest'
+      responses:
+        "200":
+          description: The member with their new role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationMember'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - members:update
+        - ApiKeys:
+            - members:update
       x-ai-tool: true
   /members/search:
     parameters:
@@ -5178,8 +5309,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -5217,8 +5346,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -5256,8 +5383,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search the monitors of the organization by name, state or health policy. Page with the returned next_cursor.
@@ -5297,8 +5422,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -5363,8 +5486,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -5404,8 +5525,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -5443,8 +5562,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -5468,8 +5585,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -5511,8 +5626,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -5554,8 +5667,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:update
-        - BearerAuth:
-            - flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
@@ -5597,8 +5708,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:execute
-        - BearerAuth:
-            - flows:execute
         - ApiKeys:
             - flows:execute
       x-ai-tool: true
@@ -5641,8 +5750,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -5689,8 +5796,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-description: Search the runs of one monitor, most recent first, and page with the returned next_cursor.
@@ -5738,8 +5843,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.flows:read
-        - BearerAuth:
-            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -5773,8 +5876,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:read
-        - BearerAuth:
-            - specs:read
         - ApiKeys:
             - specs:read
       x-ai-tool: true
@@ -5820,8 +5921,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:write
-        - BearerAuth:
-            - specs:write
         - ApiKeys:
             - specs:write
       x-ai-tool: true
@@ -5859,8 +5958,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:read
-        - BearerAuth:
-            - specs:read
         - ApiKeys:
             - specs:read
       x-ai-description: Search the specs of the organization by slug or title, with their Live version. Page with the returned next_cursor.
@@ -5895,8 +5992,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:read
-        - BearerAuth:
-            - specs:read
         - ApiKeys:
             - specs:read
       x-ai-tool: true
@@ -5933,8 +6028,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:read
-        - BearerAuth:
-            - specs:read
         - ApiKeys:
             - specs:read
       x-ai-tool: true
@@ -5984,8 +6077,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:write
-        - BearerAuth:
-            - specs:write
         - ApiKeys:
             - specs:write
       x-ai-tool: true
@@ -6026,8 +6117,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:read
-        - BearerAuth:
-            - specs:read
         - ApiKeys:
             - specs:read
       x-ai-description: Search the Live versions of a spec, newest first, and page with the returned next_cursor.
@@ -6070,8 +6159,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:read
-        - BearerAuth:
-            - specs:read
         - ApiKeys:
             - specs:read
       x-ai-tool: true
@@ -6136,8 +6223,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:write
-        - BearerAuth:
-            - specs:write
         - ApiKeys:
             - specs:write
       x-ai-tool: true
@@ -6182,8 +6267,6 @@ paths:
       security:
         - BearerAuth:
             - workspace.specs:read
-        - BearerAuth:
-            - specs:read
         - ApiKeys:
             - specs:read
       x-ai-tool: true
@@ -11945,6 +12028,13 @@ components:
           maxItems: 20
           items:
             $ref: '#/components/schemas/InvitationWorkspaceRole'
+    OrganizationMemberRoleRequest:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          $ref: '#/components/schemas/InvitationOrganizationRole'
     InvitationOrganizationRole:
       description: 'The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.'
       type: string
@@ -14060,6 +14150,95 @@ components:
           format: date-time
         last_status:
           $ref: '#/components/schemas/ExecutionStatus'
+    OrganizationAnalytics:
+      description: Organization-wide execution analytics summary and per-workspace breakdown over the window.
+      type: object
+      required:
+        - summary
+        - workspaces
+      properties:
+        summary:
+          $ref: '#/components/schemas/ExecutionAnalyticsSummary'
+        workspaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceAnalytics'
+    WorkspaceAnalytics:
+      description: One workspace's finished runs in the window.
+      type: object
+      required:
+        - workspace_id
+        - workspace_name
+        - active_flows
+        - runs
+        - failed_runs
+        - run_ms_total
+        - run_ms_average
+        - run_ms_p95
+        - cloud_run_ms_total
+        - measured_runs
+        - http_calls
+        - failed_http_calls
+        - last_completed_at
+        - last_status
+      properties:
+        workspace_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        workspace_name:
+          description: The workspace's current display name; empty when the workspace is no longer found.
+          type: string
+        active_flows:
+          description: Distinct flows in the workspace that finished a run in the window.
+          type: integer
+          format: int64
+          minimum: 1
+        runs:
+          type: integer
+          format: int64
+          minimum: 1
+        failed_runs:
+          type: integer
+          format: int64
+          minimum: 0
+        top_error_code:
+          description: The error code its failed runs reported most. Absent when none failed with a code.
+          type: string
+        run_ms_total:
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_average:
+          type: integer
+          format: int64
+          minimum: 0
+        run_ms_p95:
+          type: integer
+          format: int64
+          minimum: 0
+        cloud_run_ms_total:
+          type: integer
+          format: int64
+          minimum: 0
+        measured_runs:
+          description: Runs with a recorded HTTP call count.
+          type: integer
+          format: int64
+          minimum: 0
+        http_calls:
+          type: integer
+          format: int64
+          minimum: 0
+        failed_http_calls:
+          type: integer
+          format: int64
+          minimum: 0
+        last_completed_at:
+          type: string
+          format: date-time
+        last_status:
+          $ref: '#/components/schemas/ExecutionStatus'
     EndpointAnalyticsList:
       description: Per-endpoint HTTP call analytics over the window.
       type: object
@@ -14159,6 +14338,22 @@ components:
       type: string
       enum:
         - workspace
+    WorkspaceSearchRequest:
+      type: object
+      properties:
+        pagination:
+          $ref: '#/components/schemas/PaginationRequest'
+    WorkspaceSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Workspace'
     Workspace:
       description: A workspace of the current organization.
       type: object
@@ -14190,6 +14385,7 @@ components:
         - id
         - name
         - permissions
+        - custom
       properties:
         id:
           type: string
@@ -14200,6 +14396,32 @@ components:
           type: array
           items:
             type: string
+        custom:
+          description: True for a role the organization made, which it can change and delete. False for one of the product's managed roles (workspace_admin, workspace_editor, workspace_viewer).
+          type: boolean
+    WorkspaceRoleWriteRequest:
+      description: A custom workspace role.
+      type: object
+      required:
+        - name
+        - permissions
+      properties:
+        name:
+          description: Unique in the organization, and not the name of a managed role.
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: .*\S.*
+        permissions:
+          description: Workspace permissions (workspace.flows:read, ...) the role grants on the workspace it is held on.
+          type: array
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
     WorkspaceRoleRef:
       description: The role a member holds on a workspace.
       type: object
