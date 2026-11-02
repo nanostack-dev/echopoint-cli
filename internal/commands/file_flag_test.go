@@ -44,8 +44,9 @@ func TestFileCommandsTakeTheFileThroughFAndOfferTheRightExtensions(t *testing.T)
 		path       []string
 		extensions []string
 	}{
-		{[]string{"flow", "create"}, []string{"json"}},
-		{[]string{"flow", "update"}, []string{"json"}},
+		{[]string{"flow", "create"}, []string{".yaml", ".yml", "json"}},
+		{[]string{"flow", "update"}, []string{".yaml", ".yml", "json"}},
+		{[]string{"flow", "compile"}, []string{".yaml", ".yml"}},
 		{[]string{"collection", "import"}, []string{"json"}},
 		{[]string{"org", "env", "import"}, []string{"json", "env"}},
 		{[]string{"flow", "env", "set"}, []string{"json", "env"}},
@@ -92,10 +93,19 @@ func TestFlowCreateAndUpdateReadTheirFileFromF(t *testing.T) {
 	created := writeTemp(t, "create.json", `{"name":"From file","flow_definition":{"nodes":[],"edges":[]}}`)
 	updated := writeTemp(t, "update.json", `{"name":"Renamed"}`)
 
-	if _, _, err := execute(t, newFlowCmd(stub.state(t)), "", "create", "-f", created); err != nil {
+	if _, _, err := execute(t, newFlowCmd(stub.state(t)), "", "create", "-f", created, "--json"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := execute(t, newFlowCmd(stub.state(t)), "", "update", flowID.String(), "-f", updated); err != nil {
+	if _, _, err := execute(
+		t,
+		newFlowCmd(stub.state(t)),
+		"",
+		"update",
+		flowID.String(),
+		"-f",
+		updated,
+		"--json",
+	); err != nil {
 		t.Fatal(err)
 	}
 

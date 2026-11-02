@@ -34,7 +34,7 @@ func TestFlowCreateTakesExactlyOneOfNameAndFile(t *testing.T) {
 		args []string
 		want string
 	}{
-		"neither":    {[]string{"create"}, "pass --name for an empty flow, or -f for a flow from a JSON file"},
+		"neither":    {[]string{"create"}, "pass --name for an empty flow, or -f for a flow file"},
 		"both":       {[]string{"create", "--name", "x", "-f", file}, "pass either --name or -f, not both"},
 		"empty name": {[]string{"create", "--name", " "}, "--name must not be empty"},
 	} {

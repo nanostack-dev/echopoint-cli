@@ -29,6 +29,10 @@ func newFlowCmd(state *AppState) *cobra.Command {
 
 A <flow-id> is the flow's id, which 'echopoint flow list' shows and Tab completes.
 
+Write a flow as *.flow.yaml. flow create -f and flow update -f compile that file
+and send the JSON the API stores. flow compile --check lints it and makes no
+request. Pass --json only when the file is already that JSON.
+
 A flow runs on Cloud (EchoPoint runs it), on a Self-hosted runner (a long-lived
 runner you operate), or on an Ephemeral runner (a short-lived runner the caller
 operates). Two commands start one:
@@ -503,23 +507,27 @@ func printFlowSummary(w io.Writer, flow api.Flow) {
 }
 
 func newFlowCreateCmd(state *AppState) *cobra.Command {
-	var file, name string
+	var file, name, root string
+	var asJSON bool
 
 	cmd := &cobra.Command{
 		Use:   "create (--name <name> | -f <file>)",
-		Short: "Create a flow: an empty one with --name, or one from a JSON file with -f",
+		Short: "Create a flow: an empty one with --name, or one from a flow file with -f",
 		Long: `Create a flow. Pass exactly one of:
   --name <name>   an empty flow, to build with 'echopoint flow node add'
-  -f <file>       a flow from a CreateFlowRequest JSON file`,
+  -f <file>       a flow file (*.flow.yaml). The CLI compiles it, runs the linter,
+                  and sends the JSON the API stores. --root resolves module: references.
+                  --json means the file is already a CreateFlowRequest and is sent unchanged.`,
 		Example: `  echopoint flow create --name "Checkout"
-  echopoint flow create -f flow.json`,
+  echopoint flow create -f flows/anchor/login.flow.yaml --root flows
+  echopoint flow create -f flow.json --json`,
 		Args: fileFlagArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
 			}
 
-			req, err := buildCreateFlowRequest(cmd, name, file)
+			req, err := buildCreateFlowRequest(cmd, name, file, root, asJSON)
 			if err != nil {
 				return err
 			}
@@ -542,7 +550,16 @@ func newFlowCreateCmd(state *AppState) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "Name of the empty flow to create")
-	addFileFlag(cmd, &file, "CreateFlowRequest JSON file to create the flow from", "json")
+	addFileFlag(
+		cmd,
+		&file,
+		"Flow file (*.flow.yaml). With --json, a CreateFlowRequest JSON file",
+		".yaml",
+		".yml",
+		"json",
+	)
+	cmd.Flags().StringVar(&root, "root", "", "Library root used to resolve module: references")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "Read -f as CreateFlowRequest JSON and send it unchanged")
 	cmd.ValidArgsFunction = cobra.NoFileCompletions
 	return quietOnError(cmd)
 }
@@ -556,19 +573,18 @@ func printSavedFlow(cmd *cobra.Command, state *AppState, flow *api.Flow) error {
 	return nil
 }
 
-func buildCreateFlowRequest(cmd *cobra.Command, name, file string) (api.CreateFlowRequest, error) {
+func buildCreateFlowRequest(cmd *cobra.Command, name, file, root string, asJSON bool) (api.CreateFlowRequest, error) {
 	named, fromFile := cmd.Flags().Changed("name"), cmd.Flags().Changed("file")
 	switch {
 	case named && fromFile:
 		return api.CreateFlowRequest{}, errors.New("pass either --name or -f, not both")
 	case !named && !fromFile:
-		return api.CreateFlowRequest{}, errors.New("pass --name for an empty flow, or -f for a flow from a JSON file")
+		return api.CreateFlowRequest{}, errors.New("pass --name for an empty flow, or -f for a flow file")
 	case fromFile:
-		var req api.CreateFlowRequest
-		if err := loadJSONFile(file, &req); err != nil {
-			return req, err
-		}
-		return req, nil
+		return createRequestFromFile(cmd, file, root, asJSON)
+	}
+	if asJSON || cmd.Flags().Changed("root") {
+		return api.CreateFlowRequest{}, errors.New("pass --json and --root with -f")
 	}
 	if strings.TrimSpace(name) == "" {
 		return api.CreateFlowRequest{}, errors.New("--name must not be empty")
@@ -583,15 +599,19 @@ func buildCreateFlowRequest(cmd *cobra.Command, name, file string) (api.CreateFl
 }
 
 func newFlowUpdateCmd(state *AppState) *cobra.Command {
-	var file, name, description string
+	var file, name, description, root string
+	var asJSON bool
 
 	cmd := &cobra.Command{
 		Use:   "update <flow-id> [-f <file>]",
-		Short: "Update a flow from a JSON file, or change its name and description with flags",
+		Short: "Update a flow from a flow file, or change its name and description with flags",
 		Long: `Update a flow. Pass exactly one of:
-  -f <file>                    an UpdateFlowRequest JSON file
+  -f <file>                    a flow file (*.flow.yaml). The CLI compiles it and sends the JSON.
+                               A folder in the file is ignored: flow update does not move the flow.
+                               --json means the file is already an UpdateFlowRequest.
   --name and --description     the fields to change; the others stay`,
-		Example: `  echopoint flow update <flow-id> -f flow.json
+		Example: `  echopoint flow update <flow-id> -f flows/anchor/login.flow.yaml --root flows
+  echopoint flow update <flow-id> -f flow.json --json
   echopoint flow update <flow-id> --name "Checkout smoke test"
   echopoint flow update <flow-id> --description "Runs after every deploy"`,
 		Args: fileFlagArgs(1),
@@ -600,12 +620,12 @@ func newFlowUpdateCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			req, err := buildUpdateFlowRequest(cmd, file, name, description)
+			id, err := resolveFlowID(cmd.Context(), state, args[0])
 			if err != nil {
 				return err
 			}
 
-			id, err := resolveFlowID(cmd.Context(), state, args[0])
+			req, err := buildUpdateFlowRequest(cmd, file, name, description, root, asJSON)
 			if err != nil {
 				return err
 			}
@@ -621,13 +641,26 @@ func newFlowUpdateCmd(state *AppState) *cobra.Command {
 		},
 	}
 
-	addFileFlag(cmd, &file, "UpdateFlowRequest JSON file", "json")
+	addFileFlag(
+		cmd,
+		&file,
+		"Flow file (*.flow.yaml). With --json, an UpdateFlowRequest JSON file",
+		".yaml",
+		".yml",
+		"json",
+	)
 	cmd.Flags().StringVar(&name, "name", "", "New name of the flow")
 	cmd.Flags().StringVar(&description, "description", "", "New description of the flow")
+	cmd.Flags().StringVar(&root, "root", "", "Library root used to resolve module: references")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "Read -f as UpdateFlowRequest JSON and send it unchanged")
 	return quietOnError(cmd)
 }
 
-func buildUpdateFlowRequest(cmd *cobra.Command, file, name, description string) (api.UpdateFlowRequest, error) {
+func buildUpdateFlowRequest(
+	cmd *cobra.Command,
+	file, name, description, root string,
+	asJSON bool,
+) (api.UpdateFlowRequest, error) {
 	flags := cmd.Flags()
 	fromFile := flags.Changed("file")
 	flagged := flags.Changed("name") || flags.Changed("description")
@@ -638,7 +671,10 @@ func buildUpdateFlowRequest(cmd *cobra.Command, file, name, description string) 
 	case !fromFile && !flagged:
 		return req, errors.New("pass -f, or at least one of --name and --description")
 	case fromFile:
-		return req, loadJSONFile(file, &req)
+		return updateRequestFromFile(cmd, file, root, asJSON)
+	}
+	if asJSON || flags.Changed("root") {
+		return req, errors.New("pass --json and --root with -f")
 	}
 	if flags.Changed("name") {
 		if strings.TrimSpace(name) == "" {

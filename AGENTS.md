@@ -10,3 +10,11 @@ Go CLI, stdio MCP server and composite GitHub Action. A standalone clone include
 - Product administration uses Echopoint's browser Admin Panel. Keep `/administrations` operations outside CLI commands and privileged CLI login; MCP excludes that path and its descendants regardless of tool annotations. The complete internal API mirror may retain them.
 - Before setup or recurring failures, read [setup](docs/development/setup.md) or [troubleshooting](docs/development/troubleshooting.md). Before merging release behavior, read [publication](docs/runbooks/deployment.md); for recovery, read [rollback](docs/runbooks/rollback.md).
 - Keep required procedures local and update owning docs in the same PR as changed behavior or verified lessons.
+
+## Flow files
+
+Write a flow as `*.flow.yaml`. Nodes are a mapping keyed by the node id. `next` and `on_failure` name the nodes they run, so the file has no edges array. `module: anchor/login` is another file under `--root`.
+
+`echopoint flow create -f` and `echopoint flow update -f` compile that file, run the linter, and send the JSON the API stores. `echopoint flow compile -f <file> --check` lints and makes no request. Pass `--json` only when the file is already a CreateFlowRequest or an UpdateFlowRequest.
+
+The grammar, checks, and module rules are in [docs/flows.md](docs/flows.md). Do not hand-write the JSON graph when a flow file can say it.
