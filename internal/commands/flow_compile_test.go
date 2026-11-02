@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,6 +50,56 @@ nodes:
 	}
 	if strings.Contains(yamlOut, "flowdefinition:") || strings.Contains(yamlOut, "autolayout:") {
 		t.Fatalf("yaml used Go names:\n%s", yamlOut)
+	}
+}
+
+func TestFlowCreateCompilesAFlowFileAndSendsTheJSON(t *testing.T) {
+	file := writeTemp(t, "checkout.flow.yaml", `
+name: Checkout
+nodes:
+  create:
+    request:
+      method: POST
+      url: "{{base}}/orders"
+    expect: "status: 201"
+    outputs:
+      orderId: $.id
+`)
+	stub := newAPIStub(t)
+	stub.on(http.MethodPost, "/flows", http.StatusCreated, sampleFlow(idFor("1"), "Checkout", nil))
+
+	_, stderr, err := execute(t, newFlowCmd(stub.tableState(t)), "", "create", "-f", file)
+	if err != nil {
+		t.Fatalf("err %v stderr %s", err, stderr)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr: %s", stderr)
+	}
+	sent := bodyOf(t, stub.requestsTo(http.MethodPost, "/flows")[0])
+	definition, _ := sent["flow_definition"].(map[string]any)
+	nodes, _ := definition["nodes"].([]any)
+	if sent["name"] != "Checkout" || len(nodes) != 1 {
+		t.Fatalf("sent %v", sent)
+	}
+}
+
+func TestFlowCreateSendsAPIJSONOnlyWithTheFlag(t *testing.T) {
+	file := writeTemp(t, "flow.json", `{"name":"Checkout","flow_definition":{"nodes":[],"edges":[]}}`)
+	stub := newAPIStub(t)
+	stub.on(http.MethodPost, "/flows", http.StatusCreated, sampleFlow(idFor("1"), "Checkout", nil))
+
+	_, stderr, err := execute(t, newFlowCmd(stub.state(t)), "", "create", "-f", file)
+	if err == nil || !strings.Contains(err.Error(), "--json") || stub.requestCount() != 0 {
+		t.Fatalf("err %v stderr %q requests %d", err, stderr, stub.requestCount())
+	}
+
+	_, stderr, err = execute(t, newFlowCmd(stub.tableState(t)), "", "create", "-f", file, "--json")
+	if err != nil {
+		t.Fatalf("json err %v stderr %s", err, stderr)
+	}
+	sent := bodyOf(t, stub.requestsTo(http.MethodPost, "/flows")[0])
+	if sent["name"] != "Checkout" || sent["auto_layout"] != nil {
+		t.Fatalf("sent %v", sent)
 	}
 }
 

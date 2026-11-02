@@ -10,6 +10,7 @@ import (
 	"echopoint-cli/internal/output"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func newFlowCompileCmd(state *AppState) *cobra.Command {
@@ -19,19 +20,20 @@ func newFlowCompileCmd(state *AppState) *cobra.Command {
 		Use:   "compile",
 		Short: "Compile flow files to CreateFlowRequest JSON",
 		Long: `Compile a flow file, or a directory of them, into the CreateFlowRequest JSON
-that flow create already accepts.
+that flow create -f sends. flow create and flow update compile a flow file
+themselves. Use this command to inspect the JSON, or to lint with --check.
 
 A file is YAML. Nodes are named, and next and on_failure name the nodes they
 run. module: anchor/login resolves against the other flow files under --root
 (the file's directory, when --root is omitted). The API stores the JSON, not
-the YAML.
+the YAML. Pass --json to flow create or flow update only when the file is
+already that JSON.
 
 --check reports problems and prints no JSON. A warning still compiles.`,
 		Example: `  echopoint flow compile -f flows
   echopoint flow compile -f flows/anchor/login.flow.yaml --root flows
   echopoint flow compile -f flows --check
-  echopoint flow compile -f flows/anchor/login.flow.yaml > login.json
-  echopoint flow create -f login.json`,
+  echopoint flow create -f flows/anchor/login.flow.yaml --root flows`,
 		Args:          fileFlagArgs(0),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -76,6 +78,92 @@ func runFlowCompile(cmd *cobra.Command, state *AppState, file, root string, chec
 		return err
 	}
 	return output.PrintJSON(cmd.OutOrStdout(), doc)
+}
+
+func createRequestFromFile(cmd *cobra.Command, file, root string, asJSON bool) (api.CreateFlowRequest, error) {
+	if asJSON && cmd.Flags().Changed("root") {
+		return api.CreateFlowRequest{}, errors.New("pass --root with a flow file, not with --json")
+	}
+	if asJSON {
+		var req api.CreateFlowRequest
+		return req, loadJSONFile(file, &req)
+	}
+	return compileOneFlowFile(cmd, file, root)
+}
+
+func updateRequestFromFile(cmd *cobra.Command, file, root string, asJSON bool) (api.UpdateFlowRequest, error) {
+	if asJSON && cmd.Flags().Changed("root") {
+		return api.UpdateFlowRequest{}, errors.New("pass --root with a flow file, not with --json")
+	}
+	if asJSON {
+		var req api.UpdateFlowRequest
+		return req, loadJSONFile(file, &req)
+	}
+	compiled, err := compileOneFlowFile(cmd, file, root)
+	if err != nil {
+		return api.UpdateFlowRequest{}, err
+	}
+	if compiled.FolderId != nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), "folder is applied by flow create; flow update leaves the folder where it is")
+	}
+	name := compiled.Name
+	return api.UpdateFlowRequest{
+		Name:           &name,
+		Description:    compiled.Description,
+		FlowDefinition: &compiled.FlowDefinition,
+		AutoLayout:     compiled.AutoLayout,
+		Role:           compiled.Role,
+		Tags:           compiled.Tags,
+		Version:        compiled.Version,
+	}, nil
+}
+
+func compileOneFlowFile(cmd *cobra.Command, file, root string) (api.CreateFlowRequest, error) {
+	info, err := os.Stat(file)
+	if err != nil {
+		return api.CreateFlowRequest{}, err
+	}
+	if info.IsDir() {
+		return api.CreateFlowRequest{}, errors.New("pass one flow file; flow compile accepts a directory")
+	}
+	out, err := compileFlowPath(file, root, false)
+	if err != nil {
+		if looksLikeAPIJSON(file) {
+			return api.CreateFlowRequest{}, errors.New("this file is API JSON; pass --json to send it unchanged")
+		}
+		return api.CreateFlowRequest{}, err
+	}
+	for _, diag := range out.Diagnostics {
+		fmt.Fprintln(cmd.ErrOrStderr(), diag.String())
+	}
+	if len(out.Errors()) > 0 {
+		if looksLikeAPIJSON(file) {
+			fmt.Fprintln(cmd.ErrOrStderr(), "this file is API JSON; pass --json to send it unchanged")
+		}
+		return api.CreateFlowRequest{}, &exitCodeError{code: 1}
+	}
+	doc, err := compiledDocument(out, file, root, false)
+	if err != nil {
+		return api.CreateFlowRequest{}, err
+	}
+	req, ok := doc.(api.CreateFlowRequest)
+	if !ok {
+		return api.CreateFlowRequest{}, errors.New("compiled flow is missing")
+	}
+	return req, nil
+}
+
+func looksLikeAPIJSON(file string) bool {
+	body, err := os.ReadFile(file)
+	if err != nil {
+		return false
+	}
+	var doc map[string]any
+	if yaml.Unmarshal(body, &doc) != nil {
+		return false
+	}
+	_, ok := doc["flow_definition"]
+	return ok
 }
 
 func compileFlowPath(file, root string, dir bool) (flowdsl.Outcome, error) {

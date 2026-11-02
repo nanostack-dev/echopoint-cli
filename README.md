@@ -274,17 +274,53 @@ echopoint flow list --all -o json
 echopoint flow view <flow-id>
 echopoint flow view <flow-id> -o json
 
-# Create: an empty flow, or one from a JSON file (exactly one of --name and -f)
+# Create: an empty flow, or one from a flow file (exactly one of --name and -f).
+# -f compiles *.flow.yaml and sends the JSON the API stores. --json sends a JSON file unchanged.
 echopoint flow create --name "Checkout smoke"
-echopoint flow create -f flow.json
+echopoint flow create -f flows/checkout.flow.yaml
+echopoint flow create -f flow.json --json
 
-# Update, from a file or by flags (exactly one of the two)
-echopoint flow update <flow-id> -f flow.json
+# Update, from a flow file or by flags (exactly one of the two)
+echopoint flow update <flow-id> -f flows/checkout.flow.yaml
+echopoint flow update <flow-id> -f flow.json --json
 echopoint flow update <flow-id> --name "Checkout smoke test" --description "Runs after deploy"
 
 # Delete
 echopoint flow delete <flow-id>
 echopoint flow delete <flow-id> --yes
+```
+
+A flow file names its nodes. `next` says what runs after a node. `expect` is the check. `flow compile --check` lints the file and does not call the API.
+
+```yaml
+# flows/checkout.flow.yaml
+name: Checkout
+tags: [checkout]
+nodes:
+  create:
+    request:
+      method: POST
+      url: "{{base}}/orders"
+      headers:
+        Authorization: "Bearer {{token}}"
+      body:
+        sku: "{{sku}}"
+    expect: "status: 201"
+    outputs:
+      orderId: $.id
+    next: fetch
+  fetch:
+    request:
+      method: GET
+      url: "{{base}}/orders/{{create.orderId}}"
+    expect:
+      - "status: 200"
+      - "$.sku equals {{sku}}"
+```
+
+```bash
+echopoint flow compile -f flows/checkout.flow.yaml --check
+echopoint flow create -f flows/checkout.flow.yaml
 ```
 
 ### Running Flows

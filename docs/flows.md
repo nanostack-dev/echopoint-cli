@@ -63,20 +63,23 @@ Pass exactly one of `--name` and `-f`:
 # an empty flow, to build with `flow node add`
 echopoint flow create --name "Checkout smoke"
 
-# a flow from a CreateFlowRequest JSON file
-echopoint flow create -f flow-definition.json
+# a flow file. The CLI compiles it and sends the JSON the API stores.
+echopoint flow create -f flows/anchor/login.flow.yaml --root flows
+
+# a CreateFlowRequest JSON file, sent unchanged
+echopoint flow create -f flow-definition.json --json
 ```
 
 ### Compile a flow file
 
-`flow compile` reads a YAML flow file and prints the CreateFlowRequest JSON that `flow create -f` already accepts. It does not call the API. The API stores the JSON.
+`flow create -f` and `flow update -f` compile a flow file and send the JSON. `flow compile` does the same compile and prints the JSON. It does not call the API. The API stores the JSON. Pass `--json` to create or update only when the file is already that JSON.
 
 ```bash
 echopoint flow compile -f flows
 echopoint flow compile -f flows/anchor/login.flow.yaml --root flows
 echopoint flow compile -f flows --check
-echopoint flow compile -f flows/anchor/login.flow.yaml > login.json
-echopoint flow create -f login.json
+echopoint flow create -f flows/anchor/login.flow.yaml --root flows
+echopoint flow update <flow-id> -f flows/anchor/login.flow.yaml --root flows
 ```
 
 `--check` prints problems and no JSON. A warning still compiles. `-o yaml` prints the same document with the JSON key names.

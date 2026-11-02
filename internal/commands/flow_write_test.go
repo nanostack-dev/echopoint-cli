@@ -38,7 +38,16 @@ func TestFlowUpdateTakesAFileOrFlagsAndExactlyOneOfThem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = execute(t, newFlowCmd(stub.state(t)), "", "update", flow.String(), "-f", file); err != nil {
+	if _, _, err = execute(
+		t,
+		newFlowCmd(stub.state(t)),
+		"",
+		"update",
+		flow.String(),
+		"-f",
+		file,
+		"--json",
+	); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err = execute(
