@@ -81,6 +81,8 @@ github.com/nanostack-dev/echopoint-kit v0.3.0 h1:ITG1EpK0hZIAyudxzJiFEsGYlxpHZwL
 github.com/nanostack-dev/echopoint-kit v0.3.0/go.mod h1:+NQxoG0w/0nOpjh9Q7S88qgeNQ2varjD4U15Fn+5wPs=
 github.com/nanostack-dev/echopoint-runner v0.94.0 h1:dki9REoFmGYiut9JKTO6Z6maodT02XBoDdfsBxec0LA=
 github.com/nanostack-dev/echopoint-runner v0.94.0/go.mod h1:NqYWs8myxHvPVRTEmxoIh4M9ZSgJUZgorVBIPD/rfSk=
+github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.1.0 h1:A5odJOhfW99r8NA3HL0slvkvCjOOYEyN5UJSf5aT6JM=
+github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.1.0/go.mod h1:ksDxkaimTXiQ3luSo6H3Sn6+uOGSiHsEIPoD5O2x6W8=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=

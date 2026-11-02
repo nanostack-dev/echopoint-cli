@@ -1,14 +1,16 @@
 package commands
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 
 	"echopoint-cli/internal/api"
-	"echopoint-cli/internal/flowdsl"
 	"echopoint-cli/internal/output"
 
+	"github.com/nanostack-dev/echopoint-runner/pkg/flowdsl"
+	"github.com/nanostack-dev/echopoint-runner/pkg/flowdsl/wire"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -177,7 +179,11 @@ func compiledDocument(out flowdsl.Outcome, file, root string, dir bool) (any, er
 	if dir {
 		doc := make(map[string]api.CreateFlowRequest, len(out.Flows))
 		for _, flow := range out.Flows {
-			doc[flow.Path] = flow.Request
+			req, err := apiRequest(flow.Request)
+			if err != nil {
+				return nil, err
+			}
+			doc[flow.Path] = req
 		}
 		return doc, nil
 	}
@@ -187,8 +193,20 @@ func compiledDocument(out flowdsl.Outcome, file, root string, dir bool) (any, er
 	}
 	for _, flow := range out.Flows {
 		if flow.Path == key {
-			return flow.Request, nil
+			return apiRequest(flow.Request)
 		}
 	}
 	return nil, &exitCodeError{code: 1}
+}
+
+// The compiler's request is the API document with its own Go types. The CLI
+// client prints and sends the generated type, so the JSON is the boundary.
+func apiRequest(request wire.CreateFlowRequest) (api.CreateFlowRequest, error) {
+	raw, err := json.Marshal(request)
+	if err != nil {
+		return api.CreateFlowRequest{}, err
+	}
+	var decoded api.CreateFlowRequest
+	err = json.Unmarshal(raw, &decoded)
+	return decoded, err
 }

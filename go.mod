@@ -12,6 +12,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/nanostack-dev/echopoint-kit v0.3.0
 	github.com/nanostack-dev/echopoint-runner v0.94.0
+	github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.1.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/rs/zerolog v1.35.1
