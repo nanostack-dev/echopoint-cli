@@ -40,6 +40,7 @@ operates). Two commands start one:
 		newFlowListCmd(state),
 		newFlowViewCmd(state),
 		newFlowCreateCmd(state),
+		newFlowCompileCmd(state),
 		newFlowUpdateCmd(state),
 		newFlowDeleteCmd(state),
 		newFlowPublishCmd(state),
