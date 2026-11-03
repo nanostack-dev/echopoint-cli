@@ -565,6 +565,24 @@ func (e FlowRunStatus) Valid() bool {
 	}
 }
 
+// Defines values for FlowSourceDiagnosticSeverity.
+const (
+	Error   FlowSourceDiagnosticSeverity = "error"
+	Warning FlowSourceDiagnosticSeverity = "warning"
+)
+
+// Valid indicates whether the value is a known member of the FlowSourceDiagnosticSeverity enum.
+func (e FlowSourceDiagnosticSeverity) Valid() bool {
+	switch e {
+	case Error:
+		return true
+	case Warning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FlowVersionSortField.
 const (
 	PublishedAt FlowVersionSortField = "published_at"
@@ -2005,6 +2023,24 @@ func (e WebhookWaitFlowNodeType) Valid() bool {
 	}
 }
 
+// Defines values for WorkspaceInvitationStatus.
+const (
+	WorkspaceInvitationStatusExpired WorkspaceInvitationStatus = "expired"
+	WorkspaceInvitationStatusPending WorkspaceInvitationStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceInvitationStatus enum.
+func (e WorkspaceInvitationStatus) Valid() bool {
+	switch e {
+	case WorkspaceInvitationStatusExpired:
+		return true
+	case WorkspaceInvitationStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // AcceptedInvitationResponse The organization the caller belongs to after accepting.
 type AcceptedInvitationResponse struct {
 	OrganizationId   string `json:"organization_id"`
@@ -2769,6 +2805,22 @@ type CollectionSortField string
 // CollectionSource Source of the collection
 type CollectionSource string
 
+// CompileFlowSourceRequest defines model for CompileFlowSourceRequest.
+type CompileFlowSourceRequest struct {
+	// Source A flow file.
+	Source string `json:"source"`
+}
+
+// CompileFlowSourceResult defines model for CompileFlowSourceResult.
+type CompileFlowSourceResult struct {
+	// Completions Declared outputs, as nodeId.output, for an editor completing {{node.output}}.
+	Completions *[]string              `json:"completions,omitempty"`
+	Diagnostics []FlowSourceDiagnostic `json:"diagnostics"`
+
+	// Request The JSON document the file would save. Omitted when the file has an error.
+	Request *CreateFlowRequest `json:"request,omitempty"`
+}
+
 // CompositeAssertion defines model for CompositeAssertion.
 type CompositeAssertion struct {
 	// ExtractorData Configuration for the extractor
@@ -2851,6 +2903,9 @@ type CreateFlowRequest struct {
 
 	// Role How the flow may be run. Omitted defaults to `standalone`.
 	Role *FlowRole `json:"role,omitempty"`
+
+	// Source A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, auto_layout, and folder_id. name and flow_definition stay required so a JSON client is unchanged; the file replaces both. Compile errors return 400 and create nothing.
+	Source *string `json:"source,omitempty"`
 
 	// Tags Optional flat tags for the flow. Lowercased, normalized, deduplicated, and sorted on write. Omitted defaults to an empty list.
 	//
@@ -3059,6 +3114,19 @@ type CurrentUserWorkspace struct {
 
 	// Role The role the user holds on this workspace, or null when only their organization role reaches it.
 	Role *WorkspaceRoleRef `json:"role"`
+}
+
+// DecompileFlowSourceRequest defines model for DecompileFlowSourceRequest.
+type DecompileFlowSourceRequest struct {
+	// Flow The fields a flow file is rendered from. A stored flow or an unsaved draft.
+	// Identity, timestamps, and workspace_id are ignored.
+	Flow FlowFileDocument `json:"flow"`
+}
+
+// DecompileFlowSourceResult defines model for DecompileFlowSourceResult.
+type DecompileFlowSourceResult struct {
+	// Source The flow file.
+	Source string `json:"source"`
 }
 
 // DefinitionBase defines model for DefinitionBase.
@@ -3814,6 +3882,26 @@ type FlowExecutionListResponse struct {
 	Total int64 `json:"total"`
 }
 
+// FlowFileDocument The fields a flow file is rendered from. A stored flow or an unsaved draft.
+// Identity, timestamps, and workspace_id are ignored.
+type FlowFileDocument struct {
+	Description    *string             `json:"description,omitempty"`
+	FlowDefinition FlowDefinition      `json:"flow_definition"`
+	FolderId       *openapi_types.UUID `json:"folder_id,omitempty"`
+
+	// Id Server id, written into the file when present.
+	Id   *openapi_types.UUID `json:"id,omitempty"`
+	Name string              `json:"name"`
+
+	// Role How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
+	// reusable building block that other flows call through a module node: you can still
+	// launch it directly to test it, but schedules skip it when their tags match it unless
+	// the schedule sets `ignore_modules` to false.
+	Role    *FlowRole `json:"role,omitempty"`
+	Tags    *[]string `json:"tags,omitempty"`
+	Version *string   `json:"version,omitempty"`
+}
+
 // FlowFolder A folder in the organization's flow tree. One home per flow.
 type FlowFolder struct {
 	CreatedAt time.Time `json:"created_at"`
@@ -4003,6 +4091,21 @@ type FlowSearchResponse struct {
 	Total int64 `json:"total"`
 }
 
+// FlowSourceDiagnostic defines model for FlowSourceDiagnostic.
+type FlowSourceDiagnostic struct {
+	File *string `json:"file,omitempty"`
+
+	// Line 1-based line in the flow file. Omitted when the problem has no line.
+	Line    *int   `json:"line,omitempty"`
+	Message string `json:"message"`
+
+	// Severity error blocks a save. warning does not.
+	Severity FlowSourceDiagnosticSeverity `json:"severity"`
+}
+
+// FlowSourceDiagnosticSeverity error blocks a save. warning does not.
+type FlowSourceDiagnosticSeverity string
+
 // FlowTagListResponse Current canonical flow tags for the authenticated organization.
 type FlowTagListResponse struct {
 	// Count Number of tags returned in this response.
@@ -4178,6 +4281,21 @@ type InlineFlowDefinition struct {
 	Nodes []FlowNode  `json:"nodes"`
 }
 
+// InvitationEmailUsage Invitation emails the organization sent in the 24 hours before
+// `generated_at`, new invitations and resends counted. Deleting an
+// invitation gives none back. An invitation or a resend is refused with
+// 429 `DAILY_INVITATION_LIMIT_EXCEEDED` once `used` reaches `limit`
+// (`max_invitation_emails_per_day`). The window rolls: an email stops
+// counting 24 hours after it was sent.
+type InvitationEmailUsage struct {
+	Limit int64 `json:"limit"`
+
+	// NextEmailAt When the next email may leave. Present only while `used` reaches `limit`.
+	NextEmailAt *time.Time `json:"next_email_at,omitempty"`
+	Used        int64      `json:"used"`
+	WindowStart time.Time  `json:"window_start"`
+}
+
 // InvitationOrganizationRole The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.
 type InvitationOrganizationRole string
 
@@ -4299,6 +4417,14 @@ type LicenseUsage struct {
 	// records HTTP calls are measured; a run reaches the window once its
 	// analytics record is written, a few seconds after it finishes.
 	HttpCalls HTTPCallUsage `json:"http_calls"`
+
+	// InvitationEmailsLast24Hours Invitation emails the organization sent in the 24 hours before
+	// `generated_at`, new invitations and resends counted. Deleting an
+	// invitation gives none back. An invitation or a resend is refused with
+	// 429 `DAILY_INVITATION_LIMIT_EXCEEDED` once `used` reaches `limit`
+	// (`max_invitation_emails_per_day`). The window rolls: an email stops
+	// counting 24 hours after it was sent.
+	InvitationEmailsLast24Hours InvitationEmailUsage `json:"invitation_emails_last_24_hours"`
 
 	// Members Seats in use. An invitation is refused when `members` plus
 	// `pending_invitations` would pass `limit`.
@@ -5277,6 +5403,18 @@ type OrganizationMember struct {
 	UserId string `json:"user_id"`
 }
 
+// OrganizationMemberFilter Narrows the members. Every given field must match.
+type OrganizationMemberFilter struct {
+	// RoleIds Members holding one of these organization roles.
+	RoleIds *[]string `json:"role_ids,omitempty"`
+
+	// UserIds Members with one of these product user ids, as a member page reads one member.
+	UserIds *[]string `json:"user_ids,omitempty"`
+
+	// WorkspaceId Members holding a role on this workspace. Organization admins reach every workspace without one, so they match only when they hold one.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
+}
+
 // OrganizationMemberListResponse defines model for OrganizationMemberListResponse.
 type OrganizationMemberListResponse struct {
 	Count int                  `json:"count"`
@@ -5290,14 +5428,20 @@ type OrganizationMemberRole struct {
 	Name string `json:"name"`
 }
 
-// OrganizationMemberRoleRequest defines model for OrganizationMemberRoleRequest.
+// OrganizationMemberRoleRequest The new organization role: role_id names any organization role (GET /organization-roles); role names a managed one and stays for released clients. Give exactly one.
 type OrganizationMemberRoleRequest struct {
 	// Role The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.
-	Role InvitationOrganizationRole `json:"role"`
+	Role *InvitationOrganizationRole `json:"role,omitempty"`
+
+	// RoleId An organization role, from GET /organization-roles.
+	RoleId *string `json:"role_id,omitempty"`
 }
 
 // OrganizationMemberSearchRequest defines model for OrganizationMemberSearchRequest.
 type OrganizationMemberSearchRequest struct {
+	// Filter Narrows the members. Every given field must match.
+	Filter *OrganizationMemberFilter `json:"filter,omitempty"`
+
 	// FullTextSearch Full-text search term to match against searchable fields.
 	FullTextSearch *string            `json:"full_text_search,omitempty"`
 	Pagination     *PaginationRequest `json:"pagination,omitempty"`
@@ -5324,6 +5468,22 @@ type OrganizationMemberSearchResponse struct {
 
 // OrganizationMemberSortField Field to sort member search results by.
 type OrganizationMemberSortField string
+
+// OrganizationRole A role a member holds on the organization.
+type OrganizationRole struct {
+	// Custom True for a role the organization made. False for one of the product's managed roles (admin, member).
+	Custom bool   `json:"custom"`
+	Id     string `json:"id"`
+	Name   string `json:"name"`
+
+	// Permissions The organization permissions the role grants. The managed member role grants none.
+	Permissions []string `json:"permissions"`
+}
+
+// OrganizationRoleListResponse defines model for OrganizationRoleListResponse.
+type OrganizationRoleListResponse struct {
+	Items []OrganizationRole `json:"items"`
+}
 
 // OrganizationWriteRequest defines model for OrganizationWriteRequest.
 type OrganizationWriteRequest struct {
@@ -6801,6 +6961,9 @@ type UpdateFlowRequest struct {
 	// Role How the flow may be run. Omit to preserve the current role.
 	Role *FlowRole `json:"role,omitempty"`
 
+	// Source A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, and auto_layout. A folder in the file does not move the flow. Compile errors return 400 and change nothing.
+	Source *string `json:"source,omitempty"`
+
 	// Tags Optional flat tags for the flow. Omit to preserve the current tags;
 	// send an empty array to clear all tags; send a list to replace the tag set.
 	// Lowercased, normalized, deduplicated, and sorted on write.
@@ -7289,6 +7452,41 @@ type WorkspaceAnalytics struct {
 
 	// WorkspaceName The workspace's current display name; empty when the workspace is no longer found.
 	WorkspaceName string `json:"workspace_name"`
+}
+
+// WorkspaceInvitation An invitation that gives a role on the workspace once the invited person accepts it.
+type WorkspaceInvitation struct {
+	Email        openapi_types.Email `json:"email"`
+	ExpiresAt    time.Time           `json:"expires_at"`
+	InvitationId string              `json:"invitation_id"`
+	InvitedAt    time.Time           `json:"invited_at"`
+
+	// Role The role a member holds on a workspace.
+	Role WorkspaceRoleRef `json:"role"`
+
+	// Status pending until it expires; expired until it is resent or deleted.
+	Status WorkspaceInvitationStatus `json:"status"`
+}
+
+// WorkspaceInvitationStatus pending until it expires; expired until it is resent or deleted.
+type WorkspaceInvitationStatus string
+
+// WorkspaceInvitationSearchRequest defines model for WorkspaceInvitationSearchRequest.
+type WorkspaceInvitationSearchRequest struct {
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
+}
+
+// WorkspaceInvitationSearchResponse defines model for WorkspaceInvitationSearchResponse.
+type WorkspaceInvitationSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int                   `json:"count"`
+	Items []WorkspaceInvitation `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
 }
 
 // WorkspaceMember An organization member holding a role on a workspace.
@@ -7916,6 +8114,24 @@ type CreateFlowParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// CompileFlowSourceParams defines parameters for CompileFlowSource.
+type CompileFlowSourceParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DecompileFlowSourceParams defines parameters for DecompileFlowSource.
+type DecompileFlowSourceParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListFlowFoldersParams defines parameters for ListFlowFolders.
 type ListFlowFoldersParams struct {
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
@@ -8474,6 +8690,12 @@ type RenameOrganizationParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListOrganizationRolesParams defines parameters for ListOrganizationRoles.
+type ListOrganizationRolesParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetOrganizationAnalyticsParams defines parameters for GetOrganizationAnalytics.
 type GetOrganizationAnalyticsParams struct {
 	// Window How far back to look. Defaults to 7d.
@@ -8857,6 +9079,12 @@ type RenameWorkspaceParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchWorkspaceInvitationsParams defines parameters for SearchWorkspaceInvitations.
+type SearchWorkspaceInvitationsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // JoinWorkspaceParams defines parameters for JoinWorkspace.
 type JoinWorkspaceParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -8949,6 +9177,12 @@ type SearchExecutionsJSONRequestBody = ExecutionSearchRequest
 
 // CreateFlowJSONRequestBody defines body for CreateFlow for application/json ContentType.
 type CreateFlowJSONRequestBody = CreateFlowRequest
+
+// CompileFlowSourceJSONRequestBody defines body for CompileFlowSource for application/json ContentType.
+type CompileFlowSourceJSONRequestBody = CompileFlowSourceRequest
+
+// DecompileFlowSourceJSONRequestBody defines body for DecompileFlowSource for application/json ContentType.
+type DecompileFlowSourceJSONRequestBody = DecompileFlowSourceRequest
 
 // CreateFlowFolderJSONRequestBody defines body for CreateFlowFolder for application/json ContentType.
 type CreateFlowFolderJSONRequestBody = CreateFlowFolderRequest
@@ -9102,6 +9336,9 @@ type SearchWorkspacesJSONRequestBody = WorkspaceSearchRequest
 
 // RenameWorkspaceJSONRequestBody defines body for RenameWorkspace for application/json ContentType.
 type RenameWorkspaceJSONRequestBody = WorkspaceWriteRequest
+
+// SearchWorkspaceInvitationsJSONRequestBody defines body for SearchWorkspaceInvitations for application/json ContentType.
+type SearchWorkspaceInvitationsJSONRequestBody = WorkspaceInvitationSearchRequest
 
 // SearchWorkspaceMembersJSONRequestBody defines body for SearchWorkspaceMembers for application/json ContentType.
 type SearchWorkspaceMembersJSONRequestBody = WorkspaceMemberSearchRequest
@@ -10809,7 +11046,7 @@ type ClientInterface interface {
 
 	// CreateFlowWithBody Create Flow
 	//
-	// Creates a new flow for the authenticated user.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -10818,12 +11055,48 @@ type ClientInterface interface {
 
 	// CreateFlow Create Flow
 	//
-	// Creates a new flow for the authenticated user.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /flows (the `CreateFlow` operationId).
 	CreateFlow(ctx context.Context, params *CreateFlowParams, body CreateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CompileFlowSourceWithBody Compile Flow File
+	//
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+	CompileFlowSourceWithBody(ctx context.Context, params *CompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CompileFlowSource Compile Flow File
+	//
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+	CompileFlowSource(ctx context.Context, params *CompileFlowSourceParams, body CompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DecompileFlowSourceWithBody Render a Flow as a Flow File
+	//
+	// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+	DecompileFlowSourceWithBody(ctx context.Context, params *DecompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DecompileFlowSource Render a Flow as a Flow File
+	//
+	// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+	DecompileFlowSource(ctx context.Context, params *DecompileFlowSourceParams, body DecompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListFlowFolders List Flow Folders
 	//
@@ -11027,7 +11300,7 @@ type ClientInterface interface {
 
 	// UpdateFlowWithBody Update Flow
 	//
-	// Updates an existing flow.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11036,7 +11309,7 @@ type ClientInterface interface {
 
 	// UpdateFlow Update Flow
 	//
-	// Updates an existing flow.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -11244,6 +11517,12 @@ type ClientInterface interface {
 	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 	//   invitation. Resend or delete it.
 	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+	//   licensed `max_invitation_emails_per_day` in the last 24 hours,
+	//   invitations and resends counted. Metadata `limit`, `window_hours` and
+	//   `next_email_at` say when the next email may leave. Nothing is created.
+	// - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+	//   many emails. No invitation exists. Retry in a few minutes.
 	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 	//   invitation exists and no seat is held. Retry.
 	//
@@ -11268,6 +11547,12 @@ type ClientInterface interface {
 	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 	//   invitation. Resend or delete it.
 	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+	//   licensed `max_invitation_emails_per_day` in the last 24 hours,
+	//   invitations and resends counted. Metadata `limit`, `window_hours` and
+	//   `next_email_at` say when the next email may leave. Nothing is created.
+	// - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+	//   many emails. No invitation exists. Retry in a few minutes.
 	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 	//   invitation exists and no seat is held. Retry.
 	//
@@ -11367,6 +11652,13 @@ type ClientInterface interface {
 	// the invited person again. An expired or accepted invitation answers 409.
 	// If the email cannot be sent the invitation stays, with its new expiry,
 	// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+	//
+	// A resend counts toward `max_invitation_emails_per_day` like a new
+	// invitation. Past it the call answers `DAILY_INVITATION_LIMIT_EXCEEDED`
+	// (429) and the invitation keeps its expiry; metadata `next_email_at`
+	// says when the next email may leave. `EMAIL_RATE_LIMIT_EXCEEDED` (429)
+	// means Echopoint as a whole is sending too many emails: retry in a few
+	// minutes.
 	//
 	// Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
 	ResendOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -11491,7 +11783,7 @@ type ClientInterface interface {
 
 	// SetOrganizationMemberRoleWithBody Set Organization Member Role
 	//
-	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11500,7 +11792,7 @@ type ClientInterface interface {
 
 	// SetOrganizationMemberRole Set Organization Member Role
 	//
-	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -11738,6 +12030,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
 	RenameOrganization(ctx context.Context, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListOrganizationRoles List Organization Roles
+	//
+	// Lists the roles a member can hold on the organization: the managed admin and member roles, and any custom one. Not paginated: an organization holds a handful. Requires members:read.
+	//
+	// Corresponds with GET /organization-roles (the `ListOrganizationRoles` operationId).
+	ListOrganizationRoles(ctx context.Context, params *ListOrganizationRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetOrganizationAnalytics Get Organization Execution Analytics
 	//
@@ -12595,6 +12894,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
 	RenameWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchWorkspaceInvitationsWithBody Search Workspace Invitations
+	//
+	// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+	SearchWorkspaceInvitationsWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchWorkspaceInvitations Search Workspace Invitations
+	//
+	// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+	SearchWorkspaceInvitations(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, body SearchWorkspaceInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// JoinWorkspace Join Workspace
 	//
@@ -13900,7 +14217,7 @@ func (c *Client) ListFlows(ctx context.Context, params *ListFlowsParams, reqEdit
 
 // CreateFlowWithBody Create Flow
 //
-// Creates a new flow for the authenticated user.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 //
 // Takes any type of body and a specified content type.
 //
@@ -13919,13 +14236,89 @@ func (c *Client) CreateFlowWithBody(ctx context.Context, params *CreateFlowParam
 
 // CreateFlow Create Flow
 //
-// Creates a new flow for the authenticated user.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 //
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /flows (the `CreateFlow` operationId).
 func (c *Client) CreateFlow(ctx context.Context, params *CreateFlowParams, body CreateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateFlowRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CompileFlowSourceWithBody Compile Flow File
+//
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+func (c *Client) CompileFlowSourceWithBody(ctx context.Context, params *CompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCompileFlowSourceRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CompileFlowSource Compile Flow File
+//
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+func (c *Client) CompileFlowSource(ctx context.Context, params *CompileFlowSourceParams, body CompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCompileFlowSourceRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DecompileFlowSourceWithBody Render a Flow as a Flow File
+//
+// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+func (c *Client) DecompileFlowSourceWithBody(ctx context.Context, params *DecompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDecompileFlowSourceRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DecompileFlowSource Render a Flow as a Flow File
+//
+// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+func (c *Client) DecompileFlowSource(ctx context.Context, params *DecompileFlowSourceParams, body DecompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDecompileFlowSourceRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -14376,7 +14769,7 @@ func (c *Client) GetFlow(ctx context.Context, id openapi_types.UUID, params *Get
 
 // UpdateFlowWithBody Update Flow
 //
-// Updates an existing flow.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 //
 // Takes any type of body and a specified content type.
 //
@@ -14395,7 +14788,7 @@ func (c *Client) UpdateFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 
 // UpdateFlow Update Flow
 //
-// Updates an existing flow.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -14780,6 +15173,12 @@ func (c *Client) ListOrganizationInvitations(ctx context.Context, params *ListOr
 //   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 //     invitation. Resend or delete it.
 //   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+//     licensed `max_invitation_emails_per_day` in the last 24 hours,
+//     invitations and resends counted. Metadata `limit`, `window_hours` and
+//     `next_email_at` say when the next email may leave. Nothing is created.
+//   - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+//     many emails. No invitation exists. Retry in a few minutes.
 //   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 //     invitation exists and no seat is held. Retry.
 //
@@ -14814,6 +15213,12 @@ func (c *Client) CreateOrganizationInvitationWithBody(ctx context.Context, param
 //   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 //     invitation. Resend or delete it.
 //   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+//     licensed `max_invitation_emails_per_day` in the last 24 hours,
+//     invitations and resends counted. Metadata `limit`, `window_hours` and
+//     `next_email_at` say when the next email may leave. Nothing is created.
+//   - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+//     many emails. No invitation exists. Retry in a few minutes.
 //   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 //     invitation exists and no seat is held. Retry.
 //
@@ -14963,6 +15368,13 @@ func (c *Client) AcceptOrganizationInvitation(ctx context.Context, invitationId 
 // the invited person again. An expired or accepted invitation answers 409.
 // If the email cannot be sent the invitation stays, with its new expiry,
 // and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+//
+// A resend counts toward `max_invitation_emails_per_day` like a new
+// invitation. Past it the call answers `DAILY_INVITATION_LIMIT_EXCEEDED`
+// (429) and the invitation keeps its expiry; metadata `next_email_at`
+// says when the next email may leave. `EMAIL_RATE_LIMIT_EXCEEDED` (429)
+// means Echopoint as a whole is sending too many emails: retry in a few
+// minutes.
 //
 // Corresponds with POST /invitations/{invitationId}/resend (the `ResendOrganizationInvitation` operationId).
 func (c *Client) ResendOrganizationInvitation(ctx context.Context, invitationId InvitationId, params *ResendOrganizationInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -15175,7 +15587,7 @@ func (c *Client) SearchOrganizationMembers(ctx context.Context, params *SearchOr
 
 // SetOrganizationMemberRoleWithBody Set Organization Member Role
 //
-// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15194,7 +15606,7 @@ func (c *Client) SetOrganizationMemberRoleWithBody(ctx context.Context, userId s
 
 // SetOrganizationMemberRole Set Organization Member Role
 //
-// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -15711,6 +16123,23 @@ func (c *Client) RenameOrganizationWithBody(ctx context.Context, params *RenameO
 // Corresponds with PATCH /organization (the `RenameOrganization` operationId).
 func (c *Client) RenameOrganization(ctx context.Context, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRenameOrganizationRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListOrganizationRoles List Organization Roles
+//
+// Lists the roles a member can hold on the organization: the managed admin and member roles, and any custom one. Not paginated: an organization holds a handful. Requires members:read.
+//
+// Corresponds with GET /organization-roles (the `ListOrganizationRoles` operationId).
+func (c *Client) ListOrganizationRoles(ctx context.Context, params *ListOrganizationRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOrganizationRolesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -17434,6 +17863,44 @@ func (c *Client) RenameWorkspaceWithBody(ctx context.Context, workspaceId Worksp
 // Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
 func (c *Client) RenameWorkspace(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRenameWorkspaceRequest(c.Server, workspaceId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchWorkspaceInvitationsWithBody Search Workspace Invitations
+//
+// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+func (c *Client) SearchWorkspaceInvitationsWithBody(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspaceInvitationsRequestWithBody(c.Server, workspaceId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchWorkspaceInvitations Search Workspace Invitations
+//
+// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+func (c *Client) SearchWorkspaceInvitations(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, body SearchWorkspaceInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspaceInvitationsRequest(c.Server, workspaceId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -20704,6 +21171,134 @@ func NewCreateFlowRequestWithBody(server string, params *CreateFlowParams, conte
 	}
 
 	operationPath := fmt.Sprintf("/flows")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewCompileFlowSourceRequest calls the generic CompileFlowSource builder with application/json body
+func NewCompileFlowSourceRequest(server string, params *CompileFlowSourceParams, body CompileFlowSourceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCompileFlowSourceRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCompileFlowSourceRequestWithBody constructs an http.Request for the CompileFlowSource method, with any body, and a specified content type
+func NewCompileFlowSourceRequestWithBody(server string, params *CompileFlowSourceParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/compile")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewDecompileFlowSourceRequest calls the generic DecompileFlowSource builder with application/json body
+func NewDecompileFlowSourceRequest(server string, params *DecompileFlowSourceParams, body DecompileFlowSourceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewDecompileFlowSourceRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewDecompileFlowSourceRequestWithBody constructs an http.Request for the DecompileFlowSource method, with any body, and a specified content type
+func NewDecompileFlowSourceRequestWithBody(server string, params *DecompileFlowSourceParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/flows/decompile")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -24737,6 +25332,46 @@ func NewRenameOrganizationRequestWithBody(server string, params *RenameOrganizat
 	return req, nil
 }
 
+// NewListOrganizationRolesRequest constructs an http.Request for the ListOrganizationRoles method
+func NewListOrganizationRolesRequest(server string, params *ListOrganizationRolesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization-roles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetOrganizationAnalyticsRequest constructs an http.Request for the GetOrganizationAnalytics method
 func NewGetOrganizationAnalyticsRequest(server string, params *GetOrganizationAnalyticsParams) (*http.Request, error) {
 	var err error
@@ -28061,6 +28696,66 @@ func NewRenameWorkspaceRequestWithBody(server string, workspaceId WorkspaceIDPat
 	return req, nil
 }
 
+// NewSearchWorkspaceInvitationsRequest calls the generic SearchWorkspaceInvitations builder with application/json body
+func NewSearchWorkspaceInvitationsRequest(server string, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, body SearchWorkspaceInvitationsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchWorkspaceInvitationsRequestWithBody(server, workspaceId, params, "application/json", bodyReader)
+}
+
+// NewSearchWorkspaceInvitationsRequestWithBody constructs an http.Request for the SearchWorkspaceInvitations method, with any body, and a specified content type
+func NewSearchWorkspaceInvitationsRequestWithBody(server string, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspaces/%s/invitations/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewJoinWorkspaceRequest constructs an http.Request for the JoinWorkspace method
 func NewJoinWorkspaceRequest(server string, workspaceId WorkspaceIDPathParameter, params *JoinWorkspaceParams) (*http.Request, error) {
 	var err error
@@ -29026,7 +29721,7 @@ type ClientWithResponsesInterface interface {
 
 	// CreateFlowWithBodyWithResponse Create Flow
 	//
-	// Creates a new flow for the authenticated user.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29035,12 +29730,48 @@ type ClientWithResponsesInterface interface {
 
 	// CreateFlowWithResponse Create Flow
 	//
-	// Creates a new flow for the authenticated user.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /flows (the `CreateFlow` operationId).
 	CreateFlowWithResponse(ctx context.Context, params *CreateFlowParams, body CreateFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFlowResponse, error)
+
+	// CompileFlowSourceWithBodyWithResponse Compile Flow File
+	//
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+	CompileFlowSourceWithBodyWithResponse(ctx context.Context, params *CompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CompileFlowSourceResponse, error)
+
+	// CompileFlowSourceWithResponse Compile Flow File
+	//
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+	CompileFlowSourceWithResponse(ctx context.Context, params *CompileFlowSourceParams, body CompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*CompileFlowSourceResponse, error)
+
+	// DecompileFlowSourceWithBodyWithResponse Render a Flow as a Flow File
+	//
+	// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+	DecompileFlowSourceWithBodyWithResponse(ctx context.Context, params *DecompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DecompileFlowSourceResponse, error)
+
+	// DecompileFlowSourceWithResponse Render a Flow as a Flow File
+	//
+	// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+	DecompileFlowSourceWithResponse(ctx context.Context, params *DecompileFlowSourceParams, body DecompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*DecompileFlowSourceResponse, error)
 
 	// ListFlowFoldersWithResponse List Flow Folders
 	//
@@ -29264,7 +29995,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateFlowWithBodyWithResponse Update Flow
 	//
-	// Updates an existing flow.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29273,7 +30004,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateFlowWithResponse Update Flow
 	//
-	// Updates an existing flow.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29503,6 +30234,12 @@ type ClientWithResponsesInterface interface {
 	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 	//   invitation. Resend or delete it.
 	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+	//   licensed `max_invitation_emails_per_day` in the last 24 hours,
+	//   invitations and resends counted. Metadata `limit`, `window_hours` and
+	//   `next_email_at` say when the next email may leave. Nothing is created.
+	// - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+	//   many emails. No invitation exists. Retry in a few minutes.
 	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 	//   invitation exists and no seat is held. Retry.
 	//
@@ -29527,6 +30264,12 @@ type ClientWithResponsesInterface interface {
 	// - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 	//   invitation. Resend or delete it.
 	// - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+	// - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+	//   licensed `max_invitation_emails_per_day` in the last 24 hours,
+	//   invitations and resends counted. Metadata `limit`, `window_hours` and
+	//   `next_email_at` say when the next email may leave. Nothing is created.
+	// - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+	//   many emails. No invitation exists. Retry in a few minutes.
 	// - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 	//   invitation exists and no seat is held. Retry.
 	//
@@ -29630,6 +30373,13 @@ type ClientWithResponsesInterface interface {
 	// the invited person again. An expired or accepted invitation answers 409.
 	// If the email cannot be sent the invitation stays, with its new expiry,
 	// and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+	//
+	// A resend counts toward `max_invitation_emails_per_day` like a new
+	// invitation. Past it the call answers `DAILY_INVITATION_LIMIT_EXCEEDED`
+	// (429) and the invitation keeps its expiry; metadata `next_email_at`
+	// says when the next email may leave. `EMAIL_RATE_LIMIT_EXCEEDED` (429)
+	// means Echopoint as a whole is sending too many emails: retry in a few
+	// minutes.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -29764,7 +30514,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetOrganizationMemberRoleWithBodyWithResponse Set Organization Member Role
 	//
-	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29773,7 +30523,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetOrganizationMemberRoleWithResponse Set Organization Member Role
 	//
-	// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -30035,6 +30785,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
 	RenameOrganizationWithResponse(ctx context.Context, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameOrganizationResponse, error)
+
+	// ListOrganizationRolesWithResponse List Organization Roles
+	//
+	// Lists the roles a member can hold on the organization: the managed admin and member roles, and any custom one. Not paginated: an organization holds a handful. Requires members:read.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /organization-roles (the `ListOrganizationRoles` operationId).
+	ListOrganizationRolesWithResponse(ctx context.Context, params *ListOrganizationRolesParams, reqEditors ...RequestEditorFn) (*ListOrganizationRolesResponse, error)
 
 	// GetOrganizationAnalyticsWithResponse Get Organization Execution Analytics
 	//
@@ -30948,6 +31707,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PATCH /workspaces/{workspaceId} (the `RenameWorkspace` operationId).
 	RenameWorkspaceWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *RenameWorkspaceParams, body RenameWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameWorkspaceResponse, error)
+
+	// SearchWorkspaceInvitationsWithBodyWithResponse Search Workspace Invitations
+	//
+	// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+	SearchWorkspaceInvitationsWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspaceInvitationsResponse, error)
+
+	// SearchWorkspaceInvitationsWithResponse Search Workspace Invitations
+	//
+	// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+	SearchWorkspaceInvitationsWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, body SearchWorkspaceInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspaceInvitationsResponse, error)
 
 	// JoinWorkspaceWithResponse Join Workspace
 	//
@@ -34123,6 +34900,130 @@ func (r CreateFlowResponse) ContentType() string {
 	return ""
 }
 
+type CompileFlowSourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CompileFlowSourceResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r CompileFlowSourceResponse) GetJSON200() *CompileFlowSourceResult {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CompileFlowSourceResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CompileFlowSourceResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CompileFlowSourceResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r CompileFlowSourceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CompileFlowSourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CompileFlowSourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CompileFlowSourceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DecompileFlowSourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DecompileFlowSourceResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DecompileFlowSourceResponse) GetJSON200() *DecompileFlowSourceResult {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DecompileFlowSourceResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DecompileFlowSourceResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DecompileFlowSourceResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r DecompileFlowSourceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DecompileFlowSourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DecompileFlowSourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DecompileFlowSourceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListFlowFoldersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -36351,6 +37252,8 @@ type CreateOrganizationInvitationResponse struct {
 	JSON403 *Forbidden
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalServerError
 }
@@ -36378,6 +37281,11 @@ func (r CreateOrganizationInvitationResponse) GetJSON403() *Forbidden {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r CreateOrganizationInvitationResponse) GetJSON409() *Conflict {
 	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateOrganizationInvitationResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -36613,6 +37521,8 @@ type ResendOrganizationInvitationResponse struct {
 	JSON404 *NotFound
 	// JSON409 the response for an HTTP 409 `application/json` response
 	JSON409 *Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalServerError
 }
@@ -36640,6 +37550,11 @@ func (r ResendOrganizationInvitationResponse) GetJSON404() *NotFound {
 // GetJSON409 returns the response for an HTTP 409 `application/json` response
 func (r ResendOrganizationInvitationResponse) GetJSON409() *Conflict {
 	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ResendOrganizationInvitationResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -38428,6 +39343,61 @@ func (r RenameOrganizationResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RenameOrganizationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListOrganizationRolesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OrganizationRoleListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListOrganizationRolesResponse) GetJSON200() *OrganizationRoleListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListOrganizationRolesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListOrganizationRolesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r ListOrganizationRolesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOrganizationRolesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOrganizationRolesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListOrganizationRolesResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -42338,6 +43308,68 @@ func (r RenameWorkspaceResponse) ContentType() string {
 	return ""
 }
 
+type SearchWorkspaceInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *WorkspaceInvitationSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchWorkspaceInvitationsResponse) GetJSON200() *WorkspaceInvitationSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchWorkspaceInvitationsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchWorkspaceInvitationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchWorkspaceInvitationsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchWorkspaceInvitationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchWorkspaceInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchWorkspaceInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchWorkspaceInvitationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type JoinWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -43676,7 +44708,7 @@ func (c *ClientWithResponses) ListFlowsWithResponse(ctx context.Context, params 
 
 // CreateFlowWithBodyWithResponse Create Flow
 //
-// Creates a new flow for the authenticated user.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -43691,7 +44723,7 @@ func (c *ClientWithResponses) CreateFlowWithBodyWithResponse(ctx context.Context
 
 // CreateFlowWithResponse Create Flow
 //
-// Creates a new flow for the authenticated user.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -43702,6 +44734,66 @@ func (c *ClientWithResponses) CreateFlowWithResponse(ctx context.Context, params
 		return nil, err
 	}
 	return ParseCreateFlowResponse(rsp)
+}
+
+// CompileFlowSourceWithBodyWithResponse Compile Flow File
+//
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+func (c *ClientWithResponses) CompileFlowSourceWithBodyWithResponse(ctx context.Context, params *CompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CompileFlowSourceResponse, error) {
+	rsp, err := c.CompileFlowSourceWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCompileFlowSourceResponse(rsp)
+}
+
+// CompileFlowSourceWithResponse Compile Flow File
+//
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/compile (the `CompileFlowSource` operationId).
+func (c *ClientWithResponses) CompileFlowSourceWithResponse(ctx context.Context, params *CompileFlowSourceParams, body CompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*CompileFlowSourceResponse, error) {
+	rsp, err := c.CompileFlowSource(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCompileFlowSourceResponse(rsp)
+}
+
+// DecompileFlowSourceWithBodyWithResponse Render a Flow as a Flow File
+//
+// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+func (c *ClientWithResponses) DecompileFlowSourceWithBodyWithResponse(ctx context.Context, params *DecompileFlowSourceParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DecompileFlowSourceResponse, error) {
+	rsp, err := c.DecompileFlowSourceWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDecompileFlowSourceResponse(rsp)
+}
+
+// DecompileFlowSourceWithResponse Render a Flow as a Flow File
+//
+// Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /flows/decompile (the `DecompileFlowSource` operationId).
+func (c *ClientWithResponses) DecompileFlowSourceWithResponse(ctx context.Context, params *DecompileFlowSourceParams, body DecompileFlowSourceJSONRequestBody, reqEditors ...RequestEditorFn) (*DecompileFlowSourceResponse, error) {
+	rsp, err := c.DecompileFlowSource(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDecompileFlowSourceResponse(rsp)
 }
 
 // ListFlowFoldersWithResponse List Flow Folders
@@ -44070,7 +45162,7 @@ func (c *ClientWithResponses) GetFlowWithResponse(ctx context.Context, id openap
 
 // UpdateFlowWithBodyWithResponse Update Flow
 //
-// Updates an existing flow.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -44085,7 +45177,7 @@ func (c *ClientWithResponses) UpdateFlowWithBodyWithResponse(ctx context.Context
 
 // UpdateFlowWithResponse Update Flow
 //
-// Updates an existing flow.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -44423,6 +45515,12 @@ func (c *ClientWithResponses) ListOrganizationInvitationsWithResponse(ctx contex
 //   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 //     invitation. Resend or delete it.
 //   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+//     licensed `max_invitation_emails_per_day` in the last 24 hours,
+//     invitations and resends counted. Metadata `limit`, `window_hours` and
+//     `next_email_at` say when the next email may leave. Nothing is created.
+//   - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+//     many emails. No invitation exists. Retry in a few minutes.
 //   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 //     invitation exists and no seat is held. Retry.
 //
@@ -44453,6 +45551,12 @@ func (c *ClientWithResponses) CreateOrganizationInvitationWithBodyWithResponse(c
 //   - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
 //     invitation. Resend or delete it.
 //   - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+//   - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+//     licensed `max_invitation_emails_per_day` in the last 24 hours,
+//     invitations and resends counted. Metadata `limit`, `window_hours` and
+//     `next_email_at` say when the next email may leave. Nothing is created.
+//   - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+//     many emails. No invitation exists. Retry in a few minutes.
 //   - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
 //     invitation exists and no seat is held. Retry.
 //
@@ -44586,6 +45690,13 @@ func (c *ClientWithResponses) AcceptOrganizationInvitationWithResponse(ctx conte
 // the invited person again. An expired or accepted invitation answers 409.
 // If the email cannot be sent the invitation stays, with its new expiry,
 // and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+//
+// A resend counts toward `max_invitation_emails_per_day` like a new
+// invitation. Past it the call answers `DAILY_INVITATION_LIMIT_EXCEEDED`
+// (429) and the invitation keeps its expiry; metadata `next_email_at`
+// says when the next email may leave. `EMAIL_RATE_LIMIT_EXCEEDED` (429)
+// means Echopoint as a whole is sending too many emails: retry in a few
+// minutes.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -44774,7 +45885,7 @@ func (c *ClientWithResponses) SearchOrganizationMembersWithResponse(ctx context.
 
 // SetOrganizationMemberRoleWithBodyWithResponse Set Organization Member Role
 //
-// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -44789,7 +45900,7 @@ func (c *ClientWithResponses) SetOrganizationMemberRoleWithBodyWithResponse(ctx 
 
 // SetOrganizationMemberRoleWithResponse Set Organization Member Role
 //
-// Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -45224,6 +46335,21 @@ func (c *ClientWithResponses) RenameOrganizationWithResponse(ctx context.Context
 		return nil, err
 	}
 	return ParseRenameOrganizationResponse(rsp)
+}
+
+// ListOrganizationRolesWithResponse List Organization Roles
+//
+// Lists the roles a member can hold on the organization: the managed admin and member roles, and any custom one. Not paginated: an organization holds a handful. Requires members:read.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /organization-roles (the `ListOrganizationRoles` operationId).
+func (c *ClientWithResponses) ListOrganizationRolesWithResponse(ctx context.Context, params *ListOrganizationRolesParams, reqEditors ...RequestEditorFn) (*ListOrganizationRolesResponse, error) {
+	rsp, err := c.ListOrganizationRoles(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOrganizationRolesResponse(rsp)
 }
 
 // GetOrganizationAnalyticsWithResponse Get Organization Execution Analytics
@@ -46659,6 +47785,36 @@ func (c *ClientWithResponses) RenameWorkspaceWithResponse(ctx context.Context, w
 		return nil, err
 	}
 	return ParseRenameWorkspaceResponse(rsp)
+}
+
+// SearchWorkspaceInvitationsWithBodyWithResponse Search Workspace Invitations
+//
+// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+func (c *ClientWithResponses) SearchWorkspaceInvitationsWithBodyWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspaceInvitationsResponse, error) {
+	rsp, err := c.SearchWorkspaceInvitationsWithBody(ctx, workspaceId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspaceInvitationsResponse(rsp)
+}
+
+// SearchWorkspaceInvitationsWithResponse Search Workspace Invitations
+//
+// Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization's invitations is not needed.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspaces/{workspaceId}/invitations/search (the `SearchWorkspaceInvitations` operationId).
+func (c *ClientWithResponses) SearchWorkspaceInvitationsWithResponse(ctx context.Context, workspaceId WorkspaceIDPathParameter, params *SearchWorkspaceInvitationsParams, body SearchWorkspaceInvitationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspaceInvitationsResponse, error) {
+	rsp, err := c.SearchWorkspaceInvitations(ctx, workspaceId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspaceInvitationsResponse(rsp)
 }
 
 // JoinWorkspaceWithResponse Join Workspace
@@ -49189,6 +50345,100 @@ func ParseCreateFlowResponse(rsp *http.Response) (*CreateFlowResponse, error) {
 	return response, nil
 }
 
+// ParseCompileFlowSourceResponse parses an HTTP response from a CompileFlowSourceWithResponse call
+func ParseCompileFlowSourceResponse(rsp *http.Response) (*CompileFlowSourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CompileFlowSourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CompileFlowSourceResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDecompileFlowSourceResponse parses an HTTP response from a DecompileFlowSourceWithResponse call
+func ParseDecompileFlowSourceResponse(rsp *http.Response) (*DecompileFlowSourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DecompileFlowSourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DecompileFlowSourceResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListFlowFoldersResponse parses an HTTP response from a ListFlowFoldersWithResponse call
 func ParseListFlowFoldersResponse(rsp *http.Response) (*ListFlowFoldersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -50982,6 +52232,13 @@ func ParseCreateOrganizationInvitationResponse(rsp *http.Response) (*CreateOrgan
 		}
 		response.JSON409 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -51186,6 +52443,13 @@ func ParseResendOrganizationInvitationResponse(rsp *http.Response) (*ResendOrgan
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
@@ -52535,6 +53799,46 @@ func ParseRenameOrganizationResponse(rsp *http.Response) (*RenameOrganizationRes
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListOrganizationRolesResponse parses an HTTP response from a ListOrganizationRolesWithResponse call
+func ParseListOrganizationRolesResponse(rsp *http.Response) (*ListOrganizationRolesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOrganizationRolesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationRoleListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized
@@ -55603,6 +56907,53 @@ func ParseRenameWorkspaceResponse(rsp *http.Response) (*RenameWorkspaceResponse,
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest Workspace
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchWorkspaceInvitationsResponse parses an HTTP response from a SearchWorkspaceInvitationsWithResponse call
+func ParseSearchWorkspaceInvitationsResponse(rsp *http.Response) (*SearchWorkspaceInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchWorkspaceInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkspaceInvitationSearchResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
