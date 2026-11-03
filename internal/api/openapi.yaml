@@ -1087,7 +1087,8 @@ paths:
       tags:
         - Flows
       summary: Create Flow
-      description: Creates a new flow for the authenticated user.
+      description: |
+        Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
       operationId: createFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -1118,6 +1119,82 @@ paths:
             - workspace.flows:create
         - ApiKeys:
             - flows:create
+      x-ai-tool: true
+  /flows/compile:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Flows
+      summary: Compile Flow File
+      description: Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+      operationId: compileFlowSource
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        description: The flow file to compile.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompileFlowSourceRequest'
+        required: true
+      responses:
+        "200":
+          description: The file was read. diagnostics lists every problem. request is present only when the file compiles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompileFlowSourceResult'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Check a flow file without saving it. Returns diagnostics and, when it compiles, the JSON create document.
+      x-ai-tool: true
+  /flows/decompile:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Flows
+      summary: Render a Flow as a Flow File
+      description: Renders a flow document as a flow file. This does not read or write a flow. Send the name and definition, from a stored flow or an unsaved draft. Identity, timestamps, and workspace_id are ignored. A document with no nodes returns 400.
+      operationId: decompileFlowSource
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        description: The stored flow to render.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecompileFlowSourceRequest'
+        required: true
+      responses:
+        "200":
+          description: The flow file.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecompileFlowSourceResult'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Render a stored flow as a flow file. Does not save.
       x-ai-tool: true
   /flows/search:
     parameters:
@@ -1525,7 +1602,8 @@ paths:
       tags:
         - Flows
       summary: Update Flow
-      description: Updates an existing flow.
+      description: |
+        Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
       operationId: updateFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -4674,6 +4752,41 @@ paths:
         - ApiKeys:
             - workspace.settings:delete
       x-ai-danger: Irreversible - deletes the workspace and every flow, run, collection, webhook, monitor and spec it owns.
+  /workspaces/{workspaceId}/invitations/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+      - $ref: '#/components/parameters/WorkspaceIDPathParameter'
+    post:
+      tags:
+        - Workspaces
+      summary: Search Workspace Invitations
+      description: 'Lists the invitations that give a role on the workspace and are not accepted yet, and pages with a cursor: the people who join the workspace once they accept. An expired invitation stays listed, as expired, until it is deleted or resent. Default order: when the person was invited, oldest first, then invitation_id. Requires workspace.access:read on the workspace; reading the organization''s invitations is not needed.'
+      operationId: searchWorkspaceInvitations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceInvitationSearchRequest'
+      responses:
+        "200":
+          description: The pending invitations to the workspace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.access:read
+        - ApiKeys:
+            - workspace.access:read
+      x-ai-tool: true
   /workspaces/{workspaceId}/members/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5005,7 +5118,7 @@ paths:
       tags:
         - Members
       summary: Set Organization Member Role
-      description: 'Makes a member an organization admin, who reaches every workspace, or a member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.'
+      description: 'Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.'
       operationId: setOrganizationMemberRole
       requestBody:
         required: true
@@ -5035,6 +5148,32 @@ paths:
             - members:update
         - ApiKeys:
             - members:update
+      x-ai-tool: true
+  /organization-roles:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Members
+      summary: List Organization Roles
+      description: 'Lists the roles a member can hold on the organization: the managed admin and member roles, and any custom one. Not paginated: an organization holds a handful. Requires members:read.'
+      operationId: listOrganizationRoles
+      responses:
+        "200":
+          description: The organization roles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationRoleListResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - members:read
+        - ApiKeys:
+            - members:read
       x-ai-tool: true
   /members/search:
     parameters:
@@ -5126,6 +5265,12 @@ paths:
         - `INVITATION_ALREADY_PENDING` (409): the address already has a pending
           invitation. Resend or delete it.
         - `INVITATION_EMAIL_IS_MEMBER` (409): the address belongs to a member.
+        - `DAILY_INVITATION_LIMIT_EXCEEDED` (429): the organization sent its
+          licensed `max_invitation_emails_per_day` in the last 24 hours,
+          invitations and resends counted. Metadata `limit`, `window_hours` and
+          `next_email_at` say when the next email may leave. Nothing is created.
+        - `EMAIL_RATE_LIMIT_EXCEEDED` (429): Echopoint as a whole is sending too
+          many emails. No invitation exists. Retry in a few minutes.
         - `INVITATION_EMAIL_NOT_SENT` (500): the email could not be sent. No
           invitation exists and no seat is held. Retry.
       operationId: createOrganizationInvitation
@@ -5150,6 +5295,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "409":
           $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
         "500":
           $ref: '#/components/responses/InternalServerError'
       security:
@@ -5237,6 +5384,13 @@ paths:
         the invited person again. An expired or accepted invitation answers 409.
         If the email cannot be sent the invitation stays, with its new expiry,
         and the call answers `INVITATION_EMAIL_NOT_SENT` (500): retry the resend.
+
+        A resend counts toward `max_invitation_emails_per_day` like a new
+        invitation. Past it the call answers `DAILY_INVITATION_LIMIT_EXCEEDED`
+        (429) and the invitation keeps its expiry; metadata `next_email_at`
+        says when the next email may leave. `EMAIL_RATE_LIMIT_EXCEEDED` (429)
+        means Echopoint as a whole is sending too many emails: retry in a few
+        minutes.
       operationId: resendOrganizationInvitation
       responses:
         "200":
@@ -5253,6 +5407,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         "409":
           $ref: '#/components/responses/Conflict'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
         "500":
           $ref: '#/components/responses/InternalServerError'
       security:
@@ -8691,6 +8847,10 @@ components:
             - string
             - "null"
           format: uuid
+        source:
+          description: |
+            A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, auto_layout, and folder_id. name and flow_definition stay required so a JSON client is unchanged; the file replaces both. Compile errors return 400 and create nothing.
+          type: string
     UpdateFlowRequest:
       type: object
       properties:
@@ -8734,6 +8894,106 @@ components:
         role:
           $ref: '#/components/schemas/FlowRole'
           description: How the flow may be run. Omit to preserve the current role.
+        source:
+          description: |
+            A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, and auto_layout. A folder in the file does not move the flow. Compile errors return 400 and change nothing.
+          type: string
+    CompileFlowSourceRequest:
+      type: object
+      required:
+        - source
+      properties:
+        source:
+          description: A flow file.
+          type: string
+          minLength: 1
+    FlowSourceDiagnostic:
+      type: object
+      required:
+        - severity
+        - message
+      properties:
+        severity:
+          description: error blocks a save. warning does not.
+          type: string
+          enum:
+            - error
+            - warning
+        message:
+          type: string
+        line:
+          description: 1-based line in the flow file. Omitted when the problem has no line.
+          type: integer
+          minimum: 1
+        file:
+          type: string
+    CompileFlowSourceResult:
+      type: object
+      required:
+        - diagnostics
+      properties:
+        diagnostics:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowSourceDiagnostic'
+        request:
+          description: The JSON document the file would save. Omitted when the file has an error.
+          allOf:
+            - $ref: '#/components/schemas/CreateFlowRequest'
+        completions:
+          description: Declared outputs, as nodeId.output, for an editor completing {{node.output}}.
+          type: array
+          items:
+            type: string
+    DecompileFlowSourceRequest:
+      type: object
+      required:
+        - flow
+      properties:
+        flow:
+          $ref: '#/components/schemas/FlowFileDocument'
+    FlowFileDocument:
+      description: |
+        The fields a flow file is rendered from. A stored flow or an unsaved draft.
+        Identity, timestamps, and workspace_id are ignored.
+      type: object
+      required:
+        - name
+        - flow_definition
+      properties:
+        id:
+          description: Server id, written into the file when present.
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        version:
+          type: string
+        role:
+          $ref: '#/components/schemas/FlowRole'
+        tags:
+          type: array
+          items:
+            type: string
+        folder_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        flow_definition:
+          $ref: '#/components/schemas/FlowDefinition'
+    DecompileFlowSourceResult:
+      type: object
+      required:
+        - source
+      properties:
+        source:
+          description: The flow file.
+          type: string
     FlowFolder:
       description: A folder in the organization's flow tree. One home per flow.
       type: object
@@ -10129,6 +10389,7 @@ components:
         - schedules
         - webhooks
         - members
+        - invitation_emails_last_24_hours
         - active_cloud_jobs
         - http_calls
         - rules
@@ -10149,6 +10410,8 @@ components:
           $ref: '#/components/schemas/LicenseGauge'
         members:
           $ref: '#/components/schemas/LicenseMemberUsage'
+        invitation_emails_last_24_hours:
+          $ref: '#/components/schemas/InvitationEmailUsage'
         active_cloud_jobs:
           $ref: '#/components/schemas/LicenseGauge'
         http_calls:
@@ -10267,6 +10530,35 @@ components:
           type: integer
           format: int64
           minimum: 1
+    InvitationEmailUsage:
+      description: |
+        Invitation emails the organization sent in the 24 hours before
+        `generated_at`, new invitations and resends counted. Deleting an
+        invitation gives none back. An invitation or a resend is refused with
+        429 `DAILY_INVITATION_LIMIT_EXCEEDED` once `used` reaches `limit`
+        (`max_invitation_emails_per_day`). The window rolls: an email stops
+        counting 24 hours after it was sent.
+      type: object
+      required:
+        - used
+        - limit
+        - window_start
+      properties:
+        used:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+          format: int64
+          minimum: 1
+        window_start:
+          type: string
+          format: date-time
+        next_email_at:
+          description: When the next email may leave. Present only while `used` reaches `limit`.
+          type: string
+          format: date-time
     RollingExecutionUsage:
       description: |
         Cloud executions launched in the 24 hours before `generated_at`, every
@@ -12009,6 +12301,33 @@ components:
             sort_by:
               $ref: '#/components/schemas/OrganizationMemberSortField'
               description: Field to sort by.
+            filter:
+              $ref: '#/components/schemas/OrganizationMemberFilter'
+    OrganizationMemberFilter:
+      description: Narrows the members. Every given field must match.
+      type: object
+      properties:
+        role_ids:
+          description: Members holding one of these organization roles.
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+        workspace_id:
+          description: Members holding a role on this workspace. Organization admins reach every workspace without one, so they match only when they hold one.
+          type: string
+          minLength: 1
+          maxLength: 255
+        user_ids:
+          description: Members with one of these product user ids, as a member page reads one member.
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
     OrganizationMemberSearchResponse:
       allOf:
         - $ref: '#/components/schemas/PagedListResponse'
@@ -12113,12 +12432,16 @@ components:
           items:
             $ref: '#/components/schemas/InvitationWorkspaceRole'
     OrganizationMemberRoleRequest:
+      description: 'The new organization role: role_id names any organization role (GET /organization-roles); role names a managed one and stays for released clients. Give exactly one.'
       type: object
-      required:
-        - role
       properties:
         role:
           $ref: '#/components/schemas/InvitationOrganizationRole'
+        role_id:
+          description: An organization role, from GET /organization-roles.
+          type: string
+          minLength: 1
+          maxLength: 255
     InvitationOrganizationRole:
       description: 'The organization role the invited person gets. admin reaches every workspace; member holds no permission and reaches only the workspaces of its workspace roles. Omitted means admin, as before workspace roles.'
       type: string
@@ -14517,6 +14840,36 @@ components:
           type: string
         name:
           type: string
+    OrganizationRole:
+      description: A role a member holds on the organization.
+      type: object
+      required:
+        - id
+        - name
+        - custom
+        - permissions
+      properties:
+        permissions:
+          description: The organization permissions the role grants. The managed member role grants none.
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+        name:
+          type: string
+        custom:
+          description: True for a role the organization made. False for one of the product's managed roles (admin, member).
+          type: boolean
+    OrganizationRoleListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationRole'
     WorkspaceRoleListResponse:
       type: object
       required:
@@ -14556,6 +14909,52 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+    WorkspaceInvitationSearchRequest:
+      type: object
+      properties:
+        pagination:
+          $ref: '#/components/schemas/PaginationRequest'
+    WorkspaceInvitation:
+      description: An invitation that gives a role on the workspace once the invited person accepts it.
+      type: object
+      required:
+        - invitation_id
+        - email
+        - role
+        - status
+        - invited_at
+        - expires_at
+      properties:
+        invitation_id:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/WorkspaceRoleRef'
+        status:
+          description: pending until it expires; expired until it is resent or deleted.
+          type: string
+          enum:
+            - pending
+            - expired
+        invited_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    WorkspaceInvitationSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkspaceInvitation'
     WorkspaceMemberSearchRequest:
       type: object
       properties:
