@@ -227,7 +227,7 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
 ### Conventions
 
 - **One read verb: `view`.** `flow view`, `collection view`, `status-page view`,
-  `flow execution view`, `flow env view`, `org env view`, `spec view` and `config view` show one thing; `get` and
+  `flow execution view`, `flow env view`, `org view`, `org env view`, `spec view` and `config view` show one thing; `get` and
   `show` still work as aliases of `view`. `list` shows many.
 - **A file is always `-f/--file`.** `flow create`, `flow update`, `collection import`,
   `org env import`, `flow env set`, `monitor create|update|estimate`, `status-page save`, `status-page validate` and the
@@ -480,6 +480,16 @@ echopoint flow env set <flow-id> -f vars.env
 
 # Delete all variables of a flow (asks first)
 echopoint flow env delete <flow-id>
+```
+
+### Organization
+
+```bash
+# Show the organization's name and id
+echopoint org view -o json
+
+# Rename it (needs organization:update, which admins hold)
+echopoint org rename "Acme Payments"
 ```
 
 ### Organization Variables and Environments

@@ -5184,6 +5184,18 @@ type OperationType string
 // OperatorType Operator to apply in assertions
 type OperatorType string
 
+// Organization An organization's settings.
+type Organization struct {
+	// Description Optional organization description.
+	Description *string `json:"description,omitempty"`
+
+	// Id Organization identifier in Nanostack.
+	Id string `json:"id"`
+
+	// Name Organization display name.
+	Name string `json:"name"`
+}
+
 // OrganizationAnalytics Organization-wide execution analytics summary and per-workspace breakdown over the window.
 type OrganizationAnalytics struct {
 	// Summary The organization's finished runs in the window and the HTTP calls they sent.
@@ -5312,6 +5324,12 @@ type OrganizationMemberSearchResponse struct {
 
 // OrganizationMemberSortField Field to sort member search results by.
 type OrganizationMemberSortField string
+
+// OrganizationWriteRequest defines model for OrganizationWriteRequest.
+type OrganizationWriteRequest struct {
+	// Name Organization display name. Leading and trailing spaces are removed.
+	Name string `json:"name"`
+}
 
 // Output defines model for Output.
 type Output struct {
@@ -8444,6 +8462,18 @@ type ListOperationsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// GetOrganizationParams defines parameters for GetOrganization.
+type GetOrganizationParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// RenameOrganizationParams defines parameters for RenameOrganization.
+type RenameOrganizationParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetOrganizationAnalyticsParams defines parameters for GetOrganizationAnalytics.
 type GetOrganizationAnalyticsParams struct {
 	// Window How far back to look. Defaults to 7d.
@@ -8988,6 +9018,9 @@ type SearchFlowScheduleRunsJSONRequestBody = MonitorRunSearchRequest
 
 // SearchOpenAPISyncConfigsJSONRequestBody defines body for SearchOpenAPISyncConfigs for application/json ContentType.
 type SearchOpenAPISyncConfigsJSONRequestBody = OpenAPISyncConfigSearchRequest
+
+// RenameOrganizationJSONRequestBody defines body for RenameOrganization for application/json ContentType.
+type RenameOrganizationJSONRequestBody = OrganizationWriteRequest
 
 // CreateEnvironmentJSONRequestBody defines body for CreateEnvironment for application/json ContentType.
 type CreateEnvironmentJSONRequestBody = CreateEnvironmentRequest
@@ -11680,6 +11713,31 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOrganization Get Organization
+	//
+	// Returns the current organization's settings. Any member of the organization, and any API key of it, can read them.
+	//
+	// Corresponds with GET /organization (the `GetOrganization` operationId).
+	GetOrganization(ctx context.Context, params *GetOrganizationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RenameOrganizationWithBody Rename Organization
+	//
+	// Renames the current organization. Its description stays as it was. Requires organization:update.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+	RenameOrganizationWithBody(ctx context.Context, params *RenameOrganizationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RenameOrganization Rename Organization
+	//
+	// Renames the current organization. Its description stays as it was. Requires organization:update.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+	RenameOrganization(ctx context.Context, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetOrganizationAnalytics Get Organization Execution Analytics
 	//
@@ -15598,6 +15656,61 @@ func (c *Client) SearchOpenAPISyncConfigs(ctx context.Context, params *SearchOpe
 // Corresponds with GET /operations (the `ListOperations` operationId).
 func (c *Client) ListOperations(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListOperationsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOrganization Get Organization
+//
+// Returns the current organization's settings. Any member of the organization, and any API key of it, can read them.
+//
+// Corresponds with GET /organization (the `GetOrganization` operationId).
+func (c *Client) GetOrganization(ctx context.Context, params *GetOrganizationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrganizationRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RenameOrganizationWithBody Rename Organization
+//
+// Renames the current organization. Its description stays as it was. Requires organization:update.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+func (c *Client) RenameOrganizationWithBody(ctx context.Context, params *RenameOrganizationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRenameOrganizationRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RenameOrganization Rename Organization
+//
+// Renames the current organization. Its description stays as it was. Requires organization:update.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+func (c *Client) RenameOrganization(ctx context.Context, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRenameOrganizationRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -24531,6 +24644,99 @@ func NewListOperationsRequest(server string, params *ListOperationsParams) (*htt
 	return req, nil
 }
 
+// NewGetOrganizationRequest constructs an http.Request for the GetOrganization method
+func NewGetOrganizationRequest(server string, params *GetOrganizationParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewRenameOrganizationRequest calls the generic RenameOrganization builder with application/json body
+func NewRenameOrganizationRequest(server string, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRenameOrganizationRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewRenameOrganizationRequestWithBody constructs an http.Request for the RenameOrganization method, with any body, and a specified content type
+func NewRenameOrganizationRequestWithBody(server string, params *RenameOrganizationParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organization")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetOrganizationAnalyticsRequest constructs an http.Request for the GetOrganizationAnalytics method
 func NewGetOrganizationAnalyticsRequest(server string, params *GetOrganizationAnalyticsParams) (*http.Request, error) {
 	var err error
@@ -29802,6 +30008,33 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /operations (the `ListOperations` operationId).
 	ListOperationsWithResponse(ctx context.Context, params *ListOperationsParams, reqEditors ...RequestEditorFn) (*ListOperationsResponse, error)
+
+	// GetOrganizationWithResponse Get Organization
+	//
+	// Returns the current organization's settings. Any member of the organization, and any API key of it, can read them.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /organization (the `GetOrganization` operationId).
+	GetOrganizationWithResponse(ctx context.Context, params *GetOrganizationParams, reqEditors ...RequestEditorFn) (*GetOrganizationResponse, error)
+
+	// RenameOrganizationWithBodyWithResponse Rename Organization
+	//
+	// Renames the current organization. Its description stays as it was. Requires organization:update.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+	RenameOrganizationWithBodyWithResponse(ctx context.Context, params *RenameOrganizationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RenameOrganizationResponse, error)
+
+	// RenameOrganizationWithResponse Rename Organization
+	//
+	// Renames the current organization. Its description stays as it was. Requires organization:update.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+	RenameOrganizationWithResponse(ctx context.Context, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameOrganizationResponse, error)
 
 	// GetOrganizationAnalyticsWithResponse Get Organization Execution Analytics
 	//
@@ -38084,6 +38317,123 @@ func (r ListOperationsResponse) ContentType() string {
 	return ""
 }
 
+type GetOrganizationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Organization
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetOrganizationResponse) GetJSON200() *Organization {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetOrganizationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetOrganizationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r GetOrganizationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOrganizationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOrganizationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOrganizationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RenameOrganizationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Organization
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RenameOrganizationResponse) GetJSON200() *Organization {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RenameOrganizationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RenameOrganizationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RenameOrganizationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r RenameOrganizationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RenameOrganizationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RenameOrganizationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RenameOrganizationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetOrganizationAnalyticsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -44829,6 +45179,51 @@ func (c *ClientWithResponses) ListOperationsWithResponse(ctx context.Context, pa
 		return nil, err
 	}
 	return ParseListOperationsResponse(rsp)
+}
+
+// GetOrganizationWithResponse Get Organization
+//
+// Returns the current organization's settings. Any member of the organization, and any API key of it, can read them.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /organization (the `GetOrganization` operationId).
+func (c *ClientWithResponses) GetOrganizationWithResponse(ctx context.Context, params *GetOrganizationParams, reqEditors ...RequestEditorFn) (*GetOrganizationResponse, error) {
+	rsp, err := c.GetOrganization(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOrganizationResponse(rsp)
+}
+
+// RenameOrganizationWithBodyWithResponse Rename Organization
+//
+// Renames the current organization. Its description stays as it was. Requires organization:update.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+func (c *ClientWithResponses) RenameOrganizationWithBodyWithResponse(ctx context.Context, params *RenameOrganizationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RenameOrganizationResponse, error) {
+	rsp, err := c.RenameOrganizationWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRenameOrganizationResponse(rsp)
+}
+
+// RenameOrganizationWithResponse Rename Organization
+//
+// Renames the current organization. Its description stays as it was. Requires organization:update.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /organization (the `RenameOrganization` operationId).
+func (c *ClientWithResponses) RenameOrganizationWithResponse(ctx context.Context, params *RenameOrganizationParams, body RenameOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameOrganizationResponse, error) {
+	rsp, err := c.RenameOrganization(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRenameOrganizationResponse(rsp)
 }
 
 // GetOrganizationAnalyticsWithResponse Get Organization Execution Analytics
@@ -52067,6 +52462,93 @@ func ParseListOperationsResponse(rsp *http.Response) (*ListOperationsResponse, e
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOrganizationResponse parses an HTTP response from a GetOrganizationWithResponse call
+func ParseGetOrganizationResponse(rsp *http.Response) (*GetOrganizationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOrganizationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Organization
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRenameOrganizationResponse parses an HTTP response from a RenameOrganizationWithResponse call
+func ParseRenameOrganizationResponse(rsp *http.Response) (*RenameOrganizationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RenameOrganizationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Organization
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 

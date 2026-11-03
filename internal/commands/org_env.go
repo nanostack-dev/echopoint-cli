@@ -20,15 +20,14 @@ import (
 // never returns one, so there is nothing else to show.
 const secretPlaceholder = "<secret>"
 
-// newOrgCmd creates the top-level "org" command group for organization-scoped
-// resources. Today it hosts variable management; future org-wide resources
-// belong here too.
+// newOrgCmd creates the top-level "org" command group: the organization's own
+// settings and its organization-scoped resources.
 func newOrgCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "org",
 		Short: "Manage organization-scoped resources",
 	}
-	cmd.AddCommand(newOrgEnvCmd(state))
+	cmd.AddCommand(newOrgViewCmd(state), newOrgRenameCmd(state), newOrgEnvCmd(state))
 	return cmd
 }
 
