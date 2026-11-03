@@ -1736,6 +1736,61 @@ paths:
       security:
         - BearerAuth: []
       x-ai-danger: Invitee flow - requires a human session of the invited person.
+  /organization:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Organizations
+      summary: Get Organization
+      description: Returns the current organization's settings. Any member of the organization, and any API key of it, can read them.
+      operationId: getOrganization
+      responses:
+        "200":
+          description: The organization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth: []
+        - ApiKeys: []
+      x-ai-tool: true
+    patch:
+      tags:
+        - Organizations
+      summary: Rename Organization
+      description: Renames the current organization. Its description stays as it was. Requires organization:update.
+      operationId: renameOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationWriteRequest'
+      responses:
+        "200":
+          description: The organization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - organization:update
+        - ApiKeys:
+            - organization:update
+      x-ai-tool: true
   /organization/variables:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -11857,6 +11912,35 @@ components:
         - failed
         - partial
         - no_match
+    Organization:
+      description: An organization's settings.
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          description: Organization identifier in Nanostack.
+          type: string
+        name:
+          description: Organization display name.
+          type: string
+        description:
+          description: Optional organization description.
+          type:
+            - string
+            - "null"
+    OrganizationWriteRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          description: Organization display name. Leading and trailing spaces are removed.
+          type: string
+          minLength: 2
+          maxLength: 100
+          pattern: .*\S.*
     OrganizationMember:
       description: A member of the current organization, as seen by echopoint (proxied from anchor).
       type: object
@@ -14764,6 +14848,8 @@ tags:
     description: Special flow control nodes like delay
   - name: Runner
     description: Self-hosted runner control-plane operations
+  - name: Organizations
+    description: The current organization's settings.
   - name: Members
     description: Organization members.
   - name: Invitations

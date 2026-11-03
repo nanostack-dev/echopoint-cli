@@ -60,6 +60,7 @@ func TestGetAndShowStayAsAliasesOfView(t *testing.T) {
 		{[]string{"flow", "execution", "view"}, []string{"get"}},
 		{[]string{"flow", "env", "view"}, []string{"get"}},
 		{[]string{"org", "env", "view"}, []string{"get"}},
+		{[]string{"org", "view"}, []string{"get", "show"}},
 		{[]string{"config", "view"}, []string{"show"}},
 	} {
 		view := find(t, root, tc.view...)
