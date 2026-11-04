@@ -53,6 +53,13 @@ inputs:
     description: 'Tag match mode when using tags: any (default) or all.'
     required: false
     default: any
+  max-flows:
+    description: >
+      With tags, the most flows the tags may match before the run is refused
+      (1-1000). Empty keeps the CLI default of 50. Ignored with flow-id /
+      flow-ids.
+    required: false
+    default: ''
   ignore-modules:
     description: >
       With tags, skip module flows (reusable building blocks other flows call)
@@ -341,6 +348,10 @@ runs:
           fi
           if [ "${{ inputs.ignore-modules }}" = "true" ]; then
             selector_args+=(--ignore-modules)
+          fi
+          max_flows="${{ inputs.max-flows }}"
+          if [ -n "$max_flows" ]; then
+            selector_args+=(--max-flows "$max_flows")
           fi
         else
           # shellcheck disable=SC2206

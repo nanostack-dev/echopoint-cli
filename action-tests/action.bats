@@ -529,3 +529,28 @@ sys.exit(0 if block and re.search(r\"default: 'false'\", block.group(1)) else 1)
 @test "ignore-modules: action.yml validates the input before any launch" {
   grep -q "'ignore-modules' must be 'true' or 'false'" "$ACTION_FILE"
 }
+
+# -----------------------------------------------------------------------
+# max-flows input
+# -----------------------------------------------------------------------
+@test "max-flows: input is declared with an empty default" {
+  run python3 -c "
+import re, sys
+text = open('${ACTION_FILE}').read()
+block = re.search(r'^  max-flows:\n(.*?)(?=^  \S)', text, re.S | re.M)
+sys.exit(0 if block and re.search(r\"default: ''\", block.group(1)) else 1)
+"
+  [ "$status" -eq 0 ]
+}
+
+@test "max-flows: action.yml passes --max-flows inside the tags branch only" {
+  run python3 -c "
+import sys
+text = open('${ACTION_FILE}').read()
+tags = text.index('if [ -n \"\$tags\" ]; then')
+flag = text.index('selector_args+=(--max-flows \"\$max_flows\")')
+other = text.index('else', flag)
+sys.exit(0 if tags < flag < other else 1)
+"
+  [ "$status" -eq 0 ]
+}
