@@ -194,7 +194,13 @@ func TestFlowRun_IgnoreModulesAllModulesMatchedIsAnError(t *testing.T) {
 	}
 
 	state := makeState(t, "test-api-key", "", stub.URL)
-	_, _, err := resolveStandaloneFlowIDsByTags(context.Background(), state, []string{"smoke"}, "any")
+	_, _, err := resolveStandaloneFlowIDsByTags(
+		context.Background(),
+		state,
+		[]string{"smoke"},
+		"any",
+		maxTagResolvedFlows,
+	)
 	if err == nil || !strings.Contains(err.Error(), "no flows matched the given tags (3 module flows skipped)") {
 		t.Errorf("error = %v, want no-match message naming 3 skipped modules", err)
 	}
@@ -209,7 +215,13 @@ func TestResolveStandaloneFlowIDsByTags_NoMatchesKeepsPlainMessage(t *testing.T)
 	stub := newSearchStub(t, nil)
 	state := makeState(t, "test-api-key", "", stub.URL)
 
-	_, _, err := resolveStandaloneFlowIDsByTags(context.Background(), state, []string{"none"}, "any")
+	_, _, err := resolveStandaloneFlowIDsByTags(
+		context.Background(),
+		state,
+		[]string{"none"},
+		"any",
+		maxTagResolvedFlows,
+	)
 	if err == nil || err.Error() != "no flows matched the given tags" {
 		t.Errorf("error = %v, want the plain no-match message", err)
 	}
@@ -221,7 +233,13 @@ func TestResolveStandaloneFlowIDsByTags_CapCountsOnlyLaunchedFlows(t *testing.T)
 	stub := newSearchStub(t, makeRoleFlows(90, 40))
 	state := makeState(t, "test-api-key", "", stub.URL)
 
-	ids, skipped, err := resolveStandaloneFlowIDsByTags(context.Background(), state, []string{"smoke"}, "any")
+	ids, skipped, err := resolveStandaloneFlowIDsByTags(
+		context.Background(),
+		state,
+		[]string{"smoke"},
+		"any",
+		maxTagResolvedFlows,
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -240,7 +258,13 @@ func TestResolveStandaloneFlowIDsByTags_CapStillRejectsTooManyStandaloneFlows(t 
 	stub := newSearchStub(t, makeRoleFlows(10, maxTagResolvedFlows+1))
 	state := makeState(t, "test-api-key", "", stub.URL)
 
-	_, _, err := resolveStandaloneFlowIDsByTags(context.Background(), state, []string{"smoke"}, "any")
+	_, _, err := resolveStandaloneFlowIDsByTags(
+		context.Background(),
+		state,
+		[]string{"smoke"},
+		"any",
+		maxTagResolvedFlows,
+	)
 	if err == nil || !strings.Contains(err.Error(), "safety cap") {
 		t.Errorf("error = %v, want the safety cap error", err)
 	}
@@ -250,7 +274,13 @@ func TestResolveStandaloneFlowIDsByTags_RefusesToScanTooManyMatches(t *testing.T
 	stub := newSearchStub(t, makeRoleFlows(maxTagScannedFlows+1, 0))
 	state := makeState(t, "test-api-key", "", stub.URL)
 
-	_, _, err := resolveStandaloneFlowIDsByTags(context.Background(), state, []string{"smoke"}, "any")
+	_, _, err := resolveStandaloneFlowIDsByTags(
+		context.Background(),
+		state,
+		[]string{"smoke"},
+		"any",
+		maxTagResolvedFlows,
+	)
 	if err == nil || !strings.Contains(err.Error(), "too many to filter out modules") {
 		t.Errorf("error = %v, want the scan bound error", err)
 	}

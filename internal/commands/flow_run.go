@@ -40,8 +40,9 @@ const (
 	githubActionsTrueValue = "true"
 )
 
-// maxTagResolvedFlows caps how many flows a single --tag selection may launch, guarding
-// against an over-broad tag filter accidentally launching a huge batch from CI.
+// maxTagResolvedFlows is the default cap on how many flows a single --tag selection may
+// launch, guarding against an over-broad tag filter accidentally launching a huge batch from
+// CI. --max-flows raises it for a suite known to be larger, up to maxTagScannedFlows.
 const maxTagResolvedFlows = 50
 
 // Flow search returns at most tagSearchPageSize items per page. With --ignore-modules the CLI
@@ -130,6 +131,7 @@ func newFlowRunCmd(state *AppState) *cobra.Command {
 		flagTags           []string
 		flagMatchMode      string
 		flagIgnoreModules  bool
+		flagMaxFlows       int
 	)
 
 	cmd := &cobra.Command{
@@ -185,6 +187,14 @@ Exit codes:
 			if flagParallel < 1 {
 				return runError(format, nil, exitError, "--parallel must be >= 1")
 			}
+			if flagMaxFlows < 1 || flagMaxFlows > maxTagScannedFlows {
+				return runError(format, nil, exitError,
+					fmt.Sprintf("--max-flows must be between 1 and %d", maxTagScannedFlows))
+			}
+			if cmd.Flags().Changed("max-flows") && len(flagTags) == 0 {
+				return runError(format, nil, exitError,
+					"--max-flows only applies with --tag; flows given by ID always run")
+			}
 
 			// --tag selects flows by tag and is mutually exclusive with positional flow IDs.
 			// Require exactly one selection mode.
@@ -215,7 +225,7 @@ Exit codes:
 			flowIDs := args
 			if len(flagTags) > 0 {
 				resolved, resolveErr := resolveTagSelection(
-					ctx, state, cmd.ErrOrStderr(), flagTags, flagMatchMode, flagIgnoreModules,
+					ctx, state, cmd.ErrOrStderr(), flagTags, flagMatchMode, flagIgnoreModules, flagMaxFlows,
 				)
 				if resolveErr != nil {
 					return runError(format, nil, exitError, resolveErr.Error())
@@ -252,6 +262,9 @@ Exit codes:
 	cmd.Flags().BoolVar(&flagIgnoreModules, "ignore-modules", false,
 		"With --tag, skip module flows (reusable building blocks other flows call) among the matches. "+
 			"Mutually exclusive with positional flow IDs.")
+	cmd.Flags().IntVar(&flagMaxFlows, "max-flows", maxTagResolvedFlows,
+		fmt.Sprintf("With --tag, refuse to launch when the tags match more than this many flows (1-%d)",
+			maxTagScannedFlows))
 	cmd.ValidArgsFunction = completeFlowArgs(state, -1)
 	registerEnvironmentFlagCompletion(state, cmd)
 	_ = cmd.RegisterFlagCompletionFunc("match-mode", staticCompletion(string(api.Any), string(api.All)))
@@ -267,33 +280,37 @@ func resolveFlowIDsByTags(
 	state *AppState,
 	tags []string,
 	matchMode string,
+	maxFlows int,
 ) ([]string, error) {
-	limit := int32(maxTagResolvedFlows)
+	limit := int32(min(maxFlows, tagSearchPageSize))
 	mode := api.TagMatchMode(matchMode)
-	body := api.FlowSearchRequest{
-		Tags:         &tags,
-		TagMatchMode: &mode,
-		Pagination:   &api.PaginationRequest{Limit: &limit},
-	}
 	params := &api.SearchFlowsParams{XOrganizationID: state.OrganizationID}
+	fetch := func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.FlowSearchItem], error) {
+		body := api.FlowSearchRequest{Tags: &tags, TagMatchMode: &mode, Pagination: pagination}
+		resp, err := state.Client.API().SearchFlowsWithResponse(ctx, params, body)
+		if err != nil {
+			return searchPage[api.FlowSearchItem]{}, fmt.Errorf("search flows by tag: %w", err)
+		}
+		if resp.JSON200 == nil {
+			return searchPage[api.FlowSearchItem]{}, fmt.Errorf(
+				"search flows by tag: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
+			)
+		}
+		page := newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor)
+		// The total is independent of the cursor, so the first page decides.
+		if page.Total > int64(maxFlows) {
+			return page, fmt.Errorf(
+				"tag search matched %d flows, exceeding the CLI safety cap of %d; "+
+					"narrow the tags (or use --match-mode all), or raise --max-flows, before launching",
+				page.Total, maxFlows,
+			)
+		}
+		return page, nil
+	}
 
-	resp, err := state.Client.API().SearchFlowsWithResponse(ctx, params, body)
+	result, _, err := walkSearch(ctx, &api.PaginationRequest{Limit: &limit}, 0, fetch)
 	if err != nil {
-		return nil, fmt.Errorf("search flows by tag: %w", err)
-	}
-	if resp.JSON200 == nil {
-		return nil, fmt.Errorf(
-			"search flows by tag: unexpected status %d: %s", resp.StatusCode(), string(resp.Body),
-		)
-	}
-
-	result := resp.JSON200
-	if result.Total > int64(maxTagResolvedFlows) {
-		return nil, fmt.Errorf(
-			"tag search matched %d flows, exceeding the CLI safety cap of %d; "+
-				"narrow the tags (or use --match-mode all) before launching",
-			result.Total, maxTagResolvedFlows,
-		)
+		return nil, err
 	}
 	if len(result.Items) == 0 {
 		return nil, fmt.Errorf("no flows matched the given tags")
@@ -315,11 +332,12 @@ func resolveTagSelection(
 	tags []string,
 	matchMode string,
 	ignoreModules bool,
+	maxFlows int,
 ) ([]string, error) {
 	if !ignoreModules {
-		return resolveFlowIDsByTags(ctx, state, tags, matchMode)
+		return resolveFlowIDsByTags(ctx, state, tags, matchMode, maxFlows)
 	}
-	ids, skipped, err := resolveStandaloneFlowIDsByTags(ctx, state, tags, matchMode)
+	ids, skipped, err := resolveStandaloneFlowIDsByTags(ctx, state, tags, matchMode, maxFlows)
 	if err != nil {
 		return nil, err
 	}
@@ -338,6 +356,7 @@ func resolveStandaloneFlowIDsByTags(
 	state *AppState,
 	tags []string,
 	matchMode string,
+	maxFlows int,
 ) ([]string, int, error) {
 	mode := api.TagMatchMode(matchMode)
 	searchPageOfFlows := searchFlows(state, api.FlowSearchRequest{Tags: &tags, TagMatchMode: &mode})
@@ -375,11 +394,11 @@ func resolveStandaloneFlowIDsByTags(
 		}
 		ids = append(ids, item.Id.String())
 	}
-	if len(ids) > maxTagResolvedFlows {
+	if len(ids) > maxFlows {
 		return nil, 0, fmt.Errorf(
 			"tag search matched more than %d standalone flows, exceeding the CLI safety cap of %d; "+
-				"narrow the tags (or use --match-mode all) before launching",
-			maxTagResolvedFlows, maxTagResolvedFlows,
+				"narrow the tags (or use --match-mode all), or raise --max-flows, before launching",
+			maxFlows, maxFlows,
 		)
 	}
 	if len(ids) == 0 {

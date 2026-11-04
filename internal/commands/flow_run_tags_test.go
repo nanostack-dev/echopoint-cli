@@ -51,7 +51,7 @@ func TestResolveFlowIDsByTags_Success(t *testing.T) {
 
 	state := makeState(t, "test-api-key", "", srv.URL)
 
-	got, err := resolveFlowIDsByTags(context.Background(), state, []string{"prod"}, "any")
+	got, err := resolveFlowIDsByTags(context.Background(), state, []string{"prod"}, "any", maxTagResolvedFlows)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestResolveFlowIDsByTags_NoMatches(t *testing.T) {
 
 	state := makeState(t, "test-api-key", "", srv.URL)
 
-	_, err := resolveFlowIDsByTags(context.Background(), state, []string{"nonexistent"}, "any")
+	_, err := resolveFlowIDsByTags(context.Background(), state, []string{"nonexistent"}, "any", maxTagResolvedFlows)
 	if err == nil {
 		t.Fatal("expected error for zero matches")
 	}
@@ -87,7 +87,7 @@ func TestResolveFlowIDsByTags_TooManyMatches(t *testing.T) {
 
 	state := makeState(t, "test-api-key", "", srv.URL)
 
-	_, err := resolveFlowIDsByTags(context.Background(), state, []string{"prod"}, "any")
+	_, err := resolveFlowIDsByTags(context.Background(), state, []string{"prod"}, "any", maxTagResolvedFlows)
 	if err == nil {
 		t.Fatal("expected error when matches exceed the safety cap")
 	}
@@ -223,5 +223,34 @@ func TestFlowRun_TagResolutionRunsResolvedFlows(t *testing.T) {
 	defer mu.Unlock()
 	if launchCount != len(ids) {
 		t.Errorf("expected %d launches (one per resolved flow), got %d", len(ids), launchCount)
+	}
+}
+
+func TestResolveFlowIDsByTags_MaxFlowsRaisesTheCap(t *testing.T) {
+	// A suite one past the default cap launches once --max-flows allows it.
+	stub := newSearchStub(t, makeRoleFlows(0, maxTagResolvedFlows+1))
+	state := makeState(t, "test-api-key", "", stub.URL)
+
+	got, err := resolveFlowIDsByTags(context.Background(), state, []string{"smoke"}, "any", maxTagResolvedFlows+10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != maxTagResolvedFlows+1 {
+		t.Errorf("resolved %d flows, want %d", len(got), maxTagResolvedFlows+1)
+	}
+
+	_, err = resolveFlowIDsByTags(context.Background(), state, []string{"smoke"}, "any", maxTagResolvedFlows)
+	if err == nil || !strings.Contains(err.Error(), "--max-flows") {
+		t.Errorf("error = %v, want the safety cap error naming --max-flows", err)
+	}
+}
+
+func TestFlowRun_MaxFlowsOutOfRange(t *testing.T) {
+	stub := newSearchStub(t, makeRoleFlows(0, 1))
+	for _, value := range []string{"0", "1001"} {
+		code, _, _ := runTagCommand(t, stub.URL, "--tag", "smoke", "--max-flows", value)
+		if code != exitError {
+			t.Errorf("--max-flows %s: exit code = %d, want %d", value, code, exitError)
+		}
 	}
 }

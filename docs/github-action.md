@@ -62,6 +62,7 @@ Use a dedicated, least-privilege organization API key for CI and store it as a r
 | `cli-version` | no | `latest` | `echopoint` CLI release to download. |
 | `poll-timeout` | no | `300` | Max seconds to wait for all flows. |
 | `parallel` | no | `1` | Number of flows to run concurrently (must be ≥ 1). |
+| `max-flows` | no | CLI default (`50`) | With `tags`, the most flows the tags may match before the run is refused (1–1000). |
 
 Exactly one of `flow-id`, `flow-ids`, or `tags` is required; `parallel >= 1` is validated
 **before** any launch. Selecting by `tags` additionally requires the API key to have `flows:read`
