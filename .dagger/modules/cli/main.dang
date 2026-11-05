@@ -1,0 +1,42 @@
+pub description = "The CLI cross-compiles for every platform it ships to"
+
+type Cli {
+  """
+  Go toolchain image. Keep it equal to the go line in go.mod.
+  """
+  pub goImage: String!
+
+  """
+  GOOS/GOARCH pairs the CLI ships for, as release.yml builds them.
+  """
+  pub platforms: [String!]!
+
+  new(
+    goImage: String! = "golang:1.26.10-bookworm",
+    platforms: [String!]! = ["linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64"],
+  ) {
+    self.goImage = goImage
+    self.platforms = platforms
+    self
+  }
+
+  """
+  cmd/echopoint builds for every shipped platform.
+  """
+  crossBuild(ws: Workspace!): Void @check {
+    let base = container
+      .from(goImage)
+      .withMountedCache("/go/pkg/mod", cacheVolume("go-mod"))
+      .withMountedCache("/root/.cache/go-build", cacheVolume("go-build"))
+      .withEnvVariable("CGO_ENABLED", "0")
+      .withDirectory("/src", ws.directory("/", exclude: [".git", ".dagger", "dist", "action-tests"]))
+      .withWorkdir("/src")
+    platforms.reduce(base) { ctr, platform =>
+      ctr
+        .withEnvVariable("GOOS", platform.split("/").takeFirst(1).join(""))
+        .withEnvVariable("GOARCH", platform.split("/").takeLast(1).join(""))
+        .withExec(["go", "build", "-ldflags=-s -w", "-o", "/dev/null", "./cmd/echopoint"])
+    }.sync
+    null
+  }
+}
