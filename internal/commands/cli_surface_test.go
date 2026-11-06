@@ -118,7 +118,17 @@ func TestRootCommandsAreGroupedUnderTheirHeadings(t *testing.T) {
 	}
 
 	want := map[string][]string{
-		"Resources":         {"analytics", "collection", "flow", "monitor", "org", "spec", "status-page", "workspace"},
+		"Resources": {
+			"analytics",
+			"collection",
+			"flow",
+			"integration",
+			"monitor",
+			"org",
+			"spec",
+			"status-page",
+			"workspace",
+		},
 		"Account and setup": {"auth", "config", "profile"},
 		"Tools":             {"completion", "help", "mcp", "update", "version"},
 	}

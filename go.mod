@@ -11,7 +11,7 @@ require (
 	github.com/minio/selfupdate v0.6.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/nanostack-dev/echopoint-kit v0.3.0
-	github.com/nanostack-dev/echopoint-runner v0.94.0
+	github.com/nanostack-dev/echopoint-runner v0.101.1-0.20261105231301-47361533d1ab
 	github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.1.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	github.com/oapi-codegen/runtime v1.6.0
@@ -53,7 +53,7 @@ require (
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect

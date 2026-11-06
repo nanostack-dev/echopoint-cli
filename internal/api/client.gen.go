@@ -567,16 +567,16 @@ func (e FlowRunStatus) Valid() bool {
 
 // Defines values for FlowSourceDiagnosticSeverity.
 const (
-	Error   FlowSourceDiagnosticSeverity = "error"
-	Warning FlowSourceDiagnosticSeverity = "warning"
+	FlowSourceDiagnosticSeverityError   FlowSourceDiagnosticSeverity = "error"
+	FlowSourceDiagnosticSeverityWarning FlowSourceDiagnosticSeverity = "warning"
 )
 
 // Valid indicates whether the value is a known member of the FlowSourceDiagnosticSeverity enum.
 func (e FlowSourceDiagnosticSeverity) Valid() bool {
 	switch e {
-	case Error:
+	case FlowSourceDiagnosticSeverityError:
 		return true
-	case Warning:
+	case FlowSourceDiagnosticSeverityWarning:
 		return true
 	default:
 		return false
@@ -625,6 +625,123 @@ func (e HttpMethod) Valid() bool {
 	case POST:
 		return true
 	case PUT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationCheckStatus.
+const (
+	IntegrationCheckStatusFailed  IntegrationCheckStatus = "failed"
+	IntegrationCheckStatusPassed  IntegrationCheckStatus = "passed"
+	IntegrationCheckStatusWarning IntegrationCheckStatus = "warning"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationCheckStatus enum.
+func (e IntegrationCheckStatus) Valid() bool {
+	switch e {
+	case IntegrationCheckStatusFailed:
+		return true
+	case IntegrationCheckStatusPassed:
+		return true
+	case IntegrationCheckStatusWarning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationChoice.
+const (
+	Accepted IntegrationChoice = "accepted"
+	Refused  IntegrationChoice = "refused"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationChoice enum.
+func (e IntegrationChoice) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Refused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationEventFormat.
+const (
+	Snapshot IntegrationEventFormat = "snapshot"
+	Thin     IntegrationEventFormat = "thin"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationEventFormat enum.
+func (e IntegrationEventFormat) Valid() bool {
+	switch e {
+	case Snapshot:
+		return true
+	case Thin:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationItemKind.
+const (
+	Event     IntegrationItemKind = "event"
+	Operation IntegrationItemKind = "operation"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationItemKind enum.
+func (e IntegrationItemKind) Valid() bool {
+	switch e {
+	case Event:
+		return true
+	case Operation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationOperationBodyEncoding.
+const (
+	IntegrationOperationBodyEncodingForm IntegrationOperationBodyEncoding = "form"
+	IntegrationOperationBodyEncodingJson IntegrationOperationBodyEncoding = "json"
+	IntegrationOperationBodyEncodingNone IntegrationOperationBodyEncoding = "none"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationOperationBodyEncoding enum.
+func (e IntegrationOperationBodyEncoding) Valid() bool {
+	switch e {
+	case IntegrationOperationBodyEncodingForm:
+		return true
+	case IntegrationOperationBodyEncodingJson:
+		return true
+	case IntegrationOperationBodyEncodingNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntegrationParamIn.
+const (
+	IntegrationParamInBody  IntegrationParamIn = "body"
+	IntegrationParamInPath  IntegrationParamIn = "path"
+	IntegrationParamInQuery IntegrationParamIn = "query"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationParamIn enum.
+func (e IntegrationParamIn) Valid() bool {
+	switch e {
+	case IntegrationParamInBody:
+		return true
+	case IntegrationParamInPath:
+		return true
+	case IntegrationParamInQuery:
 		return true
 	default:
 		return false
@@ -1207,6 +1324,21 @@ func (e RequestFlowNodeType) Valid() bool {
 	}
 }
 
+// Defines values for RequestNodeDataBodyEncoding.
+const (
+	RequestNodeDataBodyEncodingForm RequestNodeDataBodyEncoding = "form"
+)
+
+// Valid indicates whether the value is a known member of the RequestNodeDataBodyEncoding enum.
+func (e RequestNodeDataBodyEncoding) Valid() bool {
+	switch e {
+	case RequestNodeDataBodyEncodingForm:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RequestOrigin.
 const (
 	RequestOriginManual  RequestOrigin = "manual"
@@ -1320,12 +1452,15 @@ func (e ResourceSearchType) Valid() bool {
 
 // Defines values for RunnerCapability.
 const (
+	FormBody      RunnerCapability = "form_body"
 	SecretOutputs RunnerCapability = "secret_outputs"
 )
 
 // Valid indicates whether the value is a known member of the RunnerCapability enum.
 func (e RunnerCapability) Valid() bool {
 	switch e {
+	case FormBody:
+		return true
 	case SecretOutputs:
 		return true
 	default:
@@ -1978,6 +2113,51 @@ func (e WebhookRequestSearchRequestSortBy) Valid() bool {
 	case WebhookRequestSearchRequestSortByMethod:
 		return true
 	case WebhookRequestSearchRequestSortByReceivedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebhookSignatureScheme.
+const (
+	StandardWebhooks WebhookSignatureScheme = "standard_webhooks"
+	Stripe           WebhookSignatureScheme = "stripe"
+)
+
+// Valid indicates whether the value is a known member of the WebhookSignatureScheme enum.
+func (e WebhookSignatureScheme) Valid() bool {
+	switch e {
+	case StandardWebhooks:
+		return true
+	case Stripe:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebhookSignatureStatus.
+const (
+	WebhookSignatureStatusExpired   WebhookSignatureStatus = "expired"
+	WebhookSignatureStatusInvalid   WebhookSignatureStatus = "invalid"
+	WebhookSignatureStatusMissing   WebhookSignatureStatus = "missing"
+	WebhookSignatureStatusUnchecked WebhookSignatureStatus = "unchecked"
+	WebhookSignatureStatusValid     WebhookSignatureStatus = "valid"
+)
+
+// Valid indicates whether the value is a known member of the WebhookSignatureStatus enum.
+func (e WebhookSignatureStatus) Valid() bool {
+	switch e {
+	case WebhookSignatureStatusExpired:
+		return true
+	case WebhookSignatureStatusInvalid:
+		return true
+	case WebhookSignatureStatusMissing:
+		return true
+	case WebhookSignatureStatusUnchecked:
+		return true
+	case WebhookSignatureStatusValid:
 		return true
 	default:
 		return false
@@ -3044,6 +3224,9 @@ type CreateWebhookRequest struct {
 	//
 	// Examples: My API Webhook
 	Name string `json:"name"`
+
+	// Signature Checks each delivery's signature with this scheme and secret.
+	Signature *WebhookSignatureInput `json:"signature,omitempty"`
 }
 
 // CurrentUser defines model for CurrentUser.
@@ -4281,6 +4464,334 @@ type InlineFlowDefinition struct {
 	Nodes []FlowNode  `json:"nodes"`
 }
 
+// Integration defines model for Integration.
+type Integration struct {
+	// ApiVersion The vendor API version the catalog was generated from, sent on every request.
+	//
+	// Examples: 2026-10-28.endive
+	ApiVersion string `json:"api_version"`
+	BaseUrl    string `json:"base_url"`
+
+	// Branding The design system of the integration's vendor, applied to its nodes.
+	Branding IntegrationBranding      `json:"branding"`
+	Curated  []IntegrationCuratedNode `json:"curated"`
+	DocsUrl  string                   `json:"docs_url"`
+
+	// EventCount Reviewed events Echopoint offers.
+	EventCount int `json:"event_count"`
+
+	// Guide The integration's guide, in Markdown, kept by the reviewing agent.
+	Guide string `json:"guide"`
+
+	// Id Examples: stripe
+	Id string `json:"id"`
+
+	// Licensed Whether the organization's license grants this integration.
+	Licensed bool `json:"licensed"`
+
+	// Name Examples: Stripe
+	Name string `json:"name"`
+
+	// OperationCount Reviewed operations Echopoint offers.
+	OperationCount int                          `json:"operation_count"`
+	Presets        []IntegrationAssertionPreset `json:"presets"`
+}
+
+// IntegrationAssertionPreset defines model for IntegrationAssertionPreset.
+type IntegrationAssertionPreset struct {
+	Assertions []string `json:"assertions"`
+	Event      string   `json:"event"`
+	Label      string   `json:"label"`
+}
+
+// IntegrationBranding The design system of the integration's vendor, applied to its nodes.
+type IntegrationBranding struct {
+	Accent string `json:"accent"`
+
+	// FontFamily A CSS font stack.
+	FontFamily string `json:"font_family"`
+
+	// LogoSvg The logo as an SVG document.
+	LogoSvg   string `json:"logo_svg"`
+	OnPrimary string `json:"on_primary"`
+
+	// Primary Examples: #635BFF
+	Primary string `json:"primary"`
+
+	// Radius Corner radius of the vendor's cards, in pixels.
+	Radius  int    `json:"radius"`
+	Surface string `json:"surface"`
+	Text    string `json:"text"`
+}
+
+// IntegrationCheck defines model for IntegrationCheck.
+type IntegrationCheck struct {
+	Message string                 `json:"message"`
+	Name    string                 `json:"name"`
+	Status  IntegrationCheckStatus `json:"status"`
+}
+
+// IntegrationCheckStatus defines model for IntegrationCheckStatus.
+type IntegrationCheckStatus string
+
+// IntegrationChoice Whether the workspace offers the item in its palette.
+type IntegrationChoice string
+
+// IntegrationChoiceInput defines model for IntegrationChoiceInput.
+type IntegrationChoiceInput struct {
+	// Choice Whether the workspace offers the item in its palette.
+	Choice IntegrationChoice   `json:"choice"`
+	Key    string              `json:"key"`
+	Kind   IntegrationItemKind `json:"kind"`
+}
+
+// IntegrationChoicesRequest defines model for IntegrationChoicesRequest.
+type IntegrationChoicesRequest struct {
+	Items []IntegrationChoiceInput `json:"items"`
+}
+
+// IntegrationConnectRequest defines model for IntegrationConnectRequest.
+type IntegrationConnectRequest struct {
+	// SecretKey A restricted test key, such as Stripe's `rk_test_…`. Live keys are refused. Write-only.
+	SecretKey *string `json:"secret_key,omitempty"`
+}
+
+// IntegrationConnection defines model for IntegrationConnection.
+type IntegrationConnection struct {
+	AccountId   *string `json:"account_id,omitempty"`
+	AccountName *string `json:"account_name,omitempty"`
+
+	// CaptureWebhookId The webhook the vendor's events arrive at.
+	CaptureWebhookId *string            `json:"capture_webhook_id,omitempty"`
+	CheckedAt        time.Time          `json:"checked_at"`
+	Checks           []IntegrationCheck `json:"checks"`
+	CreatedAt        time.Time          `json:"created_at"`
+	EnvironmentKey   string             `json:"environment_key"`
+	Id               openapi_types.UUID `json:"id"`
+	Integration      string             `json:"integration"`
+
+	// KeyHint The key's prefix and last four characters, such as `rk_test_…a1B2`.
+	KeyHint string `json:"key_hint"`
+
+	// Signed Whether the capture webhook checks the vendor's signature.
+	Signed bool `json:"signed"`
+}
+
+// IntegrationConnectionListResponse defines model for IntegrationConnectionListResponse.
+type IntegrationConnectionListResponse struct {
+	// Count The number of items returned in this response.
+	Count int                     `json:"count"`
+	Items []IntegrationConnection `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
+// IntegrationCuratedNode A hand-written node over one operation or event, with defaults that work.
+type IntegrationCuratedNode struct {
+	Defaults map[string]string `json:"defaults"`
+
+	// ItemKey The operation key or event type.
+	ItemKey string              `json:"item_key"`
+	Key     string              `json:"key"`
+	Kind    IntegrationItemKind `json:"kind"`
+
+	// Method The operation's HTTP method. Absent for an event.
+	Method *string `json:"method,omitempty"`
+
+	// Pickers Inputs that offer a list of values, such as Stripe's test cards.
+	Pickers   map[string][]IntegrationPickerValue `json:"pickers"`
+	RunAlways bool                                `json:"run_always"`
+	Title     string                              `json:"title"`
+
+	// Url The operation's URL on the vendor's API, with its path parameters unfilled. Absent for an event.
+	Url *string `json:"url,omitempty"`
+	Why string  `json:"why"`
+}
+
+// IntegrationEvent defines model for IntegrationEvent.
+type IntegrationEvent struct {
+	// Fields Field paths an assertion on the payload can read, under `data.object`.
+	Fields []IntegrationField     `json:"fields"`
+	Format IntegrationEventFormat `json:"format"`
+	Object *string                `json:"object,omitempty"`
+}
+
+// IntegrationEventFormat defines model for IntegrationEvent.Format.
+type IntegrationEventFormat string
+
+// IntegrationField defines model for IntegrationField.
+type IntegrationField struct {
+	Enum *[]string `json:"enum,omitempty"`
+	Path string    `json:"path"`
+	Type string    `json:"type"`
+}
+
+// IntegrationItem defines model for IntegrationItem.
+type IntegrationItem struct {
+	Area string `json:"area"`
+
+	// Choice Whether the workspace offers the item in its palette.
+	Choice IntegrationChoice `json:"choice"`
+	Event  *IntegrationEvent `json:"event,omitempty"`
+
+	// Key The operation key, such as `customer.create`, or the event type, such as `invoice.paid`.
+	Key  string              `json:"key"`
+	Kind IntegrationItemKind `json:"kind"`
+	Name string              `json:"name"`
+
+	// Note What an author must know, from the review.
+	Note      *string               `json:"note,omitempty"`
+	Operation *IntegrationOperation `json:"operation,omitempty"`
+	Summary   string                `json:"summary"`
+}
+
+// IntegrationItemFilter defines model for IntegrationItemFilter.
+type IntegrationItemFilter struct {
+	// Areas Only items of these product areas, such as `billing`.
+	Areas []string `json:"areas,omitempty"`
+
+	// Choice Whether the workspace offers the item in its palette.
+	Choice *IntegrationChoice   `json:"choice,omitempty"`
+	Kind   *IntegrationItemKind `json:"kind,omitempty"`
+}
+
+// IntegrationItemKind defines model for IntegrationItemKind.
+type IntegrationItemKind string
+
+// IntegrationItemListResponse defines model for IntegrationItemListResponse.
+type IntegrationItemListResponse struct {
+	// Count The number of items returned in this response.
+	Count int               `json:"count"`
+	Items []IntegrationItem `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
+// IntegrationItemSearchRequest defines model for IntegrationItemSearchRequest.
+type IntegrationItemSearchRequest struct {
+	Filter *IntegrationItemFilter `json:"filter,omitempty"`
+
+	// FullTextSearch Full-text search term to match against searchable fields.
+	FullTextSearch *string            `json:"full_text_search,omitempty"`
+	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
+}
+
+// IntegrationListResponse defines model for IntegrationListResponse.
+type IntegrationListResponse struct {
+	// Count The number of items returned in this response.
+	Count int                  `json:"count"`
+	Items []IntegrationSummary `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
+// IntegrationNodeRef Makes the node an integration node (ADR-0024). Launch fills it from the integration: a
+// request node gets the operation's method, URL, inputs, authentication, API version and
+// outputs; a webhook_wait node reads the connection's capture webhook and expects the event
+// type. The stored `method` and `url` only describe the call. Launch refuses a node whose
+// integration the license does not grant, whose environment has no connection, or whose
+// item is no longer offered.
+type IntegrationNodeRef struct {
+	// Event The event type, such as `invoice.paid`. For a webhook_wait node.
+	Event *string `json:"event,omitempty"`
+
+	// Id The integration, such as `stripe`.
+	Id string `json:"id"`
+
+	// Inputs The operation's inputs by param name. Values support template variables.
+	Inputs *map[string]interface{} `json:"inputs,omitempty"`
+
+	// Operation The operation key, such as `customer.list`. For a request node.
+	Operation *string `json:"operation,omitempty"`
+}
+
+// IntegrationOperation defines model for IntegrationOperation.
+type IntegrationOperation struct {
+	BodyEncoding   IntegrationOperationBodyEncoding `json:"body_encoding"`
+	Method         string                           `json:"method"`
+	Outputs        []IntegrationOutput              `json:"outputs"`
+	Params         []IntegrationParam               `json:"params"`
+	Path           string                           `json:"path"`
+	ResourceName   string                           `json:"resource_name"`
+	ResponseIsList *bool                            `json:"response_is_list,omitempty"`
+	ResponseObject *string                          `json:"response_object,omitempty"`
+	TestHelper     bool                             `json:"test_helper"`
+}
+
+// IntegrationOperationBodyEncoding defines model for IntegrationOperation.BodyEncoding.
+type IntegrationOperationBodyEncoding string
+
+// IntegrationOutput defines model for IntegrationOutput.
+type IntegrationOutput struct {
+	Name string `json:"name"`
+
+	// Path A JSONPath into the response body.
+	Path string `json:"path"`
+}
+
+// IntegrationParam defines model for IntegrationParam.
+type IntegrationParam struct {
+	// Common Shown first in a form.
+	Common      bool               `json:"common"`
+	Description *string            `json:"description,omitempty"`
+	Enum        *[]string          `json:"enum,omitempty"`
+	In          IntegrationParamIn `json:"in"`
+	Name        string             `json:"name"`
+	Required    bool               `json:"required"`
+	Type        string             `json:"type"`
+}
+
+// IntegrationParamIn defines model for IntegrationParam.In.
+type IntegrationParamIn string
+
+// IntegrationPickerValue defines model for IntegrationPickerValue.
+type IntegrationPickerValue struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// IntegrationSummary defines model for IntegrationSummary.
+type IntegrationSummary struct {
+	// ApiVersion The vendor API version the catalog was generated from, sent on every request.
+	//
+	// Examples: 2026-10-28.endive
+	ApiVersion string `json:"api_version"`
+
+	// Branding The design system of the integration's vendor, applied to its nodes.
+	Branding IntegrationBranding `json:"branding"`
+	DocsUrl  string              `json:"docs_url"`
+
+	// EventCount Reviewed events Echopoint offers.
+	EventCount int `json:"event_count"`
+
+	// Id Examples: stripe
+	Id string `json:"id"`
+
+	// Licensed Whether the organization's license grants this integration.
+	Licensed bool `json:"licensed"`
+
+	// Name Examples: Stripe
+	Name string `json:"name"`
+
+	// OperationCount Reviewed operations Echopoint offers.
+	OperationCount int `json:"operation_count"`
+}
+
 // InvitationEmailUsage Invitation emails the organization sent in the 24 hours before
 // `generated_at`, new invitations and resends counted. Deleting an
 // invitation gives none back. An invitation or a resend is refused with
@@ -4417,6 +4928,9 @@ type LicenseUsage struct {
 	// records HTTP calls are measured; a run reaches the window once its
 	// analytics record is written, a few seconds after it finishes.
 	HttpCalls HTTPCallUsage `json:"http_calls"`
+
+	// Integrations The ids of the integrations the license grants, such as `stripe`.
+	Integrations []string `json:"integrations"`
 
 	// InvitationEmailsLast24Hours Invitation emails the organization sent in the 24 hours before
 	// `generated_at`, new invitations and resends counted. Deleting an
@@ -5782,6 +6296,12 @@ type RequestNodeData struct {
 	// Examples: {"email":"{{userEmail}}","name":"{{userName}}"}
 	Body interface{} `json:"body,omitempty"`
 
+	// BodyEncoding How the body is sent. Absent: a string body as it is, any other body as JSON. `form`: an
+	// object body as `application/x-www-form-urlencoded` with bracket nesting
+	// (`metadata[plan]=pro`), encoded after templates resolve. A form body needs a runner that
+	// declares `form_body`.
+	BodyEncoding *RequestNodeDataBodyEncoding `json:"body_encoding,omitempty"`
+
 	// Headers HTTP headers. Supports the same variable substitution as URL.
 	// Headers can reference both initial inputs and previous node outputs.
 	//
@@ -5793,6 +6313,14 @@ type RequestNodeData struct {
 	//
 	// Examples: {"Authorization":"Bearer {{auth.token}}","Content-Type":"application/json"}
 	Headers *map[string]string `json:"headers,omitempty"`
+
+	// Integration Makes the node an integration node (ADR-0024). Launch fills it from the integration: a
+	// request node gets the operation's method, URL, inputs, authentication, API version and
+	// outputs; a webhook_wait node reads the connection's capture webhook and expects the event
+	// type. The stored `method` and `url` only describe the call. Launch refuses a node whose
+	// integration the license does not grant, whose environment has no connection, or whose
+	// item is no longer offered.
+	Integration *IntegrationNodeRef `json:"integration,omitempty"`
 
 	// Method HTTP method
 	//
@@ -5816,6 +6344,12 @@ type RequestNodeData struct {
 	// Examples: {{apiUrl}}/users/{{create-user.userId}}
 	Url string `json:"url"`
 }
+
+// RequestNodeDataBodyEncoding How the body is sent. Absent: a string body as it is, any other body as JSON. `form`: an
+// object body as `application/x-www-form-urlencoded` with bracket nesting
+// (`metadata[plan]=pro`), encoded after templates resolve. A form body needs a runner that
+// declares `form_body`.
+type RequestNodeDataBodyEncoding string
 
 // RequestOrigin Normalized provenance for saved request resources.
 type RequestOrigin string
@@ -6021,7 +6555,8 @@ type RunOpenAPISyncNowRequest struct {
 }
 
 // RunnerCapability A feature a runner build supports. `secret_outputs`: the runner masks the values of
-// node outputs declared `secret` in everything it reports (ADR-0018).
+// node outputs declared `secret` in everything it reports (ADR-0018). `form_body`: the
+// runner sends a request node with `body_encoding: form` form-encoded (ADR-0024).
 type RunnerCapability string
 
 // RunnerInputs Effective root inputs snapshot resolved for a runner execution.
@@ -6216,7 +6751,9 @@ type RunnerType string
 
 // SaveStatusPageRequest defines model for SaveStatusPageRequest.
 type SaveStatusPageRequest struct {
-	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
+	// Config Shared design draft. Services and regions must have unique IDs and at least one
+	// enabled entry; region locations are unique. Display text is plain text: HTML
+	// markup is removed before the page is stored.
 	Config               StatusPageConfig            `json:"config"`
 	ExpectedDraftVersion int64                       `json:"expected_draft_version"`
 	MonitorBindings      *[]StatusPageMonitorBinding `json:"monitor_bindings,omitempty"`
@@ -6768,7 +7305,9 @@ type StatusPageColors struct {
 	Text       string `json:"text"`
 }
 
-// StatusPageConfig Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
+// StatusPageConfig Shared design draft. Services and regions must have unique IDs and at least one
+// enabled entry; region locations are unique. Display text is plain text: HTML
+// markup is removed before the page is stored.
 type StatusPageConfig struct {
 	BrandName    string `json:"brand_name"`
 	CustomColors struct {
@@ -6799,7 +7338,9 @@ type StatusPageConfigVersion int
 
 // StatusPageEditor defines model for StatusPageEditor.
 type StatusPageEditor struct {
-	// Config Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
+	// Config Shared design draft. Services and regions must have unique IDs and at least one
+	// enabled entry; region locations are unique. Display text is plain text: HTML
+	// markup is removed before the page is stored.
 	Config          StatusPageConfig            `json:"config"`
 	DraftVersion    int64                       `json:"draft_version"`
 	Id              string                      `json:"id"`
@@ -7167,6 +7708,9 @@ type Webhook struct {
 	// Examples: 1247
 	RequestCount int `json:"request_count"`
 
+	// Signature How the webhook checks each delivery's signature. Absent when it checks none.
+	Signature *WebhookSignature `json:"signature,omitempty"`
+
 	// UpdatedAt Timestamp when the webhook endpoint was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 
@@ -7294,6 +7838,9 @@ type WebhookRequestResponse struct {
 	// ReceivedAt Timestamp when the request was received.
 	ReceivedAt time.Time `json:"received_at"`
 
+	// SignatureStatus The outcome of checking one delivery's signature. `unchecked` when the webhook had no signing secret; `missing` without a signature header; `expired` when signed more than five minutes from its arrival.
+	SignatureStatus WebhookSignatureStatus `json:"signature_status"`
+
 	// UserAgent Value of the request's User-Agent header, the same value as in `headers` (header names match case-insensitively). Absent when the request carried no User-Agent, or an empty one.
 	//
 	// Examples: GitHub-Hookshot/abc123
@@ -7356,6 +7903,27 @@ type WebhookSearchRequest struct {
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
+// WebhookSignature defines model for WebhookSignature.
+type WebhookSignature struct {
+	// Scheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`.
+	Scheme WebhookSignatureScheme `json:"scheme"`
+}
+
+// WebhookSignatureInput defines model for WebhookSignatureInput.
+type WebhookSignatureInput struct {
+	// Scheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`.
+	Scheme WebhookSignatureScheme `json:"scheme"`
+
+	// Secret The signing secret, such as Stripe's `whsec_…` endpoint secret. Write-only.
+	Secret *string `json:"secret,omitempty"`
+}
+
+// WebhookSignatureScheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`.
+type WebhookSignatureScheme string
+
+// WebhookSignatureStatus The outcome of checking one delivery's signature. `unchecked` when the webhook had no signing secret; `missing` without a signature header; `expired` when signed more than five minutes from its arrival.
+type WebhookSignatureStatus string
+
 // WebhookSortField Field to sort webhook endpoint search results by.
 type WebhookSortField string
 
@@ -7402,6 +7970,14 @@ type WebhookWaitNodeData struct {
 	// the node's assertions pick the first request that passes them. The node result reports each
 	// group in `expectations`, and for a group that found nothing, the closest request check by check.
 	Expect *[]WebhookExpectation `json:"expect,omitempty"`
+
+	// Integration Makes the node an integration node (ADR-0024). Launch fills it from the integration: a
+	// request node gets the operation's method, URL, inputs, authentication, API version and
+	// outputs; a webhook_wait node reads the connection's capture webhook and expects the event
+	// type. The stored `method` and `url` only describe the call. Launch refuses a node whose
+	// integration the license does not grant, whose environment has no connection, or whose
+	// item is no longer offered.
+	Integration *IntegrationNodeRef `json:"integration,omitempty"`
 
 	// SettleMs How long the wait keeps listening once every expectation has its events, so an
 	// expectation with a `max` sees an extra event that arrives late. Only used with `expect`.
@@ -7609,6 +8185,12 @@ type CurrentUserIncludeParameter = []CurrentUserInclude
 
 // EnvironmentPath defines model for EnvironmentPath.
 type EnvironmentPath = string
+
+// IntegrationEnvironmentKeyParameter defines model for IntegrationEnvironmentKeyParameter.
+type IntegrationEnvironmentKeyParameter = string
+
+// IntegrationIdParameter Examples: stripe
+type IntegrationIdParameter = string
 
 // InvitationId defines model for InvitationId.
 type InvitationId = string
@@ -8432,6 +9014,69 @@ type RestoreFlowVersionParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// SearchIntegrationsParams defines parameters for SearchIntegrations.
+type SearchIntegrationsParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetIntegrationParams defines parameters for GetIntegration.
+type GetIntegrationParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetIntegrationChoicesParams defines parameters for SetIntegrationChoices.
+type SetIntegrationChoicesParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchIntegrationConnectionsParams defines parameters for SearchIntegrationConnections.
+type SearchIntegrationConnectionsParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DisconnectIntegrationParams defines parameters for DisconnectIntegration.
+type DisconnectIntegrationParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ConnectIntegrationParams defines parameters for ConnectIntegration.
+type ConnectIntegrationParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchIntegrationItemsParams defines parameters for SearchIntegrationItems.
+type SearchIntegrationItemsParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // ListOrganizationInvitationsParams defines parameters for ListOrganizationInvitations.
 type ListOrganizationInvitationsParams struct {
 	// Limit Maximum number of items per page.
@@ -9020,6 +9665,24 @@ type SearchWebhookRequestsParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ClearWebhookSignatureParams defines parameters for ClearWebhookSignature.
+type ClearWebhookSignatureParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetWebhookSignatureParams defines parameters for SetWebhookSignature.
+type SetWebhookSignatureParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // StreamWebhookRequestsParams defines parameters for StreamWebhookRequests.
 type StreamWebhookRequestsParams struct {
 	Limit int32 `form:"limit" json:"limit"`
@@ -9217,6 +9880,21 @@ type SetFlowVariableJSONRequestBody = SetVariableRequest
 // SearchFlowVersionsJSONRequestBody defines body for SearchFlowVersions for application/json ContentType.
 type SearchFlowVersionsJSONRequestBody = FlowVersionSearchRequest
 
+// SearchIntegrationsJSONRequestBody defines body for SearchIntegrations for application/json ContentType.
+type SearchIntegrationsJSONRequestBody = SearchRequest
+
+// SetIntegrationChoicesJSONRequestBody defines body for SetIntegrationChoices for application/json ContentType.
+type SetIntegrationChoicesJSONRequestBody = IntegrationChoicesRequest
+
+// SearchIntegrationConnectionsJSONRequestBody defines body for SearchIntegrationConnections for application/json ContentType.
+type SearchIntegrationConnectionsJSONRequestBody = SearchRequest
+
+// ConnectIntegrationJSONRequestBody defines body for ConnectIntegration for application/json ContentType.
+type ConnectIntegrationJSONRequestBody = IntegrationConnectRequest
+
+// SearchIntegrationItemsJSONRequestBody defines body for SearchIntegrationItems for application/json ContentType.
+type SearchIntegrationItemsJSONRequestBody = IntegrationItemSearchRequest
+
 // CreateOrganizationInvitationJSONRequestBody defines body for CreateOrganizationInvitation for application/json ContentType.
 type CreateOrganizationInvitationJSONRequestBody = CreateOrganizationInvitationRequest
 
@@ -9275,6 +9953,8 @@ type SearchResourcesJSONRequestBody = ResourceSearchRequest
 type ClaimEphemeralJobJSONRequestBody = EphemeralJobClaimRequest
 
 // CompleteEphemeralExecutionJSONRequestBody defines body for CompleteEphemeralExecution for application/json ContentType.
+//
+// Deprecated: this type has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 type CompleteEphemeralExecutionJSONRequestBody = EphemeralCompletionRequest
 
 // HeartbeatRunnerJobsJSONRequestBody defines body for HeartbeatRunnerJobs for application/json ContentType.
@@ -9321,6 +10001,9 @@ type SearchWebhooksJSONRequestBody = WebhookSearchRequest
 
 // SearchWebhookRequestsJSONRequestBody defines body for SearchWebhookRequests for application/json ContentType.
 type SearchWebhookRequestsJSONRequestBody = WebhookRequestSearchRequest
+
+// SetWebhookSignatureJSONRequestBody defines body for SetWebhookSignature for application/json ContentType.
+type SetWebhookSignatureJSONRequestBody = WebhookSignatureInput
 
 // CreateWorkspaceRoleJSONRequestBody defines body for CreateWorkspaceRole for application/json ContentType.
 type CreateWorkspaceRoleJSONRequestBody = WorkspaceRoleWriteRequest
@@ -11487,6 +12170,110 @@ type ClientInterface interface {
 	// Corresponds with POST /init (the `InitUser` operationId).
 	InitUser(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchIntegrationsWithBody Search Integrations
+	//
+	// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+	SearchIntegrationsWithBody(ctx context.Context, params *SearchIntegrationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchIntegrations Search Integrations
+	//
+	// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+	SearchIntegrations(ctx context.Context, params *SearchIntegrationsParams, body SearchIntegrationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetIntegration Get Integration
+	//
+	// Returns one integration with its branding, guide, curated nodes and assertion presets.
+	//
+	// Corresponds with GET /integrations/{integrationId} (the `GetIntegration` operationId).
+	GetIntegration(ctx context.Context, integrationId IntegrationIdParameter, params *GetIntegrationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetIntegrationChoicesWithBody Accept or Refuse Integration Items
+	//
+	// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+	SetIntegrationChoicesWithBody(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetIntegrationChoices Accept or Refuse Integration Items
+	//
+	// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+	SetIntegrationChoices(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, body SetIntegrationChoicesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchIntegrationConnectionsWithBody Search Integration Connections
+	//
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+	SearchIntegrationConnectionsWithBody(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchIntegrationConnections Search Integration Connections
+	//
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+	SearchIntegrationConnections(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, body SearchIntegrationConnectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DisconnectIntegration Disconnect an Integration
+	//
+	// Removes the connection of one environment, its capture webhook and, when the key still allows it, the endpoint registered with the vendor.
+	//
+	// Corresponds with DELETE /integrations/{integrationId}/connections/{environmentKey} (the `DisconnectIntegration` operationId).
+	DisconnectIntegration(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *DisconnectIntegrationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConnectIntegrationWithBody Connect an Integration
+	//
+	// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+	ConnectIntegrationWithBody(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConnectIntegration Connect an Integration
+	//
+	// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+	ConnectIntegration(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, body ConnectIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchIntegrationItemsWithBody Search Integration Items
+	//
+	// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+	SearchIntegrationItemsWithBody(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchIntegrationItems Search Integration Items
+	//
+	// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+	SearchIntegrationItems(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, body SearchIntegrationItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListOrganizationInvitations Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
 	//
 	// Deprecated: use `searchOrganizationInvitations`, which pages with a
@@ -12226,34 +13013,46 @@ type ClientInterface interface {
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
 	ClaimEphemeralJob(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, body ClaimEphemeralJobJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CompleteEphemeralExecutionWithBody Complete an ephemeral execution
+	// CompleteEphemeralExecutionWithBody Complete a pre-Job ephemeral execution
 	//
-	// Reports the terminal result for an ephemeral execution produced by a caller-owned
-	// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-	// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-	// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-	// publication of the same payload is idempotent; a different payload for an already-terminal
-	// execution returns 409 Conflict. The response includes the terminal execution and node
-	// summaries so the CLI/action can report without an extra read.
+	// Reports the terminal result for an ephemeral execution that has no runner Job.
+	// Current launches create a one-shot Job, and an execution that has one is refused
+	// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+	// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+	// without a Job, created before Jobs existed, accepts its result here, keyed by
+	// execution and without a claim. Only valid for executions with
+	// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+	// publication of the same payload is idempotent; a different payload for an
+	// already-terminal execution returns 409 Conflict. The response includes the
+	// terminal execution and node summaries so the CLI/action can report without an
+	// extra read.
 	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompleteEphemeralExecutionWithBody(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CompleteEphemeralExecution Complete an ephemeral execution
+	// CompleteEphemeralExecution Complete a pre-Job ephemeral execution
 	//
-	// Reports the terminal result for an ephemeral execution produced by a caller-owned
-	// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-	// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-	// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-	// publication of the same payload is idempotent; a different payload for an already-terminal
-	// execution returns 409 Conflict. The response includes the terminal execution and node
-	// summaries so the CLI/action can report without an extra read.
+	// Reports the terminal result for an ephemeral execution that has no runner Job.
+	// Current launches create a one-shot Job, and an execution that has one is refused
+	// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+	// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+	// without a Job, created before Jobs existed, accepts its result here, keyed by
+	// execution and without a claim. Only valid for executions with
+	// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+	// publication of the same payload is idempotent; a different payload for an
+	// already-terminal execution returns 409 Conflict. The response includes the
+	// terminal execution and node summaries so the CLI/action can report without an
+	// extra read.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompleteEphemeralExecution(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, body CompleteEphemeralExecutionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// HeartbeatRunnerJobsWithBody Renew leases for active runner jobs
@@ -12776,6 +13575,31 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /webhooks/{id}/requests/search (the `SearchWebhookRequests` operationId).
 	SearchWebhookRequests(ctx context.Context, id WebhookIdParameter, params *SearchWebhookRequestsParams, body SearchWebhookRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ClearWebhookSignature Remove Webhook Signature Verification
+	//
+	// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+	//
+	// Corresponds with DELETE /webhooks/{id}/signature (the `ClearWebhookSignature` operationId).
+	ClearWebhookSignature(ctx context.Context, id WebhookIdParameter, params *ClearWebhookSignatureParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWebhookSignatureWithBody Set Webhook Signature Verification
+	//
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+	SetWebhookSignatureWithBody(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWebhookSignature Set Webhook Signature Verification
+	//
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+	SetWebhookSignature(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, body SetWebhookSignatureJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// StreamWebhookRequests Stream Webhook Requests
 	//
@@ -15134,6 +15958,230 @@ func (c *Client) InitUser(ctx context.Context, reqEditors ...RequestEditorFn) (*
 	return c.Client.Do(req)
 }
 
+// SearchIntegrationsWithBody Search Integrations
+//
+// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+func (c *Client) SearchIntegrationsWithBody(ctx context.Context, params *SearchIntegrationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchIntegrationsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchIntegrations Search Integrations
+//
+// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+func (c *Client) SearchIntegrations(ctx context.Context, params *SearchIntegrationsParams, body SearchIntegrationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchIntegrationsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetIntegration Get Integration
+//
+// Returns one integration with its branding, guide, curated nodes and assertion presets.
+//
+// Corresponds with GET /integrations/{integrationId} (the `GetIntegration` operationId).
+func (c *Client) GetIntegration(ctx context.Context, integrationId IntegrationIdParameter, params *GetIntegrationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetIntegrationRequest(c.Server, integrationId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetIntegrationChoicesWithBody Accept or Refuse Integration Items
+//
+// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+func (c *Client) SetIntegrationChoicesWithBody(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetIntegrationChoicesRequestWithBody(c.Server, integrationId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetIntegrationChoices Accept or Refuse Integration Items
+//
+// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+func (c *Client) SetIntegrationChoices(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, body SetIntegrationChoicesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetIntegrationChoicesRequest(c.Server, integrationId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchIntegrationConnectionsWithBody Search Integration Connections
+//
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+func (c *Client) SearchIntegrationConnectionsWithBody(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchIntegrationConnectionsRequestWithBody(c.Server, integrationId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchIntegrationConnections Search Integration Connections
+//
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+func (c *Client) SearchIntegrationConnections(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, body SearchIntegrationConnectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchIntegrationConnectionsRequest(c.Server, integrationId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DisconnectIntegration Disconnect an Integration
+//
+// Removes the connection of one environment, its capture webhook and, when the key still allows it, the endpoint registered with the vendor.
+//
+// Corresponds with DELETE /integrations/{integrationId}/connections/{environmentKey} (the `DisconnectIntegration` operationId).
+func (c *Client) DisconnectIntegration(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *DisconnectIntegrationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDisconnectIntegrationRequest(c.Server, integrationId, environmentKey, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ConnectIntegrationWithBody Connect an Integration
+//
+// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+func (c *Client) ConnectIntegrationWithBody(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectIntegrationRequestWithBody(c.Server, integrationId, environmentKey, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ConnectIntegration Connect an Integration
+//
+// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+func (c *Client) ConnectIntegration(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, body ConnectIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectIntegrationRequest(c.Server, integrationId, environmentKey, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchIntegrationItemsWithBody Search Integration Items
+//
+// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+func (c *Client) SearchIntegrationItemsWithBody(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchIntegrationItemsRequestWithBody(c.Server, integrationId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchIntegrationItems Search Integration Items
+//
+// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+func (c *Client) SearchIntegrationItems(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, body SearchIntegrationItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchIntegrationItemsRequest(c.Server, integrationId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListOrganizationInvitations Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
 //
 // Deprecated: use `searchOrganizationInvitations`, which pages with a
@@ -16557,19 +17605,24 @@ func (c *Client) ClaimEphemeralJob(ctx context.Context, executionId openapi_type
 	return c.Client.Do(req)
 }
 
-// CompleteEphemeralExecutionWithBody Complete an ephemeral execution
+// CompleteEphemeralExecutionWithBody Complete a pre-Job ephemeral execution
 //
-// Reports the terminal result for an ephemeral execution produced by a caller-owned
-// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-// publication of the same payload is idempotent; a different payload for an already-terminal
-// execution returns 409 Conflict. The response includes the terminal execution and node
-// summaries so the CLI/action can report without an extra read.
+// Reports the terminal result for an ephemeral execution that has no runner Job.
+// Current launches create a one-shot Job, and an execution that has one is refused
+// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+// without a Job, created before Jobs existed, accepts its result here, keyed by
+// execution and without a claim. Only valid for executions with
+// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+// publication of the same payload is idempotent; a different payload for an
+// already-terminal execution returns 409 Conflict. The response includes the
+// terminal execution and node summaries so the CLI/action can report without an
+// extra read.
 //
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) CompleteEphemeralExecutionWithBody(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCompleteEphemeralExecutionRequestWithBody(c.Server, executionId, params, contentType, body)
 	if err != nil {
@@ -16582,19 +17635,24 @@ func (c *Client) CompleteEphemeralExecutionWithBody(ctx context.Context, executi
 	return c.Client.Do(req)
 }
 
-// CompleteEphemeralExecution Complete an ephemeral execution
+// CompleteEphemeralExecution Complete a pre-Job ephemeral execution
 //
-// Reports the terminal result for an ephemeral execution produced by a caller-owned
-// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-// publication of the same payload is idempotent; a different payload for an already-terminal
-// execution returns 409 Conflict. The response includes the terminal execution and node
-// summaries so the CLI/action can report without an extra read.
+// Reports the terminal result for an ephemeral execution that has no runner Job.
+// Current launches create a one-shot Job, and an execution that has one is refused
+// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+// without a Job, created before Jobs existed, accepts its result here, keyed by
+// execution and without a claim. Only valid for executions with
+// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+// publication of the same payload is idempotent; a different payload for an
+// already-terminal execution returns 409 Conflict. The response includes the
+// terminal execution and node summaries so the CLI/action can report without an
+// extra read.
 //
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) CompleteEphemeralExecution(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, body CompleteEphemeralExecutionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCompleteEphemeralExecutionRequest(c.Server, executionId, params, body)
 	if err != nil {
@@ -17605,6 +18663,61 @@ func (c *Client) SearchWebhookRequestsWithBody(ctx context.Context, id WebhookId
 // Corresponds with POST /webhooks/{id}/requests/search (the `SearchWebhookRequests` operationId).
 func (c *Client) SearchWebhookRequests(ctx context.Context, id WebhookIdParameter, params *SearchWebhookRequestsParams, body SearchWebhookRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSearchWebhookRequestsRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ClearWebhookSignature Remove Webhook Signature Verification
+//
+// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+//
+// Corresponds with DELETE /webhooks/{id}/signature (the `ClearWebhookSignature` operationId).
+func (c *Client) ClearWebhookSignature(ctx context.Context, id WebhookIdParameter, params *ClearWebhookSignatureParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewClearWebhookSignatureRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWebhookSignatureWithBody Set Webhook Signature Verification
+//
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+func (c *Client) SetWebhookSignatureWithBody(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWebhookSignatureRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWebhookSignature Set Webhook Signature Verification
+//
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+func (c *Client) SetWebhookSignature(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, body SetWebhookSignatureJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWebhookSignatureRequest(c.Server, id, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -23445,6 +24558,484 @@ func NewInitUserRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewSearchIntegrationsRequest calls the generic SearchIntegrations builder with application/json body
+func NewSearchIntegrationsRequest(server string, params *SearchIntegrationsParams, body SearchIntegrationsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchIntegrationsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchIntegrationsRequestWithBody constructs an http.Request for the SearchIntegrations method, with any body, and a specified content type
+func NewSearchIntegrationsRequestWithBody(server string, params *SearchIntegrationsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/integrations/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewGetIntegrationRequest constructs an http.Request for the GetIntegration method
+func NewGetIntegrationRequest(server string, integrationId IntegrationIdParameter, params *GetIntegrationParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "integrationId", integrationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/integrations/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewSetIntegrationChoicesRequest calls the generic SetIntegrationChoices builder with application/json body
+func NewSetIntegrationChoicesRequest(server string, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, body SetIntegrationChoicesJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetIntegrationChoicesRequestWithBody(server, integrationId, params, "application/json", bodyReader)
+}
+
+// NewSetIntegrationChoicesRequestWithBody constructs an http.Request for the SetIntegrationChoices method, with any body, and a specified content type
+func NewSetIntegrationChoicesRequestWithBody(server string, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "integrationId", integrationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/integrations/%s/choices", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchIntegrationConnectionsRequest calls the generic SearchIntegrationConnections builder with application/json body
+func NewSearchIntegrationConnectionsRequest(server string, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, body SearchIntegrationConnectionsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchIntegrationConnectionsRequestWithBody(server, integrationId, params, "application/json", bodyReader)
+}
+
+// NewSearchIntegrationConnectionsRequestWithBody constructs an http.Request for the SearchIntegrationConnections method, with any body, and a specified content type
+func NewSearchIntegrationConnectionsRequestWithBody(server string, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "integrationId", integrationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/integrations/%s/connections/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewDisconnectIntegrationRequest constructs an http.Request for the DisconnectIntegration method
+func NewDisconnectIntegrationRequest(server string, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *DisconnectIntegrationParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "integrationId", integrationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "environmentKey", environmentKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/integrations/%s/connections/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewConnectIntegrationRequest calls the generic ConnectIntegration builder with application/json body
+func NewConnectIntegrationRequest(server string, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, body ConnectIntegrationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConnectIntegrationRequestWithBody(server, integrationId, environmentKey, params, "application/json", bodyReader)
+}
+
+// NewConnectIntegrationRequestWithBody constructs an http.Request for the ConnectIntegration method, with any body, and a specified content type
+func NewConnectIntegrationRequestWithBody(server string, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "integrationId", integrationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "environmentKey", environmentKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/integrations/%s/connections/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchIntegrationItemsRequest calls the generic SearchIntegrationItems builder with application/json body
+func NewSearchIntegrationItemsRequest(server string, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, body SearchIntegrationItemsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchIntegrationItemsRequestWithBody(server, integrationId, params, "application/json", bodyReader)
+}
+
+// NewSearchIntegrationItemsRequestWithBody constructs an http.Request for the SearchIntegrationItems method, with any body, and a specified content type
+func NewSearchIntegrationItemsRequestWithBody(server string, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "integrationId", integrationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/integrations/%s/items/search", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
 // NewListOrganizationInvitationsRequest constructs an http.Request for the ListOrganizationInvitations method
 func NewListOrganizationInvitationsRequest(server string, params *ListOrganizationInvitationsParams) (*http.Request, error) {
 	var err error
@@ -28202,6 +29793,135 @@ func NewSearchWebhookRequestsRequestWithBody(server string, id WebhookIdParamete
 	return req, nil
 }
 
+// NewClearWebhookSignatureRequest constructs an http.Request for the ClearWebhookSignature method
+func NewClearWebhookSignatureRequest(server string, id WebhookIdParameter, params *ClearWebhookSignatureParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/webhooks/%s/signature", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewSetWebhookSignatureRequest calls the generic SetWebhookSignature builder with application/json body
+func NewSetWebhookSignatureRequest(server string, id WebhookIdParameter, params *SetWebhookSignatureParams, body SetWebhookSignatureJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetWebhookSignatureRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewSetWebhookSignatureRequestWithBody constructs an http.Request for the SetWebhookSignature method, with any body, and a specified content type
+func NewSetWebhookSignatureRequestWithBody(server string, id WebhookIdParameter, params *SetWebhookSignatureParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/webhooks/%s/signature", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
 // NewStreamWebhookRequestsRequest constructs an http.Request for the StreamWebhookRequests method
 func NewStreamWebhookRequestsRequest(server string, id WebhookIdParameter, params *StreamWebhookRequestsParams) (*http.Request, error) {
 	var err error
@@ -30202,6 +31922,114 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /init (the `InitUser` operationId).
 	InitUserWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*InitUserResponse, error)
 
+	// SearchIntegrationsWithBodyWithResponse Search Integrations
+	//
+	// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+	SearchIntegrationsWithBodyWithResponse(ctx context.Context, params *SearchIntegrationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchIntegrationsResponse, error)
+
+	// SearchIntegrationsWithResponse Search Integrations
+	//
+	// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+	SearchIntegrationsWithResponse(ctx context.Context, params *SearchIntegrationsParams, body SearchIntegrationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchIntegrationsResponse, error)
+
+	// GetIntegrationWithResponse Get Integration
+	//
+	// Returns one integration with its branding, guide, curated nodes and assertion presets.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /integrations/{integrationId} (the `GetIntegration` operationId).
+	GetIntegrationWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *GetIntegrationParams, reqEditors ...RequestEditorFn) (*GetIntegrationResponse, error)
+
+	// SetIntegrationChoicesWithBodyWithResponse Accept or Refuse Integration Items
+	//
+	// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+	SetIntegrationChoicesWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetIntegrationChoicesResponse, error)
+
+	// SetIntegrationChoicesWithResponse Accept or Refuse Integration Items
+	//
+	// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+	SetIntegrationChoicesWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, body SetIntegrationChoicesJSONRequestBody, reqEditors ...RequestEditorFn) (*SetIntegrationChoicesResponse, error)
+
+	// SearchIntegrationConnectionsWithBodyWithResponse Search Integration Connections
+	//
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+	SearchIntegrationConnectionsWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchIntegrationConnectionsResponse, error)
+
+	// SearchIntegrationConnectionsWithResponse Search Integration Connections
+	//
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+	SearchIntegrationConnectionsWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, body SearchIntegrationConnectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchIntegrationConnectionsResponse, error)
+
+	// DisconnectIntegrationWithResponse Disconnect an Integration
+	//
+	// Removes the connection of one environment, its capture webhook and, when the key still allows it, the endpoint registered with the vendor.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /integrations/{integrationId}/connections/{environmentKey} (the `DisconnectIntegration` operationId).
+	DisconnectIntegrationWithResponse(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *DisconnectIntegrationParams, reqEditors ...RequestEditorFn) (*DisconnectIntegrationResponse, error)
+
+	// ConnectIntegrationWithBodyWithResponse Connect an Integration
+	//
+	// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+	ConnectIntegrationWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConnectIntegrationResponse, error)
+
+	// ConnectIntegrationWithResponse Connect an Integration
+	//
+	// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+	ConnectIntegrationWithResponse(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, body ConnectIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*ConnectIntegrationResponse, error)
+
+	// SearchIntegrationItemsWithBodyWithResponse Search Integration Items
+	//
+	// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+	SearchIntegrationItemsWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchIntegrationItemsResponse, error)
+
+	// SearchIntegrationItemsWithResponse Search Integration Items
+	//
+	// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+	SearchIntegrationItemsWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, body SearchIntegrationItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchIntegrationItemsResponse, error)
+
 	// ListOrganizationInvitationsWithResponse Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
 	//
 	// Deprecated: use `searchOrganizationInvitations`, which pages with a
@@ -31003,34 +32831,46 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/claim (the `ClaimEphemeralJob` operationId).
 	ClaimEphemeralJobWithResponse(ctx context.Context, executionId openapi_types.UUID, params *ClaimEphemeralJobParams, body ClaimEphemeralJobJSONRequestBody, reqEditors ...RequestEditorFn) (*ClaimEphemeralJobResponse, error)
 
-	// CompleteEphemeralExecutionWithBodyWithResponse Complete an ephemeral execution
+	// CompleteEphemeralExecutionWithBodyWithResponse Complete a pre-Job ephemeral execution
 	//
-	// Reports the terminal result for an ephemeral execution produced by a caller-owned
-	// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-	// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-	// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-	// publication of the same payload is idempotent; a different payload for an already-terminal
-	// execution returns 409 Conflict. The response includes the terminal execution and node
-	// summaries so the CLI/action can report without an extra read.
+	// Reports the terminal result for an ephemeral execution that has no runner Job.
+	// Current launches create a one-shot Job, and an execution that has one is refused
+	// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+	// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+	// without a Job, created before Jobs existed, accepts its result here, keyed by
+	// execution and without a claim. Only valid for executions with
+	// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+	// publication of the same payload is idempotent; a different payload for an
+	// already-terminal execution returns 409 Conflict. The response includes the
+	// terminal execution and node summaries so the CLI/action can report without an
+	// extra read.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompleteEphemeralExecutionWithBodyWithResponse(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CompleteEphemeralExecutionResponse, error)
 
-	// CompleteEphemeralExecutionWithResponse Complete an ephemeral execution
+	// CompleteEphemeralExecutionWithResponse Complete a pre-Job ephemeral execution
 	//
-	// Reports the terminal result for an ephemeral execution produced by a caller-owned
-	// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-	// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-	// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-	// publication of the same payload is idempotent; a different payload for an already-terminal
-	// execution returns 409 Conflict. The response includes the terminal execution and node
-	// summaries so the CLI/action can report without an extra read.
+	// Reports the terminal result for an ephemeral execution that has no runner Job.
+	// Current launches create a one-shot Job, and an execution that has one is refused
+	// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+	// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+	// without a Job, created before Jobs existed, accepts its result here, keyed by
+	// execution and without a claim. Only valid for executions with
+	// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+	// publication of the same payload is idempotent; a different payload for an
+	// already-terminal execution returns 409 Conflict. The response includes the
+	// terminal execution and node summaries so the CLI/action can report without an
+	// extra read.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompleteEphemeralExecutionWithResponse(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, body CompleteEphemeralExecutionJSONRequestBody, reqEditors ...RequestEditorFn) (*CompleteEphemeralExecutionResponse, error)
 
 	// HeartbeatRunnerJobsWithBodyWithResponse Renew leases for active runner jobs
@@ -31581,6 +33421,33 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /webhooks/{id}/requests/search (the `SearchWebhookRequests` operationId).
 	SearchWebhookRequestsWithResponse(ctx context.Context, id WebhookIdParameter, params *SearchWebhookRequestsParams, body SearchWebhookRequestsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWebhookRequestsResponse, error)
+
+	// ClearWebhookSignatureWithResponse Remove Webhook Signature Verification
+	//
+	// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /webhooks/{id}/signature (the `ClearWebhookSignature` operationId).
+	ClearWebhookSignatureWithResponse(ctx context.Context, id WebhookIdParameter, params *ClearWebhookSignatureParams, reqEditors ...RequestEditorFn) (*ClearWebhookSignatureResponse, error)
+
+	// SetWebhookSignatureWithBodyWithResponse Set Webhook Signature Verification
+	//
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+	SetWebhookSignatureWithBodyWithResponse(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWebhookSignatureResponse, error)
+
+	// SetWebhookSignatureWithResponse Set Webhook Signature Verification
+	//
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+	SetWebhookSignatureWithResponse(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, body SetWebhookSignatureJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWebhookSignatureResponse, error)
 
 	// StreamWebhookRequestsWithResponse Stream Webhook Requests
 	//
@@ -37177,6 +39044,468 @@ func (r InitUserResponse) ContentType() string {
 	return ""
 }
 
+type SearchIntegrationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *IntegrationListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchIntegrationsResponse) GetJSON200() *IntegrationListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchIntegrationsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchIntegrationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchIntegrationsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchIntegrationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchIntegrationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchIntegrationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchIntegrationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetIntegrationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Integration
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetIntegrationResponse) GetJSON200() *Integration {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetIntegrationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetIntegrationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetIntegrationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetIntegrationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetIntegrationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetIntegrationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetIntegrationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetIntegrationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetIntegrationChoicesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetIntegrationChoicesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetIntegrationChoicesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetIntegrationChoicesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetIntegrationChoicesResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SetIntegrationChoicesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetIntegrationChoicesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetIntegrationChoicesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetIntegrationChoicesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchIntegrationConnectionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *IntegrationConnectionListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchIntegrationConnectionsResponse) GetJSON200() *IntegrationConnectionListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchIntegrationConnectionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchIntegrationConnectionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchIntegrationConnectionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchIntegrationConnectionsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchIntegrationConnectionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchIntegrationConnectionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchIntegrationConnectionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchIntegrationConnectionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DisconnectIntegrationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DisconnectIntegrationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DisconnectIntegrationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DisconnectIntegrationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DisconnectIntegrationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DisconnectIntegrationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DisconnectIntegrationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DisconnectIntegrationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DisconnectIntegrationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ConnectIntegrationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *IntegrationConnection
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ConnectIntegrationResponse) GetJSON200() *IntegrationConnection {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ConnectIntegrationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ConnectIntegrationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ConnectIntegrationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ConnectIntegrationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r ConnectIntegrationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ConnectIntegrationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConnectIntegrationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConnectIntegrationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchIntegrationItemsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *IntegrationItemListResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchIntegrationItemsResponse) GetJSON200() *IntegrationItemListResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchIntegrationItemsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchIntegrationItemsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchIntegrationItemsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchIntegrationItemsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchIntegrationItemsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchIntegrationItemsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchIntegrationItemsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchIntegrationItemsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListOrganizationInvitationsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -42750,6 +45079,144 @@ func (r SearchWebhookRequestsResponse) ContentType() string {
 	return ""
 }
 
+type ClearWebhookSignatureResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Webhook
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ClearWebhookSignatureResponse) GetJSON200() *Webhook {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ClearWebhookSignatureResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ClearWebhookSignatureResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ClearWebhookSignatureResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ClearWebhookSignatureResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r ClearWebhookSignatureResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ClearWebhookSignatureResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ClearWebhookSignatureResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ClearWebhookSignatureResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetWebhookSignatureResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Webhook
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetWebhookSignatureResponse) GetJSON200() *Webhook {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetWebhookSignatureResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetWebhookSignatureResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetWebhookSignatureResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetWebhookSignatureResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SetWebhookSignatureResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetWebhookSignatureResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetWebhookSignatureResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetWebhookSignatureResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type StreamWebhookRequestsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -45477,6 +47944,186 @@ func (c *ClientWithResponses) InitUserWithResponse(ctx context.Context, reqEdito
 	return ParseInitUserResponse(rsp)
 }
 
+// SearchIntegrationsWithBodyWithResponse Search Integrations
+//
+// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+func (c *ClientWithResponses) SearchIntegrationsWithBodyWithResponse(ctx context.Context, params *SearchIntegrationsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchIntegrationsResponse, error) {
+	rsp, err := c.SearchIntegrationsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchIntegrationsResponse(rsp)
+}
+
+// SearchIntegrationsWithResponse Search Integrations
+//
+// Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /integrations/search (the `SearchIntegrations` operationId).
+func (c *ClientWithResponses) SearchIntegrationsWithResponse(ctx context.Context, params *SearchIntegrationsParams, body SearchIntegrationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchIntegrationsResponse, error) {
+	rsp, err := c.SearchIntegrations(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchIntegrationsResponse(rsp)
+}
+
+// GetIntegrationWithResponse Get Integration
+//
+// Returns one integration with its branding, guide, curated nodes and assertion presets.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /integrations/{integrationId} (the `GetIntegration` operationId).
+func (c *ClientWithResponses) GetIntegrationWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *GetIntegrationParams, reqEditors ...RequestEditorFn) (*GetIntegrationResponse, error) {
+	rsp, err := c.GetIntegration(ctx, integrationId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetIntegrationResponse(rsp)
+}
+
+// SetIntegrationChoicesWithBodyWithResponse Accept or Refuse Integration Items
+//
+// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+func (c *ClientWithResponses) SetIntegrationChoicesWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetIntegrationChoicesResponse, error) {
+	rsp, err := c.SetIntegrationChoicesWithBody(ctx, integrationId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetIntegrationChoicesResponse(rsp)
+}
+
+// SetIntegrationChoicesWithResponse Accept or Refuse Integration Items
+//
+// Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /integrations/{integrationId}/choices (the `SetIntegrationChoices` operationId).
+func (c *ClientWithResponses) SetIntegrationChoicesWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SetIntegrationChoicesParams, body SetIntegrationChoicesJSONRequestBody, reqEditors ...RequestEditorFn) (*SetIntegrationChoicesResponse, error) {
+	rsp, err := c.SetIntegrationChoices(ctx, integrationId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetIntegrationChoicesResponse(rsp)
+}
+
+// SearchIntegrationConnectionsWithBodyWithResponse Search Integration Connections
+//
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+func (c *ClientWithResponses) SearchIntegrationConnectionsWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchIntegrationConnectionsResponse, error) {
+	rsp, err := c.SearchIntegrationConnectionsWithBody(ctx, integrationId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchIntegrationConnectionsResponse(rsp)
+}
+
+// SearchIntegrationConnectionsWithResponse Search Integration Connections
+//
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /integrations/{integrationId}/connections/search (the `SearchIntegrationConnections` operationId).
+func (c *ClientWithResponses) SearchIntegrationConnectionsWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationConnectionsParams, body SearchIntegrationConnectionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchIntegrationConnectionsResponse, error) {
+	rsp, err := c.SearchIntegrationConnections(ctx, integrationId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchIntegrationConnectionsResponse(rsp)
+}
+
+// DisconnectIntegrationWithResponse Disconnect an Integration
+//
+// Removes the connection of one environment, its capture webhook and, when the key still allows it, the endpoint registered with the vendor.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /integrations/{integrationId}/connections/{environmentKey} (the `DisconnectIntegration` operationId).
+func (c *ClientWithResponses) DisconnectIntegrationWithResponse(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *DisconnectIntegrationParams, reqEditors ...RequestEditorFn) (*DisconnectIntegrationResponse, error) {
+	rsp, err := c.DisconnectIntegration(ctx, integrationId, environmentKey, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDisconnectIntegrationResponse(rsp)
+}
+
+// ConnectIntegrationWithBodyWithResponse Connect an Integration
+//
+// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+func (c *ClientWithResponses) ConnectIntegrationWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConnectIntegrationResponse, error) {
+	rsp, err := c.ConnectIntegrationWithBody(ctx, integrationId, environmentKey, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConnectIntegrationResponse(rsp)
+}
+
+// ConnectIntegrationWithResponse Connect an Integration
+//
+// Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /integrations/{integrationId}/connections/{environmentKey} (the `ConnectIntegration` operationId).
+func (c *ClientWithResponses) ConnectIntegrationWithResponse(ctx context.Context, integrationId IntegrationIdParameter, environmentKey IntegrationEnvironmentKeyParameter, params *ConnectIntegrationParams, body ConnectIntegrationJSONRequestBody, reqEditors ...RequestEditorFn) (*ConnectIntegrationResponse, error) {
+	rsp, err := c.ConnectIntegration(ctx, integrationId, environmentKey, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConnectIntegrationResponse(rsp)
+}
+
+// SearchIntegrationItemsWithBodyWithResponse Search Integration Items
+//
+// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+func (c *ClientWithResponses) SearchIntegrationItemsWithBodyWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchIntegrationItemsResponse, error) {
+	rsp, err := c.SearchIntegrationItemsWithBody(ctx, integrationId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchIntegrationItemsResponse(rsp)
+}
+
+// SearchIntegrationItemsWithResponse Search Integration Items
+//
+// Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /integrations/{integrationId}/items/search (the `SearchIntegrationItems` operationId).
+func (c *ClientWithResponses) SearchIntegrationItemsWithResponse(ctx context.Context, integrationId IntegrationIdParameter, params *SearchIntegrationItemsParams, body SearchIntegrationItemsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchIntegrationItemsResponse, error) {
+	rsp, err := c.SearchIntegrationItems(ctx, integrationId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchIntegrationItemsResponse(rsp)
+}
+
 // ListOrganizationInvitationsWithResponse Deprecated: use search_organization_invitations instead, which pages with a cursor. List Pending Organization Invitations
 //
 // Deprecated: use `searchOrganizationInvitations`, which pages with a
@@ -46692,19 +49339,25 @@ func (c *ClientWithResponses) ClaimEphemeralJobWithResponse(ctx context.Context,
 	return ParseClaimEphemeralJobResponse(rsp)
 }
 
-// CompleteEphemeralExecutionWithBodyWithResponse Complete an ephemeral execution
+// CompleteEphemeralExecutionWithBodyWithResponse Complete a pre-Job ephemeral execution
 //
-// Reports the terminal result for an ephemeral execution produced by a caller-owned
-// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-// publication of the same payload is idempotent; a different payload for an already-terminal
-// execution returns 409 Conflict. The response includes the terminal execution and node
-// summaries so the CLI/action can report without an extra read.
+// Reports the terminal result for an ephemeral execution that has no runner Job.
+// Current launches create a one-shot Job, and an execution that has one is refused
+// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+// without a Job, created before Jobs existed, accepts its result here, keyed by
+// execution and without a claim. Only valid for executions with
+// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+// publication of the same payload is idempotent; a different payload for an
+// already-terminal execution returns 409 Conflict. The response includes the
+// terminal execution and node summaries so the CLI/action can report without an
+// extra read.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) CompleteEphemeralExecutionWithBodyWithResponse(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CompleteEphemeralExecutionResponse, error) {
 	rsp, err := c.CompleteEphemeralExecutionWithBody(ctx, executionId, params, contentType, body, reqEditors...)
 	if err != nil {
@@ -46713,19 +49366,24 @@ func (c *ClientWithResponses) CompleteEphemeralExecutionWithBodyWithResponse(ctx
 	return ParseCompleteEphemeralExecutionResponse(rsp)
 }
 
-// CompleteEphemeralExecutionWithResponse Complete an ephemeral execution
+// CompleteEphemeralExecutionWithResponse Complete a pre-Job ephemeral execution
 //
-// Reports the terminal result for an ephemeral execution produced by a caller-owned
-// runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-// and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-// with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-// publication of the same payload is idempotent; a different payload for an already-terminal
-// execution returns 409 Conflict. The response includes the terminal execution and node
-// summaries so the CLI/action can report without an extra read.
+// Reports the terminal result for an ephemeral execution that has no runner Job.
+// Current launches create a one-shot Job, and an execution that has one is refused
+// with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+// POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+// without a Job, created before Jobs existed, accepts its result here, keyed by
+// execution and without a claim. Only valid for executions with
+// `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+// publication of the same payload is idempotent; a different payload for an
+// already-terminal execution returns 409 Conflict. The response includes the
+// terminal execution and node summaries so the CLI/action can report without an
+// extra read.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /runner/ephemeral/executions/{executionId}/complete (the `CompleteEphemeralExecution` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) CompleteEphemeralExecutionWithResponse(ctx context.Context, executionId openapi_types.UUID, params *CompleteEphemeralExecutionParams, body CompleteEphemeralExecutionJSONRequestBody, reqEditors ...RequestEditorFn) (*CompleteEphemeralExecutionResponse, error) {
 	rsp, err := c.CompleteEphemeralExecution(ctx, executionId, params, body, reqEditors...)
 	if err != nil {
@@ -47575,6 +50233,51 @@ func (c *ClientWithResponses) SearchWebhookRequestsWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseSearchWebhookRequestsResponse(rsp)
+}
+
+// ClearWebhookSignatureWithResponse Remove Webhook Signature Verification
+//
+// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /webhooks/{id}/signature (the `ClearWebhookSignature` operationId).
+func (c *ClientWithResponses) ClearWebhookSignatureWithResponse(ctx context.Context, id WebhookIdParameter, params *ClearWebhookSignatureParams, reqEditors ...RequestEditorFn) (*ClearWebhookSignatureResponse, error) {
+	rsp, err := c.ClearWebhookSignature(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseClearWebhookSignatureResponse(rsp)
+}
+
+// SetWebhookSignatureWithBodyWithResponse Set Webhook Signature Verification
+//
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+func (c *ClientWithResponses) SetWebhookSignatureWithBodyWithResponse(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWebhookSignatureResponse, error) {
+	rsp, err := c.SetWebhookSignatureWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWebhookSignatureResponse(rsp)
+}
+
+// SetWebhookSignatureWithResponse Set Webhook Signature Verification
+//
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /webhooks/{id}/signature (the `SetWebhookSignature` operationId).
+func (c *ClientWithResponses) SetWebhookSignatureWithResponse(ctx context.Context, id WebhookIdParameter, params *SetWebhookSignatureParams, body SetWebhookSignatureJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWebhookSignatureResponse, error) {
+	rsp, err := c.SetWebhookSignature(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWebhookSignatureResponse(rsp)
 }
 
 // StreamWebhookRequestsWithResponse Stream Webhook Requests
@@ -52136,6 +54839,369 @@ func ParseInitUserResponse(rsp *http.Response) (*InitUserResponse, error) {
 	return response, nil
 }
 
+// ParseSearchIntegrationsResponse parses an HTTP response from a SearchIntegrationsWithResponse call
+func ParseSearchIntegrationsResponse(rsp *http.Response) (*SearchIntegrationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchIntegrationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest IntegrationListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetIntegrationResponse parses an HTTP response from a GetIntegrationWithResponse call
+func ParseGetIntegrationResponse(rsp *http.Response) (*GetIntegrationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetIntegrationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Integration
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetIntegrationChoicesResponse parses an HTTP response from a SetIntegrationChoicesWithResponse call
+func ParseSetIntegrationChoicesResponse(rsp *http.Response) (*SetIntegrationChoicesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetIntegrationChoicesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchIntegrationConnectionsResponse parses an HTTP response from a SearchIntegrationConnectionsWithResponse call
+func ParseSearchIntegrationConnectionsResponse(rsp *http.Response) (*SearchIntegrationConnectionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchIntegrationConnectionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest IntegrationConnectionListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDisconnectIntegrationResponse parses an HTTP response from a DisconnectIntegrationWithResponse call
+func ParseDisconnectIntegrationResponse(rsp *http.Response) (*DisconnectIntegrationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DisconnectIntegrationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConnectIntegrationResponse parses an HTTP response from a ConnectIntegrationWithResponse call
+func ParseConnectIntegrationResponse(rsp *http.Response) (*ConnectIntegrationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConnectIntegrationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest IntegrationConnection
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchIntegrationItemsResponse parses an HTTP response from a SearchIntegrationItemsWithResponse call
+func ParseSearchIntegrationItemsResponse(rsp *http.Response) (*SearchIntegrationItemsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchIntegrationItemsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest IntegrationItemListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListOrganizationInvitationsResponse parses an HTTP response from a ListOrganizationInvitationsWithResponse call
 func ParseListOrganizationInvitationsResponse(rsp *http.Response) (*ListOrganizationInvitationsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -56489,6 +59555,114 @@ func ParseSearchWebhookRequestsResponse(rsp *http.Response) (*SearchWebhookReque
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseClearWebhookSignatureResponse parses an HTTP response from a ClearWebhookSignatureWithResponse call
+func ParseClearWebhookSignatureResponse(rsp *http.Response) (*ClearWebhookSignatureResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ClearWebhookSignatureResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Webhook
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetWebhookSignatureResponse parses an HTTP response from a SetWebhookSignatureWithResponse call
+func ParseSetWebhookSignatureResponse(rsp *http.Response) (*SetWebhookSignatureResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetWebhookSignatureResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Webhook
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
 		var dest Forbidden

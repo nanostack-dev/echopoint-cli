@@ -576,6 +576,25 @@ it also measures health, and a status page binds it with `monitor_bindings`. See
 `status-page binding-options` is removed. Use this CLI only with an API that serves
 11.0.0.
 
+### Integrations
+
+```bash
+echopoint integration list
+echopoint integration view stripe
+echopoint integration items stripe --kind operation --area billing --search invoice
+echopoint integration refuse stripe operation:customer.delete event:charge.dispute.created
+echopoint integration accept stripe operation:customer.delete
+echopoint integration connections stripe
+echopoint integration connect stripe --env dev < stripe-test-key.txt
+echopoint integration disconnect stripe --env dev --yes
+```
+
+An integration ships reviewed operations, which become request nodes, and events,
+which become expected webhook events. A workspace accepts every item until it
+refuses one. `connect` reads a restricted test key from standard input, refuses a
+live key, checks it with the vendor and registers a signed capture webhook. Using
+an integration's nodes needs it in the organization's plan.
+
 ### Status Pages
 
 ```bash
