@@ -166,28 +166,59 @@ func validateIntegrationNode(n flatNode, catalog integrationCatalog) []string {
 			}
 		}
 	}
+	_, itemProblems := checkCatalogItem(ref, catalog, mcpHints)
+	for _, p := range itemProblems {
+		add("%s", p)
+	}
+	return problems
+}
+
+// itemHints name the tools that fix a catalog problem, which differ between
+// the MCP server and the CLI.
+type itemHints struct {
+	integrations string
+	items        string
+	accept       string
+}
+
+var mcpHints = itemHints{
+	integrations: "see search_integrations",
+	items:        "see search_integration_items",
+	accept:       "accept it with set_integration_choices",
+}
+
+// checkCatalogItem finds the node's item in the workspace catalog and checks
+// that the workspace offers it and that it takes the node's inputs.
+func checkCatalogItem(ref flatIntegration, catalog integrationCatalog, hints itemHints) (catalogItem, []string) {
+	var problems []string
 	items, known := catalog[ref.ID]
 	if !known || items == nil {
-		add("integration %q does not exist (see search_integrations)", ref.ID)
-		return problems
+		return catalogItem{}, []string{fmt.Sprintf("integration %q does not exist (%s)", ref.ID, hints.integrations)}
 	}
 	item, ok := catalog.item(ref)
 	if !ok {
 		key := ref.Operation + ref.Event
-		add("integration %q has no %s %q (see search_integration_items)", ref.ID, itemKind(ref), key)
-		return problems
+		return catalogItem{}, []string{
+			fmt.Sprintf("integration %q has no %s %q (%s)", ref.ID, itemKind(ref), key, hints.items),
+		}
 	}
 	if item.Choice == choiceRefused {
-		add("%s %q is refused in this workspace: accept it with set_integration_choices", itemKind(ref), item.Key)
+		problems = append(problems,
+			fmt.Sprintf("%s %q is refused in this workspace: %s", itemKind(ref), item.Key, hints.accept))
 	}
 	if item.Operation != nil {
+		names := make([]string, 0, len(ref.Inputs))
 		for name := range ref.Inputs {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
 			if !slices.Contains(item.Operation.Params, catalogName{Name: name}) {
-				add("%s takes no input %q", item.Key, name)
+				problems = append(problems, fmt.Sprintf("%s takes no input %q", item.Key, name))
 			}
 		}
 	}
-	return problems
+	return item, problems
 }
 
 func itemKind(ref flatIntegration) string {
