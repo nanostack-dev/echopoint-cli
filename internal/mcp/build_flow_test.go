@@ -125,7 +125,7 @@ func TestValidateFlatFlow(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			problems := validateFlatFlow(tt.flow)
+			problems := validateFlatFlow(tt.flow, nil)
 			if tt.wantOK {
 				if len(problems) != 0 {
 					t.Fatalf("expected no problems, got: %v", problems)
@@ -158,7 +158,7 @@ func TestBuildFlowDoc(t *testing.T) {
 		Edges: []string{"setup>call", "call>cleanup"},
 	}
 
-	doc := buildFlowDoc(flow)
+	doc := buildFlowDoc(flow, nil)
 
 	// Round-trip through JSON to assert the wire shape the backend expects.
 	raw, _ := json.Marshal(doc)
@@ -238,7 +238,7 @@ func TestBuildFlowDocMarksOnlyTheNamedOutputsSecret(t *testing.T) {
 		{ID: "login", Method: "POST", URL: "{{base}}/login",
 			Outputs:       map[string]string{"jwt": "$.jwt", "userId": "$.user.id"},
 			SecretOutputs: []string{"jwt"}},
-	}})
+	}}, nil)
 
 	raw, _ := json.Marshal(doc)
 	var got struct {
