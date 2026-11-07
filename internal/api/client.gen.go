@@ -670,6 +670,30 @@ func (e IntegrationChoice) Valid() bool {
 	}
 }
 
+// Defines values for IntegrationConnectionFormRegistration.
+const (
+	IntegrationConnectionFormRegistrationApi      IntegrationConnectionFormRegistration = "api"
+	IntegrationConnectionFormRegistrationCallback IntegrationConnectionFormRegistration = "callback"
+	IntegrationConnectionFormRegistrationManual   IntegrationConnectionFormRegistration = "manual"
+	IntegrationConnectionFormRegistrationNone     IntegrationConnectionFormRegistration = "none"
+)
+
+// Valid indicates whether the value is a known member of the IntegrationConnectionFormRegistration enum.
+func (e IntegrationConnectionFormRegistration) Valid() bool {
+	switch e {
+	case IntegrationConnectionFormRegistrationApi:
+		return true
+	case IntegrationConnectionFormRegistrationCallback:
+		return true
+	case IntegrationConnectionFormRegistrationManual:
+		return true
+	case IntegrationConnectionFormRegistrationNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IntegrationEventFormat.
 const (
 	Snapshot IntegrationEventFormat = "snapshot"
@@ -2121,16 +2145,22 @@ func (e WebhookRequestSearchRequestSortBy) Valid() bool {
 
 // Defines values for WebhookSignatureScheme.
 const (
+	HmacSha256       WebhookSignatureScheme = "hmac_sha256"
 	StandardWebhooks WebhookSignatureScheme = "standard_webhooks"
 	Stripe           WebhookSignatureScheme = "stripe"
+	Twilio           WebhookSignatureScheme = "twilio"
 )
 
 // Valid indicates whether the value is a known member of the WebhookSignatureScheme enum.
 func (e WebhookSignatureScheme) Valid() bool {
 	switch e {
+	case HmacSha256:
+		return true
 	case StandardWebhooks:
 		return true
 	case Stripe:
+		return true
+	case Twilio:
 		return true
 	default:
 		return false
@@ -4473,9 +4503,12 @@ type Integration struct {
 	BaseUrl    string `json:"base_url"`
 
 	// Branding The design system of the integration's vendor, applied to its nodes.
-	Branding IntegrationBranding      `json:"branding"`
-	Curated  []IntegrationCuratedNode `json:"curated"`
-	DocsUrl  string                   `json:"docs_url"`
+	Branding IntegrationBranding `json:"branding"`
+
+	// Connection What connecting the integration asks for, and how its events reach Echopoint.
+	Connection IntegrationConnectionForm `json:"connection"`
+	Curated    []IntegrationCuratedNode  `json:"curated"`
+	DocsUrl    string                    `json:"docs_url"`
 
 	// EventCount Reviewed events Echopoint offers.
 	EventCount int `json:"event_count"`
@@ -4550,8 +4583,11 @@ type IntegrationChoicesRequest struct {
 	Items []IntegrationChoiceInput `json:"items"`
 }
 
-// IntegrationConnectRequest defines model for IntegrationConnectRequest.
+// IntegrationConnectRequest The values of the integration's connection fields. `secret_key` alone is the shorthand for an integration whose only field is `secret_key`.
 type IntegrationConnectRequest struct {
+	// Credentials The connection fields' values by name. Secret values are write-only.
+	Credentials *map[string]string `json:"credentials,omitempty"`
+
 	// SecretKey A restricted test key, such as Stripe's `rk_test_…`. Live keys are refused. Write-only.
 	SecretKey *string `json:"secret_key,omitempty"`
 }
@@ -4573,9 +4609,41 @@ type IntegrationConnection struct {
 	// KeyHint The key's prefix and last four characters, such as `rk_test_…a1B2`.
 	KeyHint string `json:"key_hint"`
 
+	// Settings The connection fields that are not secret, such as Twilio's account SID.
+	Settings *map[string]string `json:"settings,omitempty"`
+
 	// Signed Whether the capture webhook checks the vendor's signature.
 	Signed bool `json:"signed"`
 }
+
+// IntegrationConnectionField One value a member gives when connecting.
+type IntegrationConnectionField struct {
+	Help        *string `json:"help,omitempty"`
+	Label       string  `json:"label"`
+	Name        string  `json:"name"`
+	Optional    bool    `json:"optional"`
+	Placeholder *string `json:"placeholder,omitempty"`
+
+	// Secret Secret values are encrypted and never shown back.
+	Secret bool `json:"secret"`
+}
+
+// IntegrationConnectionForm What connecting the integration asks for, and how its events reach Echopoint.
+type IntegrationConnectionForm struct {
+	Fields []IntegrationConnectionField `json:"fields"`
+
+	// Instructions For `manual` registration, how to add the endpoint in the vendor's dashboard. `{{webhook_url}}` stands for the capture webhook's URL.
+	Instructions *string `json:"instructions,omitempty"`
+
+	// Registration How the vendor learns the capture webhook's URL. `api` registers it, `manual` asks the member to add it in the vendor's dashboard, `callback` sends it with each request, `none` means the vendor sends no events.
+	Registration IntegrationConnectionFormRegistration `json:"registration"`
+
+	// Signed Whether the vendor signs its deliveries, so expected events count only signed ones.
+	Signed bool `json:"signed"`
+}
+
+// IntegrationConnectionFormRegistration How the vendor learns the capture webhook's URL. `api` registers it, `manual` asks the member to add it in the vendor's dashboard, `callback` sends it with each request, `none` means the vendor sends no events.
+type IntegrationConnectionFormRegistration string
 
 // IntegrationConnectionListResponse defines model for IntegrationConnectionListResponse.
 type IntegrationConnectionListResponse struct {
@@ -7905,20 +7973,20 @@ type WebhookSearchRequest struct {
 
 // WebhookSignature defines model for WebhookSignature.
 type WebhookSignature struct {
-	// Scheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`.
+	// Scheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`; `hmac_sha256` reads a `sha256=` HMAC of the body, such as GitHub's `X-Hub-Signature-256`; `twilio` reads `X-Twilio-Signature`, an HMAC-SHA1 of the URL and the form params.
 	Scheme WebhookSignatureScheme `json:"scheme"`
 }
 
 // WebhookSignatureInput defines model for WebhookSignatureInput.
 type WebhookSignatureInput struct {
-	// Scheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`.
+	// Scheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`; `hmac_sha256` reads a `sha256=` HMAC of the body, such as GitHub's `X-Hub-Signature-256`; `twilio` reads `X-Twilio-Signature`, an HMAC-SHA1 of the URL and the form params.
 	Scheme WebhookSignatureScheme `json:"scheme"`
 
 	// Secret The signing secret, such as Stripe's `whsec_…` endpoint secret. Write-only.
 	Secret *string `json:"secret,omitempty"`
 }
 
-// WebhookSignatureScheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`.
+// WebhookSignatureScheme How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`; `hmac_sha256` reads a `sha256=` HMAC of the body, such as GitHub's `X-Hub-Signature-256`; `twilio` reads `X-Twilio-Signature`, an HMAC-SHA1 of the URL and the form params.
 type WebhookSignatureScheme string
 
 // WebhookSignatureStatus The outcome of checking one delivery's signature. `unchecked` when the webhook had no signing secret; `missing` without a signature header; `expired` when signed more than five minutes from its arrival.
@@ -11730,6 +11798,7 @@ type ClientInterface interface {
 	// CreateFlowWithBody Create Flow
 	//
 	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11739,6 +11808,7 @@ type ClientInterface interface {
 	// CreateFlow Create Flow
 	//
 	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -11984,6 +12054,7 @@ type ClientInterface interface {
 	// UpdateFlowWithBody Update Flow
 	//
 	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11993,6 +12064,7 @@ type ClientInterface interface {
 	// UpdateFlow Update Flow
 	//
 	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13532,7 +13604,7 @@ type ClientInterface interface {
 
 	// DeleteWebhook Delete Webhook Endpoint
 	//
-	// Deletes a webhook endpoint. This is a destructive operation.
+	// Deletes a webhook endpoint. This is a destructive operation. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; disconnect the integration instead.
 	//
 	// Corresponds with DELETE /webhooks/{id} (the `DeleteWebhook` operationId).
 	DeleteWebhook(ctx context.Context, id WebhookIdParameter, params *DeleteWebhookParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -13578,14 +13650,14 @@ type ClientInterface interface {
 
 	// ClearWebhookSignature Remove Webhook Signature Verification
 	//
-	// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+	// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`.
 	//
 	// Corresponds with DELETE /webhooks/{id}/signature (the `ClearWebhookSignature` operationId).
 	ClearWebhookSignature(ctx context.Context, id WebhookIdParameter, params *ClearWebhookSignatureParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SetWebhookSignatureWithBody Set Webhook Signature Verification
 	//
-	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13594,7 +13666,7 @@ type ClientInterface interface {
 
 	// SetWebhookSignature Set Webhook Signature Verification
 	//
-	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -15042,6 +15114,7 @@ func (c *Client) ListFlows(ctx context.Context, params *ListFlowsParams, reqEdit
 // CreateFlowWithBody Create Flow
 //
 // Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15061,6 +15134,7 @@ func (c *Client) CreateFlowWithBody(ctx context.Context, params *CreateFlowParam
 // CreateFlow Create Flow
 //
 // Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -15594,6 +15668,7 @@ func (c *Client) GetFlow(ctx context.Context, id openapi_types.UUID, params *Get
 // UpdateFlowWithBody Update Flow
 //
 // Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15613,6 +15688,7 @@ func (c *Client) UpdateFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 // UpdateFlow Update Flow
 //
 // Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -18569,7 +18645,7 @@ func (c *Client) SearchWebhooks(ctx context.Context, params *SearchWebhooksParam
 
 // DeleteWebhook Delete Webhook Endpoint
 //
-// Deletes a webhook endpoint. This is a destructive operation.
+// Deletes a webhook endpoint. This is a destructive operation. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; disconnect the integration instead.
 //
 // Corresponds with DELETE /webhooks/{id} (the `DeleteWebhook` operationId).
 func (c *Client) DeleteWebhook(ctx context.Context, id WebhookIdParameter, params *DeleteWebhookParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -18675,7 +18751,7 @@ func (c *Client) SearchWebhookRequests(ctx context.Context, id WebhookIdParamete
 
 // ClearWebhookSignature Remove Webhook Signature Verification
 //
-// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`.
 //
 // Corresponds with DELETE /webhooks/{id}/signature (the `ClearWebhookSignature` operationId).
 func (c *Client) ClearWebhookSignature(ctx context.Context, id WebhookIdParameter, params *ClearWebhookSignatureParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -18692,7 +18768,7 @@ func (c *Client) ClearWebhookSignature(ctx context.Context, id WebhookIdParamete
 
 // SetWebhookSignatureWithBody Set Webhook Signature Verification
 //
-// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 //
 // Takes any type of body and a specified content type.
 //
@@ -18711,7 +18787,7 @@ func (c *Client) SetWebhookSignatureWithBody(ctx context.Context, id WebhookIdPa
 
 // SetWebhookSignature Set Webhook Signature Verification
 //
-// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -31442,6 +31518,7 @@ type ClientWithResponsesInterface interface {
 	// CreateFlowWithBodyWithResponse Create Flow
 	//
 	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -31451,6 +31528,7 @@ type ClientWithResponsesInterface interface {
 	// CreateFlowWithResponse Create Flow
 	//
 	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -31716,6 +31794,7 @@ type ClientWithResponsesInterface interface {
 	// UpdateFlowWithBodyWithResponse Update Flow
 	//
 	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -31725,6 +31804,7 @@ type ClientWithResponsesInterface interface {
 	// UpdateFlowWithResponse Update Flow
 	//
 	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33370,7 +33450,7 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteWebhookWithResponse Delete Webhook Endpoint
 	//
-	// Deletes a webhook endpoint. This is a destructive operation.
+	// Deletes a webhook endpoint. This is a destructive operation. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; disconnect the integration instead.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33424,7 +33504,7 @@ type ClientWithResponsesInterface interface {
 
 	// ClearWebhookSignatureWithResponse Remove Webhook Signature Verification
 	//
-	// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+	// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33433,7 +33513,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetWebhookSignatureWithBodyWithResponse Set Webhook Signature Verification
 	//
-	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33442,7 +33522,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetWebhookSignatureWithResponse Set Webhook Signature Verification
 	//
-	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+	// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -44766,6 +44846,8 @@ type DeleteWebhookResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON400 returns the response for an HTTP 400 `application/json` response
@@ -44786,6 +44868,11 @@ func (r DeleteWebhookResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r DeleteWebhookResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteWebhookResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -45092,6 +45179,8 @@ type ClearWebhookSignatureResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -45117,6 +45206,11 @@ func (r ClearWebhookSignatureResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ClearWebhookSignatureResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r ClearWebhookSignatureResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -45161,6 +45255,8 @@ type SetWebhookSignatureResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -45186,6 +45282,11 @@ func (r SetWebhookSignatureResponse) GetJSON403() *Forbidden {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r SetWebhookSignatureResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r SetWebhookSignatureResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -47176,6 +47277,7 @@ func (c *ClientWithResponses) ListFlowsWithResponse(ctx context.Context, params 
 // CreateFlowWithBodyWithResponse Create Flow
 //
 // Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -47191,6 +47293,7 @@ func (c *ClientWithResponses) CreateFlowWithBodyWithResponse(ctx context.Context
 // CreateFlowWithResponse Create Flow
 //
 // Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -47630,6 +47733,7 @@ func (c *ClientWithResponses) GetFlowWithResponse(ctx context.Context, id openap
 // UpdateFlowWithBodyWithResponse Update Flow
 //
 // Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -47645,6 +47749,7 @@ func (c *ClientWithResponses) UpdateFlowWithBodyWithResponse(ctx context.Context
 // UpdateFlowWithResponse Update Flow
 //
 // Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -50147,7 +50252,7 @@ func (c *ClientWithResponses) SearchWebhooksWithResponse(ctx context.Context, pa
 
 // DeleteWebhookWithResponse Delete Webhook Endpoint
 //
-// Deletes a webhook endpoint. This is a destructive operation.
+// Deletes a webhook endpoint. This is a destructive operation. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; disconnect the integration instead.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -50237,7 +50342,7 @@ func (c *ClientWithResponses) SearchWebhookRequestsWithResponse(ctx context.Cont
 
 // ClearWebhookSignatureWithResponse Remove Webhook Signature Verification
 //
-// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+// Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -50252,7 +50357,7 @@ func (c *ClientWithResponses) ClearWebhookSignatureWithResponse(ctx context.Cont
 
 // SetWebhookSignatureWithBodyWithResponse Set Webhook Signature Verification
 //
-// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -50267,7 +50372,7 @@ func (c *ClientWithResponses) SetWebhookSignatureWithBodyWithResponse(ctx contex
 
 // SetWebhookSignatureWithResponse Set Webhook Signature Verification
 //
-// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+// Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -59368,6 +59473,13 @@ func ParseDeleteWebhookResponse(rsp *http.Response) (*DeleteWebhookResponse, err
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -59624,6 +59736,13 @@ func ParseClearWebhookSignatureResponse(rsp *http.Response) (*ClearWebhookSignat
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -59677,6 +59796,13 @@ func ParseSetWebhookSignatureResponse(rsp *http.Response) (*SetWebhookSignatureR
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 

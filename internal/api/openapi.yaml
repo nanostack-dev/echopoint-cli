@@ -110,7 +110,7 @@ paths:
       tags:
         - Webhook
       summary: Delete Webhook Endpoint
-      description: Deletes a webhook endpoint. This is a destructive operation.
+      description: Deletes a webhook endpoint. This is a destructive operation. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; disconnect the integration instead.
       operationId: deleteWebhook
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -125,6 +125,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
             - workspace.webhooks:delete
@@ -566,7 +568,7 @@ paths:
       tags:
         - Webhook
       summary: Set Webhook Signature Verification
-      description: Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission.
+      description: Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
       operationId: setWebhookSignature
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -592,6 +594,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
             - workspace.webhooks:create
@@ -602,7 +606,7 @@ paths:
       tags:
         - Webhook
       summary: Remove Webhook Signature Verification
-      description: Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`.
+      description: Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`.
       operationId: clearWebhookSignature
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -621,6 +625,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
             - workspace.webhooks:create
@@ -1410,6 +1416,7 @@ paths:
       summary: Create Flow
       description: |
         Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+        A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
       operationId: createFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -1925,6 +1932,7 @@ paths:
       summary: Update Flow
       description: |
         Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+        Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
       operationId: updateFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -8016,10 +8024,13 @@ components:
             - base_url
             - curated
             - presets
+            - connection
           properties:
             guide:
               description: The integration's guide, in Markdown, kept by the reviewing agent.
               type: string
+            connection:
+              $ref: '#/components/schemas/IntegrationConnectionForm'
             base_url:
               type: string
             curated:
@@ -8304,11 +8315,66 @@ components:
           type: string
         choice:
           $ref: '#/components/schemas/IntegrationChoice'
-    IntegrationConnectRequest:
+    IntegrationConnectionForm:
+      description: What connecting the integration asks for, and how its events reach Echopoint.
       type: object
       required:
-        - secret_key
+        - fields
+        - registration
+        - signed
       properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationConnectionField'
+        registration:
+          description: How the vendor learns the capture webhook's URL. `api` registers it, `manual` asks the member to add it in the vendor's dashboard, `callback` sends it with each request, `none` means the vendor sends no events.
+          type: string
+          enum:
+            - api
+            - manual
+            - callback
+            - none
+        instructions:
+          description: For `manual` registration, how to add the endpoint in the vendor's dashboard. `{{webhook_url}}` stands for the capture webhook's URL.
+          type: string
+        signed:
+          description: Whether the vendor signs its deliveries, so expected events count only signed ones.
+          type: boolean
+    IntegrationConnectionField:
+      description: One value a member gives when connecting.
+      type: object
+      required:
+        - name
+        - label
+        - secret
+        - optional
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        secret:
+          description: Secret values are encrypted and never shown back.
+          type: boolean
+        optional:
+          type: boolean
+        placeholder:
+          type: string
+        help:
+          type: string
+    IntegrationConnectRequest:
+      description: The values of the integration's connection fields. `secret_key` alone is the shorthand for an integration whose only field is `secret_key`.
+      type: object
+      properties:
+        credentials:
+          description: The connection fields' values by name. Secret values are write-only.
+          type: object
+          maxProperties: 10
+          additionalProperties:
+            type: string
+            maxLength: 4096
+          writeOnly: true
         secret_key:
           description: A restricted test key, such as Stripe's `rk_test_…`. Live keys are refused. Write-only.
           type: string
@@ -8356,6 +8422,11 @@ components:
         key_hint:
           description: The key's prefix and last four characters, such as `rk_test_…a1B2`.
           type: string
+        settings:
+          description: The connection fields that are not secret, such as Twilio's account SID.
+          type: object
+          additionalProperties:
+            type: string
         account_id:
           type: string
         account_name:
@@ -8388,11 +8459,13 @@ components:
               items:
                 $ref: '#/components/schemas/IntegrationConnection'
     WebhookSignatureScheme:
-      description: How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`.
+      description: How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`; `hmac_sha256` reads a `sha256=` HMAC of the body, such as GitHub's `X-Hub-Signature-256`; `twilio` reads `X-Twilio-Signature`, an HMAC-SHA1 of the URL and the form params.
       type: string
       enum:
         - stripe
         - standard_webhooks
+        - hmac_sha256
+        - twilio
     WebhookSignatureStatus:
       description: The outcome of checking one delivery's signature. `unchecked` when the webhook had no signing secret; `missing` without a signature header; `expired` when signed more than five minutes from its arrival.
       type: string

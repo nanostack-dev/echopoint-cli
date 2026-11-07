@@ -11,7 +11,7 @@ require (
 	github.com/minio/selfupdate v0.6.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/nanostack-dev/echopoint-kit v0.3.0
-	github.com/nanostack-dev/echopoint-runner v0.101.1-0.20261105231301-47361533d1ab
+	github.com/nanostack-dev/echopoint-runner v0.102.0
 	github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.1.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	github.com/oapi-codegen/runtime v1.6.0
