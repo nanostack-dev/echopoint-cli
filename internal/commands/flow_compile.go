@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"echopoint-cli/internal/api"
+	"echopoint-cli/internal/mcp"
 	"echopoint-cli/internal/output"
 
 	"github.com/nanostack-dev/echopoint-runner/pkg/flowdsl"
@@ -82,7 +83,22 @@ func runFlowCompile(cmd *cobra.Command, state *AppState, file, root string, chec
 	return output.PrintJSON(cmd.OutOrStdout(), doc)
 }
 
-func createRequestFromFile(cmd *cobra.Command, file, root string, asJSON bool) (api.CreateFlowRequest, error) {
+// fillIntegrations completes the integration nodes of a compiled flow from the
+// workspace catalog before the CLI sends it.
+type fillIntegrations func(*wire.CreateFlowRequest) error
+
+func catalogFiller(cmd *cobra.Command, state *AppState) fillIntegrations {
+	return func(req *wire.CreateFlowRequest) error {
+		return mcp.FlowFileIntegrations(cmd.Context(), state.Client, req)
+	}
+}
+
+func createRequestFromFile(
+	cmd *cobra.Command,
+	file, root string,
+	asJSON bool,
+	fill fillIntegrations,
+) (api.CreateFlowRequest, error) {
 	if asJSON && cmd.Flags().Changed("root") {
 		return api.CreateFlowRequest{}, errors.New("pass --root with a flow file, not with --json")
 	}
@@ -90,10 +106,15 @@ func createRequestFromFile(cmd *cobra.Command, file, root string, asJSON bool) (
 		var req api.CreateFlowRequest
 		return req, loadJSONFile(file, &req)
 	}
-	return compileOneFlowFile(cmd, file, root)
+	return compileOneFlowFile(cmd, file, root, fill)
 }
 
-func updateRequestFromFile(cmd *cobra.Command, file, root string, asJSON bool) (api.UpdateFlowRequest, error) {
+func updateRequestFromFile(
+	cmd *cobra.Command,
+	file, root string,
+	asJSON bool,
+	fill fillIntegrations,
+) (api.UpdateFlowRequest, error) {
 	if asJSON && cmd.Flags().Changed("root") {
 		return api.UpdateFlowRequest{}, errors.New("pass --root with a flow file, not with --json")
 	}
@@ -101,7 +122,7 @@ func updateRequestFromFile(cmd *cobra.Command, file, root string, asJSON bool) (
 		var req api.UpdateFlowRequest
 		return req, loadJSONFile(file, &req)
 	}
-	compiled, err := compileOneFlowFile(cmd, file, root)
+	compiled, err := compileOneFlowFile(cmd, file, root, fill)
 	if err != nil {
 		return api.UpdateFlowRequest{}, err
 	}
@@ -120,7 +141,11 @@ func updateRequestFromFile(cmd *cobra.Command, file, root string, asJSON bool) (
 	}, nil
 }
 
-func compileOneFlowFile(cmd *cobra.Command, file, root string) (api.CreateFlowRequest, error) {
+func compileOneFlowFile(
+	cmd *cobra.Command,
+	file, root string,
+	fill fillIntegrations,
+) (api.CreateFlowRequest, error) {
 	info, err := os.Stat(file)
 	if err != nil {
 		return api.CreateFlowRequest{}, err
@@ -144,6 +169,9 @@ func compileOneFlowFile(cmd *cobra.Command, file, root string) (api.CreateFlowRe
 		}
 		return api.CreateFlowRequest{}, &exitCodeError{code: 1}
 	}
+	if err := fillCompiledFlow(out, file, root, fill); err != nil {
+		return api.CreateFlowRequest{}, err
+	}
 	doc, err := compiledDocument(out, file, root, false)
 	if err != nil {
 		return api.CreateFlowRequest{}, err
@@ -153,6 +181,24 @@ func compileOneFlowFile(cmd *cobra.Command, file, root string) (api.CreateFlowRe
 		return api.CreateFlowRequest{}, errors.New("compiled flow is missing")
 	}
 	return req, nil
+}
+
+// fillCompiledFlow fills the integration nodes of the flow file itself; the
+// modules it uses are stored apart.
+func fillCompiledFlow(out flowdsl.Outcome, file, root string, fill fillIntegrations) error {
+	key, err := flowdsl.ModulePath(root, file)
+	if err != nil {
+		return err
+	}
+	for i := range out.Flows {
+		if out.Flows[i].Path != key {
+			continue
+		}
+		if err := fill(&out.Flows[i].Request); err != nil {
+			return fmt.Errorf("%s: %w", file, err)
+		}
+	}
+	return nil
 }
 
 func looksLikeAPIJSON(file string) bool {

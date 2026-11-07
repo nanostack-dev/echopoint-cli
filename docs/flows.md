@@ -134,7 +134,32 @@ nodes:
 
 An output is `$.path`, `header:<name>`, `body`, or `status`. `status` captures the HTTP status code. Add `secret: true` beside `path`, `header`, or `status: true` when the value must be masked.
 
-A node has exactly one kind: `request`, `module`, `delay`, `set`, `assert`, `branch`, `poll`, `loop`, `webhook_wait`, or `sse`. `delay: 1000` waits that many milliseconds. `set` writes variables, and those names are its outputs. A branch names a `target` node per case and a `default`; compile adds the success edges. `folder` is a folder id. A folder path is a warning and is left unset, because the API wants the id.
+A node has exactly one kind: `request`, `module`, `integration`, `delay`, `set`, `assert`, `branch`, `poll`, `loop`, `webhook_wait`, or `sse`. `delay: 1000` waits that many milliseconds. `set` writes variables, and those names are its outputs. A branch names a `target` node per case and a `default`; compile adds the success edges. `folder` is a folder id. A folder path is a warning and is left unset, because the API wants the id.
+
+An `integration` node uses an operation or an event of a connected integration (see `echopoint integration items <id>`). It sets `id` and exactly one of `operation` and `event`. An operation node calls the operation with its `inputs`; it compiles to a `request` node, and launch fills the method, URL, headers and body from the integration, so the node sets none of them. An event node waits for the integration's webhook; it compiles to a `webhook_wait` node, takes no inputs and no status check, and checks the event payload with `expect`. Both take `timeout_ms`; an event node also takes `settle_ms`. `flow create -f` and `flow update -f` check each integration node against the workspace catalog: the integration and item must exist, the item must not be refused, and the operation must take every input. `flow compile` works offline, so it prints the operation node with an empty method and URL.
+
+```yaml
+name: "stripe: customer created"
+nodes:
+  customer:
+    integration:
+      id: stripe
+      operation: customer.create
+      inputs:
+        email: garbage+stripe@nanostack.dev
+    outputs:
+      id: $.id
+    expect: "status: 200"
+    next: created
+  created:
+    integration:
+      id: stripe
+      event: customer.created
+      timeout_ms: 60000
+    expect: "$.data.object.id equals {{customer.id}}"
+```
+
+Declare the operation outputs other nodes read, as on a `request` node: `echopoint integration items stripe --search customer.create -o json` lists each output's name and path. Launch adds the catalog outputs you did not declare, but `flow create` rejects a reference to an undeclared output, and `flow compile --check` does not catch it. An event node provides the same outputs as a `webhook_wait` node.
 
 `{{node.output}}` must name a node in the same graph and an output that node declares. A longer path walks into that value, the same way the runner does: `{{list.items.0.id}}` is valid when `list` declares `items`. `{{var}}` with no dot is an initial input. `{{webhook.url}}` and `{{webhook.requests_url}}` are provided when a flow waits for a webhook and no node is named `webhook`. An `sse` node always provides `events`, `count`, and `last`. A `webhook_wait` node always provides `id`, `method`, `headers`, `query`, `body`, and `received_at`.
 

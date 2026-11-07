@@ -528,7 +528,7 @@ func newFlowCreateCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			req, err := buildCreateFlowRequest(cmd, name, file, root, asJSON)
+			req, err := buildCreateFlowRequest(cmd, name, file, root, asJSON, catalogFiller(cmd, state))
 			if err != nil {
 				return err
 			}
@@ -574,7 +574,12 @@ func printSavedFlow(cmd *cobra.Command, state *AppState, flow *api.Flow) error {
 	return nil
 }
 
-func buildCreateFlowRequest(cmd *cobra.Command, name, file, root string, asJSON bool) (api.CreateFlowRequest, error) {
+func buildCreateFlowRequest(
+	cmd *cobra.Command,
+	name, file, root string,
+	asJSON bool,
+	fill fillIntegrations,
+) (api.CreateFlowRequest, error) {
 	named, fromFile := cmd.Flags().Changed("name"), cmd.Flags().Changed("file")
 	switch {
 	case named && fromFile:
@@ -582,7 +587,7 @@ func buildCreateFlowRequest(cmd *cobra.Command, name, file, root string, asJSON 
 	case !named && !fromFile:
 		return api.CreateFlowRequest{}, errors.New("pass --name for an empty flow, or -f for a flow file")
 	case fromFile:
-		return createRequestFromFile(cmd, file, root, asJSON)
+		return createRequestFromFile(cmd, file, root, asJSON, fill)
 	}
 	if asJSON || cmd.Flags().Changed("root") {
 		return api.CreateFlowRequest{}, errors.New("pass --json and --root with -f")
@@ -626,7 +631,7 @@ func newFlowUpdateCmd(state *AppState) *cobra.Command {
 				return err
 			}
 
-			req, err := buildUpdateFlowRequest(cmd, file, name, description, root, asJSON)
+			req, err := buildUpdateFlowRequest(cmd, file, name, description, root, asJSON, catalogFiller(cmd, state))
 			if err != nil {
 				return err
 			}
@@ -661,6 +666,7 @@ func buildUpdateFlowRequest(
 	cmd *cobra.Command,
 	file, name, description, root string,
 	asJSON bool,
+	fill fillIntegrations,
 ) (api.UpdateFlowRequest, error) {
 	flags := cmd.Flags()
 	fromFile := flags.Changed("file")
@@ -672,7 +678,7 @@ func buildUpdateFlowRequest(
 	case !fromFile && !flagged:
 		return req, errors.New("pass -f, or at least one of --name and --description")
 	case fromFile:
-		return updateRequestFromFile(cmd, file, root, asJSON)
+		return updateRequestFromFile(cmd, file, root, asJSON, fill)
 	}
 	if asJSON || flags.Changed("root") {
 		return req, errors.New("pass --json and --root with -f")
