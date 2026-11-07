@@ -108,3 +108,82 @@ func TestFlowCreateRefusesAnUnknownIntegration(t *testing.T) {
 		t.Fatalf("err %v", err)
 	}
 }
+
+// stripeItemsWithOutputs is the catalog of a Stripe customer.create operation
+// that returns the customer id.
+func stripeItemsWithOutputs() map[string]any {
+	items := stripeItems("accepted")
+	operation := items["items"].([]any)[0].(map[string]any)["operation"].(map[string]any)
+	operation["outputs"] = []any{map[string]any{"name": "id", "path": "$.id"}}
+	return items
+}
+
+func TestFlowCompileCheckReadsAnOperationOutputFromTheCatalog(t *testing.T) {
+	file := writeTemp(t, "stripe.flow.yaml", strings.Replace(stripeFlowFile,
+		`expect: "$.data.object.email equals garbage+stripe@nanostack.dev"`,
+		`expect: "$.data.object.id equals {{customer.id}}"`, 1))
+	stub := newAPIStub(t)
+	stub.on(http.MethodPost, "/integrations/stripe/items/search", http.StatusOK, stripeItemsWithOutputs())
+
+	stdout, stderr, err := execute(t, newFlowCmd(stub.tableState(t)), "", "compile", "-f", file, "--check")
+	if err != nil || stdout != "" || stderr != "" {
+		t.Fatalf("stdout %q stderr %q err %v", stdout, stderr, err)
+	}
+	if n := len(stub.requestsTo(http.MethodPost, "/integrations/stripe/items/search")); n != 1 {
+		t.Fatalf("catalog fetched %d times", n)
+	}
+}
+
+func TestFlowCompileCheckRefusesAnOperationOutputTheCatalogDoesNotHave(t *testing.T) {
+	file := writeTemp(t, "stripe.flow.yaml", strings.Replace(stripeFlowFile,
+		`expect: "$.data.object.email equals garbage+stripe@nanostack.dev"`,
+		`expect: "$.data.object.id equals {{customer.no_such_output}}"`, 1))
+	stub := newAPIStub(t)
+	stub.on(http.MethodPost, "/integrations/stripe/items/search", http.StatusOK, stripeItemsWithOutputs())
+
+	_, stderr, err := execute(t, newFlowCmd(stub.tableState(t)), "", "compile", "-f", file, "--check")
+	if err == nil {
+		t.Fatal("check passed")
+	}
+	if !strings.Contains(stderr, "output 'no_such_output' not declared by source node 'customer'") {
+		t.Fatalf("stderr %s", stderr)
+	}
+}
+
+func TestFlowCompileCheckMakesNoRequestForAFlowWithoutIntegrations(t *testing.T) {
+	file := writeTemp(t, "ping.flow.yaml", `
+name: Ping
+nodes:
+  ping:
+    request:
+      method: GET
+      url: "{{base}}/health"
+    expect: "status: 200"
+`)
+	stub := newAPIStub(t)
+
+	_, stderr, err := execute(t, newFlowCmd(stub.tableState(t)), "", "compile", "-f", file, "--check")
+	if err != nil {
+		t.Fatalf("err %v stderr %s", err, stderr)
+	}
+	if n := stub.requestCount(); n != 0 {
+		t.Fatalf("sent %d requests", n)
+	}
+}
+
+func TestFlowCompileCheckGivesNoCatalogOutputToANodeThatExpectsAnError(t *testing.T) {
+	declined := strings.Replace(stripeFlowFile, `expect: "status: 200"`, `expect: "status: 402"`, 1)
+	file := writeTemp(t, "stripe.flow.yaml", strings.Replace(declined,
+		`expect: "$.data.object.email equals garbage+stripe@nanostack.dev"`,
+		`expect: "$.data.object.id equals {{customer.id}}"`, 1))
+	stub := newAPIStub(t)
+	stub.on(http.MethodPost, "/integrations/stripe/items/search", http.StatusOK, stripeItemsWithOutputs())
+
+	_, stderr, err := execute(t, newFlowCmd(stub.tableState(t)), "", "compile", "-f", file, "--check")
+	if err == nil {
+		t.Fatal("check passed")
+	}
+	if !strings.Contains(stderr, "output 'id' not declared by source node 'customer'") {
+		t.Fatalf("stderr %s", stderr)
+	}
+}

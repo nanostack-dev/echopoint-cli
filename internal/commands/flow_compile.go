@@ -32,7 +32,10 @@ run. module: anchor/login resolves against the other flow files under --root
 the YAML. Pass --json to flow create or flow update only when the file is
 already that JSON.
 
---check reports problems and prints no JSON. A warning still compiles.`,
+--check reports problems and prints no JSON. A warning still compiles. When a
+flow uses an integration, --check also reads the workspace's integration
+catalog and checks that every operation output a node reads exists, the rule
+flow create applies. That check needs you signed in.`,
 		Example: `  echopoint flow compile -f flows
   echopoint flow compile -f flows/anchor/login.flow.yaml --root flows
   echopoint flow compile -f flows --check
@@ -40,7 +43,7 @@ already that JSON.
 		Args:          fileFlagArgs(0),
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Annotations:   offline(),
+		Annotations:   offlineWithStoredCredentials(),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runFlowCompile(cmd, state, file, root, check)
 		},
@@ -70,7 +73,7 @@ func runFlowCompile(cmd *cobra.Command, state *AppState, file, root string, chec
 		return &exitCodeError{code: 1}
 	}
 	if check {
-		return nil
+		return checkFlowReferences(cmd, state, out)
 	}
 	doc, err := compiledDocument(out, file, root, info.IsDir())
 	if err != nil {
@@ -81,6 +84,27 @@ func runFlowCompile(cmd *cobra.Command, state *AppState, file, root string, chec
 		return err
 	}
 	return output.PrintJSON(cmd.OutOrStdout(), doc)
+}
+
+// checkFlowReferences checks each compiled flow that uses an integration
+// against the workspace catalog, so a reference to an operation output that
+// does not exist fails here as it would on flow create.
+func checkFlowReferences(cmd *cobra.Command, state *AppState, out flowdsl.Outcome) error {
+	failed := false
+	for _, compiled := range out.Flows {
+		if err := mcp.CheckFlowFileReferences(cmd.Context(), state.Client, compiled.Request); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "%s: %v\n", compiled.Path, err)
+			if state.Token == "" && state.APIKey == "" {
+				fmt.Fprintln(cmd.ErrOrStderr(),
+					"checking integration nodes reads the workspace catalog: sign in with 'echopoint auth login'")
+			}
+			failed = true
+		}
+	}
+	if failed {
+		return &exitCodeError{code: 1}
+	}
+	return nil
 }
 
 // fillIntegrations completes the integration nodes of a compiled flow from the

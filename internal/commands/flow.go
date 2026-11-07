@@ -30,8 +30,9 @@ func newFlowCmd(state *AppState) *cobra.Command {
 A <flow-id> is the flow's id, which 'echopoint flow list' shows and Tab completes.
 
 Write a flow as *.flow.yaml. flow create -f and flow update -f compile that file
-and send the JSON the API stores. flow compile --check lints it and makes no
-request. Pass --json only when the file is already that JSON.
+and send the JSON the API stores. flow compile --check lints it; it reads the
+API only for a flow that uses an integration. Pass --json only when the file is
+already that JSON.
 
 A flow runs on Cloud (EchoPoint runs it), on a Self-hosted runner (a long-lived
 runner you operate), or on an Ephemeral runner (a short-lived runner the caller

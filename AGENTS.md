@@ -15,6 +15,6 @@ Go CLI, stdio MCP server and composite GitHub Action. A standalone clone include
 
 Write a flow as `*.flow.yaml`. Nodes are a mapping keyed by the node id. `next` and `on_failure` name the nodes they run, so the file has no edges array. `module: anchor/login` is another file under `--root`.
 
-`echopoint flow create -f` and `echopoint flow update -f` compile that file, run the linter, and send the JSON the API stores. `echopoint flow compile -f <file> --check` lints and makes no request. Pass `--json` only when the file is already a CreateFlowRequest or an UpdateFlowRequest.
+`echopoint flow create -f` and `echopoint flow update -f` compile that file, run the linter, and send the JSON the API stores. `echopoint flow compile -f <file> --check` lints; it reads the API only for a flow that uses an integration, to check the operation outputs other nodes read against the workspace catalog. Pass `--json` only when the file is already a CreateFlowRequest or an UpdateFlowRequest.
 
 The grammar, checks, and module rules are in [docs/flows.md](docs/flows.md). Do not hand-write the JSON graph when a flow file can say it.

@@ -48,9 +48,11 @@ type catalogOperation struct {
 	Outputs []catalogName `json:"outputs"`
 }
 
-// catalogName is a named operation param or output.
+// catalogName is a named operation param or output. An output's path is the
+// JSONPath launch extracts it with.
 type catalogName struct {
 	Name string `json:"name"`
+	Path string `json:"path,omitempty"`
 }
 
 // integrationCatalog holds, per integration id, its items by kind and key. A

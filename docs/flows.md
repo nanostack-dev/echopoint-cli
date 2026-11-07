@@ -82,7 +82,7 @@ echopoint flow create -f flows/anchor/login.flow.yaml --root flows
 echopoint flow update <flow-id> -f flows/anchor/login.flow.yaml --root flows
 ```
 
-`--check` prints problems and no JSON. A warning still compiles. `-o yaml` prints the same document with the JSON key names.
+`--check` prints problems and no JSON. A warning still compiles. For a flow that uses an integration, `--check` also reads the workspace catalog to check the operation outputs other nodes read. `-o yaml` prints the same document with the JSON key names.
 
 A file is named `*.flow.yaml`. One file is one flow. Nodes are a mapping keyed by the node id, and `next` / `on_failure` name the nodes they run, so the file has no edges array. `steps` is the same graph written as a list: each step runs after the one before it, unless the step sets `next` or is a branch.
 
@@ -147,8 +147,6 @@ nodes:
       operation: customer.create
       inputs:
         email: garbage+stripe@nanostack.dev
-    outputs:
-      id: $.id
     expect: "status: 200"
     next: created
   created:
@@ -159,7 +157,7 @@ nodes:
     expect: "$.data.object.id equals {{customer.id}}"
 ```
 
-Declare the operation outputs other nodes read, as on a `request` node: `echopoint integration items stripe --search customer.create -o json` lists each output's name and path. Launch adds the catalog outputs you did not declare, but `flow create` rejects a reference to an undeclared output, and `flow compile --check` does not catch it. An event node provides the same outputs as a `webhook_wait` node.
+An operation node provides the outputs its catalog operation lists: `echopoint integration items stripe --search customer.create -o json` lists each output's name and path. Declare `outputs` only to read a value the catalog does not list, as on a `request` node. A node whose `expect` accepts no 2xx status, such as `status: 402` for a declined card, gets no catalog outputs, because the error body does not have them. `flow create` and `flow compile --check` both read the workspace catalog and reject a reference to an output that neither the catalog nor the file declares, so `--check` needs you signed in for a flow that uses an integration. An event node provides the same outputs as a `webhook_wait` node.
 
 `{{node.output}}` must name a node in the same graph and an output that node declares. A longer path walks into that value, the same way the runner does: `{{list.items.0.id}}` is valid when `list` declares `items`. `{{var}}` with no dot is an initial input. `{{webhook.url}}` and `{{webhook.requests_url}}` are provided when a flow waits for a webhook and no node is named `webhook`. An `sse` node always provides `events`, `count`, and `last`. A `webhook_wait` node always provides `id`, `method`, `headers`, `query`, `body`, and `received_at`.
 
