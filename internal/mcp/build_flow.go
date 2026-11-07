@@ -169,7 +169,10 @@ func validateFlatFlow(f flatFlow, catalog integrationCatalog) []string {
 
 // validateNodes checks each node's required fields and returns the id set and
 // the per-node declared outputs used by edge and reference validation.
-func validateNodes(nodes []flatNode, catalog integrationCatalog) (map[string]bool, map[string]map[string]bool, []string) {
+func validateNodes(
+	nodes []flatNode,
+	catalog integrationCatalog,
+) (map[string]bool, map[string]map[string]bool, []string) {
 	var problems []string
 	ids := map[string]bool{}
 	declaredOutputs := map[string]map[string]bool{}
@@ -320,53 +323,7 @@ func validateRefs(f flatFlow, ids map[string]bool, declared map[string]map[strin
 func buildFlowDoc(f flatFlow, catalog integrationCatalog) map[string]any {
 	nodes := make([]map[string]any, 0, len(f.Nodes))
 	for _, n := range f.Nodes {
-		runWhen := n.RunWhen
-		if runWhen == "" {
-			runWhen = "on_success"
-		}
-		node := map[string]any{
-			"id":           n.ID,
-			"run_when":     runWhen,
-			"display_name": n.ID,
-		}
-
-		switch n.kind() {
-		case moduleKind:
-			data := map[string]any{"flow_id": n.FlowID}
-			if len(n.Inputs) > 0 {
-				data["input_bindings"] = n.Inputs
-			}
-			if len(n.Outputs) > 0 {
-				data["output_bindings"] = n.Outputs
-			}
-			node[keyType] = moduleKind
-			node["data"] = data
-		default:
-			if n.kind() == integrationKind {
-				buildIntegrationNode(n, catalog, node)
-			} else {
-				data := map[string]any{"url": n.URL, "method": n.Method}
-				if n.Body != "" {
-					data["body"] = n.Body
-				}
-				if len(n.Headers) > 0 {
-					data["headers"] = n.Headers
-				}
-				node[keyType] = requestKind
-				node["data"] = data
-			}
-			if outs := buildOutputs(n.Outputs, n.SecretOutputs); len(outs) > 0 {
-				node["outputs"] = outs
-			}
-			if len(n.Asserts) > 0 {
-				asserts := make([]map[string]any, 0, len(n.Asserts))
-				for _, a := range n.Asserts {
-					asserts = append(asserts, buildAssertion(a))
-				}
-				node["assertions"] = asserts
-			}
-		}
-		nodes = append(nodes, node)
+		nodes = append(nodes, buildNode(n, catalog))
 	}
 
 	edges := make([]map[string]any, 0, len(f.Edges))
@@ -394,6 +351,56 @@ func buildFlowDoc(f flatFlow, catalog integrationCatalog) map[string]any {
 		doc["tags"] = f.Tags
 	}
 	return doc
+}
+
+// buildNode maps one flat node onto its full node: the data wrapper for its
+// kind, then outputs and assertions for a request or integration node.
+func buildNode(n flatNode, catalog integrationCatalog) map[string]any {
+	runWhen := n.RunWhen
+	if runWhen == "" {
+		runWhen = "on_success"
+	}
+	node := map[string]any{
+		"id":           n.ID,
+		"run_when":     runWhen,
+		"display_name": n.ID,
+	}
+	switch n.kind() {
+	case moduleKind:
+		data := map[string]any{"flow_id": n.FlowID}
+		if len(n.Inputs) > 0 {
+			data["input_bindings"] = n.Inputs
+		}
+		if len(n.Outputs) > 0 {
+			data["output_bindings"] = n.Outputs
+		}
+		node[keyType] = moduleKind
+		node["data"] = data
+		return node
+	case integrationKind:
+		buildIntegrationNode(n, catalog, node)
+	default:
+		data := map[string]any{"url": n.URL, "method": n.Method}
+		if n.Body != "" {
+			data["body"] = n.Body
+		}
+		if len(n.Headers) > 0 {
+			data["headers"] = n.Headers
+		}
+		node[keyType] = requestKind
+		node["data"] = data
+	}
+	if outs := buildOutputs(n.Outputs, n.SecretOutputs); len(outs) > 0 {
+		node["outputs"] = outs
+	}
+	if len(n.Asserts) > 0 {
+		asserts := make([]map[string]any, 0, len(n.Asserts))
+		for _, a := range n.Asserts {
+			asserts = append(asserts, buildAssertion(a))
+		}
+		node["assertions"] = asserts
+	}
+	return node
 }
 
 // buildOutputs converts name->json_path into the request node output shape, in

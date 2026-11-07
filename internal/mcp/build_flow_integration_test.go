@@ -44,21 +44,42 @@ func TestValidateFlatFlowIntegrationNodes(t *testing.T) {
 			flatNode{ID: "paid", Integration: &flatIntegration{ID: "stripe", Event: "checkout.session.completed"},
 				TimeoutMS: 60000, Asserts: []flatAssert{{Path: "$.data.object.customer", Value: "{{customer.id}}"}}},
 		), ""},
-		{"unknown integration", stripeFlow(flatNode{ID: "a", Integration: &flatIntegration{ID: "ghost", Operation: "x"}}),
-			"search_integrations"},
+		{
+			"unknown integration",
+			stripeFlow(flatNode{ID: "a", Integration: &flatIntegration{ID: "ghost", Operation: "x"}}),
+			"search_integrations",
+		},
 		{"unknown item", stripeFlow(flatNode{ID: "a", Integration: op("customer.nope", nil)}),
 			"search_integration_items"},
 		{"refused item", stripeFlow(flatNode{ID: "a", Integration: op("account.delete", nil)}),
 			"set_integration_choices"},
-		{"unknown input", stripeFlow(flatNode{ID: "a", Integration: op("customer.create", map[string]any{"mail": "x"})}),
-			`takes no input "mail"`},
-		{"both operation and event", stripeFlow(flatNode{ID: "a",
-			Integration: &flatIntegration{ID: "stripe", Operation: "customer.create", Event: "checkout.session.completed"}}),
+		{
+			"unknown input",
+			stripeFlow(flatNode{ID: "a", Integration: op("customer.create", map[string]any{"mail": "x"})}),
+			`takes no input "mail"`,
+		},
+		{"both operation and event", stripeFlow(flatNode{
+			ID: "a",
+			Integration: &flatIntegration{
+				ID:        "stripe",
+				Operation: "customer.create",
+				Event:     "checkout.session.completed",
+			},
+		}),
 			"exactly one of"},
-		{"method set by the author", stripeFlow(flatNode{ID: "a", Method: "POST", Integration: op("customer.create", nil)}),
-			"remove method"},
-		{"event with a status assert", stripeFlow(flatNode{ID: "a",
-			Integration: &flatIntegration{ID: "stripe", Event: "checkout.session.completed"}, Asserts: []flatAssert{{Status: 200}}}),
+		{
+			"method set by the author",
+			stripeFlow(flatNode{ID: "a", Method: "POST", Integration: op("customer.create", nil)}),
+			"remove method",
+		},
+		{"event with a status assert", stripeFlow(flatNode{
+			ID: "a",
+			Integration: &flatIntegration{
+				ID:    "stripe",
+				Event: "checkout.session.completed",
+			},
+			Asserts: []flatAssert{{Status: 200}},
+		}),
 			"an event has no status"},
 		{"input refers to an undeclared output", stripeFlow(flatNode{ID: "a",
 			Integration: op("customer.create", map[string]any{"email": "{{other.mail}}"})}),
@@ -106,7 +127,8 @@ func TestBuildFlowDocIntegrationNodes(t *testing.T) {
 		t.Fatalf("operation node: %+v", call)
 	}
 	ref, _ := call.Data["integration"].(map[string]any)
-	if ref["id"] != "stripe" || ref["operation"] != "customer.create" || ref["inputs"].(map[string]any)["email"] != "{{email}}" {
+	if ref["id"] != "stripe" || ref["operation"] != "customer.create" ||
+		ref["inputs"].(map[string]any)["email"] != "{{email}}" {
 		t.Fatalf("operation ref: %+v", ref)
 	}
 	if len(call.Assertions) != 1 {
