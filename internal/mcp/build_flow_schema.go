@@ -26,6 +26,22 @@ and needs flow_id, with "outputs" mapping a local name to "childNodeId.childKey"
 run_when defaults on_success; use "always" for cleanup nodes so they run even
 after an upstream failure.
 
+Integration nodes: a node with "integration" calls a vendor operation or waits
+for a vendor event; launch fills the method, url, auth and body, so give no
+method, url, headers or body. {"integration":{"id":"stripe","operation":
+"customer.create","inputs":{"email":"..."}}} is a request node: its "inputs"
+are the operation params, and the operation's outputs (see
+search_integration_items) are referenceable as {{nodeId.output}} without
+declaring them. {"integration":{"id":"stripe","event":"checkout.session.completed"}}
+is a wait node (optional "timeout_ms"): it passes when that event reaches the
+connection's capture webhook during the run; assert on payload paths, not status.
+Set up an integration before using it:
+  1. search_integrations — find the integration id;
+  2. search_integration_connections, then connect_integration if not connected;
+  3. search_integration_items — the operation/event keys, params and outputs;
+     set_integration_choices to accept an item the workspace refused;
+  4. build_flow with the integration nodes.
+
 Secrets: list request outputs that hold a credential or token in
 "secret_outputs" (e.g. "secret_outputs": ["jwt"]). Their values show as *** in
 results; downstream nodes still receive the real value. A module re-exporting a
@@ -49,6 +65,18 @@ Worked example — create a flow that calls an API and asserts the result:
      "run_when": "always", "asserts": [{"status": 204}]}
   ],
   "edges": ["create>get", "get>cleanup"]
+}
+
+Integration example — create a Stripe customer, then wait for checkout:
+{
+  "name": "demo: stripe checkout",
+  "nodes": [
+    {"id": "customer", "integration": {"id": "stripe", "operation": "customer.create",
+     "inputs": {"email": "{{email}}"}}, "asserts": [{"status": 200}]},
+    {"id": "paid", "integration": {"id": "stripe", "event": "checkout.session.completed"},
+     "timeout_ms": 300000, "asserts": [{"path": "$.data.object.customer", "value": "{{customer.id}}"}]}
+  ],
+  "edges": ["customer>paid"]
 }`
 
 // buildFlowInputSchema is the JSON Schema advertised to the MCP client.
@@ -67,7 +95,7 @@ var buildFlowInputSchema = []byte(`{
     },
     "nodes": {
       "type": "array",
-      "description": "Flat list of request and module nodes.",
+      "description": "Flat list of request, module and integration nodes.",
       "items": {
         "type": "object",
         "required": ["id"],
@@ -102,6 +130,18 @@ var buildFlowInputSchema = []byte(`{
               }
             }
           },
+          "integration": {
+            "type": "object",
+            "required": ["id"],
+            "description": "Integration node: set exactly one of operation and event. Leave out kind, method, url, headers and body.",
+            "properties": {
+              "id": {"type": "string", "description": "Integration id from search_integrations (e.g. stripe)."},
+              "operation": {"type": "string", "description": "Operation key from search_integration_items; the node calls it."},
+              "event": {"type": "string", "description": "Event key from search_integration_items; the node waits for it."},
+              "inputs": {"type": "object", "description": "operation: param name -> value; values may use {{refs}}."}
+            }
+          },
+          "timeout_ms": {"type": "integer", "description": "integration event: how long to wait, in milliseconds."},
           "flow_id": {"type": "string", "description": "module: id of the sub-flow to run."},
           "inputs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "module: input binding name -> value."}
         }

@@ -348,6 +348,7 @@ func printExecutionSummary(execution api.FlowExecution) error {
 const (
 	columnID   = "ID"
 	columnName = "Name"
+	columnKey  = "Key"
 
 	columnStarted = "Started"
 )

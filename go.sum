@@ -79,8 +79,8 @@ github.com/modelcontextprotocol/go-sdk v1.6.1 h1:0zOSupjKUxPKSocPT1Wtago+mUHU2/u
 github.com/modelcontextprotocol/go-sdk v1.6.1/go.mod h1:kzm3kzFL1/+AziGOE0nUs3gvPoNxMCvkxokMkuFapXQ=
 github.com/nanostack-dev/echopoint-kit v0.3.0 h1:ITG1EpK0hZIAyudxzJiFEsGYlxpHZwL/VrVkpWVxkAQ=
 github.com/nanostack-dev/echopoint-kit v0.3.0/go.mod h1:+NQxoG0w/0nOpjh9Q7S88qgeNQ2varjD4U15Fn+5wPs=
-github.com/nanostack-dev/echopoint-runner v0.94.0 h1:dki9REoFmGYiut9JKTO6Z6maodT02XBoDdfsBxec0LA=
-github.com/nanostack-dev/echopoint-runner v0.94.0/go.mod h1:NqYWs8myxHvPVRTEmxoIh4M9ZSgJUZgorVBIPD/rfSk=
+github.com/nanostack-dev/echopoint-runner v0.102.0 h1:aePaXV2sv9QWYrEVI5ZBrLvc0uD1TAdcdVrCkytGYbQ=
+github.com/nanostack-dev/echopoint-runner v0.102.0/go.mod h1:BoHp/Jf0ej4xh15WCC+oz54QH013d+wgrW4LJdlcUa8=
 github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.1.0 h1:A5odJOhfW99r8NA3HL0slvkvCjOOYEyN5UJSf5aT6JM=
 github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.1.0/go.mod h1:ksDxkaimTXiQ3luSo6H3Sn6+uOGSiHsEIPoD5O2x6W8=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
@@ -192,8 +192,8 @@ golang.org/x/oauth2 v0.36.0/go.mod h1:YDBUJMTkDnJS+A4BP4eZBjCqtokkg1hODuPjwiGPO7
 golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
-golang.org/x/sync v0.22.0 h1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=
-golang.org/x/sync v0.22.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
+golang.org/x/sync v0.23.0 h1:KameEIfc1IkluZyXWLn39Wd4tURc6GbCiISGiZm2bQk=
+golang.org/x/sync v0.23.0/go.mod h1:sUUOizhqBxiL6pEWpqNLUiaJn1ShEbZ6BBqskPbjZm0=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

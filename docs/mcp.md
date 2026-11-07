@@ -107,6 +107,34 @@ retained internally; they do not grant tool exposure. See
 The ordinary tool set tracks the contract: annotate an eligible operation
 `x-ai-tool` (and resync) to expose it. Administration routes remain excluded.
 
+## Integrations
+
+An integration (Stripe, GitHub, Resend, Clerk, Twilio) ships reviewed operations,
+which become request nodes, and events, which become expected webhook events. An
+agent sets one up and uses it with these tools, in this order:
+
+1. `search_integrations` finds the integration id. `get_integration` shows it with
+   its curated nodes.
+2. `search_integration_connections` lists the connection per environment.
+   `connect_integration` stores the vendor's restricted test key and creates the
+   signed capture webhook. `disconnect_integration` removes both.
+3. `search_integration_items` lists the operation and event keys with their params
+   and outputs. A workspace accepts every item until it refuses one;
+   `set_integration_choices` accepts or refuses items.
+4. `build_flow` takes integration nodes:
+   `{"id": "customer", "integration": {"id": "stripe", "operation": "customer.create",
+   "inputs": {"email": "{{email}}"}}}` calls an operation, and
+   `{"id": "paid", "integration": {"id": "stripe", "event": "checkout.session.completed"},
+   "timeout_ms": 300000}` waits for an event. Launch fills the method, URL, auth and
+   body, so the node has none of them. The operation's outputs are referenceable
+   (`{{customer.id}}`) without declaring them. Before saving, `build_flow` checks
+   each node against the workspace's items and names the tool that fixes a gap.
+
+`connect_integration` puts the vendor key in the model's context. When that is not
+acceptable, connect with `echopoint integration connect <id> --env <env>`, which reads
+the key from standard input, and let the agent do the rest. The save gate refuses a
+flow whose integration the organization's plan does not include.
+
 ## Searches and pagination
 
 Every collection is a cursor-paginated search tool named after its operation:

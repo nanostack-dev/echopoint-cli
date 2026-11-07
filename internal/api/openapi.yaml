@@ -110,7 +110,7 @@ paths:
       tags:
         - Webhook
       summary: Delete Webhook Endpoint
-      description: Deletes a webhook endpoint. This is a destructive operation.
+      description: Deletes a webhook endpoint. This is a destructive operation. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; disconnect the integration instead.
       operationId: deleteWebhook
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -125,6 +125,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         "404":
           $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
             - workspace.webhooks:delete
@@ -311,6 +313,326 @@ paths:
       security:
         - BearerAuth: []
       x-ai-danger: Admin route - requires a privileged session.
+  /integrations/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Integration
+      summary: Search Integrations
+      description: Lists the integrations Echopoint offers, such as Stripe, ordered by id, with whether the organization's license grants each one.
+      operationId: searchIntegrations
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Integrations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /integrations/{integrationId}:
+    parameters:
+      - $ref: '#/components/parameters/IntegrationIdParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Integration
+      summary: Get Integration
+      description: Returns one integration with its branding, guide, curated nodes and assertion presets.
+      operationId: getIntegration
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      responses:
+        "200":
+          description: The integration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /integrations/{integrationId}/items/search:
+    parameters:
+      - $ref: '#/components/parameters/IntegrationIdParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Integration
+      summary: Search Integration Items
+      description: Lists the reviewed operations and events of an integration, ordered by kind then key, with the workspace's choice for each. `full_text_search` matches the key, name and path.
+      operationId: searchIntegrationItems
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationItemSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Operations and events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationItemListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /integrations/{integrationId}/choices:
+    parameters:
+      - $ref: '#/components/parameters/IntegrationIdParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    put:
+      tags:
+        - Integration
+      summary: Accept or Refuse Integration Items
+      description: Records the workspace's choice for each item. A refused operation or event leaves the workspace's palette; every other one is accepted. Needs the integration in the organization's license.
+      operationId: setIntegrationChoices
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationChoicesRequest'
+        required: true
+      responses:
+        "204":
+          description: Choices recorded.
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.settings:update
+        - ApiKeys:
+            - workspace.settings:update
+      x-ai-tool: true
+  /integrations/{integrationId}/connections/search:
+    parameters:
+      - $ref: '#/components/parameters/IntegrationIdParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Integration
+      summary: Search Integration Connections
+      description: Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+      operationId: searchIntegrationConnections
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Connections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationConnectionListResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+  /integrations/{integrationId}/connections/{environmentKey}:
+    parameters:
+      - $ref: '#/components/parameters/IntegrationIdParameter'
+      - $ref: '#/components/parameters/IntegrationEnvironmentKeyParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    put:
+      tags:
+        - Integration
+      summary: Connect an Integration
+      description: Connects the integration for one environment of the workspace, or replaces the connection. Echopoint refuses a live key, checks the key with the vendor, creates a capture webhook, registers it with the vendor and stores the vendor's signing secret on it. The secret key is write-only. Needs the integration in the organization's license.
+      operationId: connectIntegration
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationConnectRequest'
+        required: true
+      responses:
+        "200":
+          description: The connection, with the checks it passed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationConnection'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.settings:update
+        - ApiKeys:
+            - workspace.settings:update
+      x-ai-tool: true
+    delete:
+      tags:
+        - Integration
+      summary: Disconnect an Integration
+      description: Removes the connection of one environment, its capture webhook and, when the key still allows it, the endpoint registered with the vendor.
+      operationId: disconnectIntegration
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      responses:
+        "204":
+          description: Disconnected, or there was no connection.
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.settings:update
+        - ApiKeys:
+            - workspace.settings:update
+      x-ai-tool: true
+  /webhooks/{id}/signature:
+    parameters:
+      - $ref: '#/components/parameters/WebhookIdParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    put:
+      tags:
+        - Webhook
+      summary: Set Webhook Signature Verification
+      description: Sets the scheme and signing secret the webhook checks each delivery's signature with. Every later delivery records its signature status. The secret is write-only and is never returned. Configuring a webhook uses the create permission, because webhooks have no update permission. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`; reconnect the integration instead.
+      operationId: setWebhookSignature
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        description: The signature scheme and signing secret.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookSignatureInput'
+        required: true
+      responses:
+        "200":
+          description: Signature verification set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace.webhooks:create
+        - ApiKeys:
+            - webhooks:create
+      x-ai-tool: true
+    delete:
+      tags:
+        - Webhook
+      summary: Remove Webhook Signature Verification
+      description: Removes the webhook's signing secret. Later deliveries record the signature status `unchecked`. A webhook an integration connection captures events with returns 409 `WEBHOOK_MANAGED_BY_INTEGRATION`.
+      operationId: clearWebhookSignature
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      responses:
+        "200":
+          description: Signature verification removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace.webhooks:create
+        - ApiKeys:
+            - webhooks:create
+      x-ai-tool: true
   /webhooks/{id}/requests/search:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -783,16 +1105,21 @@ paths:
     post:
       tags:
         - Runner
-      summary: Complete an ephemeral execution
+      summary: Complete a pre-Job ephemeral execution
       description: |
-        Reports the terminal result for an ephemeral execution produced by a caller-owned
-        runner. Sibling to the self-hosted POST /runner/jobs/{jobId}/complete, but execution-keyed
-        and claim/lease-free (an ephemeral runner never claims a job). Only valid for executions
-        with `runner_type = ephemeral` belonging to the requesting organization. Duplicate
-        publication of the same payload is idempotent; a different payload for an already-terminal
-        execution returns 409 Conflict. The response includes the terminal execution and node
-        summaries so the CLI/action can report without an extra read.
+        Reports the terminal result for an ephemeral execution that has no runner Job.
+        Current launches create a one-shot Job, and an execution that has one is refused
+        with 409 `EPHEMERAL_JOB_COMPLETION_REQUIRED`: complete it through
+        POST /runner/jobs/{jobId}/complete with the claimed job token. An execution
+        without a Job, created before Jobs existed, accepts its result here, keyed by
+        execution and without a claim. Only valid for executions with
+        `runner_type = ephemeral` belonging to the requesting organization. Duplicate
+        publication of the same payload is idempotent; a different payload for an
+        already-terminal execution returns 409 Conflict. The response includes the
+        terminal execution and node summaries so the CLI/action can report without an
+        extra read.
       operationId: completeEphemeralExecution
+      deprecated: true
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
       requestBody:
@@ -1089,6 +1416,7 @@ paths:
       summary: Create Flow
       description: |
         Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+        A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
       operationId: createFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -1604,6 +1932,7 @@ paths:
       summary: Update Flow
       description: |
         Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+        Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
       operationId: updateFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -7532,6 +7861,11 @@ components:
           type: integer
           examples:
             - 1247
+        signature:
+          description: How the webhook checks each delivery's signature. Absent when it checks none.
+          oneOf:
+            - $ref: '#/components/schemas/WebhookSignature'
+            - type: "null"
         workspace_id:
           description: Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
           type:
@@ -7595,6 +7929,573 @@ components:
           maxLength: 255
           examples:
             - My API Webhook
+        signature:
+          $ref: '#/components/schemas/WebhookSignatureInput'
+          description: Checks each delivery's signature with this scheme and secret.
+    IntegrationBranding:
+      description: The design system of the integration's vendor, applied to its nodes.
+      type: object
+      required:
+        - logo_svg
+        - primary
+        - on_primary
+        - accent
+        - surface
+        - text
+        - font_family
+        - radius
+      properties:
+        logo_svg:
+          description: The logo as an SVG document.
+          type: string
+        primary:
+          type: string
+          examples:
+            - '#635BFF'
+        on_primary:
+          type: string
+        accent:
+          type: string
+        surface:
+          type: string
+        text:
+          type: string
+        font_family:
+          description: A CSS font stack.
+          type: string
+        radius:
+          description: Corner radius of the vendor's cards, in pixels.
+          type: integer
+    IntegrationSummary:
+      type: object
+      required:
+        - id
+        - name
+        - api_version
+        - licensed
+        - operation_count
+        - event_count
+        - branding
+        - docs_url
+      properties:
+        id:
+          type: string
+          examples:
+            - stripe
+        name:
+          type: string
+          examples:
+            - Stripe
+        api_version:
+          description: The vendor API version the catalog was generated from, sent on every request.
+          type: string
+          examples:
+            - 2026-10-28.endive
+        licensed:
+          description: Whether the organization's license grants this integration.
+          type: boolean
+        operation_count:
+          description: Reviewed operations Echopoint offers.
+          type: integer
+        event_count:
+          description: Reviewed events Echopoint offers.
+          type: integer
+        branding:
+          $ref: '#/components/schemas/IntegrationBranding'
+        docs_url:
+          type: string
+    IntegrationListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/IntegrationSummary'
+    Integration:
+      allOf:
+        - $ref: '#/components/schemas/IntegrationSummary'
+        - type: object
+          required:
+            - guide
+            - base_url
+            - curated
+            - presets
+            - connection
+          properties:
+            guide:
+              description: The integration's guide, in Markdown, kept by the reviewing agent.
+              type: string
+            connection:
+              $ref: '#/components/schemas/IntegrationConnectionForm'
+            base_url:
+              type: string
+            curated:
+              type: array
+              items:
+                $ref: '#/components/schemas/IntegrationCuratedNode'
+            presets:
+              type: array
+              items:
+                $ref: '#/components/schemas/IntegrationAssertionPreset'
+    IntegrationItemKind:
+      type: string
+      enum:
+        - operation
+        - event
+    IntegrationChoice:
+      description: Whether the workspace offers the item in its palette.
+      type: string
+      enum:
+        - accepted
+        - refused
+    IntegrationCuratedNode:
+      description: A hand-written node over one operation or event, with defaults that work.
+      type: object
+      required:
+        - key
+        - title
+        - why
+        - kind
+        - item_key
+        - defaults
+        - pickers
+        - run_always
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        why:
+          type: string
+        kind:
+          $ref: '#/components/schemas/IntegrationItemKind'
+        item_key:
+          description: The operation key or event type.
+          type: string
+        method:
+          description: The operation's HTTP method. Absent for an event.
+          type: string
+        url:
+          description: The operation's URL on the vendor's API, with its path parameters unfilled. Absent for an event.
+          type: string
+        defaults:
+          type: object
+          additionalProperties:
+            type: string
+        pickers:
+          description: Inputs that offer a list of values, such as Stripe's test cards.
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/IntegrationPickerValue'
+        run_always:
+          type: boolean
+    IntegrationPickerValue:
+      type: object
+      required:
+        - label
+        - value
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+    IntegrationAssertionPreset:
+      type: object
+      required:
+        - event
+        - label
+        - assertions
+      properties:
+        event:
+          type: string
+        label:
+          type: string
+        assertions:
+          type: array
+          items:
+            type: string
+    IntegrationItemSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+        - type: object
+          properties:
+            filter:
+              $ref: '#/components/schemas/IntegrationItemFilter'
+    IntegrationItemFilter:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/IntegrationItemKind'
+        areas:
+          description: Only items of these product areas, such as `billing`.
+          type: array
+          items:
+            type: string
+          x-go-type-skip-optional-pointer: true
+        choice:
+          $ref: '#/components/schemas/IntegrationChoice'
+    IntegrationItem:
+      type: object
+      required:
+        - kind
+        - key
+        - name
+        - summary
+        - area
+        - choice
+      properties:
+        kind:
+          $ref: '#/components/schemas/IntegrationItemKind'
+        key:
+          description: The operation key, such as `customer.create`, or the event type, such as `invoice.paid`.
+          type: string
+        name:
+          type: string
+        summary:
+          type: string
+        note:
+          description: What an author must know, from the review.
+          type: string
+        area:
+          type: string
+        choice:
+          $ref: '#/components/schemas/IntegrationChoice'
+        operation:
+          $ref: '#/components/schemas/IntegrationOperation'
+        event:
+          $ref: '#/components/schemas/IntegrationEvent'
+    IntegrationOperation:
+      type: object
+      required:
+        - method
+        - path
+        - resource_name
+        - body_encoding
+        - test_helper
+        - params
+        - outputs
+      properties:
+        method:
+          type: string
+        path:
+          type: string
+        resource_name:
+          type: string
+        body_encoding:
+          type: string
+          enum:
+            - none
+            - form
+            - json
+        test_helper:
+          type: boolean
+        response_object:
+          type: string
+        response_is_list:
+          type: boolean
+        params:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationParam'
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationOutput'
+    IntegrationParam:
+      type: object
+      required:
+        - name
+        - in
+        - type
+        - required
+        - common
+      properties:
+        name:
+          type: string
+        in:
+          type: string
+          enum:
+            - path
+            - query
+            - body
+        type:
+          type: string
+        required:
+          type: boolean
+        common:
+          description: Shown first in a form.
+          type: boolean
+        enum:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+    IntegrationOutput:
+      type: object
+      required:
+        - name
+        - path
+      properties:
+        name:
+          type: string
+        path:
+          description: A JSONPath into the response body.
+          type: string
+    IntegrationEvent:
+      type: object
+      required:
+        - format
+        - fields
+      properties:
+        format:
+          type: string
+          enum:
+            - snapshot
+            - thin
+        object:
+          type: string
+        fields:
+          description: Field paths an assertion on the payload can read, under `data.object`.
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationField'
+    IntegrationField:
+      type: object
+      required:
+        - path
+        - type
+      properties:
+        path:
+          type: string
+        type:
+          type: string
+        enum:
+          type: array
+          items:
+            type: string
+    IntegrationItemListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/IntegrationItem'
+    IntegrationChoicesRequest:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/IntegrationChoiceInput'
+    IntegrationChoiceInput:
+      type: object
+      required:
+        - kind
+        - key
+        - choice
+      properties:
+        kind:
+          $ref: '#/components/schemas/IntegrationItemKind'
+        key:
+          type: string
+        choice:
+          $ref: '#/components/schemas/IntegrationChoice'
+    IntegrationConnectionForm:
+      description: What connecting the integration asks for, and how its events reach Echopoint.
+      type: object
+      required:
+        - fields
+        - registration
+        - signed
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationConnectionField'
+        registration:
+          description: How the vendor learns the capture webhook's URL. `api` registers it, `manual` asks the member to add it in the vendor's dashboard, `callback` sends it with each request, `none` means the vendor sends no events.
+          type: string
+          enum:
+            - api
+            - manual
+            - callback
+            - none
+        instructions:
+          description: For `manual` registration, how to add the endpoint in the vendor's dashboard. `{{webhook_url}}` stands for the capture webhook's URL.
+          type: string
+        signed:
+          description: Whether the vendor signs its deliveries, so expected events count only signed ones.
+          type: boolean
+    IntegrationConnectionField:
+      description: One value a member gives when connecting.
+      type: object
+      required:
+        - name
+        - label
+        - secret
+        - optional
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        secret:
+          description: Secret values are encrypted and never shown back.
+          type: boolean
+        optional:
+          type: boolean
+        placeholder:
+          type: string
+        help:
+          type: string
+    IntegrationConnectRequest:
+      description: The values of the integration's connection fields. `secret_key` alone is the shorthand for an integration whose only field is `secret_key`.
+      type: object
+      properties:
+        credentials:
+          description: The connection fields' values by name. Secret values are write-only.
+          type: object
+          maxProperties: 10
+          additionalProperties:
+            type: string
+            maxLength: 4096
+          writeOnly: true
+        secret_key:
+          description: A restricted test key, such as Stripe's `rk_test_…`. Live keys are refused. Write-only.
+          type: string
+          minLength: 1
+          maxLength: 1024
+          writeOnly: true
+    IntegrationCheckStatus:
+      type: string
+      enum:
+        - passed
+        - warning
+        - failed
+    IntegrationCheck:
+      type: object
+      required:
+        - name
+        - status
+        - message
+      properties:
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/IntegrationCheckStatus'
+        message:
+          type: string
+    IntegrationConnection:
+      type: object
+      required:
+        - id
+        - integration
+        - environment_key
+        - key_hint
+        - signed
+        - checks
+        - checked_at
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        integration:
+          type: string
+        environment_key:
+          type: string
+        key_hint:
+          description: The key's prefix and last four characters, such as `rk_test_…a1B2`.
+          type: string
+        settings:
+          description: The connection fields that are not secret, such as Twilio's account SID.
+          type: object
+          additionalProperties:
+            type: string
+        account_id:
+          type: string
+        account_name:
+          type: string
+        capture_webhook_id:
+          description: The webhook the vendor's events arrive at.
+          type: string
+        signed:
+          description: Whether the capture webhook checks the vendor's signature.
+          type: boolean
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationCheck'
+        checked_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    IntegrationConnectionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/IntegrationConnection'
+    WebhookSignatureScheme:
+      description: How a sender signs its deliveries. `stripe` reads the `Stripe-Signature` header; `standard_webhooks` reads the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature`; `hmac_sha256` reads a `sha256=` HMAC of the body, such as GitHub's `X-Hub-Signature-256`; `twilio` reads `X-Twilio-Signature`, an HMAC-SHA1 of the URL and the form params.
+      type: string
+      enum:
+        - stripe
+        - standard_webhooks
+        - hmac_sha256
+        - twilio
+    WebhookSignatureStatus:
+      description: The outcome of checking one delivery's signature. `unchecked` when the webhook had no signing secret; `missing` without a signature header; `expired` when signed more than five minutes from its arrival.
+      type: string
+      enum:
+        - unchecked
+        - valid
+        - invalid
+        - missing
+        - expired
+    WebhookSignature:
+      type: object
+      required:
+        - scheme
+      properties:
+        scheme:
+          $ref: '#/components/schemas/WebhookSignatureScheme'
+    WebhookSignatureInput:
+      type: object
+      required:
+        - scheme
+        - secret
+      properties:
+        scheme:
+          $ref: '#/components/schemas/WebhookSignatureScheme'
+        secret:
+          description: The signing secret, such as Stripe's `whsec_…` endpoint secret. Write-only.
+          type: string
+          minLength: 1
+          maxLength: 1024
+          writeOnly: true
     HttpMethod:
       description: HTTP method
       type: string
@@ -7715,6 +8616,7 @@ components:
         - query_params
         - received_at
         - ip_address
+        - signature_status
       properties:
         id:
           description: Unique identifier for the webhook request.
@@ -7776,6 +8678,8 @@ components:
           description: Timestamp when the request was received.
           type: string
           format: date-time
+        signature_status:
+          $ref: '#/components/schemas/WebhookSignatureStatus'
     WebhookRequestFilter:
       type: object
       properties:
@@ -8118,6 +9022,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WebhookExpectation'
+        integration:
+          $ref: '#/components/schemas/IntegrationNodeRef'
     WebhookExpectation:
       description: One event the wait expects, described by the assertions it must pass.
       type: object
@@ -8199,6 +9105,42 @@ components:
           type: integer
           examples:
             - 30000
+        body_encoding:
+          description: |
+            How the body is sent. Absent: a string body as it is, any other body as JSON. `form`: an
+            object body as `application/x-www-form-urlencoded` with bracket nesting
+            (`metadata[plan]=pro`), encoded after templates resolve. A form body needs a runner that
+            declares `form_body`.
+          type: string
+          enum:
+            - form
+        integration:
+          $ref: '#/components/schemas/IntegrationNodeRef'
+    IntegrationNodeRef:
+      description: |
+        Makes the node an integration node (ADR-0024). Launch fills it from the integration: a
+        request node gets the operation's method, URL, inputs, authentication, API version and
+        outputs; a webhook_wait node reads the connection's capture webhook and expects the event
+        type. The stored `method` and `url` only describe the call. Launch refuses a node whose
+        integration the license does not grant, whose environment has no connection, or whose
+        item is no longer offered.
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          description: The integration, such as `stripe`.
+          type: string
+        operation:
+          description: The operation key, such as `customer.list`. For a request node.
+          type: string
+        event:
+          description: The event type, such as `invoice.paid`. For a webhook_wait node.
+          type: string
+        inputs:
+          description: The operation's inputs by param name. Values support template variables.
+          type: object
+          additionalProperties: true
     DelayNodeData:
       type: object
       required:
@@ -9719,10 +10661,12 @@ components:
     RunnerCapability:
       description: |
         A feature a runner build supports. `secret_outputs`: the runner masks the values of
-        node outputs declared `secret` in everything it reports (ADR-0018).
+        node outputs declared `secret` in everything it reports (ADR-0018). `form_body`: the
+        runner sends a request node with `body_encoding: form` form-encoded (ADR-0024).
       type: string
       enum:
         - secret_outputs
+        - form_body
     EphemeralJobClaimResponse:
       description: One-time delivery of the Job credential and runnable payload.
       type: object
@@ -10393,6 +11337,7 @@ components:
         - active_cloud_jobs
         - http_calls
         - rules
+        - integrations
       properties:
         generated_at:
           description: The instant every window in this response ends at.
@@ -10418,6 +11363,11 @@ components:
           $ref: '#/components/schemas/HTTPCallUsage'
         rules:
           $ref: '#/components/schemas/LicenseRules'
+        integrations:
+          description: The ids of the integrations the license grants, such as `stripe`.
+          type: array
+          items:
+            type: string
     HTTPCallUsage:
       description: |
         How close the organization's runs came to the per-execution HTTP call
@@ -13892,7 +14842,10 @@ components:
           type: boolean
       additionalProperties: false
     StatusPageConfig:
-      description: Shared design draft. Services and regions must have unique IDs and at least one enabled entry; region locations are unique.
+      description: |
+        Shared design draft. Services and regions must have unique IDs and at least one
+        enabled entry; region locations are unique. Display text is plain text: HTML
+        markup is removed before the page is stored.
       type: object
       required:
         - version
@@ -15122,6 +16075,23 @@ components:
         type: string
         examples:
           - echopoint-api
+    IntegrationIdParameter:
+      name: integrationId
+      in: path
+      description: The integration id.
+      required: true
+      schema:
+        type: string
+        examples:
+          - stripe
+    IntegrationEnvironmentKeyParameter:
+      name: environmentKey
+      in: path
+      description: The environment the connection serves, such as `dev`.
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{1,64}$'
     WebhookIdParameter:
       name: id
       in: path
@@ -15227,6 +16197,8 @@ tags:
     description: Authentication and current user context operations.
   - name: Webhook
     description: Manage webhook endpoints and capture requests.
+  - name: Integration
+    description: Third-party integrations, such as Stripe, their reviewed operations and events, and their connections.
   - name: Analytics
     description: Webhook and execution analytics.
   - name: Flows
