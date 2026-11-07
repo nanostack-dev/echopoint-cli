@@ -143,6 +143,9 @@ func buildFlowHandler(cli *client.Client) mcpsdk.ToolHandler {
 		if status >= 400 {
 			return errResult(fmt.Sprintf("HTTP %d\n%s", status, text)), nil
 		}
+		for _, w := range correlationWarnings(flow) {
+			text += "\nwarning: " + w
+		}
 		return &mcpsdk.CallToolResult{
 			Content: []mcpsdk.Content{&mcpsdk.TextContent{Text: text}},
 		}, nil

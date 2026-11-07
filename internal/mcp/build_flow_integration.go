@@ -271,3 +271,39 @@ func buildIntegrationNode(n flatNode, catalog integrationCatalog, node map[strin
 	node[keyType] = requestKind
 	node["data"] = data
 }
+
+// correlationWarnings names each integration event node that no assert ties to
+// this run. Every run of a connection shares its capture webhook, so a wait
+// takes the first delivery of the event type that passes its asserts: an
+// assert on a value another node of this run produced selects this run's
+// event, while an assert on a literal or an environment value also matches a
+// concurrent run's event (Echopoint ADR-0029).
+func correlationWarnings(f flatFlow) []string {
+	ids := make(map[string]bool, len(f.Nodes))
+	for _, n := range f.Nodes {
+		ids[n.ID] = true
+	}
+	var warnings []string
+	for _, n := range f.Nodes {
+		if n.Integration == nil || n.Integration.Event == "" || eventRefsThisRun(n, ids) {
+			continue
+		}
+		warnings = append(warnings, fmt.Sprintf(
+			"integration event %q has no assert tied to this run: concurrent runs share the %s "+
+				"capture webhook, so the wait can take another run's %s event; add an assert on a "+
+				"value this run created, for example {\"path\": \"$.data.object.id\", \"value\": \"{{<node>.id}}\"}",
+			n.ID, n.Integration.ID, n.Integration.Event))
+	}
+	return warnings
+}
+
+func eventRefsThisRun(n flatNode, ids map[string]bool) bool {
+	for _, a := range n.Asserts {
+		for _, m := range refPattern.FindAllStringSubmatch(a.Value, -1) {
+			if ids[m[1]] && m[1] != n.ID {
+				return true
+			}
+		}
+	}
+	return false
+}

@@ -129,6 +129,12 @@ agent sets one up and uses it with these tools, in this order:
    body, so the node has none of them. The operation's outputs are referenceable
    (`{{customer.id}}`) without declaring them. Before saving, `build_flow` checks
    each node against the workspace's items and names the tool that fixes a gap.
+5. Tie every event to the run. All runs of a connection share its capture webhook, for
+   every vendor, so another run's event of the same type can arrive first. An event's
+   asserts select the delivery: a delivery that fails them is skipped. Assert on a value
+   this run created, such as `{"path": "$.data.object.id", "value": "{{customer.id}}"}`.
+   An assert on a literal or an environment value also matches another run's event, so
+   `build_flow` adds a `warning:` line for each event without a run-specific assert.
 
 `connect_integration` puts the vendor key in the model's context. When that is not
 acceptable, connect with `echopoint integration connect <id> --env <env>`, which reads

@@ -141,3 +141,38 @@ func TestBuildFlowDocIntegrationNodes(t *testing.T) {
 		t.Fatalf("event ref: %+v", ref)
 	}
 }
+
+func TestCorrelationWarningsNameEventsWithoutARunAssert(t *testing.T) {
+	customer := flatNode{ID: "customer", Integration: &flatIntegration{ID: "stripe", Operation: "customer.create"}}
+	event := func(asserts ...flatAssert) flatNode {
+		return flatNode{
+			ID:          "paid",
+			Integration: &flatIntegration{ID: "stripe", Event: "checkout.session.completed"},
+			Asserts:     asserts,
+		}
+	}
+	cases := map[string]struct {
+		flow flatFlow
+		want int
+	}{
+		"no assert":      {stripeFlow(customer, event()), 1},
+		"literal assert": {stripeFlow(customer, event(flatAssert{Path: "$.data.object.id", Value: "cus_1"})), 1},
+		"env assert": {
+			stripeFlow(customer, event(flatAssert{Path: "$.data.object.email", Value: "{{email}}"})),
+			1,
+		},
+		"self ref": {stripeFlow(customer, event(flatAssert{Path: "$.id", Value: "{{paid.id}}"})), 1},
+		"node ref assert": {
+			stripeFlow(customer, event(flatAssert{Path: "$.data.object.customer", Value: "{{customer.id}}"})),
+			0,
+		},
+		"operation only": {stripeFlow(customer), 0},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := correlationWarnings(tc.flow); len(got) != tc.want {
+				t.Fatalf("got %d warnings %v, want %d", len(got), got, tc.want)
+			}
+		})
+	}
+}

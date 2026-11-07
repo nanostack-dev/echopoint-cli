@@ -35,6 +35,13 @@ search_integration_items) are referenceable as {{nodeId.output}} without
 declaring them. {"integration":{"id":"stripe","event":"checkout.session.completed"}}
 is a wait node (optional "timeout_ms"): it passes when that event reaches the
 connection's capture webhook during the run; assert on payload paths, not status.
+Every run of a connection shares its capture webhook, for every vendor, so a
+concurrent run's event of the same type can arrive first. An event's asserts
+select the delivery: one that fails them is skipped, and the wait keeps
+listening. Give every event an assert on a value this run created, for example
+{"path":"$.data.object.id","value":"{{customer.id}}"}; an assert on a literal
+or an environment value also matches another run's event. build_flow warns
+when an event has no such assert.
 Set up an integration before using it:
   1. search_integrations — find the integration id;
   2. search_integration_connections, then connect_integration if not connected;
