@@ -88,6 +88,9 @@ func NewRootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+		} else if apiKey == "" && cmd.Annotations[storedCredentialsAnnotation] == annotationEnabled {
+			// Such a command works without credentials; it uses them when stored.
+			token, apiKey, _ = resolveStoredCredentials(flagToken, cfg.Profile)
 		}
 		if organizationID == "" && apiKey == "" && token != "" {
 			organizationID = recoverSessionOrganizationID(contextOf(cmd), cfg, token)

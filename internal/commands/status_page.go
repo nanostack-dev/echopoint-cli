@@ -28,6 +28,14 @@ func offline() map[string]string {
 	return map[string]string{offlineAnnotation: annotationEnabled}
 }
 
+// storedCredentialsAnnotation marks an offline command that reads the API for
+// part of its work: it uses the stored credentials when there are some.
+const storedCredentialsAnnotation = "echopoint/stored-credentials"
+
+func offlineWithStoredCredentials() map[string]string {
+	return map[string]string{offlineAnnotation: annotationEnabled, storedCredentialsAnnotation: annotationEnabled}
+}
+
 // draftAction routes two local CLI commands; it is not an API/domain enum.
 type draftAction int
 
