@@ -3,19 +3,26 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"echopoint-cli/internal/api"
 
 	"github.com/google/uuid"
+	"github.com/nanostack-dev/echopoint-runner/pkg/flowdsl/wire"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/spf13/cobra"
 )
 
 // nodeTypeRequest is the "request" flow node type.
 const nodeTypeRequest = "request"
+
+// maxEmailWaitTimeoutMs is the lifetime of a run inbox address.
+const maxEmailWaitTimeoutMs = 120 * 60 * 1000
 
 // newFlowNodeCmd creates the node subcommand for flows
 func newFlowNodeCmd(state *AppState) *cobra.Command {
@@ -39,6 +46,7 @@ func newFlowNodeCmd(state *AppState) *cobra.Command {
 // newFlowNodeAddCmd adds a new node to a flow
 func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 	var nodeType, name, method, url, headers, body, moduleFlowID, customID, runWhen string
+	var linkPattern, codePattern string
 	var duration, timeoutMs, settleMs int
 	var inputBindings, outputBindings, afterNodes []string
 
@@ -57,6 +65,11 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
   # events with 'flow node expect add'
   echopoint flow node add <flow-id> --id events --type webhook_wait --name "Every invitation event" \
     --timeout 30000 --settle 3000 --run-when always --after resend-invite
+
+  # Wait for the email a signup sent to {{inbox.address}}; then match it with
+  # 'flow node assertion add ... --extractor json_path --path $.subject'
+  echopoint flow node add <flow-id> --id verify --type email_wait --name "Verification email" \
+    --timeout 60000 --link-pattern '/verify' --after signup
 
   # Add a module node that runs another flow (reuse a flow inside this one)
   echopoint flow node add <flow-id> --type module --name "Login" \
@@ -136,6 +149,8 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 				duration:       duration,
 				timeoutMs:      timeoutMs,
 				settleMs:       settleMs,
+				linkPattern:    linkPattern,
+				codePattern:    codePattern,
 				moduleFlowID:   moduleFlowID,
 				inputBindings:  inputBindings,
 				outputBindings: outputBindings,
@@ -191,7 +206,7 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request, delay, module or webhook_wait)")
+	cmd.Flags().StringVar(&nodeType, "type", "", "Node type (request, delay, module, webhook_wait or email_wait)")
 	cmd.Flags().StringVar(&customID, "id", "",
 		"Custom node ID, unique within the flow (auto-generated UUID if omitted)")
 	cmd.Flags().StringVar(&runWhen, "run-when", "",
@@ -204,9 +219,14 @@ func newFlowNodeAddCmd(state *AppState) *cobra.Command {
 	cmd.Flags().StringVar(&headers, "headers", "", "HTTP headers as JSON (for request nodes)")
 	cmd.Flags().StringVar(&body, "body", "", "Request body (for request nodes)")
 	cmd.Flags().IntVar(&duration, "duration", 0, "Delay duration in milliseconds (for delay nodes)")
-	cmd.Flags().IntVar(&timeoutMs, "timeout", 0, "Wait budget in milliseconds (for webhook_wait nodes; default 30000)")
+	cmd.Flags().IntVar(&timeoutMs, "timeout", 0,
+		"Wait budget in milliseconds (webhook_wait: default 30000; email_wait: default 60000, at most 7200000)")
 	cmd.Flags().IntVar(&settleMs, "settle", 0,
-		"How long to keep listening once every expected event arrived (for webhook_wait nodes)")
+		"How long to keep listening once every expected event arrived (for webhook_wait and email_wait nodes)")
+	cmd.Flags().StringVar(&linkPattern, "link-pattern", "",
+		"Regex that keeps the links of the matched email (for email_wait nodes)")
+	cmd.Flags().StringVar(&codePattern, "code-pattern", "",
+		`Regex that finds the code in the email text; group 1 when it has one (for email_wait nodes; default \b\d{6}\b)`)
 	cmd.Flags().StringVar(&moduleFlowID, "flow-id", "", "Referenced child flow ID (for module nodes)")
 	_ = cmd.RegisterFlagCompletionFunc("flow-id", completeFlowFlag(state))
 	cmd.Flags().StringArrayVar(&inputBindings, "input", nil,
@@ -382,7 +402,7 @@ func newFlowNodeOutputCmd(state *AppState) *cobra.Command {
 
 // newFlowNodeOutputAddCmd adds an output to a node
 func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
-	var name, extractorType, path, headerName string
+	var name, extractorType, path, headerName, selector, attribute, pattern string
 	var secret bool
 
 	cmd := &cobra.Command{
@@ -403,7 +423,11 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
   echopoint flow node output add <flow-id> <node-id> --name "contentType" --extractor header --header-name "Content-Type"
 
   # Add a secret output: its value is replaced by *** in every result and event after extraction
-  echopoint flow node output add <flow-id> <node-id> --name "jwt" --extractor json_path --path "$.jwt" --secret`,
+  echopoint flow node output add <flow-id> <node-id> --name "jwt" --extractor json_path --path "$.jwt" --secret
+
+  # Mask the code an email wait found, and read a link of its HTML
+  echopoint flow node output add <flow-id> verify --name code --extractor json_path --path '$.code' --secret
+  echopoint flow node output add <flow-id> verify --name reset --extractor html --selector a.reset --attribute href`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -420,9 +444,14 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 			validExtractors := []string{
 				string(api.ExtractorTypeJsonPath), string(api.ExtractorTypeStatusCode),
 				string(api.ExtractorTypeBody), string(api.ExtractorTypeHeader),
+				string(extractorTypeHTML), string(extractorTypeRegex),
 			}
 			if !containsString(validExtractors, extractorType) {
 				return fmt.Errorf("invalid extractor type: %s (must be one of: %v)", extractorType, validExtractors)
+			}
+			extraData := map[string]any{}
+			if err := addHTMLRegexData(extraData, extractorType, selector, attribute, pattern); err != nil {
+				return err
 			}
 
 			definition, err := fetchFlowDefinition(cmd.Context(), state, flowID)
@@ -435,6 +464,22 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 			// Find node and add output
 			found := false
 			for i, node := range definition.Nodes {
+				kind, _ := node.Discriminator()
+				id, _ := flowNodeID(node)
+				if id == nodeID && (kind == nodeTypeEmailWait || len(extraData) > 0) {
+					if kind != nodeTypeEmailWait && kind != nodeTypeRequest {
+						return fmt.Errorf(
+							"the %s extractor reads a request response or an email: %s",
+							extractorType,
+							nodeID,
+						)
+					}
+					if err := appendRawOutput(&definition.Nodes[i], newOutput, extraData); err != nil {
+						return err
+					}
+					found = true
+					continue
+				}
 				nodeData, _ := node.ValueByDiscriminator()
 				switch n := nodeData.(type) {
 				case api.RequestFlowNode:
@@ -471,7 +516,11 @@ func newFlowNodeOutputAddCmd(state *AppState) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "Output name")
-	cmd.Flags().StringVar(&extractorType, "extractor", "", "Extractor type (json_path, status_code, body, header)")
+	cmd.Flags().StringVar(&extractorType, "extractor", "",
+		"Extractor type (json_path, status_code, body, header, html, regex)")
+	cmd.Flags().StringVar(&selector, "selector", "", "CSS selector for the html extractor")
+	cmd.Flags().StringVar(&attribute, "attribute", "", "Attribute the html extractor reads (default: the element text)")
+	cmd.Flags().StringVar(&pattern, "pattern", "", "Regex for the regex extractor; group 1 when it has a group")
 	cmd.Flags().StringVar(&path, "path", "", "Path for json_path extractor")
 	cmd.Flags().StringVar(&headerName, "header-name", "", "Header name for header extractor")
 	cmd.Flags().BoolVar(&secret, "secret", false, "Replace the extracted value with *** in results and events")
@@ -495,6 +544,36 @@ func buildNodeOutput(name, extractorType, path, headerName string, secret bool) 
 		output.Secret = &secret
 	}
 	return output
+}
+
+// appendRawOutput appends an output through the node's JSON, with extractor
+// fields the generated client has no field for.
+func appendRawOutput(node *api.FlowNode, output api.Output, extractorData map[string]any) error {
+	encoded, err := json.Marshal(output)
+	if err != nil {
+		return err
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(encoded, &doc); err != nil {
+		return err
+	}
+	if extractor, ok := doc["extractor"].(map[string]any); ok {
+		maps.Copy(extractor, extractorData)
+	}
+	if encoded, err = json.Marshal(doc); err != nil {
+		return err
+	}
+	return editNodeJSON(node, func(nodeDoc map[string]json.RawMessage) error {
+		var outputs []json.RawMessage
+		if raw, ok := nodeDoc["outputs"]; ok && !isJSONNull(raw) {
+			if err := json.Unmarshal(raw, &outputs); err != nil {
+				return fmt.Errorf("failed to read outputs: %w", err)
+			}
+		}
+		var marshalErr error
+		nodeDoc["outputs"], marshalErr = json.Marshal(append(outputs, encoded))
+		return marshalErr
+	})
 }
 
 func appendNodeOutput(outputs *[]api.Output, output api.Output) *[]api.Output {
@@ -600,7 +679,7 @@ func newFlowNodeAssertionCmd(state *AppState) *cobra.Command {
 
 // newFlowNodeAssertionAddCmd adds an assertion to a node
 func newFlowNodeAssertionAddCmd(state *AppState) *cobra.Command {
-	var extractorType, path, headerName, paramName, operatorType, value string
+	var extractorType, path, headerName, paramName, selector, attribute, pattern, operatorType, value string
 
 	cmd := &cobra.Command{
 		Use:   addToNodeUse,
@@ -621,7 +700,13 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 
   # On a webhook wait with expected events, an assertion is a check on every event
   echopoint flow node assertion add <flow-id> events --extractor header --header-name webhook-signature \
-    --operator starts_with --value "v1,"`,
+    --operator starts_with --value "v1,"
+
+  # On an email wait, assertions pick the message: its subject, then its button link
+  echopoint flow node assertion add <flow-id> verify --extractor json_path --path '$.subject' \
+    --operator contains --value Verify
+  echopoint flow node assertion add <flow-id> verify --extractor html --selector a.verify --attribute href \
+    --operator starts_with --value https://`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
@@ -638,7 +723,7 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 			validExtractors := []string{
 				string(api.ExtractorTypeStatusCode), string(api.ExtractorTypeJsonPath),
 				string(api.ExtractorTypeBody), string(api.ExtractorTypeHeader),
-				string(api.ExtractorTypeQueryParam),
+				string(api.ExtractorTypeQueryParam), string(extractorTypeHTML), string(extractorTypeRegex),
 			}
 			if !containsString(validExtractors, extractorType) {
 				return fmt.Errorf("invalid extractor type: %s (must be one of: %v)", extractorType, validExtractors)
@@ -671,6 +756,9 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 			if extractorType == string(api.ExtractorTypeQueryParam) && paramName == "" {
 				return fmt.Errorf("--param-name is required for the query_param extractor")
 			}
+			if err := addHTMLRegexData(extractorData, extractorType, selector, attribute, pattern); err != nil {
+				return err
+			}
 
 			// Build operator data
 			operatorData := make(map[string]any)
@@ -681,6 +769,18 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 			// Find node and add assertion
 			found := false
 			for i, node := range definition.Nodes {
+				if kind, _ := node.Discriminator(); kind == nodeTypeEmailWait && isWaitNode(node, nodeID) {
+					if err := appendNodeAssertion(&definition.Nodes[i], api.CompositeAssertion{
+						ExtractorType: api.ExtractorType(extractorType),
+						ExtractorData: extractorData,
+						OperatorType:  api.OperatorType(operatorType),
+						OperatorData:  operatorData,
+					}); err != nil {
+						return err
+					}
+					found = true
+					continue
+				}
 				nodeData, _ := node.ValueByDiscriminator()
 				switch n := nodeData.(type) {
 				case api.RequestFlowNode:
@@ -723,7 +823,7 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 			}
 
 			if !found {
-				return fmt.Errorf("request or webhook wait node not found: %s", nodeID)
+				return fmt.Errorf("request, webhook wait or email wait node not found: %s", nodeID)
 			}
 
 			if err := saveFlowDefinition(cmd.Context(), state, flowID, definition); err != nil {
@@ -742,7 +842,13 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 	}
 
 	cmd.Flags().StringVar(
-		&extractorType, "extractor", "", "Extractor type (status_code, json_path, body, header, query_param)")
+		&extractorType, "extractor", "", "Extractor type (status_code, json_path, body, header, query_param, html, regex)")
+	cmd.Flags().StringVar(
+		&selector, "selector", "", "CSS selector for the html extractor")
+	cmd.Flags().StringVar(
+		&attribute, "attribute", "", "Attribute the html extractor reads (default: the element text)")
+	cmd.Flags().StringVar(
+		&pattern, "pattern", "", "Regex for the regex extractor; group 1 when it has a group")
 	cmd.Flags().StringVar(
 		&path, "path", "", "Path for json_path extractor")
 	cmd.Flags().StringVar(
@@ -792,6 +898,13 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 			// Find node and remove assertion
 			found := false
 			for i, node := range definition.Nodes {
+				if kind, _ := node.Discriminator(); kind == nodeTypeEmailWait && isWaitNode(node, nodeID) {
+					if err := removeNodeAssertion(&definition.Nodes[i], index); err != nil {
+						return err
+					}
+					found = true
+					continue
+				}
 				nodeData, _ := node.ValueByDiscriminator()
 				switch n := nodeData.(type) {
 				case api.RequestFlowNode:
@@ -832,6 +945,7 @@ func newFlowNodeAssertionRemoveCmd(state *AppState) *cobra.Command {
 // nodeBuildInput carries the fields needed to construct a flow node.
 type nodeBuildInput struct {
 	id, nodeType, name, method, url, headers, body, moduleFlowID string
+	linkPattern, codePattern                                     string
 	duration, timeoutMs, settleMs                                int
 	inputBindings, outputBindings                                []string
 	runWhen                                                      *api.FlowNodeRunWhen
@@ -900,11 +1014,112 @@ func buildFlowNode(in nodeBuildInput) (api.FlowNode, error) {
 		}); err != nil {
 			return node, err
 		}
+	case nodeTypeEmailWait:
+		return buildEmailWaitNode(in)
 	default:
 		return node, fmt.Errorf(
-			"invalid node type: %s (must be 'request', 'delay', 'module' or 'webhook_wait')", in.nodeType)
+			"invalid node type: %s (must be 'request', 'delay', 'module', 'webhook_wait' or 'email_wait')", in.nodeType)
 	}
 	return node, nil
+}
+
+// addHTMLRegexData fills the extractor data of the html and regex extractors.
+func addHTMLRegexData(data map[string]any, extractorType, selector, attribute, pattern string) error {
+	switch api.ExtractorType(extractorType) {
+	case extractorTypeHTML:
+		if selector == "" {
+			return fmt.Errorf("--selector is required for the html extractor")
+		}
+		data["selector"] = selector
+		if attribute != "" {
+			data["attribute"] = attribute
+		}
+	case extractorTypeRegex:
+		if _, err := regexp.Compile(pattern); err != nil || pattern == "" {
+			return fmt.Errorf("--pattern must be a regex for the regex extractor")
+		}
+		data["pattern"] = pattern
+	}
+	return nil
+}
+
+// appendNodeAssertion appends an assertion to a node through its JSON, so it
+// reaches a kind the generated client has no type for.
+func appendNodeAssertion(node *api.FlowNode, assertion api.CompositeAssertion) error {
+	return editNodeJSON(node, func(doc map[string]json.RawMessage) error {
+		var assertions []json.RawMessage
+		if raw, ok := doc["assertions"]; ok && !isJSONNull(raw) {
+			if err := json.Unmarshal(raw, &assertions); err != nil {
+				return fmt.Errorf("failed to read assertions: %w", err)
+			}
+		}
+		encoded, err := json.Marshal(assertion)
+		if err != nil {
+			return err
+		}
+		if doc["assertions"], err = json.Marshal(append(assertions, encoded)); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// removeNodeAssertion removes the assertion at index through the node's JSON.
+func removeNodeAssertion(node *api.FlowNode, index int) error {
+	return editNodeJSON(node, func(doc map[string]json.RawMessage) error {
+		var assertions []json.RawMessage
+		if raw, ok := doc["assertions"]; ok && !isJSONNull(raw) {
+			if err := json.Unmarshal(raw, &assertions); err != nil {
+				return fmt.Errorf("failed to read assertions: %w", err)
+			}
+		}
+		if index >= len(assertions) {
+			return fmt.Errorf("assertion index out of range: %d (node has %d assertions)", index, len(assertions))
+		}
+		var err error
+		doc["assertions"], err = json.Marshal(slices.Delete(assertions, index, index+1))
+		return err
+	})
+}
+
+// buildEmailWaitNode encodes an email_wait node, a kind the generated client
+// has no type for, from the flow file compiler's wire type.
+func buildEmailWaitNode(in nodeBuildInput) (api.FlowNode, error) {
+	var node api.FlowNode
+	if in.timeoutMs > maxEmailWaitTimeoutMs {
+		return node, fmt.Errorf("--timeout must not exceed %d, the inbox address lifetime", maxEmailWaitTimeoutMs)
+	}
+	for flag, pattern := range map[string]string{"--link-pattern": in.linkPattern, "--code-pattern": in.codePattern} {
+		if _, err := regexp.Compile(pattern); err != nil {
+			return node, fmt.Errorf("%s is not a valid regex: %w", flag, err)
+		}
+	}
+	wait := wire.EmailWaitFlowNode{
+		Id:          in.id,
+		Type:        wire.EmailWaitFlowNodeTypeEmailWait,
+		DisplayName: in.name,
+	}
+	if in.runWhen != nil {
+		runWhen := wire.FlowNodeRunWhen(*in.runWhen)
+		wait.RunWhen = &runWhen
+	}
+	if in.timeoutMs > 0 {
+		wait.Data.TimeoutMs = &in.timeoutMs
+	}
+	if in.settleMs > 0 {
+		wait.Data.SettleMs = &in.settleMs
+	}
+	if in.linkPattern != "" {
+		wait.Data.LinkPattern = &in.linkPattern
+	}
+	if in.codePattern != "" {
+		wait.Data.CodePattern = &in.codePattern
+	}
+	raw, err := json.Marshal(wait)
+	if err != nil {
+		return node, err
+	}
+	return node, node.UnmarshalJSON(raw)
 }
 
 // buildModuleData assembles a module node's data from the child flow id and bindings.

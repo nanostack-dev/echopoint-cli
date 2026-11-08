@@ -130,11 +130,11 @@ nodes:
       status: 200
 ```
 
-`expect: "status: 200"` and a `status` mapping are the same check. A list holds several checks: `["status: 200", "$.id not_empty"]`. The other checks are `$.path <operator> [value]`, `header:<name>`, `query:<name>`, `body`, and `status <operator> [value]`. `between` takes two values, `$.n between 1 5` or `status between 200 299`, and compiles to `operator_data.value` as a `[low, high]` pair. That is the pair the runner reads.
+`expect: "status: 200"` and a `status` mapping are the same check. A list holds several checks: `["status: 200", "$.id not_empty"]`. The other checks are `$.path <operator> [value]`, `header:<name>`, `query:<name>`, `html:<selector>[@attribute]`, `regex:<pattern>`, `body`, and `status <operator> [value]`. `between` takes two values, `$.n between 1 5` or `status between 200 299`, and compiles to `operator_data.value` as a `[low, high]` pair. That is the pair the runner reads.
 
-An output is `$.path`, `header:<name>`, `body`, or `status`. `status` captures the HTTP status code. Add `secret: true` beside `path`, `header`, or `status: true` when the value must be masked.
+An output is `$.path`, `header:<name>`, `html:<selector>[@attribute]`, `regex:<pattern>`, `body`, or `status`. `status` captures the HTTP status code. `html` reads an HTML body (or an email's HTML) with a CSS selector, the element text or its attribute; the mapping form `{html: a, attribute: href, all: true}` returns every match. `regex` returns the first match in the body (or an email's text), group 1 when the pattern has a group; the mapping form takes `group`. Add `secret: true` beside `path`, `header`, `html`, `regex` or `status: true` when the value must be masked.
 
-A node has exactly one kind: `request`, `module`, `integration`, `delay`, `set`, `assert`, `branch`, `poll`, `loop`, `webhook_wait`, or `sse`. `delay: 1000` waits that many milliseconds. `set` writes variables, and those names are its outputs. A branch names a `target` node per case and a `default`; compile adds the success edges. `folder` is a folder id. A folder path is a warning and is left unset, because the API wants the id.
+A node has exactly one kind: `request`, `module`, `integration`, `delay`, `set`, `assert`, `branch`, `poll`, `loop`, `webhook_wait`, `email_wait`, or `sse`. `delay: 1000` waits that many milliseconds. `set` writes variables, and those names are its outputs. A branch names a `target` node per case and a `default`; compile adds the success edges. `folder` is a folder id. A folder path is a warning and is left unset, because the API wants the id.
 
 An `integration` node uses an operation or an event of a connected integration (see `echopoint integration items <id>`). It sets `id` and exactly one of `operation` and `event`. An operation node calls the operation with its `inputs`; it compiles to a `request` node, and launch fills the method, URL, headers and body from the integration, so the node sets none of them. An event node waits for the integration's webhook; it compiles to a `webhook_wait` node, takes no inputs and no status check, and checks the event payload with `expect`. Both take `timeout_ms`; an event node also takes `settle_ms`. `flow create -f` and `flow update -f` check each integration node against the workspace catalog: the integration and item must exist, the item must not be refused, and the operation must take every input. `flow compile` works offline, so it prints the operation node with an empty method and URL.
 
@@ -161,7 +161,42 @@ An operation node provides the outputs its catalog operation lists: `echopoint i
 
 All runs of a connection share its capture webhook, for every integration, so a concurrent run's event of the same type can arrive first. An event node's checks select the delivery: launch adds them to every `expect` group, and a delivery that fails them is skipped while the wait keeps listening. Give every event node a check on a value this run created, such as `$.data.object.id equals {{customer.id}}` above. A check on a literal or an environment value also matches another run's event, so `flow compile` and `flow create -f` print a warning for an event node that has no check on another node's output, a loop variable or a flow input.
 
-`{{node.output}}` must name a node in the same graph and an output that node declares. A longer path walks into that value, the same way the runner does: `{{list.items.0.id}}` is valid when `list` declares `items`. `{{var}}` with no dot is an initial input. `{{webhook.url}}` and `{{webhook.requests_url}}` are provided when a flow waits for a webhook and no node is named `webhook`. An `sse` node always provides `events`, `count`, and `last`. A `webhook_wait` node always provides `id`, `method`, `headers`, `query`, `body`, and `received_at`.
+`{{node.output}}` must name a node in the same graph and an output that node declares. A longer path walks into that value, the same way the runner does: `{{list.items.0.id}}` is valid when `list` declares `items`. `{{var}}` with no dot is an initial input. `{{webhook.url}}` and `{{webhook.requests_url}}` are provided when a flow waits for a webhook and no node is named `webhook`. `{{inbox.address}}`, `{{inbox.local}}`, `{{inbox.domain}}` and `{{inbox.messages_url}}` are provided when a flow waits for an email and no node is named `inbox`. An `sse` node always provides `events`, `count`, and `last`. A `webhook_wait` node always provides `id`, `method`, `headers`, `query`, `body`, and `received_at`. An `email_wait` node always provides `id`, `message_id`, `from`, `to`, `envelope_from`, `envelope_to`, `subject`, `text`, `html`, `links`, `first_link`, `code`, and `received_at`, or only `received` when it has `expect` groups.
+
+An `email_wait` node waits for an email to the run inbox. Its `expect` checks pick the message; without a check, the first message matches. It takes `timeout_ms` (default 60000, at most 7200000, the address lifetime), `link_pattern` (a regex that keeps the links it matches), `code_pattern` (default `\b\d{6}\b`; group 1 when it has a group), and `settle_ms` and `expect` groups as a `webhook_wait` does. A quoted check target is a Go string, so a regex with a space doubles its backslashes: `'"regex:code is \\d+" not_empty'`.
+
+```yaml
+name: "acme: signup is verified by email"
+nodes:
+  signup:
+    request:
+      method: post
+      url: "{{apiUrl}}/signup"
+      body:
+        email: "{{inbox.local}}+alice@{{inbox.domain}}"
+    expect: "status: 202"
+    next: verify
+  verify:
+    email_wait:
+      timeout_ms: 120000
+      link_pattern: ^https://staging\.acme\.example/verify
+    expect:
+      - $.subject contains Verify
+      - $.envelope_to contains +alice@
+    outputs:
+      code:
+        path: $.code
+        secret: true
+      button: html:a.verify@href
+    next: confirm
+  confirm:
+    request:
+      method: get
+      url: "{{verify.first_link}}"
+    expect: "status: 302"
+```
+
+Launch refuses an `email_wait` until the API enables run inboxes, so such a flow compiles and lints today but does not run yet.
 
 The same output name on two nodes is normal: each one is `{{that-node.id}}`. A module infers one public output per name, so a repeated public name is a warning and that name is not inferred. List `outputs` on the file to choose which names a caller receives.
 
@@ -571,6 +606,18 @@ Remove one with `echopoint flow node expect remove <flow-id> <node-id> "<name>"`
 
 A wait without expected events keeps its older behaviour: it waits for the first
 request that passes its assertions.
+
+The same commands manage an email wait (`--type email_wait`). Its checks read the
+message: `$.subject`, `$.envelope_to`, `$.code` and the other outputs, `body` (the
+text), `header:From`, `html:<selector>[@attribute]` and `regex:<pattern>`:
+
+```bash
+echopoint flow node add <flow-id> --id verify --type email_wait --name "Verification email" \
+  --timeout 60000 --link-pattern '/verify' --after signup
+echopoint flow node assertion add <flow-id> verify --extractor json_path --path '$.subject' \
+  --operator contains --value Verify
+echopoint flow node output add <flow-id> verify --name code --extractor json_path --path '$.code' --secret
+```
 
 ## Edge Management
 
