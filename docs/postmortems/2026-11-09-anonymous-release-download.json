@@ -1,0 +1,313 @@
+{
+ "title": "Echopoint deploy gate failed 7 times: the CLI Action downloaded its binary anonymously during a GitHub anonymous-traffic incident",
+ "short": "Anonymous release download",
+ "service": "echopoint-cli GitHub Action, infra Deploy Router",
+ "date": "2026-11-09",
+ "severity": "SEV4",
+ "status": "in review",
+ "authors": [
+  "Nanostack routine (echopoint-investigation)"
+ ],
+ "summary": "From 05:16Z on 2026-11-09, GitHub answered **504** to anonymous requests for release assets while authenticated requests still got 200 (GitHub incident *Increased timeouts due to surge in anonymous users*). The echopoint deploy of #794 (Deploy Router run 42566238183) failed all 7 attempts in 45 minutes: the flow gate could not download the echopoint CLI and the frontend jobs could not download the apispec wasm, so no flow ran. Prod was not held: the next deploy (#795, which contains #794) hit a gap in the 504s and promoted to prod at 05:58Z. The echopoint CLI composite Action, which customers also pin as `@v1`, downloaded its own binary with an anonymous `curl` and no retry. echopoint-cli#98 now sends the workflow token, retries, and falls back to an anonymous request; it shipped as v3.14.2 and moved `v1` at 06:29Z.",
+ "impact": {
+  "text": "CI and deploy pipeline only. The echopoint deploy of #794 failed 7 times and paged the deploy-failure alert 7 times; the same commit reached prod 43 minutes later through the next deploy. Every caller of `nanostack-dev/echopoint-cli@v1` (the post-deploy gates, and any customer workflow) was exposed to the same failure for the length of the GitHub incident; customer runs are not measurable from here.",
+  "numbers": [
+   {
+    "value": "7",
+    "label": "failed attempts of one deploy run"
+   },
+   {
+    "value": "45 min",
+    "label": "of 504s on anonymous release downloads"
+   },
+   {
+    "value": "0",
+    "label": "flows run by the failed gate"
+   },
+   {
+    "value": "43 min",
+    "label": "delay before #794's code reached prod"
+   }
+  ]
+ },
+ "trigger": "GitHub throttled anonymous traffic: anonymous `GET github.com/\u2026/releases/download/\u2026` answered 504 in about 70 ms; the same request with a token answered 200.",
+ "detection": "The gate failed at once (`curl: (22) \u2026 504`) and `alert-deploy-failure` fired on every attempt. The error the gate printed, *No flow results: the suite failed before running a flow*, did not say that a third-party download failed, so the run was rerun six times. The routine found the cause at 06:15Z by reading the job logs and githubstatus.",
+ "resolution": "Mitigated when the #795 deploy (05:54Z) downloaded the CLI in a gap of the 504s and promoted c6989ae8 (with #794) to prod at 05:58Z. Fixed by echopoint-cli#98 (authenticated download, retries, anonymous fallback), released as v3.14.2 with `v1` moved at 06:29Z. The frontend `postinstall` download gets the same treatment in a separate fix (A2).",
+ "timeline": {
+  "events": [
+   {
+    "t": "2026-11-09T05:14:50Z",
+    "kind": "change",
+    "label": "echopoint#794 merged (tooling only)",
+    "link": "https://github.com/nanostack-dev/echopoint/pull/794"
+   },
+   {
+    "t": "2026-11-09T05:15:29Z",
+    "kind": "note",
+    "label": "Deploy Router run 42566238183 attempt 1 starts",
+    "link": "https://github.com/nanostack-dev/infra/actions/runs/42566238183"
+   },
+   {
+    "t": "2026-11-09T05:16:23Z",
+    "kind": "trigger",
+    "label": "apispec wasm download answers 504",
+    "detail": "`fetch-apispec-wasm failed: GET \u2026/echopoint-kit/releases/download/v0.4.0/SHA256SUMS answered 504` in the frontend-typecheck job.",
+    "link": "https://github.com/nanostack-dev/infra/actions/runs/42566238183/attempts/1"
+   },
+   {
+    "t": "2026-11-09T05:17:41Z",
+    "kind": "detect",
+    "label": "Flow gate fails: CLI download 504, alert fires",
+    "detail": "`curl: (22) The requested URL returned error: 504` at *Download echopoint CLI*; no flow ran.",
+    "link": "https://github.com/nanostack-dev/infra/actions/runs/42566238183/attempts/1"
+   },
+   {
+    "t": "2026-11-09T05:18:26Z",
+    "kind": "note",
+    "label": "Attempts 2-5 rerun the failed jobs, all 504",
+    "detail": "05:18, 05:20, 05:23, 05:31Z, triggered by the shared `devnanostack` identity."
+   },
+   {
+    "t": "2026-11-09T05:42:50Z",
+    "kind": "note",
+    "label": "#793 deploy downloads the CLI in a gap (11 s)",
+    "link": "https://github.com/nanostack-dev/infra/actions/runs/42566809394"
+   },
+   {
+    "t": "2026-11-09T05:57:23Z",
+    "kind": "mitigate",
+    "label": "#795 deploy gate green (contains #794)",
+    "link": "https://github.com/nanostack-dev/infra/actions/runs/42569930100"
+   },
+   {
+    "t": "2026-11-09T05:58:17Z",
+    "kind": "resolve",
+    "label": "c6989ae8 (with #794) live on prod",
+    "link": "https://github.com/nanostack-dev/infra/actions/runs/42569930100"
+   },
+   {
+    "t": "2026-11-09T05:59:07Z",
+    "kind": "note",
+    "label": "GitHub opens the anonymous-traffic incident",
+    "link": "https://www.githubstatus.com/"
+   },
+   {
+    "t": "2026-11-09T06:00:03Z",
+    "kind": "note",
+    "label": "Attempt 7 fails on the same 504"
+   },
+   {
+    "t": "2026-11-09T06:15:00Z",
+    "approx": true,
+    "kind": "note",
+    "label": "Routine finds the cause; token download returns 200"
+   },
+   {
+    "t": "2026-11-09T06:28:00Z",
+    "approx": true,
+    "kind": "followup",
+    "label": "echopoint-cli#98 merged",
+    "link": "https://github.com/nanostack-dev/echopoint-cli/pull/98"
+   },
+   {
+    "t": "2026-11-09T06:29:30Z",
+    "approx": true,
+    "kind": "followup",
+    "label": "v3.14.2 released, v1 moved to the fix",
+    "link": "https://github.com/nanostack-dev/echopoint-cli/releases/tag/v3.14.2"
+   }
+  ]
+ },
+ "whys": {
+  "problem": "The echopoint deploy of #794 failed its post-deploy gate 7 times in 45 minutes without running a flow",
+  "because": [
+   {
+    "text": "The gate could not install the echopoint CLI: the release download answered 504",
+    "evidence": "Job 128993798293 (and every later attempt): `curl: (22) The requested URL returned error: 504` at *Download echopoint CLI*",
+    "because": [
+     {
+      "text": "GitHub answered 504 to anonymous release requests; requests with a token got 200",
+      "evidence": "githubstatus incident *Increased timeouts due to surge in anonymous users* (05:59Z); local probe 06:15Z: anonymous 504 in 0.07 s, `Authorization: Bearer` 200 in 0.4 s on the same URL",
+      "because": [
+       {
+        "text": "The CLI Action downloaded its binary with a plain anonymous curl, no token and no retry",
+        "evidence": "`echopoint-cli/action.yml` before #98: `curl -fsSL -o \u2026 \"$url\"`; a TODO marked the step as v1 hardening debt",
+        "because": [
+         {
+          "id": "R1",
+          "root": true,
+          "text": "Our CI tools fetch their own binaries from github.com anonymously at run time, so GitHub's anonymous tier is a hard dependency of every gate"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "text": "The frontend typecheck and build jobs failed too: pnpm postinstall could not fetch the apispec wasm",
+    "evidence": "Job 128993235600: `fetch-apispec-wasm failed: GET \u2026/SHA256SUMS answered 504`",
+    "because": [
+     {
+      "text": "fetch-apispec-wasm.mjs uses an anonymous fetch with no retry, and the install step has no token in its env",
+      "evidence": "`apps/frontend/scripts/fetch-apispec-wasm.mjs` `download()`; infra `frontend-typecheck.yml` env holds no GITHUB_TOKEN",
+      "because": [
+       {
+        "id": "R2",
+        "root": true,
+        "text": "Build steps download release assets anonymously, with no token passed by the reusable workflows"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "lens": "impact",
+    "text": "The same run was rerun six times over 42 minutes, each a deterministic failure that paged the alert again",
+    "evidence": "Attempts 2-7 at 05:18, 05:20, 05:23, 05:31, 05:57, 05:59Z, `triggering_actor` devnanostack",
+    "because": [
+     {
+      "text": "The gate error said only *No flow results: the suite failed before running a flow*, not that a third-party download got 504",
+      "evidence": "Job 129006275798 lines 312-378",
+      "because": [
+       {
+        "id": "R3",
+        "root": true,
+        "text": "The gate reports a setup failure (tool download) like a flow failure, so nothing tells a responder that a rerun cannot help"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "lens": "impact",
+    "text": "The download flaw sat in a public action since v1 and shipped untested again in the fix",
+    "evidence": "`Action Sandbox Integration` was `skipped` on #98 and on main (no sandbox secrets, `ECHOPOINT_SANDBOX_ENABLED` unset)",
+    "because": [
+     {
+      "text": "The only test of the action needs a live sandbox org's secrets, never set; the download steps have no test that runs without an API",
+      "evidence": "`.github/workflows/action-sandbox.yml`: gated on `vars.ECHOPOINT_SANDBOX_ENABLED`, skips when `ECHOPOINT_SANDBOX_*` secrets are absent",
+      "because": [
+       {
+        "id": "R4",
+        "root": true,
+        "text": "action.yml has no CI that runs it without a live org, so action changes reach `v1` unexercised"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "contributing": [
+  "GitHub's 504s were intermittent, so runs that hit a gap passed and hid the pattern.",
+  "A GitHub incident with the same shape (timeouts for unauthenticated users) happened the day before, 10:36-12:32Z, without hitting a gate."
+ ],
+ "lessons": {
+  "well": [
+   "The gate failed closed: no deploy promoted without flows running.",
+   "Job logs named the exact URL and status, so the cause was clear once read."
+  ],
+  "wrong": [
+   "Six reruns of a deterministic failure, each paging the alert.",
+   "A known v1 TODO in a public action's download step was never closed."
+  ],
+  "lucky": [
+   "The #793 and #795 deploys hit gaps in the 504s and promoted prod, so nothing was held. With continuous 504s every deploy of both products would have stopped at dev.",
+   "No customer report: any customer pinning `@v1` would have seen the same failure during the incident.",
+   "#98 had no CI that runs the action; a local simulation under macOS bash 3.2 was the only test before `v1` moved."
+  ]
+ },
+ "actions": [
+  {
+   "id": "A1",
+   "what": "CLI Action downloads with the workflow token (`github-token` input), retries, anonymous fallback; release v3.14.2, move v1",
+   "type": "prevent",
+   "owner": "Nanostack routine (echopoint-investigation)",
+   "status": "done",
+   "ticket": {
+    "label": "echopoint-cli#98",
+    "url": "https://github.com/nanostack-dev/echopoint-cli/pull/98"
+   },
+   "fixes": [
+    "R1"
+   ]
+  },
+  {
+   "id": "A2",
+   "what": "fetch-apispec-wasm sends GITHUB_TOKEN/GH_TOKEN when set and retries 5xx; infra frontend install steps pass GITHUB_TOKEN",
+   "type": "prevent",
+   "owner": "Nanostack routine (echopoint-investigation)",
+   "due": "2026-11-10",
+   "status": "open",
+   "fixes": [
+    "R2"
+   ]
+  },
+  {
+   "id": "A3",
+   "what": "Gate names a failed setup step and its HTTP status (e.g. `SETUP-FAILED download-cli 504: rerun after githubstatus is green`) instead of the generic no-results error",
+   "type": "detect",
+   "owner": "ci-workflows maintainers",
+   "due": "2026-11-23",
+   "status": "open",
+   "fixes": [
+    "R3"
+   ]
+  },
+  {
+   "id": "A4",
+   "what": "Add a hermetic action job (resolve + download + `echopoint --help` on linux/macos/windows) that runs on every action.yml PR; enable the live sandbox when secrets exist",
+   "type": "detect",
+   "owner": "Nanostack routine (echopoint-investigation)",
+   "due": "2026-11-09",
+   "status": "open",
+   "fixes": [
+    "R4"
+   ],
+   "ticket": {
+    "label": "echopoint-cli action-smoke",
+    "url": "https://github.com/nanostack-dev/echopoint-cli/blob/main/.github/workflows/action-smoke.yml"
+   }
+  },
+  {
+   "id": "A5",
+   "what": "Workspace AGENTS.md: CI downloads from github.com send the workflow token and retry",
+   "type": "process",
+   "owner": "Nanostack routine (echopoint-investigation)",
+   "status": "done",
+   "fixes": [
+    "R1",
+    "R2"
+   ]
+  }
+ ],
+ "responders": [
+  {
+   "role": "Investigation and fix",
+   "name": "Nanostack routine (echopoint-investigation)"
+  }
+ ],
+ "messaging": {
+  "internal": "Echopoint deploy of #794 failed 7 times 05:15-06:00Z: GitHub 504'd anonymous release downloads (CLI Action, frontend wasm). Prod not held (#795 promoted at 05:58Z). Fixed in echopoint-cli#98 (v3.14.2, v1 moved); frontend fix in progress.",
+  "external": "None sent. If a customer reports `curl: (22) \u2026 504` from the Echopoint GitHub Action on 2026-11-09: GitHub throttled anonymous downloads; `@v1` now downloads with the workflow token."
+ },
+ "links": [
+  {
+   "label": "Atelier postmortem",
+   "url": "http://nanostack-dev-1340p:4320/postmortems/01a1bf01-fb85-7911-b3d1-9ea426eea035"
+  },
+  {
+   "label": "Deploy Router run 42566238183",
+   "url": "https://github.com/nanostack-dev/infra/actions/runs/42566238183"
+  },
+  {
+   "label": "echopoint-cli#98",
+   "url": "https://github.com/nanostack-dev/echopoint-cli/pull/98"
+  },
+  {
+   "label": "GitHub status",
+   "url": "https://www.githubstatus.com/"
+  }
+ ]
+}
