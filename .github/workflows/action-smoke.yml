@@ -1,0 +1,51 @@
+name: Action Smoke
+
+# Runs the composite action on every OS without an Echopoint org: it must
+# resolve the CLI version, download and unpack the binary, then fail only at
+# the API call (a closed local port). Catches download regressions before
+# release.yml moves the floating `v1` tag
+# (docs/postmortems/2026-11-09-anonymous-release-download.md).
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['action.yml', '.github/workflows/action-smoke.yml']
+  push:
+    branches: [main]
+    paths: ['action.yml', '.github/workflows/action-smoke.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Download on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run the action against a closed port
+        id: run
+        continue-on-error: true
+        uses: ./
+        with:
+          api-key: smoke-not-a-key
+          organization-id: org_smoke
+          flow-id: 00000000-0000-0000-0000-000000000000
+          api-url: http://127.0.0.1:9
+          poll-timeout: '10'
+
+      - name: The CLI was downloaded and runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="${RUNNER_TEMP}/echopoint-bin/echopoint"
+          [ "$RUNNER_OS" = "Windows" ] && bin="${bin}.exe"
+          test -x "$bin" || { echo "::error::The action did not install the CLI at $bin"; exit 1; }
+          "$bin" --help > /dev/null
+          echo "CLI installed and runs: $bin"
