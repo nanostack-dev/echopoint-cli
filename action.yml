@@ -36,6 +36,13 @@ inputs:
     description: Version of the echopoint CLI to download (e.g. v1.2.0 or latest).
     required: false
     default: latest
+  github-token:
+    description: >
+      Token used only to read the CLI release from github.com. Authenticated
+      requests keep working when GitHub throttles anonymous traffic. The default
+      workflow token is enough; set it to an empty string to download anonymously.
+    required: false
+    default: ${{ github.token }}
   poll-timeout:
     description: Maximum seconds to wait for all flows to complete.
     required: false
@@ -161,16 +168,31 @@ runs:
     - name: Resolve versions
       id: versions
       shell: bash
+      env:
+        GH_DOWNLOAD_TOKEN: ${{ inputs.github-token }}
       run: |
         set -euo pipefail
+
+        # gh_get URL [OUT]: GET a github.com resource with retries. It sends the
+        # token when one is set (anonymous requests fail during GitHub incidents,
+        # 2026-11-09) and falls back to an anonymous request if the token is refused.
+        gh_get() {
+          local url="$1" out="${2:--}" auth=()
+          if [ -n "${GH_DOWNLOAD_TOKEN:-}" ] && [ "${GITHUB_SERVER_URL:-https://github.com}" = "https://github.com" ]; then
+            auth=(-H "Authorization: Bearer ${GH_DOWNLOAD_TOKEN}")
+            if curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 "${auth[@]}" -o "$out" "$url"; then
+              return 0
+            fi
+            echo "::warning::Authenticated download of ${url} failed; retrying anonymously." >&2
+          fi
+          curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 -o "$out" "$url"
+        }
 
         cli_version="${{ inputs.cli-version }}"
 
         # Resolve 'latest' for the CLI via GitHub Releases API
         if [ "$cli_version" = "latest" ]; then
-          cli_version=$(curl -fsSL \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/nanostack-dev/echopoint-cli/releases/latest" \
+          cli_version=$(gh_get "https://api.github.com/repos/nanostack-dev/echopoint-cli/releases/latest" \
             | grep '"tag_name"' \
             | sed -E 's/.*"([^"]+)".*/\1/')
           if [ -z "$cli_version" ]; then
@@ -239,8 +261,25 @@ runs:
     - name: Download echopoint CLI
       id: download-cli
       shell: bash
+      env:
+        GH_DOWNLOAD_TOKEN: ${{ inputs.github-token }}
       run: |
         set -euo pipefail
+
+        # gh_get URL [OUT]: GET a github.com resource with retries. It sends the
+        # token when one is set (anonymous requests fail during GitHub incidents,
+        # 2026-11-09) and falls back to an anonymous request if the token is refused.
+        gh_get() {
+          local url="$1" out="${2:--}" auth=()
+          if [ -n "${GH_DOWNLOAD_TOKEN:-}" ] && [ "${GITHUB_SERVER_URL:-https://github.com}" = "https://github.com" ]; then
+            auth=(-H "Authorization: Bearer ${GH_DOWNLOAD_TOKEN}")
+            if curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 "${auth[@]}" -o "$out" "$url"; then
+              return 0
+            fi
+            echo "::warning::Authenticated download of ${url} failed; retrying anonymously." >&2
+          fi
+          curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 -o "$out" "$url"
+        }
 
         version="${{ steps.versions.outputs.cli-version }}"
         version_num="${version#v}"
@@ -257,7 +296,7 @@ runs:
         tmp_dir=$(mktemp -d)
         trap "rm -rf '$tmp_dir'" EXIT
 
-        curl -fsSL -o "${tmp_dir}/${archive}" "$url"
+        gh_get "$url" "${tmp_dir}/${archive}"
 
         install_dir="${RUNNER_TEMP}/echopoint-bin"
         mkdir -p "$install_dir"
