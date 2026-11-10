@@ -10,7 +10,7 @@ branding:
 
 inputs:
   api-key:
-    description: Echopoint API key with flows:execute and runner:complete scopes.
+    description: Echopoint API key with the flows:execute scope (plus flows:read when selecting flows by tag).
     required: true
   organization-id:
     description: Echopoint organization ID.
@@ -506,9 +506,9 @@ runs:
           status=$(extract "status")
           success=$(extract "success")
           # Build comma-separated execution-ids from results array
-          exec_matches=$(printf '%s' "$raw" | grep -o '"execution_id":"[^"]*"' || true)
+          exec_matches=$(printf '%s' "$raw" | grep -o '"execution_id": *"[^"]*"' || true)
           exec_ids=$(printf '%s\n' "$exec_matches" \
-            | sed 's/"execution_id":"//;s/"//' \
+            | sed 's/"execution_id": *"//;s/"//' \
             | tr '\n' ',' \
             | sed 's/,$//')
 

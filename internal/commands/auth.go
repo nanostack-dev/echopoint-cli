@@ -83,7 +83,7 @@ func storeAPIKeyCredential(state *AppState, apiKey, organizationID string, setDe
 		if resolveErr != nil {
 			fmt.Fprintf(os.Stderr,
 				"Warning: could not resolve organization from API key "+
-					"(pass --organization-id to set it): %v\n", resolveErr)
+					"(pass --org to set it): %v\n", resolveErr)
 		} else {
 			organizationID = resolved
 		}
@@ -191,21 +191,19 @@ How it works:
 
 1. Run: echopoint auth login
 
-2. Enter your email address (the one registered with Echopoint)
+2. Your browser opens; sign in to Echopoint there
 
-3. The CLI creates a secure session for you
+3. The CLI stores the session for the active profile
 
-4. You're authenticated! The session is valid for ~1 hour
+CI and scripts: store an organization API key instead with
+echopoint auth login --api-key <key>
 
 Commands:
 
-  echopoint auth login         Sign in with your email
-  echopoint auth login -e X    Sign in with email X
-  echopoint auth status        Check authentication status
-  echopoint auth logout        Sign out and clear credentials
-
-Note: You must have an existing Echopoint account. Sign up at
-https://dev.echopoint.dev if you don't have one.
+  echopoint auth login                  Sign in via browser
+  echopoint auth login --api-key <key>  Store an organization API key
+  echopoint auth status                 Check authentication status
+  echopoint auth logout                 Sign out and clear credentials
 `)
 		},
 	}

@@ -48,7 +48,7 @@ flow create applies. That check needs you signed in.`,
 			return runFlowCompile(cmd, state, file, root, check)
 		},
 	}
-	addFileFlag(cmd, &file, "Flow file or a directory of *.flow.yaml files", ".yaml", ".yml")
+	addFileFlag(cmd, &file, "Flow file or a directory of *.flow.yaml files", "yaml", "yml")
 	cmd.Flags().StringVar(&root, "root", "", "Library root used to resolve module: references")
 	cmd.Flags().BoolVar(&check, "check", false, "Report problems and print no JSON")
 	return cmd

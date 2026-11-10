@@ -135,11 +135,14 @@ it up later: the first command needing it asks `/me`, uses your only organizatio
 and saves it. If you belong to several, the command names them and asks for
 `--org`.
 
-### Token-based Login
+### Token for one command
 
 ```bash
-echopoint auth login --token "<SESSION_JWT>"
+echopoint flow list --token "<SESSION_JWT>"
 ```
+
+`--token` supplies a session for that command only; `auth login` does not read
+or store it.
 
 ### Environment Variable
 

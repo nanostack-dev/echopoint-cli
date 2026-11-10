@@ -4,7 +4,6 @@ go 1.26.10
 
 require (
 	github.com/getkin/kin-openapi v0.149.0
-	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/google/jsonschema-go v0.4.3
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.24
