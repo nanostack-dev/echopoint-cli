@@ -44,9 +44,9 @@ func TestFileCommandsTakeTheFileThroughFAndOfferTheRightExtensions(t *testing.T)
 		path       []string
 		extensions []string
 	}{
-		{[]string{"flow", "create"}, []string{".yaml", ".yml", "json"}},
-		{[]string{"flow", "update"}, []string{".yaml", ".yml", "json"}},
-		{[]string{"flow", "compile"}, []string{".yaml", ".yml"}},
+		{[]string{"flow", "create"}, []string{"yaml", "yml", "json"}},
+		{[]string{"flow", "update"}, []string{"yaml", "yml", "json"}},
+		{[]string{"flow", "compile"}, []string{"yaml", "yml"}},
 		{[]string{"collection", "import"}, []string{"json"}},
 		{[]string{"org", "env", "import"}, []string{"json", "env"}},
 		{[]string{"flow", "env", "set"}, []string{"json", "env"}},

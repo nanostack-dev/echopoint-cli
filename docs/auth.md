@@ -1,6 +1,6 @@
 # Authentication
 
-Echopoint uses session JWTs for API requests. The CLI stores the session token in `~/.echopoint/credentials.json` and attaches it as a Bearer token.
+Echopoint uses session JWTs for API requests. The CLI stores the session token in `~/.echopoint/credentials/<profile>.json` and attaches it as a Bearer token.
 
 ## Login
 
@@ -51,8 +51,6 @@ echopoint auth login
 ECHOPOINT_API_URL="https://apidev.echopoint.dev" \
 echopoint flow list
 ```
-
-For local development environments, the repository includes `.test-credentials.json` (gitignored) with test login details.
 
 ## Logout
 

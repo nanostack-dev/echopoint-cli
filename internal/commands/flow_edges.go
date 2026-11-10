@@ -5,7 +5,7 @@ import (
 
 	"echopoint-cli/internal/api"
 
-	"github.com/gofrs/uuid/v5"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 

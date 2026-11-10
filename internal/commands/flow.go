@@ -556,8 +556,8 @@ func newFlowCreateCmd(state *AppState) *cobra.Command {
 		cmd,
 		&file,
 		"Flow file (*.flow.yaml). With --json, a CreateFlowRequest JSON file",
-		".yaml",
-		".yml",
+		"yaml",
+		"yml",
 		"json",
 	)
 	cmd.Flags().StringVar(&root, "root", "", "Library root used to resolve module: references")
@@ -652,8 +652,8 @@ func newFlowUpdateCmd(state *AppState) *cobra.Command {
 		cmd,
 		&file,
 		"Flow file (*.flow.yaml). With --json, an UpdateFlowRequest JSON file",
-		".yaml",
-		".yml",
+		"yaml",
+		"yml",
 		"json",
 	)
 	cmd.Flags().StringVar(&name, "name", "", "New name of the flow")

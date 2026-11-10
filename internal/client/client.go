@@ -18,8 +18,6 @@ type Client struct {
 	api        *api.ClientWithResponses
 	httpClient *http.Client
 	reqEditor  api.RequestEditorFn
-	token      string
-	apiKey     string
 	baseURL    string
 	debug      bool
 }
@@ -33,7 +31,7 @@ func New(
 	timeout time.Duration,
 	editors ...api.RequestEditorFn,
 ) (*Client, error) {
-	return newClient(baseURL, token, organizationID, "", timeout, editors...)
+	return newClient(baseURL, token, organizationID, timeout, editors...)
 }
 
 // NewWithAPIKey creates a new API client that uses API key auth instead of Bearer token.
@@ -65,7 +63,6 @@ func NewWithAPIKey(
 		api:        apiClient,
 		httpClient: httpClient,
 		reqEditor:  editor,
-		apiKey:     apiKey,
 		baseURL:    baseURL,
 		debug:      debug,
 	}, nil
@@ -75,7 +72,6 @@ func newClient(
 	baseURL string,
 	token string,
 	organizationID string,
-	apiKey string,
 	timeout time.Duration,
 	editors ...api.RequestEditorFn,
 ) (*Client, error) {
@@ -105,8 +101,6 @@ func newClient(
 		api:        apiClient,
 		httpClient: httpClient,
 		reqEditor:  editor,
-		token:      token,
-		apiKey:     apiKey,
 		baseURL:    baseURL,
 		debug:      debug,
 	}, nil
@@ -164,14 +158,6 @@ func RedactedHeaders(h http.Header) string {
 
 func (c *Client) BaseURL() string {
 	return c.baseURL
-}
-
-func (c *Client) Token() string {
-	return c.token
-}
-
-func (c *Client) APIKey() string {
-	return c.apiKey
 }
 
 func (c *Client) API() *api.ClientWithResponses {

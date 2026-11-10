@@ -253,7 +253,7 @@ Exit codes:
 	cmd.Flags().StringVar(&flagIdempotencyKey, "idempotency-key", "",
 		"Stable key for idempotent CI retries (auto-derived from GitHub env when GITHUB_ACTIONS=true)")
 	cmd.Flags().DurationVar(&flagPollTimeout, "poll-timeout", 30*time.Minute,
-		"Maximum time to wait for each flow execution")
+		"Maximum total time for the whole run (all flows)")
 	cmd.Flags().IntVar(&flagParallel, "parallel", 1, "Maximum number of flows to run concurrently (>= 1)")
 	cmd.Flags().StringArrayVar(&flagTags, "tag", nil,
 		"Select flows by tag instead of by ID (repeatable). Mutually exclusive with positional flow IDs.")

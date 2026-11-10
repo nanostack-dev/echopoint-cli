@@ -9,8 +9,7 @@ import (
 
 	"echopoint-cli/internal/api"
 
-	"github.com/gofrs/uuid/v5"
-	googleuuid "github.com/google/uuid"
+	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/spf13/cobra"
 )
@@ -639,6 +638,7 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 			validExtractors := []string{
 				string(api.ExtractorTypeStatusCode), string(api.ExtractorTypeJsonPath),
 				string(api.ExtractorTypeBody), string(api.ExtractorTypeHeader),
+				string(api.ExtractorTypeQueryParam),
 			}
 			if !containsString(validExtractors, extractorType) {
 				return fmt.Errorf("invalid extractor type: %s (must be one of: %v)", extractorType, validExtractors)
@@ -685,6 +685,9 @@ greater_than_or_equal, less_than_or_equal, empty, not_empty, starts_with, ends_w
 				switch n := nodeData.(type) {
 				case api.RequestFlowNode:
 					if n.Id == nodeID {
+						if extractorType == string(api.ExtractorTypeQueryParam) {
+							return fmt.Errorf("the query_param extractor applies to webhook wait nodes only")
+						}
 						newAssertion := api.CompositeAssertion{
 							ExtractorType: api.ExtractorType(extractorType),
 							ExtractorData: extractorData,
@@ -910,7 +913,7 @@ func buildModuleData(moduleFlowID string, inputBindings, outputBindings []string
 	if moduleFlowID == "" {
 		return data, fmt.Errorf("--flow-id is required for module nodes")
 	}
-	childID, err := googleuuid.Parse(moduleFlowID)
+	childID, err := uuid.Parse(moduleFlowID)
 	if err != nil {
 		return data, fmt.Errorf("invalid --flow-id: %w", err)
 	}
