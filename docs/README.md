@@ -2,6 +2,8 @@
 
 - [Domain vocabulary](../CONTEXT.md)
 - [Architecture](technical/architecture.md), [integration contracts](technical/integration-contracts.md), [cursor-paginated listings](technical/pagination.md), [execution analytics](technical/analytics.md)
+- [Echopoint skill](../skills/echopoint/SKILL.md): the public guide a customer's coding agent reads from its raw URL.
+  Keep it self-contained (absolute links only) and update it with every command or flag it cites.
 - [Authentication](auth.md), [flows](flows.md), [monitors](monitors.md), [environment management](environment-management.md), [specs](specs.md), [status pages](status-pages.md), [MCP](mcp.md), [GitHub Action](github-action.md)
 - [Product administration scope](technical/administration-scope.md)
 - [Setup](development/setup.md), [testing](development/testing.md), [command conventions](development/command-conventions.md), [troubleshooting](development/troubleshooting.md), [agent workflow](development/agent-workflow.md)

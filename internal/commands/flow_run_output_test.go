@@ -83,3 +83,29 @@ func TestFlowRunFollowsTheEnvironmentVariableWhenNoOutputIsTyped(t *testing.T) {
 		t.Errorf("exit %d, stdout %q", code, stdout)
 	}
 }
+
+func TestFlowRunWithoutAnOrganizationNamesTheOrgFlag(t *testing.T) {
+	fake := newGoldenFlowServer(t, nil)
+	isolateCLIEnvironment(t, fake.server.URL)
+	t.Setenv("ECHOPOINT_ORGANIZATION_ID", "")
+
+	stdout, stderr, code := runCLI(t, "flow", "run", goldenReplayFlow, "-o", "json")
+
+	want := "ephemeral execution requires an organization ID (--org or ECHOPOINT_ORGANIZATION_ID)"
+	if code != exitError || !strings.Contains(stderr, "error: "+want) {
+		t.Errorf("exit %d, stderr %q, want exit %d and %q", code, stderr, exitError, want)
+	}
+	var result FlowRunOutput
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		t.Fatalf("stdout is not the result object: %v\n%s", err, stdout)
+	}
+	if result.ErrorMessage == nil || *result.ErrorMessage != want {
+		t.Errorf("error_message = %v, want %q", result.ErrorMessage, want)
+	}
+	if strings.Contains(stdout+stderr, "organization-id") {
+		t.Errorf("the hidden --organization-id alias is named:\nstdout %q\nstderr %q", stdout, stderr)
+	}
+	if launches := fake.launchLines(); launches != "" {
+		t.Errorf("a flow was launched without an organization: %s", launches)
+	}
+}
