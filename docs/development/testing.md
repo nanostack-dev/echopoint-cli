@@ -6,7 +6,7 @@ golangci-lint run
 ./action-tests/run_tests.sh
 ```
 
-The Go workflow runs lint, race-enabled tests and cross-platform builds. Action shell tests need Bats and are a separate local verification; the Go workflow does not run them. The [Action sandbox workflow](../../.github/workflows/action-sandbox.yml) is an explicit live Action exercise, not unit coverage.
+The Go workflow runs lint, race-enabled tests and cross-platform builds. Action shell tests need Bats and are a separate local verification; the Go workflow does not run them.
 
 New command leaves need examples, help-group registration and convention tests. Process tests use `runCLI` in [testmain_test.go](../../internal/commands/testmain_test.go), which builds the binary once. Flow-run and Action contract changes must pass [golden fixtures](../../internal/commands/flow_run_golden_test.go) and Action tests. API/MCP changes must validate exposure and an end-to-end supported CLI configuration flow against the matching API; report credentials/target limitations separately from local checks.
 
