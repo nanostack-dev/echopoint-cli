@@ -196,7 +196,7 @@ nodes:
     expect: "status: 302"
 ```
 
-Such a flow compiles and lints offline today, but the API does not take it yet: until the API pins a runner that knows `email_wait`, saving it fails with `INVALID_FLOW_DEFINITION`; after that pin, launch refuses it with `EMAIL_WAIT_NOT_AVAILABLE` until run inboxes are enabled.
+Echopoint saves and launches such a flow. The run gets an inbox, and `{{inbox.address}}` is its address. A runner that does not declare `email_wait` (a CLI or runner older than echopoint-runner v0.108.0) is refused the run with `RUNNER_UPGRADE_REQUIRED`.
 
 The same output name on two nodes is normal: each one is `{{that-node.id}}`. A module infers one public output per name, so a repeated public name is a warning and that name is not inferred. List `outputs` on the file to choose which names a caller receives.
 

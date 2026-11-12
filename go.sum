@@ -81,10 +81,10 @@ github.com/modelcontextprotocol/go-sdk v1.6.1 h1:0zOSupjKUxPKSocPT1Wtago+mUHU2/u
 github.com/modelcontextprotocol/go-sdk v1.6.1/go.mod h1:kzm3kzFL1/+AziGOE0nUs3gvPoNxMCvkxokMkuFapXQ=
 github.com/nanostack-dev/echopoint-kit v0.3.0 h1:ITG1EpK0hZIAyudxzJiFEsGYlxpHZwL/VrVkpWVxkAQ=
 github.com/nanostack-dev/echopoint-kit v0.3.0/go.mod h1:+NQxoG0w/0nOpjh9Q7S88qgeNQ2varjD4U15Fn+5wPs=
-github.com/nanostack-dev/echopoint-runner v0.105.1-0.20261108215550-893c0b537a2f h1:pyOzhG5L8sfAiE8G9TxzZTY17icugjfgKppoGOQsY/Q=
-github.com/nanostack-dev/echopoint-runner v0.105.1-0.20261108215550-893c0b537a2f/go.mod h1:ZvQtGduAO75KOZ88eS/m+tyouhsOHPprTE9gY5JcuRk=
-github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.3.1-0.20261108215550-893c0b537a2f h1:V8yyLsP5ibfQ9p8X9HxHY4537DD7bpvQ9vTADfGwjKA=
-github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.3.1-0.20261108215550-893c0b537a2f/go.mod h1:ksDxkaimTXiQ3luSo6H3Sn6+uOGSiHsEIPoD5O2x6W8=
+github.com/nanostack-dev/echopoint-runner v0.108.0 h1:125QunLz+D93w8nXGKQ9w3QifXxBQS/QATV6juGRhZ4=
+github.com/nanostack-dev/echopoint-runner v0.108.0/go.mod h1:ZvQtGduAO75KOZ88eS/m+tyouhsOHPprTE9gY5JcuRk=
+github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.4.0 h1:8cxoLNC57C9+b0LUsoxaaHZb6M1jFk6+gudOx+SUT70=
+github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.4.0/go.mod h1:ksDxkaimTXiQ3luSo6H3Sn6+uOGSiHsEIPoD5O2x6W8=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
