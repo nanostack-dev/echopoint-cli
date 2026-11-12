@@ -2,10 +2,13 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"echopoint-cli/internal/api"
 
@@ -14,6 +17,7 @@ import (
 
 const (
 	nodeTypeWebhookWait = "webhook_wait"
+	nodeTypeEmailWait   = "email_wait"
 	addToNodeUse        = "add <flow-id> <node-id>"
 )
 
@@ -23,6 +27,28 @@ var assertionOperators = []string{
 }
 
 var valuelessOperators = []string{"empty", "not_empty"}
+
+// The html and regex extractors are newer than the generated client.
+const (
+	extractorTypeHTML  api.ExtractorType = "html"
+	extractorTypeRegex api.ExtractorType = "regex"
+)
+
+// splitHTMLTarget reads "selector@attribute" as the flow file does: the
+// attribute is the text after the last @ that follows every ].
+func splitHTMLTarget(text string) (string, string) {
+	at := strings.LastIndex(text, "@")
+	if at <= 0 || at < strings.LastIndex(text, "]") {
+		return text, ""
+	}
+	attribute := text[at+1:]
+	if attribute == "" || strings.IndexFunc(attribute, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !strings.ContainsRune("-_:", r)
+	}) >= 0 {
+		return text, ""
+	}
+	return text[:at], attribute
+}
 
 // parseMatch reads one check of an expected event, written as
 // "<target> <operator> [value]". The target is a JSONPath ($.type), a header
@@ -57,9 +83,24 @@ func parseMatch(match string) (api.CompositeAssertion, error) {
 		assertion.ExtractorData["param_name"] = strings.TrimPrefix(target, "query:")
 	case target == string(api.ExtractorTypeBody):
 		assertion.ExtractorType = api.ExtractorTypeBody
+	case strings.HasPrefix(target, "html:") && len(target) > len("html:"):
+		assertion.ExtractorType = extractorTypeHTML
+		selector, attribute := splitHTMLTarget(strings.TrimPrefix(target, "html:"))
+		assertion.ExtractorData["selector"] = selector
+		if attribute != "" {
+			assertion.ExtractorData["attribute"] = attribute
+		}
+	case strings.HasPrefix(target, "regex:") && len(target) > len("regex:"):
+		pattern := strings.TrimPrefix(target, "regex:")
+		if _, err := regexp.Compile(pattern); err != nil {
+			return api.CompositeAssertion{}, fmt.Errorf("--match %q: %w", match, err)
+		}
+		assertion.ExtractorType = extractorTypeRegex
+		assertion.ExtractorData["pattern"] = pattern
 	default:
 		return api.CompositeAssertion{}, fmt.Errorf(
-			"--match %q: target must be a JSONPath ($.type), header:<name>, query:<name> or body", match)
+			"--match %q: target must be a JSONPath ($.type), header:<name>, query:<name>, html:<selector>, "+
+				"regex:<pattern> or body", match)
 	}
 
 	hasValue := len(parts) == 3
@@ -106,9 +147,11 @@ func expectationCount(once, never bool, minimum, maximum int) (*int, *int, error
 	return minPtr, maxPtr, nil
 }
 
-// editWebhookWait loads a flow, lets edit change one webhook wait node, and saves the flow.
-func editWebhookWait(
-	state *AppState, flowArg, nodeID string, edit func(node *api.WebhookWaitFlowNode) error,
+// editWaitExpectations loads a flow, lets edit change the expected events of
+// one webhook or email wait node, and saves the flow. It edits the node's JSON,
+// so it also reaches a kind the generated client has no type for.
+func editWaitExpectations(
+	state *AppState, flowArg, nodeID string, edit func(expect *[]api.WebhookExpectation) error,
 ) error {
 	if err := requireToken(state); err != nil {
 		return err
@@ -126,23 +169,14 @@ func editWebhookWait(
 	}
 	definition := resp.JSON200.FlowDefinition
 
-	index := -1
-	var wait api.WebhookWaitFlowNode
-	for i, node := range definition.Nodes {
-		candidate, decodeErr := node.ValueByDiscriminator()
-		if waitNode, ok := candidate.(api.WebhookWaitFlowNode); decodeErr == nil && ok && waitNode.Id == nodeID {
-			index, wait = i, waitNode
-			break
-		}
-	}
+	index := slices.IndexFunc(definition.Nodes, func(node api.FlowNode) bool {
+		return isWaitNode(node, nodeID)
+	})
 	if index < 0 {
-		return fmt.Errorf("webhook wait node not found: %s", nodeID)
+		return fmt.Errorf("webhook or email wait node not found: %s", nodeID)
 	}
-	if err := edit(&wait); err != nil {
+	if err := editNodeExpectations(&definition.Nodes[index], edit); err != nil {
 		return err
-	}
-	if err := definition.Nodes[index].FromWebhookWaitFlowNode(wait); err != nil {
-		return fmt.Errorf("failed to encode node: %w", err)
 	}
 
 	updateResp, err := state.Client.API().UpdateFlowWithResponse(context.Background(), flowID, nil,
@@ -156,12 +190,77 @@ func editWebhookWait(
 	return nil
 }
 
+// isWaitNode reports whether node is the webhook or email wait called nodeID.
+func isWaitNode(node api.FlowNode, nodeID string) bool {
+	kind, err := node.Discriminator()
+	if err != nil || (kind != nodeTypeWebhookWait && kind != nodeTypeEmailWait) {
+		return false
+	}
+	id, err := flowNodeID(node)
+	return err == nil && id == nodeID
+}
+
+// editNodeExpectations rewrites data.expect of a wait node in place and keeps
+// every other field as stored.
+func editNodeExpectations(node *api.FlowNode, edit func(expect *[]api.WebhookExpectation) error) error {
+	return editNodeJSON(node, func(doc map[string]json.RawMessage) error {
+		data := map[string]json.RawMessage{}
+		if raw, ok := doc["data"]; ok && !isJSONNull(raw) {
+			if err := json.Unmarshal(raw, &data); err != nil {
+				return fmt.Errorf("failed to read node data: %w", err)
+			}
+		}
+		expect := []api.WebhookExpectation{}
+		if raw, ok := data["expect"]; ok && !isJSONNull(raw) {
+			if err := json.Unmarshal(raw, &expect); err != nil {
+				return fmt.Errorf("failed to read expected events: %w", err)
+			}
+		}
+		if err := edit(&expect); err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(expect)
+		if err != nil {
+			return err
+		}
+		data["expect"] = encoded
+		if doc["data"], err = json.Marshal(data); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func isJSONNull(raw json.RawMessage) bool {
+	return string(raw) == "null"
+}
+
+// editNodeJSON lets edit change a node as a JSON object.
+func editNodeJSON(node *api.FlowNode, edit func(doc map[string]json.RawMessage) error) error {
+	raw, err := node.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("failed to read flow node: %w", err)
+	}
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return fmt.Errorf("failed to read flow node: %w", err)
+	}
+	if err := edit(doc); err != nil {
+		return err
+	}
+	encoded, err := json.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("failed to encode node: %w", err)
+	}
+	return node.UnmarshalJSON(encoded)
+}
+
 func newFlowNodeExpectCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "expect",
-		Short: "Manage the events a webhook wait expects",
-		Long: `A webhook wait can expect a set of named events and judge them together, as the
-final check of a flow. Each expected event is a group of checks: an event satisfies
+		Short: "Manage the events a webhook or email wait expects",
+		Long: `A webhook wait or an email wait can expect a set of named events (requests or
+emails) and judge them together, as the final check of a flow. Each expected event is a group of checks: an event satisfies
 it when it passes all of them, and one event counts for one expected event only.
 Checks resolve {{node.output}} templates, which ties an event to the resource that
 caused it. The node's own assertions ("flow node assertion add") then run on
@@ -179,15 +278,18 @@ func newFlowNodeExpectAddCmd(state *AppState) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   addToNodeUse,
-		Short: "Add an expected event to a webhook wait",
+		Short: "Add an expected event to a webhook or email wait",
 		Args:  cobra.ExactArgs(2),
-		Long: `Add an expected event to a webhook wait node.
+		Long: `Add an expected event to a webhook_wait or email_wait node.
 
 Each --match is one check, written "<target> <operator> [value]":
   $.data.invitation_id equals {{invite-member.id}}   JSONPath into the request body
   header:webhook-signature starts_with v1,            a request header
   query:q equals x                                    a query param of the request
   body not_contains anchor_inv_                       the whole body
+  $.subject contains Verify                           an email's subject (email waits)
+  html:a.verify@href starts_with https://             an email's HTML: CSS selector[@attribute]
+  regex:code:\s(\d+) not_empty                         a regex over an email's text
 
 Count (default: at least once):
   --once        exactly one event
@@ -220,20 +322,15 @@ Count (default: at least once):
 				return err
 			}
 
-			err = editWebhookWait(state, args[0], args[1], func(node *api.WebhookWaitFlowNode) error {
-				expectations := []api.WebhookExpectation{}
-				if node.Data.Expect != nil {
-					expectations = *node.Data.Expect
-				}
-				for _, existing := range expectations {
+			err = editWaitExpectations(state, args[0], args[1], func(expect *[]api.WebhookExpectation) error {
+				for _, existing := range *expect {
 					if existing.Name == name {
 						return fmt.Errorf("expected event %q already exists; remove it first", name)
 					}
 				}
-				expectations = append(expectations, api.WebhookExpectation{
+				*expect = append(*expect, api.WebhookExpectation{
 					Name: name, Min: minPtr, Max: maxPtr, Assertions: assertions,
 				})
-				node.Data.Expect = &expectations
 				return nil
 			})
 			if err != nil {
@@ -257,22 +354,19 @@ Count (default: at least once):
 func newFlowNodeExpectRemoveCmd(state *AppState) *cobra.Command {
 	return &cobra.Command{
 		Use:     "remove <flow-id> <node-id> <name>",
-		Short:   "Remove an expected event from a webhook wait",
+		Short:   "Remove an expected event from a webhook or email wait",
 		Example: `  echopoint flow node expect remove <flow-id> events "Resent with a new token"`,
 		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[2]
-			err := editWebhookWait(state, args[0], args[1], func(node *api.WebhookWaitFlowNode) error {
-				if node.Data.Expect == nil {
-					return fmt.Errorf("expected event not found: %s", name)
-				}
-				kept := slices.DeleteFunc(slices.Clone(*node.Data.Expect), func(e api.WebhookExpectation) bool {
+			err := editWaitExpectations(state, args[0], args[1], func(expect *[]api.WebhookExpectation) error {
+				kept := slices.DeleteFunc(slices.Clone(*expect), func(e api.WebhookExpectation) bool {
 					return e.Name == name
 				})
-				if len(kept) == len(*node.Data.Expect) {
+				if len(kept) == len(*expect) {
 					return fmt.Errorf("expected event not found: %s", name)
 				}
-				node.Data.Expect = &kept
+				*expect = kept
 				return nil
 			})
 			if err != nil {

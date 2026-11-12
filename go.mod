@@ -10,8 +10,8 @@ require (
 	github.com/minio/selfupdate v0.6.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/nanostack-dev/echopoint-kit v0.3.0
-	github.com/nanostack-dev/echopoint-runner v0.105.0
-	github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.3.0
+	github.com/nanostack-dev/echopoint-runner v0.108.0
+	github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.4.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/rs/zerolog v1.35.1
@@ -24,7 +24,9 @@ require (
 require (
 	aead.dev/minisign v0.3.0 // indirect
 	cloud.google.com/go v0.123.0 // indirect
+	github.com/PuerkitoBio/goquery v1.13.0 // indirect
 	github.com/TwiN/go-color v1.4.1 // indirect
+	github.com/andybalholm/cascadia v1.3.4 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/brianvoe/gofakeit/v7 v7.15.0 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
@@ -49,8 +51,9 @@ require (
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect

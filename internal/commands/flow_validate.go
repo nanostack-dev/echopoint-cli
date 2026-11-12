@@ -18,9 +18,12 @@ import (
 // templateRefPattern matches {{ ... }} references in a node's serialized form.
 var templateRefPattern = regexp.MustCompile(`\{\{\s*([^{}]+?)\s*\}\}`)
 
-// launchInputs are injected by launch into a flow with a webhook wait. They
-// contain a dot but are flow inputs, not node outputs.
-var launchInputs = map[string]bool{"webhook.url": true, "webhook.requests_url": true}
+// launchInputs are injected by launch into a flow with a webhook or email
+// wait. They contain a dot but are flow inputs, not node outputs.
+var launchInputs = map[string]bool{
+	"webhook.url": true, "webhook.requests_url": true,
+	"inbox.address": true, "inbox.local": true, "inbox.domain": true, "inbox.messages_url": true,
+}
 
 // newFlowValidateCmd statically validates a flow's graph before it is run.
 func newFlowValidateCmd(state *AppState) *cobra.Command {
