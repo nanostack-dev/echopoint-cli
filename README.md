@@ -117,6 +117,9 @@ its own model. Tools are derived from the OpenAPI contract — operations annota
 credentials. See [docs/mcp.md](docs/mcp.md) for setup and the Claude Desktop
 config snippet.
 
+A coding agent that drives the CLI itself reads the [Echopoint skill](skills/echopoint/SKILL.md):
+setup, a first flow with assertions, running it, CI and monitors, in copy-paste steps.
+
 ## Authentication
 
 Echopoint uses Clerk session JWTs. Credentials are stored per profile in

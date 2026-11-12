@@ -181,7 +181,7 @@ Exit codes:
 			}
 			if state.OrganizationID == "" {
 				return runError(format, nil, exitError,
-					"ephemeral execution requires an organization ID (--organization-id or ECHOPOINT_ORGANIZATION_ID)")
+					"ephemeral execution requires an organization ID (--org or ECHOPOINT_ORGANIZATION_ID)")
 			}
 
 			if flagParallel < 1 {
