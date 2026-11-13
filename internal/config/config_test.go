@@ -142,7 +142,7 @@ func TestUnknownAPIHasNoOAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cfg.OAuth.Enabled() {
-		t.Fatalf("an API outside the built-in table keeps the legacy flow, got %+v", cfg.OAuth)
+		t.Fatalf("an API outside the built-in table has no OAuth, got %+v", cfg.OAuth)
 	}
 }
 

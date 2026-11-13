@@ -103,7 +103,7 @@ func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, erro
 	}
 
 	fmt.Fprintln(os.Stderr, "No valid echopoint credentials found; starting browser sign-in...")
-	signedIn, _, err := signIn(cmd.Context(), state, false, state.Debug)
+	signedIn, _, err := signIn(cmd.Context(), state, state.Debug)
 	if err != nil {
 		return nil, fmt.Errorf("sign-in failed: %w", err)
 	}

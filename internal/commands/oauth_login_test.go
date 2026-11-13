@@ -24,25 +24,21 @@ func isolateHomeOnly(t *testing.T) {
 	t.Setenv("ECHOPOINT_TOKEN", "")
 }
 
-// stubLogins replaces both sign-in flows and reports which one ran.
-func stubLogins(t *testing.T) (*atomic.Int32, *atomic.Int32) {
+// stubLogin replaces the sign-in flow and counts its calls.
+func stubLogin(t *testing.T) *atomic.Int32 {
 	t.Helper()
-	legacy, oauth := new(atomic.Int32), new(atomic.Int32)
-	origLegacy, origOAuth := legacyBrowserLogin, oauthBrowserLogin
-	t.Cleanup(func() { legacyBrowserLogin, oauthBrowserLogin = origLegacy, origOAuth })
+	calls := new(atomic.Int32)
+	orig := oauthBrowserLogin
+	t.Cleanup(func() { oauthBrowserLogin = orig })
 	exp := time.Now().Add(time.Hour)
-	legacyBrowserLogin = func(context.Context, string, bool) (auth.Credentials, error) {
-		legacy.Add(1)
-		return auth.Credentials{AccessToken: "legacy", ExpiresAt: &exp}, nil
-	}
 	oauthBrowserLogin = func(_ context.Context, o auth.OAuthLoginOptions) (auth.Credentials, error) {
-		oauth.Add(1)
+		calls.Add(1)
 		return auth.Credentials{
 			AccessToken: "oauth", RefreshToken: "r", ExpiresAt: &exp,
 			OAuthIssuer: o.Issuer, OAuthClientID: o.ClientID,
 		}, nil
 	}
-	return legacy, oauth
+	return calls
 }
 
 func stateFor(t *testing.T, profile string, api string, store config.Store) *AppState {
@@ -59,32 +55,44 @@ func stateFor(t *testing.T, profile string, api string, store config.Store) *App
 
 func TestSignInDefaultProfileUsesPKCE(t *testing.T) {
 	isolateHomeOnly(t)
-	legacy, oauth := stubLogins(t)
+	calls := stubLogin(t)
 	state := stateFor(t, "", "", config.DefaultStore())
 	state.Config.API.BaseURL = "http://127.0.0.1:1" // /me lookup fails fast; only a warning
 
-	creds, _, err := signIn(context.Background(), state, false, false)
+	creds, _, err := signIn(context.Background(), state, false)
 	if err != nil || creds.AccessToken != "oauth" || creds.OAuthIssuer != "https://clerk.echopoint.dev" ||
-		legacy.Load() != 0 || oauth.Load() != 1 {
-		t.Fatalf("legacy=%d oauth=%d creds=%+v err=%v", legacy.Load(), oauth.Load(), creds, err)
+		calls.Load() != 1 {
+		t.Fatalf("calls=%d creds=%+v err=%v", calls.Load(), creds, err)
 	}
 }
 
-func TestSignInUnknownAPIUsesLegacyFlow(t *testing.T) {
+func TestSignInLocalAPIUsesDevClerk(t *testing.T) {
 	isolateHomeOnly(t)
-	legacy, oauth := stubLogins(t)
-	state := stateFor(t, "", "https://api.example.com", config.DefaultStore())
+	calls := stubLogin(t)
+	state := stateFor(t, "", "http://localhost:8080", config.DefaultStore())
 	state.Config.API.BaseURL = "http://127.0.0.1:1" // /me lookup fails fast; only a warning
 
-	creds, _, err := signIn(context.Background(), state, false, false)
-	if err != nil || creds.AccessToken != "legacy" || legacy.Load() != 1 || oauth.Load() != 0 {
-		t.Fatalf("legacy=%d oauth=%d creds=%+v err=%v", legacy.Load(), oauth.Load(), creds, err)
+	creds, _, err := signIn(context.Background(), state, false)
+	if err != nil || creds.OAuthIssuer != "https://blessed-cobra-90.clerk.accounts.dev" || calls.Load() != 1 {
+		t.Fatalf("calls=%d creds=%+v err=%v", calls.Load(), creds, err)
+	}
+}
+
+func TestSignInUnknownAPIIsRefusedWithInstructions(t *testing.T) {
+	isolateHomeOnly(t)
+	calls := stubLogin(t)
+	state := stateFor(t, "", "https://api.example.com", config.DefaultStore())
+
+	_, _, err := signIn(context.Background(), state, false)
+	if err == nil || calls.Load() != 0 ||
+		!strings.Contains(err.Error(), "--oauth-issuer") || !strings.Contains(err.Error(), "--api-key") {
+		t.Fatalf("calls=%d err=%v", calls.Load(), err)
 	}
 }
 
 func TestSignInOAuthProfileUsesPKCEAndKeepsAPIKey(t *testing.T) {
 	isolateHomeOnly(t)
-	legacy, oauth := stubLogins(t)
+	calls := stubLogin(t)
 	if _, err := auth.SaveCredentials("dev", auth.Credentials{APIKey: "key-1"}); err != nil {
 		t.Fatal(err)
 	}
@@ -93,13 +101,9 @@ func TestSignInOAuthProfileUsesPKCEAndKeepsAPIKey(t *testing.T) {
 	state := stateFor(t, "dev", "https://apidev.echopoint.dev", store)
 	state.Config.API.BaseURL = "http://127.0.0.1:1"
 
-	creds, _, err := signIn(context.Background(), state, false, false)
-	if err != nil || oauth.Load() != 1 || legacy.Load() != 0 || creds.APIKey != "key-1" || !creds.IsOAuth() {
-		t.Fatalf("legacy=%d oauth=%d creds=%+v err=%v", legacy.Load(), oauth.Load(), creds, err)
-	}
-	// --local forces the legacy frontend flow.
-	if _, _, err := signIn(context.Background(), state, true, false); err != nil || legacy.Load() != 1 {
-		t.Fatalf("--local should use the legacy flow: %v", err)
+	creds, _, err := signIn(context.Background(), state, false)
+	if err != nil || calls.Load() != 1 || creds.APIKey != "key-1" || !creds.IsOAuth() {
+		t.Fatalf("calls=%d creds=%+v err=%v", calls.Load(), creds, err)
 	}
 }
 

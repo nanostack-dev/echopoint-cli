@@ -21,8 +21,8 @@ const (
 
 	// defaultAPIBaseURL is the enforced base URL for the default profile.
 	defaultAPIBaseURL = "https://api.echopoint.dev"
-	// defaultFrontendURL is the browser-login frontend for the default profile
-	// and the fallback for custom profiles that omit a frontend URL.
+	// defaultFrontendURL is the web app of the default profile, used for links
+	// (flow URLs, spec URLs), and the fallback for custom profiles that omit it.
 	defaultFrontendURL = "https://app.echopoint.dev"
 
 	defaultOutputFormat = "table"
@@ -43,7 +43,7 @@ type Profile struct {
 }
 
 // OAuthSettings locate the authorization server and public client of a
-// profile. The zero value means the profile uses the legacy browser sign-in.
+// profile. The zero value means the profile has no browser sign-in.
 type OAuthSettings struct {
 	Issuer   string
 	ClientID string
@@ -54,15 +54,20 @@ func (o OAuthSettings) Enabled() bool { return o.Issuer != "" && o.ClientID != "
 
 // builtinOAuth maps a normalized API base URL to its OAuth settings: the Clerk
 // instance and the public client id of its "Echopoint CLI" OAuth application.
+// A local API (`make dev`) uses the dev Clerk instance.
 var builtinOAuth = map[string]OAuthSettings{
 	"https://api.echopoint.dev": {
 		Issuer:   "https://clerk.echopoint.dev",
 		ClientID: "K4rWr6Ns5NCFHqat",
 	},
-	"https://apidev.echopoint.dev": {
-		Issuer:   "https://blessed-cobra-90.clerk.accounts.dev",
-		ClientID: "l6FPYrmcg3X8lCVJ",
-	},
+	"https://apidev.echopoint.dev": devOAuth,
+	"http://localhost:8080":        devOAuth,
+	"http://127.0.0.1:8080":        devOAuth,
+}
+
+var devOAuth = OAuthSettings{
+	Issuer:   "https://blessed-cobra-90.clerk.accounts.dev",
+	ClientID: "l6FPYrmcg3X8lCVJ",
 }
 
 // NormalizeAPIBaseURL lowercases scheme and host and drops trailing slashes, so
@@ -110,7 +115,8 @@ type Config struct {
 		Timeout time.Duration
 	}
 	FrontendURL string
-	// OAuth is empty for profiles that use the legacy browser sign-in.
+	// OAuth is empty for an API outside the built-in table whose profile does
+	// not set it; such a profile can sign in only with an API key.
 	OAuth OAuthSettings
 	// oauthFromProfile is true when the profile set the OAuth settings itself.
 	oauthFromProfile bool

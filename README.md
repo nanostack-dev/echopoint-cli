@@ -133,7 +133,7 @@ echopoint auth login
 
 This opens a browser window to authenticate via Google, GitHub, or email/password.
 The production and dev APIs sign in with OAuth 2.0 and PKCE, and that session
-renews itself; other APIs and `--local` use the older flow with a 7-day token. See
+renews itself (the local API at `localhost:8080` uses the dev settings). See
 [docs/auth.md](docs/auth.md).
 Login saves your first organization as the profile's default. A stored session
 saved without one (because `/me` failed or listed no organization at login) picks

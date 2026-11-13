@@ -12,8 +12,8 @@ var callbackAssets embed.FS
 
 var callbackTemplate = template.Must(template.ParseFS(callbackAssets, "pages/callback.html"))
 
-// All assets are in the initial HTML response: BrowserLogin shuts down its
-// local server as soon as it receives the token, before later asset requests.
+// All assets are in the initial HTML response: OAuthLogin shuts down its
+// local server as soon as it receives the code, before later asset requests.
 var callbackFonts = struct {
 	Body, Heading, Mono template.URL
 }{

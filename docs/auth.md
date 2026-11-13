@@ -16,7 +16,7 @@ After sign-in, the browser returns to the CLI's loopback callback page. Check th
 
 The callback document is rendered by `internal/auth/browser_page.go` from `internal/auth/pages/callback.html`. It uses Echopoint's logo, fonts, and semantic colors from `@nanostackorg/design-system` 0.2.2, with light/dark colors following the browser's system preference. This standalone Go page uses native HTML/CSS; it does not load the React design-system package or a frontend bundle.
 
-Both sign-in flows use this page. Its CSS, SVGs, fonts, and font license notices are embedded in the initial response. Keep it self-contained: the CLI shuts down the local server after receiving the login result, so later asset requests may fail. Error messages pass through `html/template` escaping.
+The sign-in uses this page. Its CSS, SVGs, fonts, and font license notices are embedded in the initial response. Keep it self-contained: the CLI shuts down the local server after receiving the login result, so later asset requests may fail. Error messages pass through `html/template` escaping.
 
 ### OAuth sign-in with PKCE
 
@@ -51,9 +51,9 @@ profiles:
     oauth_client_id: <public-client-id>
 ```
 
-Set both values or neither. They override the built-in table, which is keyed by the API base URL (today the production and dev APIs). The client is public: there is no client secret. The issuer must use `https`.
+Set both values or neither. They override the built-in table, which is keyed by the API base URL (today the production, dev and local `http://localhost:8080` APIs). The client is public: there is no client secret. The issuer must use `https`.
 
-Any other API base URL, and `auth login --local`, still use the older browser flow above, with a 7-day token that does not renew.
+A profile for any other API without these settings cannot sign in through the browser: `auth login` stops and prints the `profile add` command to run, or use an API key. The older flow through the web app's `/cli/auth` page was retired after v3.16.0; sessions it stored keep working until their 7-day token expires.
 
 ### Use an existing session token
 
