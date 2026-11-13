@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -137,13 +138,17 @@ func newProfileAddCmd(state *AppState) *cobra.Command {
 		apiURL      string
 		frontendURL string
 		timeout     time.Duration
+		oauthIssuer string
+		oauthClient string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "add <name>",
 		Short: "Create or update a profile that overrides the API base URL",
 		Example: `  echopoint profile add staging --api-url https://staging.example.com
-  echopoint profile add staging --api-url https://staging.example.com --timeout 60s`,
+  echopoint profile add staging --api-url https://staging.example.com --timeout 60s
+  echopoint profile add staging --api-url https://staging.example.com \
+    --oauth-issuer https://issuer.example.com --oauth-client-id <client-id>`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
@@ -162,11 +167,24 @@ func newProfileAddCmd(state *AppState) *cobra.Command {
 				store.Profiles = map[string]config.Profile{}
 			}
 
+			if (oauthIssuer == "") != (oauthClient == "") {
+				return fmt.Errorf("--oauth-issuer and --oauth-client-id go together: set both or neither")
+			}
+			if oauthIssuer != "" && !auth.ValidIssuer(oauthIssuer) {
+				return fmt.Errorf("--oauth-issuer must be an https URL")
+			}
+
 			existing := store.Profiles[name]
 			profile := config.Profile{
-				APIBaseURL:  apiURL,
-				FrontendURL: frontendURL,
-				Timeout:     existing.Timeout,
+				APIBaseURL:    apiURL,
+				FrontendURL:   frontendURL,
+				Timeout:       existing.Timeout,
+				OAuthIssuer:   existing.OAuthIssuer,
+				OAuthClientID: existing.OAuthClientID,
+			}
+			if oauthIssuer != "" {
+				profile.OAuthIssuer = strings.TrimRight(oauthIssuer, "/")
+				profile.OAuthClientID = oauthClient
 			}
 			if timeout > 0 {
 				profile.Timeout = timeout
@@ -187,6 +205,10 @@ func newProfileAddCmd(state *AppState) *cobra.Command {
 	cmd.Flags().StringVar(&frontendURL, "frontend-url", "",
 		"Browser-login frontend URL for this profile (defaults to the production frontend)")
 	cmd.Flags().DurationVar(&timeout, "timeout", 0, "Request timeout for this profile (e.g. 30s)")
+	cmd.Flags().StringVar(&oauthIssuer, "oauth-issuer", "",
+		"OAuth issuer URL: sign in with OAuth 2.0 PKCE (use with --oauth-client-id)")
+	cmd.Flags().StringVar(&oauthClient, "oauth-client-id", "",
+		"OAuth public client id (use with --oauth-issuer)")
 	cmd.ValidArgsFunction = cobra.NoFileCompletions
 
 	return cmd

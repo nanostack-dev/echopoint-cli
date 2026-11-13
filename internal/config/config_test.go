@@ -108,3 +108,78 @@ func TestIsReservedProfileName(t *testing.T) {
 		t.Error("staging should not be reserved")
 	}
 }
+
+func TestBuiltinOAuthForDevAPI(t *testing.T) {
+	store := DefaultStore()
+	store.Profiles["dev"] = Profile{APIBaseURL: "https://ApiDev.echopoint.dev/"}
+	cfg, err := store.Resolve("dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.OAuth.Enabled() || cfg.OAuth.Issuer != "https://blessed-cobra-90.clerk.accounts.dev" ||
+		cfg.OAuth.ClientID != "l6FPYrmcg3X8lCVJ" {
+		t.Fatalf("dev API should map to the dev issuer, got %+v", cfg.OAuth)
+	}
+}
+
+func TestDefaultProfileUsesProductionOAuth(t *testing.T) {
+	store := DefaultStore()
+	cfg, err := store.Resolve("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.OAuth.Enabled() || cfg.OAuth.Issuer != "https://clerk.echopoint.dev" ||
+		cfg.OAuth.ClientID != "K4rWr6Ns5NCFHqat" {
+		t.Fatalf("the default profile should map to the production issuer, got %+v", cfg.OAuth)
+	}
+}
+
+func TestUnknownAPIHasNoOAuth(t *testing.T) {
+	store := DefaultStore()
+	store.Profiles["other"] = Profile{APIBaseURL: "https://api.example.com"}
+	cfg, err := store.Resolve("other")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.OAuth.Enabled() {
+		t.Fatalf("an API outside the built-in table keeps the legacy flow, got %+v", cfg.OAuth)
+	}
+}
+
+func TestProfileOAuthOverridesTableAndNeedsBothFields(t *testing.T) {
+	store := DefaultStore()
+	store.Profiles["dev"] = Profile{
+		APIBaseURL: "https://apidev.echopoint.dev", OAuthIssuer: "https://issuer.example", OAuthClientID: "mine",
+	}
+	cfg, err := store.Resolve("dev")
+	if err != nil || cfg.OAuth.Issuer != "https://issuer.example" || cfg.OAuth.ClientID != "mine" {
+		t.Fatalf("profile must win: %+v %v", cfg.OAuth, err)
+	}
+	// An explicit profile setting survives an API URL override.
+	cfg.OverrideAPIBaseURL("https://other.example")
+	if cfg.OAuth.ClientID != "mine" {
+		t.Errorf("override dropped profile OAuth: %+v", cfg.OAuth)
+	}
+
+	store.Profiles["half"] = Profile{APIBaseURL: "https://x.example", OAuthIssuer: "https://issuer.example"}
+	if _, err := store.Resolve("half"); err == nil {
+		t.Error("issuer without client id must be rejected")
+	}
+}
+
+func TestOverrideAPIBaseURLFollowsTable(t *testing.T) {
+	store := DefaultStore()
+	cfg, _ := store.Resolve("")
+	cfg.OverrideAPIBaseURL("https://apidev.echopoint.dev")
+	if !cfg.OAuth.Enabled() {
+		t.Error("ECHOPOINT_API_URL for the dev API should enable OAuth")
+	}
+	cfg.OverrideAPIBaseURL("https://api.example.com")
+	if cfg.OAuth.Enabled() {
+		t.Error("an API outside the table must not have OAuth")
+	}
+	cfg.OverrideAPIBaseURL("https://api.echopoint.dev")
+	if cfg.OAuth.Issuer != "https://clerk.echopoint.dev" {
+		t.Errorf("ECHOPOINT_API_URL for production should use the production issuer, got %+v", cfg.OAuth)
+	}
+}

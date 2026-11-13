@@ -42,7 +42,10 @@ func newAuthLoginCmd(state *AppState) *cobra.Command {
 		Short: "Sign in via browser, or store an organization API key",
 		Long: `Sign in to Echopoint.
 
-By default this opens your browser and stores a session (Bearer) token.
+By default this opens your browser and stores a session (Bearer) token. A
+profile with OAuth settings (the dev API has them built in) signs in with
+OAuth 2.0 and PKCE, and that session renews itself. Other profiles, including
+production for now, use the older browser flow with a 7-day token.
 
 Pass --api-key to store an organization API key instead. A session and an API
 key can both be stored; the session is preferred when both are present. Use
@@ -118,24 +121,42 @@ func storeAPIKeyCredential(state *AppState, apiKey, organizationID string, setDe
 	return nil
 }
 
-func browserLogin(cmd *cobra.Command, state *AppState, local, debug bool) error {
-	// Frontend URL comes from the active profile; --local and the legacy
-	// localhost API both fall back to the local frontend.
-	frontendURL := state.Config.FrontendURL
-	if frontendURL == "" {
-		frontendURL = "https://dev.echopoint.dev"
-	}
-	if local || state.Config.API.BaseURL == "http://localhost:8080" {
-		frontendURL = "http://localhost:3001"
-	}
+// The two sign-in flows; tests replace them.
+var (
+	legacyBrowserLogin = auth.BrowserLogin
+	oauthBrowserLogin  = auth.OAuthLogin
+)
 
-	creds, err := auth.BrowserLogin(cmd.Context(), frontendURL, debug)
+// signIn runs the sign-in for the active profile, saves the session and returns
+// it with the credentials path. A profile with OAuth settings signs in with
+// OAuth 2.0 PKCE; every other profile uses the frontend's token page. A
+// previously stored API key is kept, and the fresh session becomes preferred.
+// Warnings go to stderr: the MCP server owns stdout.
+func signIn(ctx context.Context, state *AppState, local, debug bool) (auth.Credentials, string, error) {
+	var creds auth.Credentials
+	var err error
+	if state.Config.OAuth.Enabled() && !local {
+		creds, err = oauthBrowserLogin(ctx, auth.OAuthLoginOptions{
+			Issuer:   state.Config.OAuth.Issuer,
+			ClientID: state.Config.OAuth.ClientID,
+			Debug:    debug,
+		})
+	} else {
+		// Frontend URL comes from the active profile; --local and the legacy
+		// localhost API both fall back to the local frontend.
+		frontendURL := state.Config.FrontendURL
+		if frontendURL == "" {
+			frontendURL = "https://dev.echopoint.dev"
+		}
+		if local || state.Config.API.BaseURL == "http://localhost:8080" {
+			frontendURL = "http://localhost:3001"
+		}
+		creds, err = legacyBrowserLogin(ctx, frontendURL, debug)
+	}
 	if err != nil {
-		return err
+		return auth.Credentials{}, "", err
 	}
 
-	// Preserve a previously stored API key, but make the fresh session the
-	// preferred method.
 	existing := loadOrEmptyCredentials(state.Profile)
 	creds.APIKey = existing.APIKey
 	creds.PreferAPIKey = false
@@ -152,6 +173,14 @@ func browserLogin(cmd *cobra.Command, state *AppState, local, debug bool) error 
 	}
 
 	path, err := auth.SaveCredentials(state.Profile, creds)
+	if err != nil {
+		return auth.Credentials{}, "", err
+	}
+	return creds, path, nil
+}
+
+func browserLogin(cmd *cobra.Command, state *AppState, local, debug bool) error {
+	creds, path, err := signIn(cmd.Context(), state, local, debug)
 	if err != nil {
 		return err
 	}
@@ -195,6 +224,10 @@ How it works:
 
 3. The CLI stores the session for the active profile
 
+Profiles with OAuth settings (the dev API has them built in) sign in with
+OAuth 2.0 and PKCE and renew the session by themselves. Other profiles use the
+older browser flow; that session ends after 7 days and you sign in again.
+
 CI and scripts: store an organization API key instead with
 echopoint auth login --api-key <key>
 
@@ -203,7 +236,7 @@ Commands:
   echopoint auth login                  Sign in via browser
   echopoint auth login --api-key <key>  Store an organization API key
   echopoint auth status                 Check authentication status
-  echopoint auth logout                 Sign out and clear credentials
+  echopoint auth logout                 Sign out (revokes an OAuth session) and clear credentials
 `)
 		},
 	}
@@ -249,15 +282,29 @@ func newAuthStatusCmd(state *AppState) *cobra.Command {
 			if creds.OrganizationID != "" {
 				fmt.Fprintf(os.Stdout, "Organization: %s\n", creds.OrganizationID)
 			}
-			if creds.AccessToken != "" {
-				if creds.ExpiresAt != nil {
-					fmt.Fprintf(os.Stdout, "Session expires: %s\n", creds.ExpiresAt.Format(time.RFC3339))
-				} else {
-					fmt.Fprintln(os.Stdout, "Session expires: unknown")
-				}
-			}
+			printSessionStatus(creds)
 			return nil
 		},
+	}
+}
+
+// printSessionStatus says which sign-in method the session uses, whether it
+// renews itself, and when its token expires.
+func printSessionStatus(creds *auth.Credentials) {
+	if creds.AccessToken == "" {
+		return
+	}
+	label := "Session expires"
+	if creds.IsOAuth() {
+		label = "Access token expires"
+		fmt.Fprintln(os.Stdout, "Session method: OAuth 2.0 (PKCE); renews itself")
+	} else {
+		fmt.Fprintln(os.Stdout, "Session method: browser token; does not renew, sign in again when it expires")
+	}
+	if creds.ExpiresAt != nil {
+		fmt.Fprintf(os.Stdout, "%s: %s\n", label, creds.ExpiresAt.Format(time.RFC3339))
+	} else {
+		fmt.Fprintf(os.Stdout, "%s: unknown\n", label)
 	}
 }
 
@@ -350,6 +397,12 @@ func newAuthLogoutCmd(state *AppState) *cobra.Command {
 		Example: `  echopoint auth logout
   echopoint --profile staging auth logout`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Revoke the refresh token first; a failure never blocks the logout.
+			if creds := loadOrEmptyCredentials(state.Profile); creds.RefreshToken != "" {
+				if revokeErr := auth.RevokeRefreshToken(cmd.Context(), creds, nil); revokeErr != nil {
+					fmt.Fprintf(os.Stderr, "Warning: could not revoke the session on the server: %v\n", revokeErr)
+				}
+			}
 			path, err := auth.DeleteCredentials(state.Profile)
 			if err != nil {
 				return err

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -147,3 +148,5 @@ func openBrowser(url string) error {
 
 	return cmd.Start()
 }
+
+func stderrWriter() io.Writer { return os.Stderr }

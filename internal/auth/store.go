@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -20,6 +21,17 @@ type Credentials struct {
 	PreferAPIKey   bool       `json:"prefer_api_key,omitempty"`
 	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 	OrganizationID string     `json:"organization_id,omitempty"`
+
+	// OAuth session fields. They are empty for the legacy browser session and
+	// for files written by older versions.
+	RefreshToken  string `json:"refresh_token,omitempty"`
+	OAuthIssuer   string `json:"oauth_issuer,omitempty"`
+	OAuthClientID string `json:"oauth_client_id,omitempty"`
+}
+
+// IsOAuth reports whether the stored session can renew itself.
+func (c Credentials) IsOAuth() bool {
+	return c.AccessToken != "" && c.RefreshToken != "" && c.OAuthIssuer != "" && c.OAuthClientID != ""
 }
 
 // sanitizeProfile keeps credentials filenames safe (no path traversal).
@@ -104,7 +116,37 @@ func SaveCredentials(profile string, creds Credentials) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path, os.WriteFile(path, data, 0o600)
+	return path, writeFileAtomic(path, data, 0o600)
+}
+
+// writeFileAtomic writes to a temporary file in the same directory and renames
+// it over the target, so a reader never sees a partial file.
+func writeFileAtomic(path string, data []byte, mode os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-"+filepath.Base(path)+"-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	cleanup := func() { _ = os.Remove(tmpName) }
+	if err := tmp.Chmod(mode); err != nil && !isWindows() {
+		_ = tmp.Close()
+		cleanup()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		cleanup()
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		cleanup()
+		return err
+	}
+	return nil
 }
 
 func DeleteCredentials(profile string) (string, error) {
@@ -120,3 +162,5 @@ func DeleteCredentials(profile string) (string, error) {
 	}
 	return path, nil
 }
+
+func isWindows() bool { return runtime.GOOS == "windows" }

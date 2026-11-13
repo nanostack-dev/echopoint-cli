@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -61,10 +62,10 @@ func NewRootCmd() *cobra.Command {
 
 		// a flag beats an environment variable, which beats the config
 		if envAPI := os.Getenv("ECHOPOINT_API_URL"); envAPI != "" {
-			cfg.API.BaseURL = envAPI
+			cfg.OverrideAPIBaseURL(envAPI)
 		}
 		if flagAPIURL != "" {
-			cfg.API.BaseURL = flagAPIURL
+			cfg.OverrideAPIBaseURL(flagAPIURL)
 		}
 
 		outputValue := cfg.Defaults.OutputFormat
@@ -278,7 +279,8 @@ func resolveToken(flagToken, profile string) (string, error) {
 		return envToken, nil
 	}
 
-	creds, _, err := auth.LoadCredentials(profile)
+	// An OAuth session renews itself here when it is about to expire.
+	creds, err := auth.EnsureSession(context.Background(), profile, auth.RefreshOptions{})
 	if err != nil {
 		return "", err
 	}
