@@ -132,6 +132,9 @@ echopoint auth login
 ```
 
 This opens a browser window to authenticate via Google, GitHub, or email/password.
+The production and dev APIs sign in with OAuth 2.0 and PKCE, and that session
+renews itself; other APIs and `--local` use the older flow with a 7-day token. See
+[docs/auth.md](docs/auth.md).
 Login saves your first organization as the profile's default. A stored session
 saved without one (because `/me` failed or listed no organization at login) picks
 it up later: the first command needing it asks `/me`, uses your only organization
@@ -187,6 +190,10 @@ credentials, so you stay logged in to every environment independently.
 echopoint profile add staging \
   --api-url https://staging.example.com \
   --frontend-url https://app.staging.example.com
+
+# Optional: sign in with OAuth 2.0 PKCE (set both; the dev API has them built in)
+echopoint profile add staging --api-url https://staging.example.com \
+  --oauth-issuer https://issuer.example.com --oauth-client-id <client-id>
 
 # List profiles (the active one is marked with *)
 echopoint profile list

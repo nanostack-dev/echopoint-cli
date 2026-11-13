@@ -3,9 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -33,6 +35,50 @@ type Profile struct {
 	APIBaseURL  string        `yaml:"api_base_url"`
 	FrontendURL string        `yaml:"frontend_url,omitempty"`
 	Timeout     time.Duration `yaml:"timeout,omitempty"`
+
+	// OAuthIssuer and OAuthClientID turn on OAuth 2.0 PKCE sign-in for the
+	// profile. Set both or neither; they override the built-in table.
+	OAuthIssuer   string `yaml:"oauth_issuer,omitempty"`
+	OAuthClientID string `yaml:"oauth_client_id,omitempty"`
+}
+
+// OAuthSettings locate the authorization server and public client of a
+// profile. The zero value means the profile uses the legacy browser sign-in.
+type OAuthSettings struct {
+	Issuer   string
+	ClientID string
+}
+
+// Enabled reports whether the profile signs in with OAuth.
+func (o OAuthSettings) Enabled() bool { return o.Issuer != "" && o.ClientID != "" }
+
+// builtinOAuth maps a normalized API base URL to its OAuth settings: the Clerk
+// instance and the public client id of its "Echopoint CLI" OAuth application.
+var builtinOAuth = map[string]OAuthSettings{
+	"https://api.echopoint.dev": {
+		Issuer:   "https://clerk.echopoint.dev",
+		ClientID: "K4rWr6Ns5NCFHqat",
+	},
+	"https://apidev.echopoint.dev": {
+		Issuer:   "https://blessed-cobra-90.clerk.accounts.dev",
+		ClientID: "l6FPYrmcg3X8lCVJ",
+	},
+}
+
+// NormalizeAPIBaseURL lowercases scheme and host and drops trailing slashes, so
+// the built-in table matches however the URL was typed.
+func NormalizeAPIBaseURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return strings.TrimRight(strings.ToLower(raw), "/")
+	}
+	return strings.ToLower(u.Scheme) + "://" + strings.ToLower(u.Host) + strings.TrimRight(u.Path, "/")
+}
+
+// BuiltinOAuth returns the built-in OAuth settings for an API base URL.
+func BuiltinOAuth(apiBaseURL string) OAuthSettings {
+	return builtinOAuth[NormalizeAPIBaseURL(apiBaseURL)]
 }
 
 // Defaults holds settings shared across every profile.
@@ -64,8 +110,22 @@ type Config struct {
 		Timeout time.Duration
 	}
 	FrontendURL string
-	Defaults    struct {
+	// OAuth is empty for profiles that use the legacy browser sign-in.
+	OAuth OAuthSettings
+	// oauthFromProfile is true when the profile set the OAuth settings itself.
+	oauthFromProfile bool
+	Defaults         struct {
 		OutputFormat string
+	}
+}
+
+// OverrideAPIBaseURL points the config at another API (the --api-url flag or
+// ECHOPOINT_API_URL). OAuth settings that the profile did not set itself follow
+// the new URL through the built-in table.
+func (c *Config) OverrideAPIBaseURL(baseURL string) {
+	c.API.BaseURL = baseURL
+	if !c.oauthFromProfile {
+		c.OAuth = BuiltinOAuth(baseURL)
 	}
 }
 
@@ -190,6 +250,7 @@ func (s *Store) Resolve(profileOverride string) (Config, error) {
 		cfg := Config{Profile: DefaultProfile, FrontendURL: defaultFrontendURL}
 		cfg.API.BaseURL = defaultAPIBaseURL
 		cfg.API.Timeout = defaultTimeout
+		cfg.OAuth = BuiltinOAuth(cfg.API.BaseURL)
 		cfg.Defaults.OutputFormat = s.outputFormat()
 		return cfg, nil
 	}
@@ -211,6 +272,15 @@ func (s *Store) Resolve(profileOverride string) (Config, error) {
 	cfg.API.Timeout = profile.Timeout
 	if cfg.API.Timeout <= 0 {
 		cfg.API.Timeout = defaultTimeout
+	}
+	if (profile.OAuthIssuer == "") != (profile.OAuthClientID == "") {
+		return Config{}, fmt.Errorf(
+			"profile %q: set both oauth_issuer and oauth_client_id, or neither", name)
+	}
+	cfg.OAuth = BuiltinOAuth(cfg.API.BaseURL)
+	if profile.OAuthIssuer != "" {
+		cfg.OAuth = OAuthSettings{Issuer: profile.OAuthIssuer, ClientID: profile.OAuthClientID}
+		cfg.oauthFromProfile = true
 	}
 	cfg.Defaults.OutputFormat = s.outputFormat()
 	return cfg, nil

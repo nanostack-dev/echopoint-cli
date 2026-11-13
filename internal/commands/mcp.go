@@ -1,12 +1,14 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"echopoint-cli/internal/api"
 	"echopoint-cli/internal/auth"
 	"echopoint-cli/internal/client"
 	"echopoint-cli/internal/mcp"
@@ -52,7 +54,8 @@ func newMcpCmd(state *AppState) *cobra.Command {
 // resolveMcpClient returns an authenticated client for the MCP server, choosing
 // in priority order: an explicit API key (flag/env), a stored API key when
 // preferred or when no valid session exists, a non-expired stored session, and
-// finally an interactive browser sign-in.
+// finally an interactive browser sign-in. An OAuth session is renewed before
+// use and again whenever it nears expiry while the server runs.
 func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, error) {
 	cfg := state.Config
 
@@ -67,6 +70,17 @@ func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, erro
 	}
 
 	creds := loadOrEmptyCredentials(state.Profile)
+	if creds.IsOAuth() {
+		renewed, err := auth.EnsureSession(contextOf(cmd), state.Profile, auth.RefreshOptions{})
+		switch {
+		case errors.Is(err, auth.ErrSessionExpired):
+			creds = loadOrEmptyCredentials(state.Profile) // the dead session was cleared
+		case err != nil:
+			return nil, err
+		case renewed != nil:
+			creds = *renewed
+		}
+	}
 	sessionValid := creds.AccessToken != "" &&
 		(creds.ExpiresAt == nil || creds.ExpiresAt.After(time.Now()))
 
@@ -85,69 +99,34 @@ func resolveMcpClient(cmd *cobra.Command, state *AppState) (*client.Client, erro
 		if orgID == "" {
 			orgID = recoverSessionOrganizationID(contextOf(cmd), cfg, creds.AccessToken)
 		}
-		return client.New(
-			cfg.API.BaseURL,
-			creds.AccessToken,
-			orgID,
-			cfg.API.Timeout,
-			client.WithWorkspaceHeader(state.WorkspaceID),
-		)
+		return newSessionClient(state, creds, orgID)
 	}
 
 	fmt.Fprintln(os.Stderr, "No valid echopoint credentials found; starting browser sign-in...")
-	signedIn, err := loginForMcp(cmd, state)
+	signedIn, _, err := signIn(cmd.Context(), state, false, state.Debug)
 	if err != nil {
 		return nil, fmt.Errorf("sign-in failed: %w", err)
 	}
-	orgID := firstNonEmpty(state.OrganizationID, signedIn.OrganizationID)
-	return client.New(
-		cfg.API.BaseURL,
-		signedIn.AccessToken,
-		orgID,
-		cfg.API.Timeout,
-		client.WithWorkspaceHeader(state.WorkspaceID),
-	)
+	fmt.Fprintf(os.Stderr, "✓ Signed in (profile: %s)\n", state.Profile)
+	return newSessionClient(state, signedIn, firstNonEmpty(state.OrganizationID, signedIn.OrganizationID))
 }
 
-// loginForMcp runs the browser sign-in, persists the resulting session
-// (preserving any stored API key), and resolves the default organization. It
-// mirrors `auth login` but writes every message to stderr, since stdout is
-// reserved for the MCP protocol.
-func loginForMcp(cmd *cobra.Command, state *AppState) (auth.Credentials, error) {
-	frontendURL := state.Config.FrontendURL
-	if frontendURL == "" {
-		frontendURL = "https://dev.echopoint.dev"
+// newSessionClient builds a Bearer client. An OAuth session gets a token source,
+// so a server that outlives the access token keeps working.
+func newSessionClient(state *AppState, creds auth.Credentials, orgID string) (*client.Client, error) {
+	editors := []api.RequestEditorFn{}
+	if creds.IsOAuth() {
+		source := auth.NewSessionSource(state.Profile, creds, auth.RefreshOptions{})
+		editors = append(editors, client.WithTokenSource(source.Token))
 	}
-	if state.Config.API.BaseURL == "http://localhost:8080" {
-		frontendURL = "http://localhost:3001"
-	}
-
-	creds, err := auth.BrowserLogin(cmd.Context(), frontendURL, state.Debug)
-	if err != nil {
-		return auth.Credentials{}, err
-	}
-
-	// Preserve a previously stored API key but make the fresh session preferred.
-	existing := loadOrEmptyCredentials(state.Profile)
-	creds.APIKey = existing.APIKey
-	creds.PreferAPIKey = false
-
-	orgID, orgErr := resolveDefaultOrganizationID(
+	editors = append(editors, client.WithWorkspaceHeader(state.WorkspaceID))
+	return client.New(
 		state.Config.API.BaseURL,
 		creds.AccessToken,
+		orgID,
 		state.Config.API.Timeout,
+		editors...,
 	)
-	if orgErr != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to resolve default organization: %v\n", orgErr)
-	} else {
-		creds.OrganizationID = orgID
-	}
-
-	if _, err := auth.SaveCredentials(state.Profile, creds); err != nil {
-		return auth.Credentials{}, err
-	}
-	fmt.Fprintf(os.Stderr, "✓ Signed in (profile: %s)\n", state.Profile)
-	return creds, nil
 }
 
 func firstNonEmpty(values ...string) string {

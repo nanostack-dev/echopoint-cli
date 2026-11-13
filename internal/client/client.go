@@ -227,6 +227,22 @@ func WithWorkspaceHeader(workspaceID string) api.RequestEditorFn {
 	}
 }
 
+// WithTokenSource makes every request carry the token the source returns at
+// that moment, replacing the fixed token given to New. A long-running process
+// uses it so a session that renews itself never sends an expired token. Pass it
+// after New's token: editors run in order. The source must be safe for
+// concurrent use.
+func WithTokenSource(source func(ctx context.Context) (string, error)) api.RequestEditorFn {
+	return func(ctx context.Context, request *http.Request) error {
+		token, err := source(ctx)
+		if err != nil {
+			return err
+		}
+		request.Header.Set("Authorization", "Bearer "+token)
+		return nil
+	}
+}
+
 func combineRequestEditors(editors ...api.RequestEditorFn) api.RequestEditorFn {
 	return func(ctx context.Context, request *http.Request) error {
 		for _, editor := range editors {
