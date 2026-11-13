@@ -664,7 +664,7 @@ Create a complete CRUD flow step by step:
 set -e
 
 # Authenticate
-echopoint auth login --local
+ECHOPOINT_API_URL=http://localhost:8080 echopoint auth login
 
 # Create empty flow
 FLOW_ID=$(echopoint flow create --name "Product API Test" | grep "ID:" | awk '{print $2}')

@@ -15,7 +15,9 @@ PRODUCT_DESCRIPTION="${PRODUCT_DESCRIPTION:-A test product description}"
 UPDATED_DESCRIPTION="${UPDATED_DESCRIPTION:-Updated product description}"
 
 # Authenticate
-$ECHOPOINT auth login --local
+# A local API (make dev) signs in with the dev Clerk instance.
+export ECHOPOINT_API_URL="${ECHOPOINT_API_URL:-http://localhost:8080}"
+$ECHOPOINT auth login
 
 # Create empty flow
 FLOW_ID=$($ECHOPOINT flow create --name "Nanostack Product Lifecycle" 2>&1 | grep "ID:" | awk '{print $2}')

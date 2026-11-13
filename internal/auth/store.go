@@ -22,8 +22,8 @@ type Credentials struct {
 	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 	OrganizationID string     `json:"organization_id,omitempty"`
 
-	// OAuth session fields. They are empty for the legacy browser session and
-	// for files written by older versions.
+	// OAuth session fields. They are empty in files written by CLI versions
+	// before 3.16.0, whose session cannot renew itself.
 	RefreshToken  string `json:"refresh_token,omitempty"`
 	OAuthIssuer   string `json:"oauth_issuer,omitempty"`
 	OAuthClientID string `json:"oauth_client_id,omitempty"`
