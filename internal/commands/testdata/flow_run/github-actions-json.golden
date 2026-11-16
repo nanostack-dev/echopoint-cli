@@ -45,8 +45,8 @@ exit: 0
 ✓ Flow 550e8400-e29b-41d4-a716-446655440001: completed
 ::endgroup::
 --- launches ---
-POST /flows/550e8400-e29b-41d4-a716-446655440001/launch idempotency-key="gh-2fe9b1d220ae180d-c7b480fba7547e07" {"environment_key":"dev","ephemeral_job_version":1,"runner_type":"ephemeral","trigger_metadata":{"actor":"octocat","job":"flows","ref":"refs/heads/main","repository":"acme/api","run_attempt":"2","run_id":"4242","sha":"abc123","source":"github_actions","workflow":"ci"},"trigger_type":"git"}
-POST /flows/550e8400-e29b-41d4-a716-4466554400a2/launch idempotency-key="gh-2fe9b1d220ae180d-0513fd682c75770e" {"environment_key":"dev","ephemeral_job_version":1,"runner_type":"ephemeral","trigger_metadata":{"actor":"octocat","job":"flows","ref":"refs/heads/main","repository":"acme/api","run_attempt":"2","run_id":"4242","sha":"abc123","source":"github_actions","workflow":"ci"},"trigger_type":"git"}
+POST /flows/550e8400-e29b-41d4-a716-446655440001/launch idempotency-key="gh-acb149c1db30e32a-1f8731a28fc6aefc" {"environment_key":"dev","ephemeral_job_version":1,"runner_type":"ephemeral","trigger_metadata":{"actor":"octocat","job":"flows","ref":"refs/heads/main","repository":"acme/api","run_attempt":"2","run_id":"4242","sha":"abc123","source":"github_actions","workflow":"ci"},"trigger_type":"git"}
+POST /flows/550e8400-e29b-41d4-a716-4466554400a2/launch idempotency-key="gh-acb149c1db30e32a-cdb6560785fc2d07" {"environment_key":"dev","ephemeral_job_version":1,"runner_type":"ephemeral","trigger_metadata":{"actor":"octocat","job":"flows","ref":"refs/heads/main","repository":"acme/api","run_attempt":"2","run_id":"4242","sha":"abc123","source":"github_actions","workflow":"ci"},"trigger_type":"git"}
 --- step summary ---
 ## Echopoint Flow Results
 

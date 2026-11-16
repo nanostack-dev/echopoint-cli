@@ -199,8 +199,8 @@ func TestDeriveGitHubIdempotencyKey(t *testing.T) {
 		os.Unsetenv("GITHUB_RUN_ATTEMPT")
 	}()
 
-	key1 := deriveGitHubIdempotencyKey([]string{"flow-1"})
-	key2 := deriveGitHubIdempotencyKey([]string{"flow-1"})
+	key1 := deriveGitHubIdempotencyKey()
+	key2 := deriveGitHubIdempotencyKey()
 	if key1 == "" {
 		t.Fatal("expected non-empty idempotency key")
 	}
@@ -210,7 +210,7 @@ func TestDeriveGitHubIdempotencyKey(t *testing.T) {
 
 	// Different run attempt → different key
 	os.Setenv("GITHUB_RUN_ATTEMPT", "2")
-	key3 := deriveGitHubIdempotencyKey([]string{"flow-1"})
+	key3 := deriveGitHubIdempotencyKey()
 	if key3 == key1 {
 		t.Errorf("different run attempt should produce different key")
 	}

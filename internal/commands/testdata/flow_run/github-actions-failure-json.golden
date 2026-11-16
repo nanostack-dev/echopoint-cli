@@ -19,7 +19,7 @@ exit: 3
 ::endgroup::
 exit code 3
 --- launches ---
-POST /flows/550e8400-e29b-41d4-a716-4466554400a3/launch idempotency-key="gh-2fe9b1d220ae180d" {"ephemeral_job_version":1,"runner_type":"ephemeral","trigger_metadata":{"actor":"octocat","job":"flows","ref":"refs/heads/main","repository":"acme/api","run_attempt":"2","run_id":"4242","sha":"abc123","source":"github_actions","workflow":"ci"},"trigger_type":"git"}
+POST /flows/550e8400-e29b-41d4-a716-4466554400a3/launch idempotency-key="gh-acb149c1db30e32a-0c1a43a61cd7af66" {"ephemeral_job_version":1,"runner_type":"ephemeral","trigger_metadata":{"actor":"octocat","job":"flows","ref":"refs/heads/main","repository":"acme/api","run_attempt":"2","run_id":"4242","sha":"abc123","source":"github_actions","workflow":"ci"},"trigger_type":"git"}
 --- step summary ---
 ## Echopoint Flow Results
 
