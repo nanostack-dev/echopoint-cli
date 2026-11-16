@@ -85,6 +85,7 @@ latest release.
 - Configuration profiles for switching between API targets
 - Built-in self-update from GitHub releases
 - MCP server (`echopoint mcp`) exposing echopoint operations as tools for AI clients
+- `echopoint api <path>`: call any API endpoint with the CLI's credentials, like `gh api` ([raw API calls](docs/api.md))
 
 ## Quick Start
 
