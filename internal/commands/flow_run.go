@@ -418,21 +418,33 @@ func resolveIdempotencyKey(flagValue string, flowIDs []string) string {
 		return os.Getenv("ECHOPOINT_IDEMPOTENCY_KEY")
 	}
 	if os.Getenv("GITHUB_ACTIONS") == githubActionsTrueValue {
-		return deriveGitHubIdempotencyKey(flowIDs)
+		base := deriveGitHubIdempotencyKey()
+		// executeFlows launches a single flow with the base key itself. An explicit key
+		// is the caller's to choose, but a derived one is shared by every flow a step
+		// runs, so it is made flow-specific here: otherwise a second single-flow run of
+		// another flow reuses it and the server answers 409 IDEMPOTENCY_KEY_CONFLICT.
+		if base != "" && len(flowIDs) == 1 {
+			return derivePerFlowKey(base, flowIDs[0])
+		}
+		return base
 	}
 	return ""
 }
 
-func deriveGitHubIdempotencyKey(flowIDs []string) string {
+// deriveGitHubIdempotencyKey identifies one step of one job attempt. GITHUB_ACTION is
+// the step id (`__run`, `__run_2` for unnamed run steps), so two steps that run flows
+// launch separately, while a retry inside the same step replays its launch.
+func deriveGitHubIdempotencyKey() string {
 	parts := []string{
 		os.Getenv("GITHUB_REPOSITORY"),
 		os.Getenv("GITHUB_WORKFLOW"),
 		os.Getenv("GITHUB_JOB"),
 		os.Getenv("GITHUB_RUN_ID"),
 		os.Getenv("GITHUB_RUN_ATTEMPT"),
+		os.Getenv("GITHUB_ACTION"),
 	}
 	base := strings.Join(parts, "/")
-	if base == "////" {
+	if strings.Trim(base, "/") == "" {
 		return ""
 	}
 	h := sha256.Sum256([]byte(base))

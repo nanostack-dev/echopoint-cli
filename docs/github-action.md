@@ -242,7 +242,16 @@ organization, flow, environment key, version ID, runner type, trigger type, and 
   trigger, or runner type) → `409 Conflict`.
 
 For multiple flow IDs, an explicit or CI-derived key is treated as a *base* key; the CLI derives
-a stable per-flow key so each launch retries safely. If a claim response is lost, the CLI exits
+a stable per-flow key so each launch retries safely. A single flow ID uses an explicit key
+unchanged, so the caller decides what counts as a retry.
+
+The CI-derived key identifies one step of one job attempt (repository, workflow, job, run ID,
+run attempt and `GITHUB_ACTION`, the step id), and it is always per flow, also for a single flow.
+So two steps of one job that each run flows launch them separately: a later step that runs a flow
+again gets a new execution, not a replay of the first step's result. A retry inside the same step
+replays its launch. Up to v4.1.0 the derived key had no step id and a single flow used it
+unchanged, so a second single-flow run in the same job got `409 Conflict`
+([troubleshooting](development/troubleshooting.md)). If a claim response is lost, the CLI exits
 without running the flow. Inspect that execution before retrying: the Job may already be claimed.
 
 
