@@ -190,3 +190,7 @@ Health policies, shorter intervals and run history: <https://github.com/nanostac
 ## 7. MCP
 
 `echopoint mcp` runs a Model Context Protocol server over stdio, so an MCP client can call Echopoint operations as tools with the credentials of the active profile. Setup and client configuration: <https://github.com/nanostack-dev/echopoint-cli/blob/main/docs/mcp.md>.
+
+## 8. Endpoints without a command
+
+`echopoint api <path>` calls any Echopoint API endpoint with the active profile, organization and workspace, like `gh api`. For example, `echopoint api /license/usage` shows the organization's limits and usage. `-X` sets the method, `-F key=value` adds a typed field, `-f <file>` sends a body, and a status outside 2xx exits 1. Prefer a dedicated command when one exists. Reference: <https://github.com/nanostack-dev/echopoint-cli/blob/main/docs/api.md>.

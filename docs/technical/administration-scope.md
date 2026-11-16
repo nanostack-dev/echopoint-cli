@@ -10,6 +10,8 @@ MCP always excludes the exact `/administrations` path and all paths starting wit
 route is accidentally marked `x-ai-tool: true` without `x-ai-danger`. Other path
 segments such as `/administrations-report` are unaffected. Former administration
 tool names return an unknown-tool error without sending an API request.
+`echopoint api` applies the same rule: it refuses those paths before it sends
+anything ([raw API calls](../api.md)).
 
 The complete owning API contract remains in `internal/api/openapi.yaml`, with its
 generated client methods retained as an internal mirror. Mirroring a route does

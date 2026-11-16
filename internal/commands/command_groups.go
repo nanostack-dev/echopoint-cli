@@ -30,6 +30,7 @@ var rootCommandGroups = map[string]string{
 	authCommandName:        accountGroupID,
 	profileCommandName:     accountGroupID,
 	configCommandName:      accountGroupID,
+	apiCommandName:         toolsGroupID,
 	mcpCommandName:         toolsGroupID,
 	updateCommandName:      toolsGroupID,
 	versionCommandName:     toolsGroupID,

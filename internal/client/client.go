@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -211,6 +212,38 @@ func (c *Client) Do(
 		return resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
 	}
 	return resp.StatusCode, respBody, nil
+}
+
+// Send issues a request against the API with the same auth, organization and
+// workspace headers as the generated client, and returns the response unread;
+// the caller closes its body. pathAndQuery is relative to the base URL, so the
+// credentials never reach another host. `echopoint api` uses it to reach any
+// endpoint.
+func (c *Client) Send(
+	ctx context.Context,
+	method, pathAndQuery string,
+	header http.Header,
+	body []byte,
+) (*http.Response, error) {
+	var rdr io.Reader
+	if body != nil {
+		rdr = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(c.baseURL, "/")+pathAndQuery, rdr)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	maps.Copy(req.Header, header)
+	if c.reqEditor != nil {
+		if editErr := c.reqEditor(ctx, req); editErr != nil {
+			return nil, fmt.Errorf("apply auth: %w", editErr)
+		}
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	return resp, nil
 }
 
 // WithWorkspaceHeader carries an explicitly selected workspace through generated and raw requests.
