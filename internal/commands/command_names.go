@@ -14,7 +14,6 @@ const (
 	flowCommandName        = "flow"
 	getVerb                = "get"
 	listVerb               = "list"
-	mcpCommandName         = "mcp"
 	monitorCommandName     = "monitor"
 	orgCommandName         = "org"
 	profileCommandName     = "profile"

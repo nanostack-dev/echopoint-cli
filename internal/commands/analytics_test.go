@@ -1,18 +1,12 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
-	"time"
-
-	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"echopoint-cli/internal/output"
 )
@@ -323,11 +317,9 @@ func TestFormatMillis(t *testing.T) {
 	}
 }
 
-// TestAnalyticsThroughTheBinaryAndMCP runs the released surface end to end: the
-// command with a profile, environment credentials and -o json, and the stdio MCP
-// tools of the same operations.
-func TestAnalyticsThroughTheBinaryAndMCP(t *testing.T) {
-	flowID := idFor("1").String()
+// TestAnalyticsThroughTheBinary runs the released surface end to end: the
+// command with a profile, environment credentials and -o json.
+func TestAnalyticsThroughTheBinary(t *testing.T) {
 	stub := newAPIStub(t).
 		on(http.MethodGet, "/analytics/summary", http.StatusOK, analyticsSummaryBody()).
 		on(http.MethodGet, "/analytics/endpoints", http.StatusOK, endpointAnalyticsBody())
@@ -344,40 +336,5 @@ func TestAnalyticsThroughTheBinaryAndMCP(t *testing.T) {
 	if _, stderr, code := runCLI(t, "analytics", "flows", "--window", "1y"); code == 0 ||
 		!strings.Contains(stderr, `invalid --window "1y"`) {
 		t.Errorf("a bad window: exit %d, stderr %q", code, stderr)
-	}
-
-	command := exec.Command(echopointBinary(t), "mcp", "--profile", "default")
-	command.Stderr = io.Discard
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "analytics-test", Version: "1"}, nil)
-	session, err := client.Connect(ctx, &mcpsdk.CommandTransport{Command: command}, nil)
-	if err != nil {
-		t.Fatalf("connect to CLI stdio MCP process: %v", err)
-	}
-	defer session.Close()
-
-	result, err := session.CallTool(ctx, &mcpsdk.CallToolParams{
-		Name: "list_endpoint_analytics", Arguments: map[string]any{"window": "7d", "flow_id": flowID},
-	})
-	if err != nil || result.IsError {
-		t.Fatalf("list_endpoint_analytics: result=%v, error=%v", result, err)
-	}
-	requests := stub.requestsTo(http.MethodGet, "/analytics/endpoints")
-	if len(requests) != 1 || requests[0].header.Get("X-Api-Key") != "golden-key" ||
-		requests[0].header.Get("X-Organization-Id") != "org_test" {
-		t.Fatalf("the MCP tool did not send one authenticated, scoped request: %+v", requests)
-	}
-	if query, _ := url.ParseQuery(requests[0].query); query.Get("window") != "7d" || query.Get("flow_id") != flowID {
-		t.Errorf("query = %q", requests[0].query)
-	}
-	_, err = session.CallTool(ctx, &mcpsdk.CallToolParams{
-		Name: "rebuild_execution_analytics", Arguments: map[string]any{},
-	})
-	if err == nil || !strings.Contains(err.Error(), `unknown tool "rebuild_execution_analytics"`) {
-		t.Errorf("rebuild_execution_analytics: %v", err)
-	}
-	if len(stub.requestsTo(http.MethodPost, "/administrations/analytics/rebuild")) != 0 {
-		t.Error("the administration rebuild was called")
 	}
 }

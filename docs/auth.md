@@ -30,7 +30,7 @@ What happens when you run `echopoint auth login`:
 4. The CLI sends the code and the verifier straight to the token endpoint. Only the real CLI can finish the exchange, because only it knows the verifier.
 5. The CLI stores the access token, a refresh token and the issuer. The code and the tokens are never printed, not even with `--debug`.
 
-The access token lasts about 24 hours and renews itself. When a command starts and the token ends within 60 seconds, the CLI uses the refresh token to get a new pair and saves both. A refresh token works only once, so a lock file next to the credentials makes parallel `echopoint` processes take turns; the second one finds the new token and does not refresh again. `echopoint mcp` renews the token while it runs, so it can stay up for days.
+The access token lasts about 24 hours and renews itself. When a command starts and the token ends within 60 seconds, the CLI uses the refresh token to get a new pair and saves both. A refresh token works only once, so a lock file next to the credentials makes parallel `echopoint` processes take turns; the second one finds the new token and does not refresh again.
 
 If the server refuses the refresh token, the CLI removes the stored session (an API key stays) and asks you to run `echopoint auth login` again. If the network fails, the CLI reports the error and keeps your credentials, so you can retry.
 

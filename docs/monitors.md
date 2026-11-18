@@ -103,7 +103,7 @@ organization's daily Cloud execution limit and what its other enabled Cloud moni
 already plan (`monitor_id` in the request leaves the monitor being edited out).
 Saving a monitor is never refused for the Cloud plan; runs past the limit are refused
 when they launch. The Cloud budget read (`GET /monitors/cloud-budget`) serves the web
-app only: it has no CLI command and no MCP tool.
+app only: it has no CLI command.
 
 ```bash
 echo '{"tags":["checkout"],"runner_type":"cloud","interval_seconds":300,"health_policy":true}' \
@@ -137,16 +137,6 @@ A status page maps a visible service to a monitor with a health policy through
 See [status pages](status-pages.md). Find the candidates with
 `echopoint monitor list --enabled --has-health-policy`. `status-page binding-options`
 and the single-assertion `binding` are gone.
-
-## MCP
-
-The embedded contract exposes the monitor operations under their unchanged operation
-names: `list_flow_schedules`, `create_flow_schedule`, `get_flow_schedule`,
-`update_flow_schedule`, `delete_flow_schedule`, `pause_flow_schedule`,
-`resume_flow_schedule`, `list_flow_schedule_runs`, `get_flow_schedule_run`,
-`preview_schedule_tags`, plus `run_monitor` and `estimate_monitor`. Path arguments use
-`monitorId` and `runId`. `get_monitor_cloud_budget` and every probe tool do not exist.
-See [MCP](mcp.md).
 
 ## Release
 

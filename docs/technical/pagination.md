@@ -1,6 +1,6 @@
 # Cursor-paginated listings
 
-Every collection Echopoint owns is a `POST .../search` operation that pages with an opaque keyset cursor: a request carries `pagination: {limit, offset, cursor}` and a response carries `items`, `total`, `count` and, unless it is the last page, `next_cursor`. The 17 `GET` lists they replace (`listFlows`, `listFlowFolders`, `listEnvironments`, `listCollections`, `listFlowVersions`, `listFlowExecutions`, `listFlowSchedules`, `listFlowScheduleRuns`, `listSpecs`, `listSpecVersions` and the rest) are deprecated and keep working. The CLI and the MCP server read the searches. Echopoint's own reference is `docs/technical/cursor-search.md` in the Echopoint repository, which lists each search's scope and default order.
+Every collection Echopoint owns is a `POST .../search` operation that pages with an opaque keyset cursor: a request carries `pagination: {limit, offset, cursor}` and a response carries `items`, `total`, `count` and, unless it is the last page, `next_cursor`. The 17 `GET` lists they replace (`listFlows`, `listFlowFolders`, `listEnvironments`, `listCollections`, `listFlowVersions`, `listFlowExecutions`, `listFlowSchedules`, `listFlowScheduleRuns`, `listSpecs`, `listSpecVersions` and the rest) are deprecated and keep working. The CLI reads the searches. Echopoint's own reference is `docs/technical/cursor-search.md` in the Echopoint repository, which lists each search's scope and default order.
 
 ## Listing commands
 
@@ -36,7 +36,3 @@ Internal reads never page by offset. `walkSearch`, `walkAll` and `walkSome` in `
 - `flow tag` with `--query` or `--match-tag`, and `flow run --tag --ignore-modules`, walk every match. `flow run --tag` without `--ignore-modules` is one request: its safety cap of 50 flows is checked against `total`.
 - `org env environments list` prints the sorted names of all environments.
 - Tab completion reads at most 5 pages of 100 (`completionMaxPages`) within the 2 second timeout and answers with what it read; completion of folder paths needs the whole tree and answers nothing if it cannot read it. Recent-execution and recent-run completions read the first page only.
-
-## MCP
-
-The search tools are named after the operation (`search_flows`, `search_collections`, `search_flow_folders`, `search_executions`, `search_flow_schedules`, `search_spec_versions`, ...). Their arguments are the path parameters plus the request body fields, flattened; the paging controls are the `pagination` object, so an agent continues a listing by passing `{"pagination": {"limit": 20, "cursor": "<next_cursor>"}}`. The deprecated `list_*` tools remain, and their descriptions start with `Deprecated: use <search_tool> instead, which pages with a cursor.` `search_organization_members` is the Anchor-backed search of the organization's members; the API-key and invitation searches are `x-ai-danger` and not tools.

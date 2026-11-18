@@ -1,4 +1,4 @@
-package mcp
+package flowfile
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ var cliHints = itemHints{
 }
 
 // FlowFileIntegrations checks the integration nodes of a compiled flow file
-// against the workspace catalog, with the build_flow rules, and stores each
+// against the workspace catalog, with the catalog rules, and stores each
 // operation's method and path. The flow compiler works offline and leaves
 // them empty; the API requires both.
 func FlowFileIntegrations(ctx context.Context, cli *client.Client, req *wire.CreateFlowRequest) error {

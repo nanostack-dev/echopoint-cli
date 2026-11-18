@@ -84,7 +84,6 @@ latest release.
 - Tab completion of flows, folders, executions, collections, environments and profiles
 - Configuration profiles for switching between API targets
 - Built-in self-update from GitHub releases
-- MCP server (`echopoint mcp`) exposing echopoint operations as tools for AI clients
 - `echopoint api <path>`: call any API endpoint with the CLI's credentials, like `gh api` ([raw API calls](docs/api.md))
 
 ## Quick Start
@@ -109,14 +108,17 @@ echopoint flow env set <flow-id> --var API_KEY=secret --var BASE_URL=https://api
 echopoint flow run <flow-id>
 ```
 
-## MCP Server
+## MCP
 
-`echopoint mcp` runs a Model Context Protocol server over stdio so an
-MCP-compatible AI client (Claude Desktop, Cursor, ...) can drive echopoint with
-its own model. Tools are derived from the OpenAPI contract — operations annotated
-`x-ai-tool: true` become tools — and every call runs as you, through your stored
-credentials. See [docs/mcp.md](docs/mcp.md) for setup and the Claude Desktop
-config snippet.
+The CLI no longer runs an MCP server. The Echopoint API serves MCP remotely
+(Streamable HTTP, OAuth sign-in). For now only the dev endpoint exists; the
+production endpoint follows:
+
+```bash
+claude mcp add --transport http echopoint https://apidev.echopoint.dev/mcp
+```
+
+See [docs/mcp.md](docs/mcp.md) for the removal and its history.
 
 A coding agent that drives the CLI itself reads the [Echopoint skill](skills/echopoint/SKILL.md):
 setup, a first flow with assertions, running it, CI and monitors, in copy-paste steps.
@@ -234,7 +236,7 @@ Nouns are singular and the plural stays as an alias: `flow` (`flows`), `collecti
 |-------|----------|
 | Resources | `analytics`, `flow`, `monitor`, `spec`, `collection`, `status-page`, `org` |
 | Account and setup | `auth`, `profile`, `config` |
-| Tools | `mcp`, `completion`, `update`, `version` |
+| Tools | `api`, `completion`, `update`, `version` |
 
 Every command has an `Example:` in its `--help`. An unknown subcommand fails with suggestions.
 
@@ -731,5 +733,5 @@ MIT
 
 Workspace operations require an explicit workspace ID with `--workspace` or
 `ECHOPOINT_WORKSPACE_ID`. The flag takes precedence. Selection applies to generated
-requests, MCP tools and ephemeral launch/claim calls. Job-token completion retains
+requests and ephemeral launch/claim calls. Job-token completion retains
 its existing runner protocol. Organization settings and status pages need no workspace.

@@ -152,7 +152,11 @@ analytics of its finished runs.
 
 A flow runs on Cloud (EchoPoint runs it), on a Self-hosted runner (a long-lived
 runner you operate), or on an Ephemeral runner (a short-lived runner the caller
-operates: 'echopoint flow run' makes this CLI one).`,
+operates: 'echopoint flow run' makes this CLI one).
+
+The MCP server for AI clients is served by the EchoPoint API, not by this CLI:
+claude mcp add --transport http echopoint https://apidev.echopoint.dev/mcp
+(dev endpoint for now; the production endpoint follows).`,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if skipsConfiguration(cmd) {
 				return nil
@@ -191,7 +195,6 @@ operates: 'echopoint flow run' makes this CLI one).`,
 		newProfileCmd(state),
 		newConfigCmd(state),
 		newAPICmd(state),
-		newMcpCmd(state),
 		newVersionCmd(),
 		newUpdateCmd(),
 	)
@@ -204,14 +207,13 @@ operates: 'echopoint flow run' makes this CLI one).`,
 }
 
 // requiresToken reports whether a command needs a resolved session token in
-// PersistentPreRunE. Auth, profile, config, version, update, completion, and mcp commands
-// manage their own state and must run without valid credentials — mcp in
-// particular resolves auth itself (and may trigger browser sign-in) at launch.
+// PersistentPreRunE. Auth, profile, config, version, update and completion
+// commands manage their own state and must run without valid credentials.
 // A command annotated offline works on local files only.
 //
 // The auth/profile/config groups match anywhere in the parent chain so their
 // subcommands (e.g. "auth login") also skip token resolution. The top-level
-// self-management commands "version", "update", "completion" and "mcp" match ONLY when they are a
+// self-management commands "version", "update" and "completion" match ONLY when they are a
 // direct child of root — otherwise a subcommand named "update" (notably
 // "flow update") would wrongly skip token resolution and then fail its own
 // requireToken check, making it impossible to authenticate.
@@ -224,7 +226,7 @@ func requiresToken(cmd *cobra.Command) bool {
 		switch c.Name() {
 		case authCommandName, profileCommandName, configCommandName:
 			return false
-		case versionCommandName, updateCommandName, mcpCommandName, completionCommandName:
+		case versionCommandName, updateCommandName, completionCommandName:
 			if isRootChild(c) {
 				return false
 			}
@@ -297,8 +299,8 @@ func resolveToken(flagToken, profile string) (string, error) {
 // resolveStoredCredentials picks the Bearer token and the stored API key for a
 // command. A stored session (Bearer) is the default when both are present,
 // unless the API key is marked preferred or no session is available. An
-// expired session falls back to a stored API key, as `echopoint mcp` does,
-// and is an error only when no API key is stored.
+// expired session falls back to a stored API key and is an error only when no
+// API key is stored.
 func resolveStoredCredentials(flagToken, profile string) (string, string, error) {
 	token, err := resolveToken(flagToken, profile)
 	apiKey := resolveStoredAPIKey(profile, token)
