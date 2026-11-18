@@ -154,9 +154,9 @@ A flow runs on Cloud (EchoPoint runs it), on a Self-hosted runner (a long-lived
 runner you operate), or on an Ephemeral runner (a short-lived runner the caller
 operates: 'echopoint flow run' makes this CLI one).
 
-The MCP server for AI clients is served by the EchoPoint API, not by this CLI:
-claude mcp add --transport http echopoint https://apidev.echopoint.dev/mcp
-(dev endpoint for now; the production endpoint follows).`,
+This CLI has no MCP server. The EchoPoint API serves one remotely (OAuth sign-in).
+Only the dev endpoint exists so far, for dev accounts; production follows:
+claude mcp add --transport http echopoint https://apidev.echopoint.dev/mcp`,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if skipsConfiguration(cmd) {
 				return nil

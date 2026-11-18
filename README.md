@@ -111,8 +111,8 @@ echopoint flow run <flow-id>
 ## MCP
 
 The CLI no longer runs an MCP server. The Echopoint API serves MCP remotely
-(Streamable HTTP, OAuth sign-in). For now only the dev endpoint exists; the
-production endpoint follows:
+(Streamable HTTP, OAuth sign-in). For now only the dev endpoint exists, and
+only dev Echopoint accounts can sign in to it; the production endpoint follows:
 
 ```bash
 claude mcp add --transport http echopoint https://apidev.echopoint.dev/mcp

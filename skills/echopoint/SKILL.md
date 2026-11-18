@@ -189,7 +189,7 @@ Health policies, shorter intervals and run history: <https://github.com/nanostac
 
 ## 7. MCP
 
-The CLI has no MCP server. The Echopoint API serves MCP remotely; on dev, add it with `claude mcp add --transport http echopoint https://apidev.echopoint.dev/mcp` (the production endpoint follows). Details: <https://github.com/nanostack-dev/echopoint-cli/blob/main/docs/mcp.md>.
+The CLI has no MCP server. The Echopoint API serves MCP remotely; on dev (dev accounts only), add it with `claude mcp add --transport http echopoint https://apidev.echopoint.dev/mcp` (the production endpoint follows). Details: <https://github.com/nanostack-dev/echopoint-cli/blob/main/docs/mcp.md>.
 
 ## 8. Endpoints without a command
 
