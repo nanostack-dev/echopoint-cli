@@ -125,7 +125,7 @@ var oauthBrowserLogin = auth.OAuthLogin
 // signIn runs the OAuth 2.0 PKCE sign-in for the active profile, saves the
 // session and returns it with the credentials path. A previously stored API
 // key is kept, and the fresh session becomes preferred. Warnings go to stderr:
-// the MCP server owns stdout.
+// stdout carries only command output.
 func signIn(ctx context.Context, state *AppState, debug bool) (auth.Credentials, string, error) {
 	if !state.Config.OAuth.Enabled() {
 		return auth.Credentials{}, "", fmt.Errorf(

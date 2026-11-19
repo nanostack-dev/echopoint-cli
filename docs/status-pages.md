@@ -94,13 +94,6 @@ publishing never fabricates uptime.
 
 The public HTML and JSON responses request exclusion from search engines with `X-Robots-Tag: noindex, nofollow`. They remain anonymously accessible. Customer CNAME domains require verified hostname routing and TLS; this milestone does not provide custom-domain commands.
 
-## MCP exposure
-
-The refreshed contract exposes `get_status_page` and `save_status_page`
-(`get_status_page_binding_options` was removed). The existing contract excludes publication,
-withdrawal and visitor reads from the MCP catalog. Use the explicit CLI commands
-for these actions; this change does not widen the MCP exposure policy.
-
 The command family accompanies Echopoint API PR #475 and frontend PR #476.
 It first ships in the CLI release cut after this feature is merged; earlier
 releases, including v1.11.1, do not contain it.
@@ -119,7 +112,6 @@ echopoint --profile prod status-page public \
   --organization-key "$(jq -r .organization_key saved-page.json)"
 ```
 
-The public command sends no stored credentials or organization headers. The new
-organization-key endpoint remains excluded from MCP, like the legacy public
-read. Existing slug reads and update payloads are unchanged; keep the complete
+The public command sends no stored credentials or organization headers.
+Existing slug reads and update payloads are unchanged; keep the complete
 returned `slug` when saving. No DNS or Wrangler change is required per customer.

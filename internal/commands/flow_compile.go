@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"echopoint-cli/internal/api"
-	"echopoint-cli/internal/mcp"
+	"echopoint-cli/internal/flowfile"
 	"echopoint-cli/internal/output"
 
 	"github.com/nanostack-dev/echopoint-runner/pkg/flowdsl"
@@ -92,7 +92,7 @@ func runFlowCompile(cmd *cobra.Command, state *AppState, file, root string, chec
 func checkFlowReferences(cmd *cobra.Command, state *AppState, out flowdsl.Outcome) error {
 	failed := false
 	for _, compiled := range out.Flows {
-		if err := mcp.CheckFlowFileReferences(cmd.Context(), state.Client, compiled.Request); err != nil {
+		if err := flowfile.CheckFlowFileReferences(cmd.Context(), state.Client, compiled.Request); err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "%s: %v\n", compiled.Path, err)
 			if state.Token == "" && state.APIKey == "" {
 				fmt.Fprintln(cmd.ErrOrStderr(),
@@ -113,7 +113,7 @@ type fillIntegrations func(*wire.CreateFlowRequest) error
 
 func catalogFiller(cmd *cobra.Command, state *AppState) fillIntegrations {
 	return func(req *wire.CreateFlowRequest) error {
-		return mcp.FlowFileIntegrations(cmd.Context(), state.Client, req)
+		return flowfile.FlowFileIntegrations(cmd.Context(), state.Client, req)
 	}
 }
 

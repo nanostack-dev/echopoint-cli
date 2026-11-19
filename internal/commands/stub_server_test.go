@@ -105,8 +105,7 @@ func (stub *apiStub) onSearch(path string, items ...any) *apiStub {
 // flowSearchPath is where the flow search is served.
 const flowSearchPath = "/flows/search"
 
-// onFlows answers the flow search, which every CLI listing reads, and the deprecated
-// GET /flows, which the MCP list_flows tool still calls, with the flows.
+// onFlows answers the flow search, which every CLI listing reads, with the flows.
 func (stub *apiStub) onFlows(flows ...api.Flow) *apiStub {
 	items := make([]any, 0, len(flows))
 	for _, flow := range flows {

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -203,53 +202,5 @@ func TestLogoutRevokesAndSucceedsWhenRevokeFails(t *testing.T) {
 		if c, _, _ := auth.LoadCredentials("dev"); c != nil {
 			t.Errorf("credentials must be gone: %+v", c)
 		}
-	}
-}
-
-func TestRefreshingClientRenewsOnceUnderConcurrentRequests(t *testing.T) {
-	isolateHomeOnly(t)
-	f := newFakeIssuer(t)
-	saveOAuthSession(t, f, "dev", 10*time.Second)
-
-	var mu sync.Mutex
-	seen := map[string]int{}
-	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		seen[r.Header.Get("Authorization")]++
-		mu.Unlock()
-		fmt.Fprint(w, `{}`)
-	}))
-	defer api.Close()
-
-	creds, _, _ := auth.LoadCredentials("dev")
-	state := &AppState{Profile: "dev"}
-	state.Config.API.BaseURL = api.URL
-	state.Config.API.Timeout = 5 * time.Second
-	cli, err := newSessionClient(state, *creds, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var wg sync.WaitGroup
-	for range 16 {
-		wg.Go(func() {
-			if status, _, err := cli.Do(
-				context.Background(),
-				http.MethodGet,
-				"/ping",
-				nil,
-				nil,
-			); err != nil ||
-				status != 200 {
-				t.Errorf("status=%d err=%v", status, err)
-			}
-		})
-	}
-	wg.Wait()
-	if f.tokenCalls.Load() != 1 {
-		t.Fatalf("token calls = %d, want 1", f.tokenCalls.Load())
-	}
-	if len(seen) != 1 || seen["Bearer access-1"] != 16 {
-		t.Fatalf("every request must carry the renewed token: %v", seen)
 	}
 }

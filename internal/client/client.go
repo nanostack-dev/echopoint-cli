@@ -168,8 +168,8 @@ func (c *Client) API() *api.ClientWithResponses {
 // Do issues a raw HTTP request against the API, applying the same auth headers
 // (Bearer/API key + organization) as the generated client. path must already
 // have its path parameters substituted; query may be nil; body is raw JSON or
-// nil. Returns the status code and response body bytes. Used by the MCP server
-// to dispatch any annotated operation generically without per-operation glue.
+// nil. Returns the status code and response body bytes. Used by the flow
+// file integration check, which reads the workspace catalog.
 func (c *Client) Do(
 	ctx context.Context,
 	method, path string,

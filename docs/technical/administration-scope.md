@@ -5,19 +5,19 @@ This includes viewing and changing Cloud fleet limits shared across organization
 in a deployment. The CLI provides ordinary product configuration and execution
 workflows; it has no administration command tree or administrator login mode.
 
-MCP always excludes the exact `/administrations` path and all paths starting with
-`/administrations/`. This rule applies before tool annotations, including when a
-route is accidentally marked `x-ai-tool: true` without `x-ai-danger`. Other path
-segments such as `/administrations-report` are unaffected. Former administration
-tool names return an unknown-tool error without sending an API request.
-`echopoint api` applies the same rule: it refuses those paths before it sends
+The CLI has no command for the exact `/administrations` path or any path starting
+with `/administrations/`. Other path segments such as `/administrations-report` are
+unaffected.
+`echopoint api` refuses those paths before it sends
 anything ([raw API calls](../api.md)).
 
 The complete owning API contract remains in `internal/api/openapi.yaml`, with its
 generated client methods retained as an internal mirror. Mirroring a route does
-not expose a CLI command or MCP tool. Keep generated files synchronized through
+not expose a CLI command. Keep generated files synchronized through
 the [integration contract procedure](integration-contracts.md).
 
-Regression tests exercise a permissively annotated administration contract and
-the real CLI stdio MCP process. They verify administration exclusion, rejection
-without outbound HTTP requests, and continued access to ordinary flow tools.
+Regression tests in
+[administration_exclusion_test.go](../../internal/commands/administration_exclusion_test.go)
+verify that the commands are unavailable, that rejected calls send no HTTP request,
+and that an ordinary flow listing still works. The remote MCP server, served by the
+Echopoint API, owns its own administration exclusion ([MCP](../mcp.md)).

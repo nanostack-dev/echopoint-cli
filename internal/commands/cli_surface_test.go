@@ -130,7 +130,7 @@ func TestRootCommandsAreGroupedUnderTheirHeadings(t *testing.T) {
 			"workspace",
 		},
 		"Account and setup": {"auth", "config", "profile"},
-		"Tools":             {"api", "completion", "help", "mcp", "update", "version"},
+		"Tools":             {"api", "completion", "help", "update", "version"},
 	}
 	for heading, names := range want {
 		if !slices.Equal(sections[heading], names) {

@@ -5,11 +5,11 @@ failed, how long they took, and the HTTP calls they sent. It is read-only and ne
 the `flows:read` permission. `--profile`, `--org`, session or API-key authentication
 and `-o` work as on every other command.
 
-| Command | API operation | MCP tool |
-| --- | --- | --- |
-| `analytics summary [--window]` | `GET /analytics/summary` | `get_execution_analytics_summary` |
-| `analytics flows [--window]` | `GET /analytics/flows` | `list_flow_analytics` |
-| `analytics endpoints [--window] [--flow-id]` | `GET /analytics/endpoints` | `list_endpoint_analytics` |
+| Command | API operation |
+| --- | --- |
+| `analytics summary [--window]` | `GET /analytics/summary` |
+| `analytics flows [--window]` | `GET /analytics/flows` |
+| `analytics endpoints [--window] [--flow-id]` | `GET /analytics/endpoints` |
 
 ```bash
 echopoint analytics summary                      # last 7 days
@@ -56,13 +56,10 @@ kept.
 
 ## Exposure
 
-The three reads are `x-ai-tool` operations, so `echopoint mcp` serves them with the
-same arguments (`window`, and `flow_id` on endpoints). The rebuild,
-`POST /administrations/analytics/rebuild`, is an administration route: it has no
-command and no MCP tool, following [administration scope](administration-scope.md). The
-[catalog test](../../internal/mcp/catalog_test.go) and the
+The rebuild, `POST /administrations/analytics/rebuild`, is an administration route:
+it has no command, following [administration scope](administration-scope.md). The
 [command tests](../../internal/commands/analytics_test.go), which also drive the built
-binary and its stdio MCP server, pin this.
+binary, pin the three reads.
 
 An Echopoint API deployed before these operations does not serve them; the command
 then reports the API's error.

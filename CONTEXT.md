@@ -20,7 +20,6 @@
 | Analytics window | `24h`, `7d` or `30d` lookback of execution analytics; a run counts in the window its completion time falls in. |
 | Measured run | Finished run whose runner recorded its HTTP call count; analytics call totals cover measured runs only. |
 | Endpoint | Analytics grouping of HTTP calls by method, host and unresolved path template, such as `/users/{{userId}}`. |
-| MCP tool | OpenAPI operation exposed through the stdio MCP server under the contract's exposure rules. |
 | Action version | Floating Action contract tag such as `v1`; independent from the CLI's semantic release version. |
 
 [Command conventions](docs/development/command-conventions.md) own help/argument vocabulary. [Integration contracts](docs/technical/integration-contracts.md) own cross-repository compatibility.
