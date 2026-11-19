@@ -84,7 +84,7 @@ echopoint flow update <flow-id> -f flows/anchor/login.flow.yaml --root flows
 
 `--check` prints problems and no JSON. A warning still compiles. For a flow that uses an integration, `--check` also reads the workspace catalog to check the operation outputs other nodes read. `-o yaml` prints the same document with the JSON key names.
 
-A file is named `*.flow.yaml`. One file is one flow. Nodes are a mapping keyed by the node id, and `next` / `on_failure` name the nodes they run, so the file has no edges array. `steps` is the same graph written as a list: each step runs after the one before it, unless the step sets `next` or is a branch.
+A file is named `*.flow.yaml`. One file is one flow: a file with a second YAML document (`---`) is refused. Nodes are a mapping keyed by the node id, and `next` / `on_failure` name the nodes they run, so the file has no edges array. `steps` is the same graph written as a list: each step runs after the one before it, unless the step sets `next` or is a branch.
 
 ```yaml
 name: "echopoint: organization member role"
@@ -129,6 +129,10 @@ nodes:
     expect:
       status: 200
 ```
+
+A `request` node sends a string `body` as it is and any other body as JSON. `body_encoding: form` sends a mapping body as `application/x-www-form-urlencoded` with bracket nesting (`metadata[plan]=pro`), encoded after templates resolve, for example an OAuth token request; `form` is the only value. A form body needs a runner that declares `form_body`, as the CLI's embedded runner does. A flow file the API decompiles carries `body_encoding` for such a node; a CLI built on flowdsl older than v0.6.0 (echopoint-runner v0.114.0) refuses that file.
+
+`tags` follow the API's rule: each tag is trimmed and lowercased, then must be 1 to 20 characters matching `[a-z0-9][a-z0-9._:/-]*`, and a flow has at most 32 distinct tags. Compile refuses a tag that a save would refuse, and a `next` or `on_failure` chain that leads back to a node it started from (a cycle).
 
 `expect: "status: 200"` and a `status` mapping are the same check. A list holds several checks: `["status: 200", "$.id not_empty"]`. The other checks are `$.path <operator> [value]`, `header:<name>`, `query:<name>`, `html:<selector>[@attribute]`, `regex:<pattern>`, `body`, and `status <operator> [value]`. `between` takes two values, `$.n between 1 5` or `status between 200 299`, and compiles to `operator_data.value` as a `[low, high]` pair. That is the pair the runner reads.
 
@@ -211,6 +215,8 @@ echopoint flow update <flow-id> -f updated-flow.json
 echopoint flow update <flow-id> --name "Checkout smoke test" --description "Runs after deploy"
 ```
 Only the flags given change; the other fields stay.
+
+With a flow file, the file replaces the name, version and graph. `tags`, `description` and `role` follow the file: a key the file leaves out keeps the stored value, and an explicit `tags: []` or `description: ""` clears it.
 
 ### Flow Role
 A flow is either **standalone** (the default: a test of its own) or a **module**: a reusable building block that other flows call through a module node. A Module flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` runs module flows too unless you pass `--ignore-modules`.

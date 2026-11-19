@@ -8,8 +8,8 @@ require (
 	github.com/mattn/go-isatty v0.0.24
 	github.com/minio/selfupdate v0.6.0
 	github.com/nanostack-dev/echopoint-kit v0.3.0
-	github.com/nanostack-dev/echopoint-runner v0.112.0
-	github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.5.0
+	github.com/nanostack-dev/echopoint-runner v0.114.0
+	github.com/nanostack-dev/echopoint-runner/pkg/flowdsl v0.6.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/rs/zerolog v1.35.1
