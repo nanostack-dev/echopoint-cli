@@ -29,7 +29,7 @@ func TestFlowRoleShowsTheCurrentRole(t *testing.T) {
 	}
 }
 
-func TestFlowRoleSetModuleSendsOnlyTheRole(t *testing.T) {
+func TestFlowRoleSetFunctionSendsOnlyTheRole(t *testing.T) {
 	flow := idFor("1")
 	stub := newAPIStub(t)
 	stub.on(http.MethodPut, "/flows/"+flow.String(), http.StatusOK, moduleFlow("Login"))
@@ -45,7 +45,7 @@ func TestFlowRoleSetModuleSendsOnlyTheRole(t *testing.T) {
 	}
 }
 
-func TestFlowRoleSetStandaloneSendsOnlyTheRole(t *testing.T) {
+func TestFlowRoleSetTestSendsOnlyTheRole(t *testing.T) {
 	flow := idFor("1")
 	stub := newAPIStub(t)
 	stub.on(http.MethodPut, "/flows/"+flow.String(), http.StatusOK, sampleFlow(flow, "Login", nil))

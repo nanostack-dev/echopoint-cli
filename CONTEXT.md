@@ -11,7 +11,7 @@
 | Health policy | The `health_policy` of a monitor (`confirmation_runs`, `recovery_runs`, `freshness_seconds`). A monitor with one runs on an interval of 60 to 86400 seconds, measures health from its scheduled runs and can be bound to a status page. Diagnostic runs never confirm health. A probe was this concept under another name and no longer exists. |
 | Flow history | Undo list of a flow's earlier states (`flow history`). Each entry is a version: a snapshot that is never changed. A save stores the state it replaces when the newest version is at least 10 minutes old; a restore always stores it; a flow keeps 30. Launches and monitors run the flow as it is now, never a version. There is no publish step. |
 | Flow role | `test` (default) or `function`; set with `flow role <flow-id> --set`. |
-| Module flow | Flow with role `module`: a reusable building block that other flows call through a module node. It can be launched directly to test it; monitors skip it when their tags match unless the monitor sets `ignore_modules` to false. `flow run --tag` runs it unless `--ignore-modules` is passed. |
+| Function flow | Flow with role `function`: a reusable parameterized flow (`input` and `output` contract nodes) that other flows call through a module node or callers invoke directly over HTTP / MCP. Monitors skip it when their tags match unless the monitor sets `ignore_modules` to false. `flow run --tag` runs it unless `--ignore-modules` is passed. |
 | Collection | API request grouping identified by an ID and name. |
 | Spec | OpenAPI document stored in Echopoint, addressed by a unique slug with a separate title. |
 | Cloud | Echopoint operates the execution runner. |

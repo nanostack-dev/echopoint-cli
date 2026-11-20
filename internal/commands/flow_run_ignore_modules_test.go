@@ -201,8 +201,8 @@ func TestFlowRun_IgnoreModulesAllModulesMatchedIsAnError(t *testing.T) {
 		"any",
 		maxTagResolvedFlows,
 	)
-	if err == nil || !strings.Contains(err.Error(), "no flows matched the given tags (3 module flows skipped)") {
-		t.Errorf("error = %v, want no-match message naming 3 skipped modules", err)
+	if err == nil || !strings.Contains(err.Error(), "no flows matched the given tags (3 function flows skipped)") {
+		t.Errorf("error = %v, want no-match message naming 3 skipped function flows", err)
 	}
 	stub.mu.Lock()
 	defer stub.mu.Unlock()
@@ -293,10 +293,10 @@ func TestFlowRun_IgnoreModulesReportsSkippedOnStderrOnly(t *testing.T) {
 	if code != exitSuccess {
 		t.Fatalf("exit code = %d, want %d", code, exitSuccess)
 	}
-	if !strings.Contains(stderr, "Skipped 2 module flow(s) matched by the tags.") {
-		t.Errorf("stderr = %q, want the skipped-modules notice", stderr)
+	if !strings.Contains(stderr, "Skipped 2 function flow(s) matched by the tags.") {
+		t.Errorf("stderr = %q, want the skipped-functions notice", stderr)
 	}
-	if strings.Contains(stdout, "Skipped") || strings.Contains(stdout, "module") {
+	if strings.Contains(stdout, "Skipped") || strings.Contains(stdout, "function") {
 		t.Errorf("stdout carries the notice: %q", stdout)
 	}
 }

@@ -46,12 +46,12 @@ const (
 const maxTagResolvedFlows = 50
 
 // Flow search returns at most tagSearchPageSize items per page. With --ignore-modules the CLI
-// walks next_cursor through every match to drop module flows client-side, and refuses to scan more than
+// walks next_cursor through every match to drop function flows client-side, and refuses to scan more than
 // maxTagScannedFlows matches so an over-broad tag cannot turn into an unbounded crawl.
 const (
 	tagSearchPageSize   = 100
 	maxTagScannedFlows  = 1000
-	ignoreModulesNotice = "Skipped %d module flow(s) matched by the tags.\n"
+	ignoreModulesNotice = "Skipped %d function flow(s) matched by the tags.\n"
 )
 
 // statusForExit maps a CLI exit code to the stable status string surfaced in JSON output and
@@ -257,7 +257,7 @@ Exit codes:
 	cmd.Flags().StringVar(&flagMatchMode, "match-mode", string(api.Any),
 		`Tag match mode when using --tag: "any" (default, OR) or "all" (AND)`)
 	cmd.Flags().BoolVar(&flagIgnoreModules, "ignore-modules", false,
-		"With --tag, skip module flows (reusable building blocks other flows call) among the matches. "+
+		"With --tag, skip function flows (reusable building blocks other flows call) among the matches. "+
 			"Mutually exclusive with positional flow IDs.")
 	cmd.Flags().IntVar(&flagMaxFlows, "max-flows", maxTagResolvedFlows,
 		fmt.Sprintf("With --tag, refuse to launch when the tags match more than this many flows (1-%d)",
@@ -393,14 +393,14 @@ func resolveStandaloneFlowIDsByTags(
 	}
 	if len(ids) > maxFlows {
 		return nil, 0, fmt.Errorf(
-			"tag search matched more than %d standalone flows, exceeding the CLI safety cap of %d; "+
+			"tag search matched more than %d test flows, exceeding the CLI safety cap of %d; "+
 				"narrow the tags (or use --match-mode all), or raise --max-flows, before launching",
 			maxFlows, maxFlows,
 		)
 	}
 	if len(ids) == 0 {
 		if skipped > 0 {
-			return nil, 0, fmt.Errorf("no flows matched the given tags (%d module flows skipped)", skipped)
+			return nil, 0, fmt.Errorf("no flows matched the given tags (%d function flows skipped)", skipped)
 		}
 		return nil, 0, fmt.Errorf("no flows matched the given tags")
 	}
