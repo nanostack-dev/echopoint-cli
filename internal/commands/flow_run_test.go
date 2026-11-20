@@ -452,7 +452,7 @@ func TestIntegration_ClaimConflictNeverRunsFlow(t *testing.T) {
 
 	state := makeState(t, "test-api-key", "", srv.URL)
 	results, code := executeFlows(
-		context.Background(), state, []string{flowUUID().String()}, "", "", "", 1, "",
+		context.Background(), state, []string{flowUUID().String()}, "", "", 1, "",
 	)
 	if code != exitError || len(results) != 1 || reports != 0 {
 		t.Fatalf(
@@ -476,7 +476,6 @@ func TestIntegration_SuccessfulEphemeralExecution(t *testing.T) {
 		context.Background(),
 		state,
 		[]string{flowUUID().String()},
-		"",
 		"",
 		"",
 		1,
@@ -506,7 +505,6 @@ func TestIntegration_TerminalIdempotentReplay(t *testing.T) {
 		context.Background(),
 		state,
 		[]string{flowUUID().String()},
-		"",
 		"",
 		"",
 		1,
@@ -558,7 +556,6 @@ func TestIntegration_MultipleFlowsSequential(t *testing.T) {
 		state,
 		[]string{flowID1, flowID2},
 		"base-key",
-		"",
 		"",
 		1,
 		"",
@@ -632,7 +629,6 @@ func TestIntegration_ParallelBounding(t *testing.T) {
 		flowIDs,
 		"",
 		"",
-		"",
 		maxParallel,
 		"",
 	)
@@ -674,7 +670,6 @@ func TestIntegration_JSONOutputOnAPIError(t *testing.T) {
 		[]string{flowUUID().String()},
 		"",
 		"",
-		"",
 		1,
 		"json",
 	)
@@ -711,7 +706,7 @@ func TestIntegration_EphemeralClaimDeclaresTheSecretOutputsCapability(t *testing
 	defer srv.Close()
 
 	state := makeState(t, "test-api-key", "", srv.URL)
-	executeFlows(context.Background(), state, []string{flowUUID().String()}, "", "", "", 1, "")
+	executeFlows(context.Background(), state, []string{flowUUID().String()}, "", "", 1, "")
 
 	if !slices.Contains(capabilities, "secret_outputs") {
 		t.Fatalf("the ephemeral claim must declare secret_outputs, got %v", capabilities)

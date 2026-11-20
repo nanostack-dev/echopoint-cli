@@ -29,14 +29,6 @@ inputs:
   environment:
     description: Environment key to use for resolved flow inputs.
     required: false
-  version-id:
-    description: >
-      Deprecated. ID of an earlier version of the flow to run. Omit it: a run
-      uses the flow as it is now, and the API will drop this option.
-    required: false
-    deprecationMessage: >
-      version-id is deprecated. A run uses the flow as it is now; restore a
-      version in the Echopoint app to run it again.
   cli-version:
     description: Version of the echopoint CLI to download (e.g. v1.2.0 or latest).
     required: false
@@ -408,11 +400,6 @@ runs:
         env_input="${{ inputs.environment }}"
         if [ -n "$env_input" ]; then
           extra_flags+=(--environment "$env_input")
-        fi
-
-        version_id="${{ inputs.version-id }}"
-        if [ -n "$version_id" ]; then
-          extra_flags+=(--version-id "$version_id")
         fi
 
         poll_timeout="${{ inputs.poll-timeout }}"
