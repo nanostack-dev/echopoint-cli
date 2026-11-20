@@ -249,7 +249,9 @@ Exit codes:
 		"Print each node's status (name, status, duration) and the runner's logs as the flow runs")
 	cmd.Flags().StringVarP(&flagEnvironment, "environment", "e", "", "Environment to overlay on flow inputs (e.g. dev)")
 	cmd.Flags().StringVar(&flagVersionID, "version-id", "",
-		"Flow version ID to execute (default: current flow definition)")
+		"Deprecated: run an earlier version of the flow (default: the flow as it is now)")
+	_ = cmd.Flags().MarkDeprecated("version-id",
+		"a run uses the flow as it is now; restore a version in the app to run it again. The API will drop this option")
 	cmd.Flags().StringVar(&flagIdempotencyKey, "idempotency-key", "",
 		"Stable key for idempotent CI retries (auto-derived from GitHub env when GITHUB_ACTIONS=true)")
 	cmd.Flags().DurationVar(&flagPollTimeout, "poll-timeout", 30*time.Minute,

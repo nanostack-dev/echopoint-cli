@@ -44,18 +44,24 @@ echopoint flow view <flow-id> -o yaml
 ```
 `get` and `show` are aliases of `view`.
 
-### Publish and inspect immutable versions
+### Read a flow's history
 
 ```bash
-echopoint --org <organization-id> flow publish <flow-id> -o json
-echopoint --org <organization-id> flow version list <flow-id> --limit 20 -o json
-echopoint --org <organization-id> flow version list <flow-id> --cursor <next_cursor>
-echopoint --org <organization-id> flow version view <flow-id> <version-id> -o json
+echopoint --org <organization-id> flow history list <flow-id> --limit 20 -o json
+echopoint --org <organization-id> flow history list <flow-id> --cursor <next_cursor>
+echopoint --org <organization-id> flow history view <flow-id> <version-id> -o json
 ```
 
-Publishing snapshots the saved definition. Version reads include
-the definition and assertions, and default to JSON so nested fields are preserved.
-`flow versions` is an alias of `flow version`; `get` and `show` alias `view`.
+Every launch, monitor and gate runs the flow as it is now: there is no publish
+step. The history is an undo list. A save stores the state it replaces when the
+newest version is at least 10 minutes old, and a restore always stores it. A
+flow keeps its 30 newest versions. Restore a version in the app's History panel.
+
+History reads include the definition and assertions, and default to JSON so
+nested fields are preserved. `get` and `show` alias `view`.
+
+`flow publish` and `flow version` were removed in v6.0.0: publishing no longer
+changes what runs.
 
 ### Create a Flow
 Pass exactly one of `--name` and `-f`:

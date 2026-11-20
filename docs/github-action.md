@@ -58,7 +58,7 @@ Use a dedicated, least-privilege organization API key for CI and store it as a r
 | `ignore-modules` | no | `false` | With `tags`, skip module flows among the matches (passes `--ignore-modules`). `true` or `false`; ignored, with a warning, when selecting by `flow-id` / `flow-ids`. |
 | `api-url` | no | CLI default | Echopoint API base URL, e.g. `https://apidev.echopoint.dev`. |
 | `environment` | no | — | Environment key for resolved inputs/env. |
-| `version-id` | no | current | Immutable flow version to run. Applies to every requested flow. |
+| `version-id` | no | current | Deprecated: runs an earlier version of every requested flow. Omit it; the API will drop it. |
 | `cli-version` | no | `latest` | `echopoint` CLI release to download. |
 | `poll-timeout` | no | `300` | Max seconds to wait for all flows. |
 | `parallel` | no | `1` | Number of flows to run concurrently (must be ≥ 1). |
@@ -131,7 +131,7 @@ Skip module flows (reusable building blocks other flows call) among the tag matc
     ignore-modules: 'true'
 ```
 
-Pin an environment and an immutable version:
+Run against an environment:
 
 ```yaml
 - uses: nanostack-dev/echopoint-cli@v1
@@ -140,8 +140,10 @@ Pin an environment and an immutable version:
     organization-id: ${{ secrets.ECHOPOINT_ORG_ID }}
     flow-id: flow_abc123
     environment: staging
-    version-id: ver_2024_06_01
 ```
+
+A run uses the flow as it is now. `version-id` is deprecated: to run an
+earlier version again, restore it in the app's History panel.
 
 Pin specific binary versions and consume outputs:
 
@@ -166,13 +168,12 @@ export ECHOPOINT_ORGANIZATION_ID=...  # or --org
 
 echopoint flows run flow_abc123 \
   --environment staging \
-  --version-id ver_2024_06_01 \
   --parallel 1 \
   --poll-timeout 5m \
   -o json
 ```
 
-Flags: `-e/--environment`, `--version-id`, `--idempotency-key`,
+Flags: `-e/--environment`, `--idempotency-key`, `--version-id` (deprecated),
 `--poll-timeout` (default `30m`), `--parallel` (default `1`), `-o json`. `-o` is the CLI's global
 output flag: `table` (the default) prints a summary on stderr, `json` prints the object below on
 stdout, and `yaml` prints the same object as YAML. Auth comes from
