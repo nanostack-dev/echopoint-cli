@@ -9,6 +9,6 @@
 - [Setup](development/setup.md), [testing](development/testing.md), [command conventions](development/command-conventions.md), [troubleshooting](development/troubleshooting.md), [agent workflow](development/agent-workflow.md)
 - [Publication and consumer installation](runbooks/deployment.md), [rollback](runbooks/rollback.md)
 - [Architecture decisions](adr/README.md)
-- Postmortems: [2026-10-22 blank workspace header (SEV2)](postmortems/2026-10-22-blank-workspace-header.md), [2026-11-09 anonymous release download (SEV4)](postmortems/2026-11-09-anonymous-release-download.md)
+- Postmortems: [2026-10-22 blank workspace header (SEV2)](postmortems/2026-10-22-blank-workspace-header.md), [2026-11-09 anonymous release download (SEV4)](postmortems/2026-11-09-anonymous-release-download.md), [2026-11-20 CLI lacked contract_nodes (SEV3)](postmortems/2026-11-20-cli-lacked-contract-nodes.md)
 
 Existing capability docs keep their published paths and remain authoritative. New implemented capability docs belong under `technical/`; add research or postmortems only for actual proposals or incidents.

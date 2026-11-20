@@ -1,0 +1,124 @@
+{
+  "title": "CLI and GitHub Action refused every function flow: the embedded runner did not declare contract_nodes",
+  "short": "CLI lacked contract_nodes",
+  "service": "echopoint-cli, echopoint (runner capability gate)",
+  "date": "2026-11-20",
+  "severity": "SEV3",
+  "status": "in review",
+  "authors": ["Nanostack routine (echopoint-investigation)"],
+  "summary": "Echopoint shipped input/output contract nodes for function flows to prod at 15:05 UTC (echopoint#927) and refuses an ephemeral claim of such a flow unless the runner declares `contract_nodes`. The capability arrived in runner v0.118.0, but every CLI release that day (v6.0.0 to v7.0.0) embeds runner v0.117.0 or older. So `echopoint flow run` and the GitHub Action got 409 `RUNNER_UPGRADE_REQUIRED` for every function flow, and for any flow that calls one. The flow-coverage routine found it at 18:14 UTC while writing the gate flow for #927. echopoint-cli#114 embeds runner v0.119.0 and tests every gated capability.",
+  "impact": {
+    "text": "Function flows with contract nodes could not run from the CLI or the GitHub Action on prod. Cloud and self-hosted runners were not affected. No customer reported it; the feature was hours old.",
+    "numbers": [
+      {"value": "~3 h 20 m", "label": "function flows unrunnable from the CLI and Action"},
+      {"value": "3", "label": "CLI releases shipped without the capability"},
+      {"value": "0", "label": "gate flows that ran a function flow on the CLI"}
+    ]
+  },
+  "trigger": "echopoint#927 reached prod at 15:05 UTC with a claim gate on `contract_nodes`, which no released CLI declared.",
+  "detection": "The echopoint-investigation routine got the 409 at 18:14 UTC on the first CLI run of its new gate flow for #927. No alert covers RUNNER_UPGRADE_REQUIRED refusals.",
+  "resolution": "echopoint-cli#114 embeds runner v0.119.0, which declares `contract_nodes`; its release lets `flow run` claim function flows.",
+  "timeline": {
+    "events": [
+      {"t": "2026-11-20T14:53:02Z", "kind": "change", "label": "echopoint#927 merges: contract nodes + claim gate", "link": "https://github.com/nanostack-dev/echopoint/pull/927"},
+      {"t": "2026-11-20T15:01:57Z", "kind": "change", "label": "runner#132 merges, tagged v0.117.0", "link": "https://github.com/nanostack-dev/echopoint-runner/pull/132"},
+      {"t": "2026-11-20T15:05:11Z", "kind": "trigger", "label": "#927 live on prod; CLI claims of function flows refused", "link": "https://github.com/nanostack-dev/infra/actions/runs/44758452609"},
+      {"t": "2026-11-20T15:05:41Z", "kind": "change", "label": "runner#135 declares contract_nodes (v0.118.0)", "link": "https://github.com/nanostack-dev/echopoint-runner/pull/135"},
+      {"t": "2026-11-20T15:14:08Z", "kind": "change", "label": "CLI#112 pins runner v0.117.0 (SSE reconnect)", "link": "https://github.com/nanostack-dev/echopoint-cli/pull/112"},
+      {"t": "2026-11-20T15:35:23Z", "kind": "change", "label": "CLI v7.0.0 released, still runner v0.117.0", "link": "https://github.com/nanostack-dev/echopoint-cli/releases/tag/v7.0.0"},
+      {"t": "2026-11-20T18:14:56Z", "kind": "detect", "label": "Routine's flow run refused: 409 RUNNER_UPGRADE_REQUIRED", "detail": "Execution 01a1fa2b-301a-76e1-a436-050a52df8077: `This flow uses input or output contract nodes, and the runner that claimed it cannot execute them.`"},
+      {"t": "2026-11-20T18:16:00Z", "approx": true, "kind": "note", "label": "Cause found: CLI binary has no contract_nodes string", "detail": "`go version -m` shows runner v0.117.0; `contract_nodes` landed in v0.118.0."},
+      {"t": "2026-11-20T18:31:00Z", "approx": true, "kind": "mitigate", "label": "echopoint-cli#114 merged (runner v0.119.0)", "link": "https://github.com/nanostack-dev/echopoint-cli/pull/114"},
+      {"t": "2026-11-20T18:40:00Z", "approx": true, "kind": "resolve", "label": "CLI release with contract_nodes published"}
+    ]
+  },
+  "whys": {
+    "problem": "`echopoint flow run` and the GitHub Action could not run any function flow on prod",
+    "because": [
+      {
+        "text": "The CLI's ephemeral claim did not declare contract_nodes, so Echopoint refused it with 409",
+        "evidence": "Claim response `RUNNER_UPGRADE_REQUIRED … declares contract_nodes`; CLI v7.0.0 binary has no `contract_nodes` string",
+        "because": [
+          {
+            "text": "CLI v7.0.0 embeds runner v0.117.0; the capability was declared in v0.118.0",
+            "evidence": "`go version -m echopoint`: runner v0.117.0; runner#135 tagged v0.118.0 at 15:06",
+            "because": [
+              {
+                "text": "Runner, CLI and Echopoint PRs of one feature merged within 40 min; CLI#112 pinned the runner tag that existed when it was opened",
+                "evidence": "runner v0.117.0 15:03, v0.118.0 15:06, CLI#112 merge 15:14 on v0.117.0",
+                "because": [
+                  {
+                    "text": "Echopoint gated a node type on a capability before any released CLI declared it, and nothing checks that order",
+                    "evidence": "workspace AGENTS.md covers only the reverse order (runner declares before Echopoint accepts)",
+                    "because": [
+                      {"id": "R1", "root": true, "text": "No check or rule requires a released CLI and Action to declare a capability before Echopoint gates a node type on it"}
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "text": "CLI CI passed because its capability test asserted only secret_outputs",
+            "evidence": "TestIntegration_EphemeralClaimDeclaresTheSecretOutputsCapability before echopoint-cli#114",
+            "because": [
+              {
+                "text": "The test was written for the first capability and never grew with form_body, email_wait or contract_nodes",
+                "because": [
+                  {"id": "R2", "root": true, "text": "The CLI test pinned one capability instead of the set Echopoint gates on"}
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "lens": "impact",
+        "text": "It went unnoticed for 3 h because no gate flow ran a function flow on the CLI runner",
+        "evidence": "#927 added CT only; no prod-org flow had an `input` node before 18:14",
+        "because": [
+          {
+            "text": "The gate runs flows on the CLI, but #927 shipped no gate flow for its new node types",
+            "because": [
+              {"id": "R3", "root": true, "text": "A PR that adds a runner node type is not required to ship a gate flow that runs it on the CLI runner"}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "contributing": [
+    "Three CLI majors (v6.0.0, v6.1.0, v7.0.0) shipped within 40 min, each focused on publish removal, not capabilities."
+  ],
+  "lessons": {
+    "well": [
+      "Echopoint's refusal message named the missing capability, so the cause took minutes to find.",
+      "The gate fails closed: no CLI ran a contract node it could not execute."
+    ],
+    "wrong": [
+      "The capability gate went to prod with no client able to pass it on the ephemeral path.",
+      "The CLI capability test checked one of four capabilities."
+    ],
+    "lucky": [
+      "The feature was hours old and had no known users; a gate on an existing node type would have broken running CI pipelines.",
+      "The routine wrote a gate flow for #927 the same day."
+    ]
+  },
+  "actions": [
+    {"id": "A1", "what": "Embed runner v0.119.0 and assert every gated capability in the CLI claim test", "type": "prevent", "owner": "Nanostack routine (echopoint-investigation)", "due": "2026-11-20", "status": "done", "ticket": {"label": "echopoint-cli#114", "url": "https://github.com/nanostack-dev/echopoint-cli/pull/114"}, "fixes": ["R2"]},
+    {"id": "A2", "what": "Workspace AGENTS.md rule: an Echopoint PR that gates a node type on a capability merges after a released CLI declares it", "type": "process", "owner": "Nanostack routine (echopoint-investigation)", "due": "2026-11-20", "status": "done", "fixes": ["R1"]},
+    {"id": "A3", "what": "Echopoint CI check: every RunnerCapability the server gates is declared by the latest released CLI (fail before merge)", "type": "prevent", "owner": "echopoint maintainers", "due": "2026-12-04", "status": "open", "fixes": ["R1"]},
+    {"id": "A4", "what": "Gate flow `Function flow contract nodes` runs a function flow on the CLI runner (echopoint tag)", "type": "detect", "owner": "Nanostack routine (echopoint-investigation)", "due": "2026-11-21", "status": "open", "fixes": ["R3"]},
+    {"id": "A5", "what": "Alert when prod answers RUNNER_UPGRADE_REQUIRED to a released CLI version", "type": "detect", "owner": "echopoint maintainers", "due": "2026-12-04", "status": "open", "fixes": ["R3"]}
+  ],
+  "responders": [{"role": "Investigation and fix", "name": "Nanostack routine (echopoint-investigation)"}],
+  "messaging": {
+    "internal": "Function flows (contract nodes) could not run from the CLI/Action since #927: CLI v7.0.0 embeds runner v0.117.0 without contract_nodes. echopoint-cli#114 ships runner v0.119.0; run `echopoint update`.",
+    "external": "None: no known users of function flows yet."
+  },
+  "links": [
+    {"label": "echopoint#927", "url": "https://github.com/nanostack-dev/echopoint/pull/927"},
+    {"label": "echopoint-runner#135", "url": "https://github.com/nanostack-dev/echopoint-runner/pull/135"},
+    {"label": "echopoint-cli#114", "url": "https://github.com/nanostack-dev/echopoint-cli/pull/114"}
+  ]
+}
