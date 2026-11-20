@@ -682,9 +682,12 @@ func TestIntegration_JSONOutputOnAPIError(t *testing.T) {
 	}
 }
 
-// Echopoint refuses a Job whose flow declares a secret output to a claim that
-// does not declare the embedded runner can mask one (ADR-0019).
-func TestIntegration_EphemeralClaimDeclaresTheSecretOutputsCapability(t *testing.T) {
+// Echopoint refuses a Job to a claim that lacks a capability the flow needs:
+// secret outputs (ADR-0019), form bodies, email waits and input/output contract
+// nodes (ADR-0037). The embedded runner must declare every capability Echopoint
+// gates a node on, or `flow run` and the Action get 409 RUNNER_UPGRADE_REQUIRED
+// for that node type. Add a capability here when Echopoint gates a new one.
+func TestIntegration_EphemeralClaimDeclaresEveryGatedCapability(t *testing.T) {
 	var capabilities []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -708,7 +711,9 @@ func TestIntegration_EphemeralClaimDeclaresTheSecretOutputsCapability(t *testing
 	state := makeState(t, "test-api-key", "", srv.URL)
 	executeFlows(context.Background(), state, []string{flowUUID().String()}, "", "", 1, "")
 
-	if !slices.Contains(capabilities, "secret_outputs") {
-		t.Fatalf("the ephemeral claim must declare secret_outputs, got %v", capabilities)
+	for _, want := range []string{"secret_outputs", "form_body", "email_wait", "contract_nodes"} {
+		if !slices.Contains(capabilities, want) {
+			t.Errorf("the ephemeral claim must declare %s, got %v", want, capabilities)
+		}
 	}
 }
