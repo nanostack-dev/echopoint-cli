@@ -6,16 +6,15 @@ import (
 	"testing"
 )
 
-func TestFlowPublishedVersionCommands(t *testing.T) {
+func TestFlowHistoryCommands(t *testing.T) {
 	flow, version := idFor("21").String(), idFor("22").String()
 	for _, tc := range []struct {
 		name, method, path string
 		status             int
 		args               []string
 	}{
-		{"publish", http.MethodPost, "/flows/" + flow + "/publish", http.StatusCreated, []string{"publish", flow}},
-		{"list", http.MethodPost, "/flows/" + flow + "/versions/search", http.StatusOK, []string{"version", "list", flow, "--limit", "7", "--offset", "2"}},
-		{"view", http.MethodGet, "/flows/" + flow + "/versions/" + version, http.StatusOK, []string{"version", "view", flow, version}},
+		{"list", http.MethodPost, "/flows/" + flow + "/versions/search", http.StatusOK, []string{"history", "list", flow, "--limit", "7", "--offset", "2"}},
+		{"view", http.MethodGet, "/flows/" + flow + "/versions/" + version, http.StatusOK, []string{"history", "view", flow, version}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			stub := newAPIStub(t).on(tc.method, tc.path, tc.status, map[string]any{"id": version, "items": []any{}})
@@ -43,13 +42,12 @@ func TestFlowPublishedVersionCommands(t *testing.T) {
 	}
 }
 
-func TestFlowVersionsRejectBadArgumentsWithoutRequests(t *testing.T) {
+func TestFlowHistoryRejectsBadArgumentsWithoutRequests(t *testing.T) {
 	stub := newAPIStub(t)
 	for _, args := range [][]string{
-		{"publish", "not-an-id"},
-		{"version", "view", idFor("21").String(), "not-a-version"},
-		{"version", "list", idFor("21").String(), "--limit", "101"},
-		{"version", "list", idFor("21").String(), "--offset", "-1"},
+		{"history", "view", idFor("21").String(), "not-a-version"},
+		{"history", "list", idFor("21").String(), "--limit", "101"},
+		{"history", "list", idFor("21").String(), "--offset", "-1"},
 	} {
 		_, _, err := execute(t, newFlowCmd(stub.state(t)), "", args...)
 		if err == nil {

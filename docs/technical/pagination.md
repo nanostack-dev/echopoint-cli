@@ -10,7 +10,7 @@ These commands page by cursor and share one set of flags:
 | --- | --- | --- |
 | `flow list` (also `--folder`, `--uncategorized`) | `searchFlows` | newest first |
 | `flow execution list <flow-id>` | `searchExecutions` with `filter.flow_ids` | newest first |
-| `flow version list <flow-id>` | `searchFlowVersions` | newest first |
+| `flow history list <flow-id>` | `searchFlowVersions` | newest first |
 | `collection list` | `searchCollections` | newest first |
 | `monitor list` | `searchFlowSchedules` | newest first |
 | `monitor runs <monitor-id>` | `searchFlowScheduleRuns` | newest first |
@@ -24,7 +24,7 @@ These commands page by cursor and share one set of flags:
 | `--all` | Follow `next_cursor` to the end and print every result as one page. |
 | `--offset` | Still accepted: skips that many results, page-number style. It cannot be combined with `--cursor` (the API answers `400 INVALID_CURSOR`, so the CLI refuses first). Prefer a cursor: it stays correct while rows are created, and rows that tie on the sort value across a page boundary are neither skipped nor repeated. |
 
-`-o json` and `-o yaml` print the API's envelope, `{count, items, next_cursor, total}`. `next_cursor` is absent on the last page, as in the API; with `--all` it is always absent. The table prints `Total: N` on stdout, and while there is more it writes `More results: add --cursor <next_cursor> to continue, or --all to list every page.` to stderr, so a script reading the table is unaffected. `flow version list` has no table: it prints JSON (or YAML with `-o yaml`) and the same hint on stderr.
+`-o json` and `-o yaml` print the API's envelope, `{count, items, next_cursor, total}`. `next_cursor` is absent on the last page, as in the API; with `--all` it is always absent. The table prints `Total: N` on stdout, and while there is more it writes `More results: add --cursor <next_cursor> to continue, or --all to list every page.` to stderr, so a script reading the table is unaffected. `flow history list` has no table: it prints JSON (or YAML with `-o yaml`) and the same hint on stderr.
 
 `flow list -o json` items are the search's slim rows (`FlowSearchItem`): they carry no `flow_definition`. Read a whole flow with `flow view <flow-id> -o json`. `flow execution list` rows are the slim activity rows of `searchExecutions` (`flow_name`, `runner_type`, `status`, `started_at`, ...); read an execution's snapshot with `flow execution view`.
 

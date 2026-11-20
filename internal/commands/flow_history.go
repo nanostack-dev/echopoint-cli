@@ -11,48 +11,32 @@ import (
 	"echopoint-cli/internal/output"
 )
 
-func newFlowPublishCmd(state *AppState) *cobra.Command {
-	return quietOnError(&cobra.Command{
-		Use: "publish <flow-id>", Short: "Snapshot a flow as an immutable published version",
-		Example: `  echopoint flow publish <flow-id> -o json`, Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			id, err := resolveFlowID(cmd.Context(), state, args[0])
-			if err != nil {
-				return err
-			}
-			resp, err := state.Client.API().PublishFlowWithResponse(cmd.Context(), id, nil)
-			if err != nil {
-				return err
-			}
-			return printStatusResponse(cmd, state, resp.JSON201, resp.HTTPResponse, resp.Body)
-		},
-	})
-}
-
-func newFlowVersionCmd(state *AppState) *cobra.Command {
+func newFlowHistoryCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     versionCommandName,
-		Aliases: []string{"versions"},
-		Short:   "Discover immutable published flow versions",
+		Use:   "history",
+		Short: "Read the undo history of a flow",
+		Long: `Read the undo history of a flow. Every launch and monitor runs the flow as it is
+now; the history only keeps earlier states so that one can be restored.
+
+A save stores the state it replaces when the newest version is at least 10
+minutes old, and a restore always stores it, so an edit can be undone. A flow
+keeps its 30 newest versions. Restore a version in the app's History panel.`,
 	}
-	cmd.AddCommand(newFlowVersionListCmd(state), newFlowVersionViewCmd(state))
+	cmd.AddCommand(newFlowHistoryListCmd(state), newFlowHistoryViewCmd(state))
 	return cmd
 }
 
-func newFlowVersionListCmd(state *AppState) *cobra.Command {
+func newFlowHistoryListCmd(state *AppState) *cobra.Command {
 	var pages pageFlags
 	cmd := quietOnError(&cobra.Command{
-		Use: "list <flow-id>", Short: "List published versions of a flow, newest first",
-		Long: `List the published versions of a flow, newest first, as JSON (or YAML with -o yaml).
+		Use: "list <flow-id>", Short: "List the versions of a flow, newest first",
+		Long: `List the versions of a flow, newest first, as JSON (or YAML with -o yaml).
 
 A page ends with next_cursor, which --cursor takes to continue the listing; --all
 follows it to the oldest version.`,
-		Example: `  echopoint flow version list <flow-id> --limit 20 -o json
-  echopoint flow version list <flow-id> --cursor <next_cursor>
-  echopoint flow version list <flow-id> --all`,
+		Example: `  echopoint flow history list <flow-id> --limit 20 -o json
+  echopoint flow history list <flow-id> --cursor <next_cursor>
+  echopoint flow history list <flow-id> --all`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -72,7 +56,7 @@ follows it to the oldest version.`,
 			if state.OutputFormat == output.FormatYAML {
 				return output.PrintYAML(cmd.OutOrStdout(), page)
 			}
-			// Published versions are nested documents: they print as JSON unless YAML is asked for.
+			// Versions are nested documents: they print as JSON unless YAML is asked for.
 			if err := output.PrintJSON(cmd.OutOrStdout(), page); err != nil {
 				return err
 			}
@@ -84,7 +68,7 @@ follows it to the oldest version.`,
 	return cmd
 }
 
-// searchFlowVersions reads one page of the published versions of a flow, newest first.
+// searchFlowVersions reads one page of the versions of a flow, newest first.
 func searchFlowVersions(state *AppState, flowID uuid.UUID) pageFetcher[api.FlowVersion] {
 	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.FlowVersion], error) {
 		resp, err := state.Client.API().SearchFlowVersionsWithResponse(
@@ -100,12 +84,12 @@ func searchFlowVersions(state *AppState, flowID uuid.UUID) pageFetcher[api.FlowV
 	}
 }
 
-func newFlowVersionViewCmd(state *AppState) *cobra.Command {
+func newFlowHistoryViewCmd(state *AppState) *cobra.Command {
 	return quietOnError(&cobra.Command{
 		Use:               "view <flow-id> <version-id>",
 		Aliases:           []string{getVerb, showVerb},
-		Short:             "Show a published version and its assertion definitions",
-		Example:           `  echopoint flow version view <flow-id> <version-id> -o json`,
+		Short:             "Show one version of a flow and its assertion definitions",
+		Example:           `  echopoint flow history view <flow-id> <version-id> -o json`,
 		Args:              cobra.ExactArgs(2),
 		ValidArgsFunction: completeFlowVersionArgs(state),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -151,7 +135,7 @@ func completeFlowVersionArgs(state *AppState) completionFunc {
 				for _, version := range versions {
 					candidates = append(
 						candidates,
-						completionCandidate{version.Id.String(), "published " + formatWhen(version.PublishedAt)},
+						completionCandidate{version.Id.String(), "saved " + formatWhen(version.PublishedAt)},
 					)
 				}
 				return candidates

@@ -392,14 +392,14 @@ func runSpecWith(t *testing.T, state *AppState, args ...string) (string, string,
 	return execute(t, newSpecCmd(state), "", args...)
 }
 
-func TestFlowVersionListIsJSONWithNextCursor(t *testing.T) {
+func TestFlowHistoryListIsJSONWithNextCursor(t *testing.T) {
 	flow := idFor("21")
 	table := newKeysetTable(tiedRows(4, 2, func(id uuid.UUID, _ int) any {
 		return api.FlowVersion{Id: id, FlowId: flow}
 	})...)
 	stub := newAPIStub(t).onHandler(http.MethodPost, "/flows/"+flow.String()+"/versions/search", table.handle)
 
-	out, stderr, err := execute(t, newFlowCmd(stub.state(t)), "", "version", "list", flow.String(), "--limit", "3")
+	out, stderr, err := execute(t, newFlowCmd(stub.state(t)), "", "history", "list", flow.String(), "--limit", "3")
 
 	var page listedPage
 	if err != nil || json.Unmarshal([]byte(out), &page) != nil || page.NextCursor == nil || len(page.Items) != 3 {
