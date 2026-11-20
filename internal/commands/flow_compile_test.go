@@ -13,7 +13,7 @@ func TestFlowCompilePrintsTheCreateRequestAndChecksIt(t *testing.T) {
 	path := filepath.Join(root, "login.flow.yaml")
 	body := []byte(strings.TrimSpace(`
 name: "anchor: login (reusable)"
-role: module
+role: function
 nodes:
   request:
     request:

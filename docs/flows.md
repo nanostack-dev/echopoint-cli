@@ -94,7 +94,7 @@ A file is named `*.flow.yaml`. One file is one flow: a file with a second YAML d
 
 ```yaml
 name: "echopoint: organization member role"
-role: standalone
+role: test
 tags: [echopoint]
 nodes:
   login:
@@ -116,7 +116,7 @@ nodes:
 
 ```yaml
 name: "anchor: login (reusable)"
-role: module
+role: function
 id: eac266b3-2f3f-41b4-b061-f63b92b7b80e
 inputs: [email, password]
 nodes:
@@ -144,7 +144,37 @@ A `request` node sends a string `body` as it is and any other body as JSON. `bod
 
 An output is `$.path`, `header:<name>`, `html:<selector>[@attribute]`, `regex:<pattern>`, `body`, or `status`. `status` captures the HTTP status code. `html` reads an HTML body (or an email's HTML) with a CSS selector, the element text or its attribute; the mapping form `{html: a, attribute: href, all: true}` returns every match. `regex` returns the first match in the body (or an email's text), group 1 when the pattern has a group; the mapping form takes `group`. Add `secret: true` beside `path`, `header`, `html`, `regex` or `status: true` when the value must be masked.
 
-A node has exactly one kind: `request`, `module`, `integration`, `delay`, `set`, `assert`, `branch`, `poll`, `loop`, `webhook_wait`, `email_wait`, or `sse`. `delay: 1000` waits that many milliseconds. `set` writes variables, and those names are its outputs. A branch names a `target` node per case and a `default`; compile adds the success edges. `folder` is a folder id. A folder path is a warning and is left unset, because the API wants the id.
+A node has exactly one kind: `request`, `module`, `integration`, `delay`, `set`, `assert`, `branch`, `poll`, `loop`, `webhook_wait`, `email_wait`, `sse`, `input`, or `output`. `delay: 1000` waits that many milliseconds. `set` writes variables, and those names are its outputs. A branch names a `target` node per case and a `default`; compile adds the success edges. `folder` is a folder id. A folder path is a warning and is left unset, because the API wants the id.
+
+`input` and `output` are contract nodes allowed only on `role: function` flows (`flowdsl` v0.8.0). `role: module` and `role: standalone` in older `*.flow.yaml` files now fail compile with `role must be test or function`; migrate them to `function` or `test`.
+
+```yaml
+name: "tenant: provision"
+role: function
+nodes:
+  input:
+    input:
+      properties:
+        email: { type: string, description: "Owner email" }
+        plan: { type: string, default: "pro" }
+      required: [email]
+    next: create
+  create:
+    request:
+      method: POST
+      url: "{{apiUrl}}/tenants"
+      body:
+        email: "{{input.email}}"
+        plan: "{{input.plan}}"
+    outputs:
+      id: $.id
+    expect: "status: 201"
+    next: output
+  output:
+    output:
+      properties:
+        tenant_id: { type: string, value: "{{create.id}}" }
+```
 
 An `integration` node uses an operation or an event of a connected integration (see `echopoint integration items <id>`). It sets `id` and exactly one of `operation` and `event`. An operation node calls the operation with its `inputs`; it compiles to a `request` node, and launch fills the method, URL, headers and body from the integration, so the node sets none of them. An event node waits for the integration's webhook; it compiles to a `webhook_wait` node, takes no inputs and no status check, and checks the event payload with `expect`. Both take `timeout_ms`; an event node also takes `settle_ms`. `flow create -f` and `flow update -f` check each integration node against the workspace catalog: the integration and item must exist, the item must not be refused, and the operation must take every input. `flow compile` works offline, so it prints the operation node with an empty method and URL.
 
@@ -225,15 +255,15 @@ Only the flags given change; the other fields stay.
 With a flow file, the file replaces the name, version and graph. `tags`, `description` and `role` follow the file: a key the file leaves out keeps the stored value, and an explicit `tags: []` or `description: ""` clears it.
 
 ### Flow Role
-A flow is either **standalone** (the default: a test of its own) or a **module**: a reusable building block that other flows call through a module node. A Module flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` runs module flows too unless you pass `--ignore-modules`.
+A flow is either **test** (the default: a test of its own) or a **function**: a reusable building block that other flows call through a module node (or callers invoke directly over HTTP / MCP). A Function flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` runs function flows too unless you pass `--ignore-modules`.
 ```bash
 # show the role
 echopoint flow role <flow-id>
 echopoint flow role <flow-id> -o json
 
 # change it; only the role is sent, every other field stays
-echopoint flow role <flow-id> --set module
-echopoint flow role <flow-id> --set standalone
+echopoint flow role <flow-id> --set function
+echopoint flow role <flow-id> --set test
 ```
 `-o json` and `-o yaml` print `{"id": ..., "role": ...}` for both forms. An unknown role fails before any request. `flow view -o json` and `flow list -o json` carry `role`, and a `CreateFlowRequest` or `UpdateFlowRequest` file may set it.
 
@@ -251,11 +281,16 @@ echopoint flow run --tag smoke --ignore-modules
 # EchoPoint runs it on Cloud (or a Self-hosted runner): it prints the execution id and returns
 echopoint flow launch <flow-id>
 echopoint flow launch <flow-id> --runner self_hosted -e prd
+
+# Launch a function flow with declared inputs and wait synchronously up to 30 s (RFC 7240 Prefer: wait=30)
+echopoint flow launch <flow-id> --input email=alice@example.com --input-json retries=2 --wait 30 -o json
 ```
 
 `flow run` exits 0 when every flow passed, 1 when a flow failed, 2 when cancelled, 3 on an API or runner error and 4 on timeout. `-o json` prints one JSON object on stdout (the GitHub Action reads it); `-o yaml` prints the same object as YAML; the default `table` prints a summary on stderr. See [Running flows in CI](github-action.md).
 
-`--ignore-modules` (with `--tag` only; combining it with flow IDs is a usage error, exit 3) drops module flows from the tag matches before launch, as schedules do. The search endpoint does not filter by role, so the CLI pages through all matches and filters client-side. The 50-flow safety cap counts only the flows that will be launched; at most 1000 matches are scanned. A match made only of modules fails like "no flows matched" (exit 3), and the skipped count (`Skipped 2 module flow(s) matched by the tags.`) goes to stderr, never into the `-o json` result.
+`flow launch` accepts `--input key=value` (string) and `--input-json key=<json>` (typed JSON) for a function flow's declared `input` parameters, plus `--wait <seconds>` (1–45) to send `Prefer: wait=N`. When the run finishes within the wait window, the API answers `200 OK` and the CLI prints the redacted `output` node values (or the full response with `-o json`/`-o yaml`); if it is still running, the API answers `202 Accepted` with the execution id.
+
+`--ignore-modules` (with `--tag` only; combining it with flow IDs is a usage error, exit 3) drops function flows from the tag matches before launch, as schedules do. The search endpoint does not filter by role here, so the CLI pages through all matches and filters client-side. The 50-flow safety cap counts only the flows that will be launched; at most 1000 matches are scanned. A match made only of function flows fails like "no flows matched" (exit 3), and the skipped count (`Skipped 2 function flow(s) matched by the tags.`) goes to stderr, never into the `-o json` result.
 
 `-e/--environment` overlays a named organization environment (`dev`, `prd`) on the flow's variables, on both commands.
 

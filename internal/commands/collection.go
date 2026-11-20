@@ -163,7 +163,7 @@ func newCollectionCreateCmd(state *AppState) *cobra.Command {
 				req.Description = &description
 			}
 			if source != "" {
-				value := api.CollectionSource(source)
+				value := api.CreateCollectionRequestSource(source)
 				req.Source = &value
 			}
 

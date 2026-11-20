@@ -31,13 +31,13 @@ func makeRoleFlows(modules, standalones int) []roleFlow {
 	for i := range modules {
 		flows = append(flows, roleFlow{
 			id:   uuid.MustParse(fmt.Sprintf("550e8400-e29b-41d4-a716-4466554%05d", i)),
-			role: api.FlowRoleModule,
+			role: api.Function,
 		})
 	}
 	for i := range standalones {
 		flows = append(flows, roleFlow{
 			id:   uuid.MustParse(fmt.Sprintf("650e8400-e29b-41d4-a716-4466554%05d", i)),
-			role: api.FlowRoleStandalone,
+			role: api.Test,
 		})
 	}
 	return flows
@@ -142,7 +142,7 @@ func TestFlowRun_IgnoreModulesSkipsModuleFlows(t *testing.T) {
 	for _, f := range flows {
 		got := stub.launched[f.id.String()]
 		want := 0
-		if f.role == api.FlowRoleStandalone {
+		if f.role == api.Test {
 			want = 1
 		}
 		if got != want {
@@ -201,8 +201,8 @@ func TestFlowRun_IgnoreModulesAllModulesMatchedIsAnError(t *testing.T) {
 		"any",
 		maxTagResolvedFlows,
 	)
-	if err == nil || !strings.Contains(err.Error(), "no flows matched the given tags (3 module flows skipped)") {
-		t.Errorf("error = %v, want no-match message naming 3 skipped modules", err)
+	if err == nil || !strings.Contains(err.Error(), "no flows matched the given tags (3 function flows skipped)") {
+		t.Errorf("error = %v, want no-match message naming 3 skipped function flows", err)
 	}
 	stub.mu.Lock()
 	defer stub.mu.Unlock()
@@ -293,10 +293,10 @@ func TestFlowRun_IgnoreModulesReportsSkippedOnStderrOnly(t *testing.T) {
 	if code != exitSuccess {
 		t.Fatalf("exit code = %d, want %d", code, exitSuccess)
 	}
-	if !strings.Contains(stderr, "Skipped 2 module flow(s) matched by the tags.") {
-		t.Errorf("stderr = %q, want the skipped-modules notice", stderr)
+	if !strings.Contains(stderr, "Skipped 2 function flow(s) matched by the tags.") {
+		t.Errorf("stderr = %q, want the skipped-functions notice", stderr)
 	}
-	if strings.Contains(stdout, "Skipped") || strings.Contains(stdout, "module") {
+	if strings.Contains(stdout, "Skipped") || strings.Contains(stdout, "function") {
 		t.Errorf("stdout carries the notice: %q", stdout)
 	}
 }

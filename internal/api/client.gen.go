@@ -331,6 +331,24 @@ func (e CollectionSource) Valid() bool {
 	}
 }
 
+// Defines values for CreateCollectionRequestSource.
+const (
+	CreateCollectionRequestSourceManual  CreateCollectionRequestSource = "manual"
+	CreateCollectionRequestSourceOpenapi CreateCollectionRequestSource = "openapi"
+)
+
+// Valid indicates whether the value is a known member of the CreateCollectionRequestSource enum.
+func (e CreateCollectionRequestSource) Valid() bool {
+	switch e {
+	case CreateCollectionRequestSourceManual:
+		return true
+	case CreateCollectionRequestSourceOpenapi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CurrentUserInclude.
 const (
 	CurrentUserIncludeWorkspace CurrentUserInclude = "workspace"
@@ -355,6 +373,21 @@ const (
 func (e DelayFlowNodeType) Valid() bool {
 	switch e {
 	case DelayFlowNodeTypeDelay:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailWaitFlowNodeType.
+const (
+	EmailWaitFlowNodeTypeEmailWait EmailWaitFlowNodeType = "email_wait"
+)
+
+// Valid indicates whether the value is a known member of the EmailWaitFlowNodeType enum.
+func (e EmailWaitFlowNodeType) Valid() bool {
+	switch e {
+	case EmailWaitFlowNodeTypeEmailWait:
 		return true
 	default:
 		return false
@@ -446,8 +479,10 @@ func (e ExecutionSummaryWindow) Valid() bool {
 const (
 	ExtractorTypeBody       ExtractorType = "body"
 	ExtractorTypeHeader     ExtractorType = "header"
+	ExtractorTypeHtml       ExtractorType = "html"
 	ExtractorTypeJsonPath   ExtractorType = "json_path"
 	ExtractorTypeQueryParam ExtractorType = "query_param"
+	ExtractorTypeRegex      ExtractorType = "regex"
 	ExtractorTypeStatusCode ExtractorType = "status_code"
 	ExtractorTypeXmlPath    ExtractorType = "xml_path"
 )
@@ -459,9 +494,13 @@ func (e ExtractorType) Valid() bool {
 		return true
 	case ExtractorTypeHeader:
 		return true
+	case ExtractorTypeHtml:
+		return true
 	case ExtractorTypeJsonPath:
 		return true
 	case ExtractorTypeQueryParam:
+		return true
+	case ExtractorTypeRegex:
 		return true
 	case ExtractorTypeStatusCode:
 		return true
@@ -528,16 +567,16 @@ func (e FlowNodeRunWhen) Valid() bool {
 
 // Defines values for FlowRole.
 const (
-	FlowRoleModule     FlowRole = "module"
-	FlowRoleStandalone FlowRole = "standalone"
+	Function FlowRole = "function"
+	Test     FlowRole = "test"
 )
 
 // Valid indicates whether the value is a known member of the FlowRole enum.
 func (e FlowRole) Valid() bool {
 	switch e {
-	case FlowRoleModule:
+	case Function:
 		return true
-	case FlowRoleStandalone:
+	case Test:
 		return true
 	default:
 		return false
@@ -585,13 +624,13 @@ func (e FlowSourceDiagnosticSeverity) Valid() bool {
 
 // Defines values for FlowVersionSortField.
 const (
-	PublishedAt FlowVersionSortField = "published_at"
+	FlowVersionSortFieldCreatedAt FlowVersionSortField = "created_at"
 )
 
 // Valid indicates whether the value is a known member of the FlowVersionSortField enum.
 func (e FlowVersionSortField) Valid() bool {
 	switch e {
-	case PublishedAt:
+	case FlowVersionSortFieldCreatedAt:
 		return true
 	default:
 		return false
@@ -625,6 +664,21 @@ func (e HttpMethod) Valid() bool {
 	case POST:
 		return true
 	case PUT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputFlowNodeType.
+const (
+	InputFlowNodeTypeInput InputFlowNodeType = "input"
+)
+
+// Valid indicates whether the value is a known member of the InputFlowNodeType enum.
+func (e InputFlowNodeType) Valid() bool {
+	switch e {
+	case InputFlowNodeTypeInput:
 		return true
 	default:
 		return false
@@ -972,8 +1026,11 @@ const (
 	NodeExecutionResultNodeTypeAssert      NodeExecutionResultNodeType = "assert"
 	NodeExecutionResultNodeTypeBranch      NodeExecutionResultNodeType = "branch"
 	NodeExecutionResultNodeTypeDelay       NodeExecutionResultNodeType = "delay"
+	NodeExecutionResultNodeTypeEmailWait   NodeExecutionResultNodeType = "email_wait"
+	NodeExecutionResultNodeTypeInput       NodeExecutionResultNodeType = "input"
 	NodeExecutionResultNodeTypeLoop        NodeExecutionResultNodeType = "loop"
 	NodeExecutionResultNodeTypeModule      NodeExecutionResultNodeType = "module"
+	NodeExecutionResultNodeTypeOutput      NodeExecutionResultNodeType = "output"
 	NodeExecutionResultNodeTypePoll        NodeExecutionResultNodeType = "poll"
 	NodeExecutionResultNodeTypeRequest     NodeExecutionResultNodeType = "request"
 	NodeExecutionResultNodeTypeSetVariable NodeExecutionResultNodeType = "set_variable"
@@ -990,9 +1047,15 @@ func (e NodeExecutionResultNodeType) Valid() bool {
 		return true
 	case NodeExecutionResultNodeTypeDelay:
 		return true
+	case NodeExecutionResultNodeTypeEmailWait:
+		return true
+	case NodeExecutionResultNodeTypeInput:
+		return true
 	case NodeExecutionResultNodeTypeLoop:
 		return true
 	case NodeExecutionResultNodeTypeModule:
+		return true
+	case NodeExecutionResultNodeTypeOutput:
 		return true
 	case NodeExecutionResultNodeTypePoll:
 		return true
@@ -1318,6 +1381,42 @@ func (e OrganizationMemberSortField) Valid() bool {
 	}
 }
 
+// Defines values for OutputFlowNodeType.
+const (
+	OutputFlowNodeTypeOutput OutputFlowNodeType = "output"
+)
+
+// Valid indicates whether the value is a known member of the OutputFlowNodeType enum.
+func (e OutputFlowNodeType) Valid() bool {
+	switch e {
+	case OutputFlowNodeTypeOutput:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PermissionAssignability.
+const (
+	ASSIGNABLE    PermissionAssignability = "ASSIGNABLE"
+	NOTHELD       PermissionAssignability = "NOT_HELD"
+	RUNNERONLYKEY PermissionAssignability = "RUNNER_ONLY_KEY"
+)
+
+// Valid indicates whether the value is a known member of the PermissionAssignability enum.
+func (e PermissionAssignability) Valid() bool {
+	switch e {
+	case ASSIGNABLE:
+		return true
+	case NOTHELD:
+		return true
+	case RUNNERONLYKEY:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PollFlowNodeType.
 const (
 	PollFlowNodeTypePoll PollFlowNodeType = "poll"
@@ -1476,16 +1575,22 @@ func (e ResourceSearchType) Valid() bool {
 
 // Defines values for RunnerCapability.
 const (
-	FormBody      RunnerCapability = "form_body"
-	SecretOutputs RunnerCapability = "secret_outputs"
+	RunnerCapabilityContractNodes RunnerCapability = "contract_nodes"
+	RunnerCapabilityEmailWait     RunnerCapability = "email_wait"
+	RunnerCapabilityFormBody      RunnerCapability = "form_body"
+	RunnerCapabilitySecretOutputs RunnerCapability = "secret_outputs"
 )
 
 // Valid indicates whether the value is a known member of the RunnerCapability enum.
 func (e RunnerCapability) Valid() bool {
 	switch e {
-	case FormBody:
+	case RunnerCapabilityContractNodes:
 		return true
-	case SecretOutputs:
+	case RunnerCapabilityEmailWait:
+		return true
+	case RunnerCapabilityFormBody:
+		return true
+	case RunnerCapabilitySecretOutputs:
 		return true
 	default:
 		return false
@@ -2257,6 +2362,58 @@ type AcceptedInvitationResponse struct {
 	OrganizationName string `json:"organization_name"`
 }
 
+// AdministrationOrganization An organization of this deployment with its members, as Echopoint staff see it.
+type AdministrationOrganization struct {
+	// CreatedAt When the organization was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier of the organization (KSUID).
+	Id string `json:"id"`
+
+	// Members Members of the organization, at most 100.
+	Members []AdministrationOrganizationMember `json:"members"`
+
+	// MembersTruncated True when the organization has more members than this response lists.
+	MembersTruncated bool `json:"members_truncated"`
+
+	// Name Name of the organization.
+	Name string `json:"name"`
+}
+
+// AdministrationOrganizationMember A member of an organization, as Echopoint staff see it.
+type AdministrationOrganizationMember struct {
+	// Email Email address of the member.
+	Email openapi_types.Email `json:"email"`
+
+	// ExternalId Identifier of the user at the identity provider, when Anchor knows it.
+	ExternalId *string `json:"external_id,omitempty"`
+
+	// Name Display name of the member, when set.
+	Name *string `json:"name,omitempty"`
+
+	// RoleName Name of the member's organization role. Empty when the member holds none.
+	RoleName string `json:"role_name"`
+
+	// UserId Unique identifier of the product user (KSUID).
+	UserId string `json:"user_id"`
+}
+
+// AdministrationOrganizationSearchRequest Generic search request template
+type AdministrationOrganizationSearchRequest = SearchRequest
+
+// AdministrationOrganizationSearchResponse defines model for AdministrationOrganizationSearchResponse.
+type AdministrationOrganizationSearchResponse struct {
+	// Count The number of items returned in this response.
+	Count int                          `json:"count"`
+	Items []AdministrationOrganization `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
 // AnalyticsBucketSize The width of one time series bucket.
 type AnalyticsBucketSize string
 
@@ -2425,6 +2582,52 @@ type ApiKeySearchRequest struct {
 
 // ApiKeySortField Field to sort API key search results by.
 type ApiKeySortField string
+
+// ApiKeyUpdateRequest defines model for ApiKeyUpdateRequest.
+type ApiKeyUpdateRequest struct {
+	// Name New human-readable name for the API key. Must be unique within the organization.
+	//
+	// Examples: GitHub Actions
+	Name string `json:"name"`
+}
+
+// AppliedSpecVersion The Live version a request of edit commands produced.
+type AppliedSpecVersion struct {
+	// Bump How far a Live version moved from the one before it. `initial` is a spec's
+	// first Live version. `major`: a change breaks clients or may break them.
+	// `minor`: a new operation, schema, optional field, or enum value, or a looser
+	// limit. `patch`: descriptions, examples, extensions, or other edits.
+	Bump SpecBump `json:"bump"`
+
+	// ChangeCounts How many changes of each severity a Live version made.
+	ChangeCounts SpecChangeCounts `json:"change_counts"`
+
+	// Changes What changed from the previous Live version. Empty for the first version.
+	Changes   []SpecChange `json:"changes"`
+	CreatedAt time.Time    `json:"created_at"`
+
+	// CreatedBy The member or API key that did something.
+	CreatedBy SpecActor `json:"created_by"`
+
+	// Findings Where the document departs from its own conventions: the casing most
+	// properties or operation IDs use, the responses, error shape,
+	// extensions, and security most operations declare, descriptions, and
+	// declared path parameters. Ordered by pointer.
+	Findings       []SpecFinding      `json:"findings"`
+	Id             openapi_types.UUID `json:"id"`
+	LayoutVersion  int32              `json:"layout_version"`
+	OpenapiVersion string             `json:"openapi_version"`
+
+	// Replayed True when the `command_id` had already produced this version and
+	// nothing was applied (status 200); false for a new version (201).
+	// A client that cannot read the status, such as an MCP tool call,
+	// reads this instead.
+	Replayed bool   `json:"replayed"`
+	Sha256   string `json:"sha256"`
+
+	// Version Examples: 1.4.0
+	Version string `json:"version"`
+}
 
 // ApplySpecCommandsRequest defines model for ApplySpecCommandsRequest.
 type ApplySpecCommandsRequest struct {
@@ -2600,7 +2803,7 @@ type BulkMoveFlowsResult struct {
 	MovedFlows int `json:"moved_flows"`
 }
 
-// CloudFleetSettingsSource Whether the effective settings come from deployment configuration or a saved platform administrator override.
+// CloudFleetSettingsSource Whether the effective settings come from deployment configuration or a saved Echopoint staff override.
 type CloudFleetSettingsSource string
 
 // CloudFleetStatus Cloud execution safety capacity across every organization in the current deployment.
@@ -2635,7 +2838,7 @@ type CloudFleetStatus struct {
 	// Revision Settings revision for optimistic concurrency. Zero means deployment defaults with no saved override.
 	Revision int64 `json:"revision"`
 
-	// SettingsSource Whether the effective settings come from deployment configuration or a saved platform administrator override.
+	// SettingsSource Whether the effective settings come from deployment configuration or a saved Echopoint staff override.
 	SettingsSource CloudFleetSettingsSource `json:"settings_source"`
 
 	// SettingsUpdatedAt Database timestamp of the latest saved override, or null when deployment defaults are in use.
@@ -3043,6 +3246,11 @@ type CompositeAssertion struct {
 	// (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
 	// `query_param` reads a query parameter of the request a `webhook_wait` node received;
 	// an HTTP response has none.
+	// `html` reads an HTML document with a CSS selector (`HTMLExtractorConfig`): a response body,
+	// the HTML part of an email, or the body of a received webhook request. It parses the way a
+	// browser does, so broken markup never fails the parse.
+	// `regex` returns the first match of a pattern in the raw body or the text of an email
+	// (`RegexExtractorConfig`).
 	ExtractorType ExtractorType `json:"extractor_type"`
 
 	// OperatorData Configuration for the operator
@@ -3066,9 +3274,21 @@ type CreateCollectionRequest struct {
 	// Examples: My API Collection
 	Name string `json:"name"`
 
-	// Source Source of the collection
-	Source *CollectionSource `json:"source,omitempty"`
+	// Source Deprecated and ignored: a created collection is always `manual`.
+	// An `openapi` collection comes from `importFromOpenAPI`, which keeps
+	// its document and sync configuration. Released clients may still
+	// send this field; omit it.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Source *CreateCollectionRequestSource `json:"source,omitempty"`
 }
+
+// CreateCollectionRequestSource Deprecated and ignored: a created collection is always `manual`.
+// An `openapi` collection comes from `importFromOpenAPI`, which keeps
+// its document and sync configuration. Released clients may still
+// send this field; omit it.
+//
+// Deprecated: this type has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+type CreateCollectionRequestSource string
 
 // CreateEnvironmentRequest defines model for CreateEnvironmentRequest.
 type CreateEnvironmentRequest struct {
@@ -3097,7 +3317,10 @@ type CreateFlowRequest struct {
 	// Description Optional description of the flow.
 	//
 	// Examples: Test user endpoints with branching logic
-	Description    *string        `json:"description,omitempty"`
+	Description *string `json:"description,omitempty"`
+
+	// ExposeOnMcp Expose this Function flow as a callable tool on `/mcp`. Only valid when `role` is `function` (400 `EXPOSE_ON_MCP_REQUIRES_FUNCTION` otherwise). Omitted defaults to `false`.
+	ExposeOnMcp    *bool          `json:"expose_on_mcp,omitempty"`
 	FlowDefinition FlowDefinition `json:"flow_definition"`
 
 	// FolderId Folder to create the flow in. Omit or send null to leave it uncategorized. A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
@@ -3111,10 +3334,10 @@ type CreateFlowRequest struct {
 	// Examples: User API Test Flow
 	Name string `json:"name"`
 
-	// Role How the flow may be run. Omitted defaults to `standalone`.
+	// Role How the flow may be run. Omitted defaults to `test`.
 	Role *FlowRole `json:"role,omitempty"`
 
-	// Source A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, auto_layout, and folder_id. name and flow_definition stay required so a JSON client is unchanged; the file replaces both. Compile errors return 400 and create nothing.
+	// Source A flow file. When set, the server compiles it and stores that document. The file replaces name, version, flow_definition and auto_layout. For folder_id, tags, description, role and metadata a value the file sets wins, and a value sent beside the file applies when the file leaves it out. name and flow_definition stay required so a JSON client is unchanged; the file replaces both. Compile errors, including an invalid tag, more than 32 tags or a cycle, return 400 INVALID_FLOW_DEFINITION and create nothing.
 	Source *string `json:"source,omitempty"`
 
 	// Tags Optional flat tags for the flow. Lowercased, normalized, deduplicated, and sorted on write. Omitted defaults to an empty list.
@@ -3158,7 +3381,7 @@ type CreateMonitorRequest struct {
 	// HealthPolicy Turns a monitor into a health measurement. Requires interval_seconds; freshness_seconds must cover interval_seconds + timeout_seconds.
 	HealthPolicy *MonitorHealthPolicy `json:"health_policy,omitempty"`
 
-	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+	// IgnoreModules Skip flows whose role is `function` when resolving the tag selector. Omitted defaults to true.
 	IgnoreModules *bool `json:"ignore_modules,omitempty"`
 
 	// IntervalSeconds Interval cadence in seconds; only with a health policy.
@@ -3399,6 +3622,63 @@ type DelayNodeData struct {
 	Duration int `json:"duration"`
 }
 
+// EmailWaitFlowNode defines model for EmailWaitFlowNode.
+type EmailWaitFlowNode struct {
+	// Assertions Validation assertions for the node
+	Assertions *[]CompositeAssertion `json:"assertions,omitempty"`
+
+	// Data Polls the run inbox, whose address launch injects as `inbox.address`, until a message
+	// passes the node's assertions (ADR-0030). Without an assertion the first message matches.
+	// Default timeout is 60 seconds, at most 120 minutes: the address lifetime.
+	Data EmailWaitNodeData `json:"data"`
+
+	// DisplayName Human-readable name for the node
+	//
+	// Examples: My Node
+	DisplayName string `json:"display_name"`
+
+	// Id Unique identifier for the node
+	//
+	// Examples: node-1
+	Id string `json:"id"`
+
+	// Outputs Named outputs extracted from the response/data
+	Outputs *[]Output `json:"outputs,omitempty"`
+
+	// RunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
+	RunWhen *FlowNodeRunWhen      `json:"run_when,omitempty"`
+	Type    EmailWaitFlowNodeType `json:"type"`
+}
+
+// EmailWaitFlowNodeType defines model for EmailWaitFlowNode.Type.
+type EmailWaitFlowNodeType string
+
+// EmailWaitNodeData Polls the run inbox, whose address launch injects as `inbox.address`, until a message
+// passes the node's assertions (ADR-0030). Without an assertion the first message matches.
+// Default timeout is 60 seconds, at most 120 minutes: the address lifetime.
+type EmailWaitNodeData struct {
+	// CodePattern Go regular expression that finds the code in the text. With a capture group the code is group 1. Defaults to six digits.
+	//
+	// Examples: \b\d{6}\b
+	CodePattern *string `json:"code_pattern,omitempty"`
+
+	// Expect The events this wait expects, as for a webhook wait.
+	Expect *[]WebhookExpectation `json:"expect,omitempty"`
+
+	// LinkPattern Go regular expression that keeps the links it matches. Empty keeps every link.
+	//
+	// Examples: https://app\.example\.com/verify
+	LinkPattern *string `json:"link_pattern,omitempty"`
+
+	// SettleMs How long the wait keeps listening once every expectation has its events. Only used with `expect`. Defaults to 0.
+	SettleMs *int `json:"settle_ms,omitempty"`
+
+	// TimeoutMs Wait budget in milliseconds. Defaults to 60000, at most 7200000.
+	//
+	// Examples: 60000
+	TimeoutMs *int `json:"timeout_ms,omitempty"`
+}
+
 // EndpointAnalytics The HTTP calls sent to one method, host and path template.
 type EndpointAnalytics struct {
 	Calls             int64 `json:"calls"`
@@ -3563,11 +3843,11 @@ type ExecuteRequestRequest struct {
 	// Description Optional request description
 	Description *string `json:"description,omitempty"`
 
-	// EnvironmentKey Optional named organization environment override. Base organization variables are always loaded.
+	// EnvironmentKey Optional named organization environment override. Base organization variables are always loaded. A key that names no environment of the organization answers 400 ENVIRONMENT_KEY_NOT_FOUND.
 	EnvironmentKey *string `json:"environment_key,omitempty"`
 
-	// FolderId Parent folder ID
-	FolderId *openapi_types.UUID `json:"folder_id,omitempty"`
+	// FolderId Parent folder ID. On update, null moves the request to the collection root and an absent field leaves it where it is. An execution saves nothing, so it ignores the field.
+	FolderId openapi_types.UUID `json:"folder_id,omitempty"`
 
 	// Headers Non-auth HTTP headers
 	Headers *map[string]string `json:"headers,omitempty"`
@@ -3718,11 +3998,8 @@ type ExecutionSearchFilter struct {
 // ExecutionSearchRequest defines model for ExecutionSearchRequest.
 type ExecutionSearchRequest struct {
 	// Filter Filter criteria.
-	Filter *ExecutionSearchFilter `json:"filter,omitempty"`
-
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Filter     *ExecutionSearchFilter `json:"filter,omitempty"`
+	Pagination *PaginationRequest     `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *ExecutionSortField `json:"sort_by,omitempty"`
@@ -3771,7 +4048,7 @@ type ExportedFlow struct {
 	// Edges Connections between nodes
 	Edges []FlowEdge `json:"edges"`
 
-	// InitialInputs Initial input variables for the flow (from its variable set)
+	// InitialInputs Variables a run of the flow resolves. A plain value stored on the flow is inlined; a secret or an organization or environment key is the placeholder `{{KEY}}`.
 	InitialInputs map[string]interface{} `json:"initial_inputs"`
 
 	// Name Name of the flow
@@ -3793,6 +4070,11 @@ type ExportedFlow struct {
 // (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
 // `query_param` reads a query parameter of the request a `webhook_wait` node received;
 // an HTTP response has none.
+// `html` reads an HTML document with a CSS selector (`HTMLExtractorConfig`): a response body,
+// the HTML part of an email, or the body of a received webhook request. It parses the way a
+// browser does, so broken markup never fails the parse.
+// `regex` returns the first match of a pattern in the raw body or the text of an email
+// (`RegexExtractorConfig`).
 type ExtractorType string
 
 // Flow defines model for Flow.
@@ -3803,7 +4085,10 @@ type Flow struct {
 	// Description Optional description of what the flow does.
 	//
 	// Examples: Test user endpoints with branching logic
-	Description    *string        `json:"description,omitempty"`
+	Description *string `json:"description,omitempty"`
+
+	// ExposeOnMcp Whether this Function flow is registered as a callable tool on the remote /mcp endpoint. Always false for `test` flows.
+	ExposeOnMcp    bool           `json:"expose_on_mcp"`
 	FlowDefinition FlowDefinition `json:"flow_definition"`
 
 	// FolderId The flow's folder, or null when it is uncategorized.
@@ -3827,10 +4112,11 @@ type Flow struct {
 	// Examples: org_123
 	OrganizationId string `json:"organization_id"`
 
-	// Role How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
-	// reusable building block that other flows call through a module node: you can still
-	// launch it directly to test it, but schedules skip it when their tags match it unless
-	// the schedule sets `ignore_modules` to false.
+	// Role How a flow may be run (ADR-0037). A `test` flow verifies a scenario and produces a
+	// pass/fail verdict. A `function` flow is a reusable parameterized building block
+	// with `input`/`output` contract nodes that other flows call through a module
+	// (`Function call`) step: you can still launch it directly to test it, but schedules
+	// skip it when their tags match it unless the schedule sets `ignore_modules` to false.
 	Role FlowRole `json:"role"`
 
 	// Tags Flat canonical tags associated with the flow (lowercase, normalized, deduplicated, sorted).
@@ -3857,8 +4143,11 @@ type FlowAnalytics struct {
 	FailedRuns      int64              `json:"failed_runs"`
 	FlowId          openapi_types.UUID `json:"flow_id"`
 
-	// FlowName The flow's current name; empty when the flow was deleted.
+	// FlowName The flow's current name.
 	FlowName string `json:"flow_name"`
+
+	// FlowRole The flow's current role (`test` or `function`).
+	FlowRole FlowRole `json:"flow_role"`
 
 	// HttpCallPeak The most HTTP calls one run sent. Absent when no run was measured.
 	HttpCallPeak    *int32    `json:"http_call_peak,omitempty"`
@@ -3922,7 +4211,7 @@ type FlowEdge struct {
 	// Examples: e-success
 	Id string `json:"id"`
 
-	// Source ID of the source node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE.
+	// Source ID of the source node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE. Edges must not form a cycle (every edge type counts, inside loop and poll bodies too); a create, update or restore with one returns 400 FLOW_EDGE_CYCLE naming the node_ids on it.
 	//
 	// Examples: req-1
 	Source string `json:"source"`
@@ -3932,7 +4221,7 @@ type FlowEdge struct {
 	// Examples: right
 	SourceHandle *string `json:"source_handle,omitempty"`
 
-	// Target ID of the target node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE.
+	// Target ID of the target node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE. Edges must not form a cycle (every edge type counts, inside loop and poll bodies too); a create, update or restore with one returns 400 FLOW_EDGE_CYCLE naming the node_ids on it.
 	//
 	// Examples: req-success
 	Target string `json:"target"`
@@ -4106,10 +4395,11 @@ type FlowFileDocument struct {
 	Id   *openapi_types.UUID `json:"id,omitempty"`
 	Name string              `json:"name"`
 
-	// Role How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
-	// reusable building block that other flows call through a module node: you can still
-	// launch it directly to test it, but schedules skip it when their tags match it unless
-	// the schedule sets `ignore_modules` to false.
+	// Role How a flow may be run (ADR-0037). A `test` flow verifies a scenario and produces a
+	// pass/fail verdict. A `function` flow is a reusable parameterized building block
+	// with `input`/`output` contract nodes that other flows call through a module
+	// (`Function call`) step: you can still launch it directly to test it, but schedules
+	// skip it when their tags match it unless the schedule sets `ignore_modules` to false.
 	Role    *FlowRole `json:"role,omitempty"`
 	Tags    *[]string `json:"tags,omitempty"`
 	Version *string   `json:"version,omitempty"`
@@ -4180,7 +4470,7 @@ type FlowFolderSortField string
 type FlowHTTPCallPeak struct {
 	FlowId openapi_types.UUID `json:"flow_id"`
 
-	// FlowName The flow's current name; empty when the flow was deleted.
+	// FlowName The flow's current name.
 	FlowName string `json:"flow_name"`
 	Peak     int32  `json:"peak"`
 
@@ -4227,10 +4517,11 @@ type FlowNode struct {
 // FlowNodeRunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
 type FlowNodeRunWhen string
 
-// FlowRole How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
-// reusable building block that other flows call through a module node: you can still
-// launch it directly to test it, but schedules skip it when their tags match it unless
-// the schedule sets `ignore_modules` to false.
+// FlowRole How a flow may be run (ADR-0037). A `test` flow verifies a scenario and produces a
+// pass/fail verdict. A `function` flow is a reusable parameterized building block
+// with `input`/`output` contract nodes that other flows call through a module
+// (`Function call`) step: you can still launch it directly to test it, but schedules
+// skip it when their tags match it unless the schedule sets `ignore_modules` to false.
 type FlowRole string
 
 // FlowRunStatus Outcome of a flow's most recent terminal execution, folded to the states the Flow Library list renders: passed (completed), failed (failed), or none (no terminal run yet). In-flight and cancelled runs are ignored: they never erase the last real pass/fail badge.
@@ -4238,8 +4529,11 @@ type FlowRunStatus string
 
 // FlowSearchItem Lightweight flow returned by flow search. flow_definition is present only when requested via include_definition, keeping search payloads small.
 type FlowSearchItem struct {
-	CreatedAt      time.Time       `json:"created_at"`
-	Description    *string         `json:"description,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	Description *string   `json:"description,omitempty"`
+
+	// ExposeOnMcp Whether this Function flow is registered as a callable tool on the remote /mcp endpoint. Always false for `test` flows.
+	ExposeOnMcp    bool            `json:"expose_on_mcp"`
 	FlowDefinition *FlowDefinition `json:"flow_definition,omitempty"`
 
 	// FolderId The flow's folder, or null when it is uncategorized.
@@ -4254,10 +4548,11 @@ type FlowSearchItem struct {
 	NodeCount      int    `json:"node_count"`
 	OrganizationId string `json:"organization_id"`
 
-	// Role How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
-	// reusable building block that other flows call through a module node: you can still
-	// launch it directly to test it, but schedules skip it when their tags match it unless
-	// the schedule sets `ignore_modules` to false.
+	// Role How a flow may be run (ADR-0037). A `test` flow verifies a scenario and produces a
+	// pass/fail verdict. A `function` flow is a reusable parameterized building block
+	// with `input`/`output` contract nodes that other flows call through a module
+	// (`Function call`) step: you can still launch it directly to test it, but schedules
+	// skip it when their tags match it unless the schedule sets `ignore_modules` to false.
 	Role      FlowRole  `json:"role"`
 	Tags      []string  `json:"tags"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -4266,6 +4561,9 @@ type FlowSearchItem struct {
 
 // FlowSearchRequest defines model for FlowSearchRequest.
 type FlowSearchRequest struct {
+	// ExposeOnMcp Filter results by whether the flow is exposed as a callable tool on `/mcp`. Omit to include both.
+	ExposeOnMcp *bool `json:"expose_on_mcp,omitempty"`
+
 	// FolderId Scope results to this folder and all of its descendants. Omit to search every folder. Ignored when uncategorized is true. A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
 	FolderId *openapi_types.UUID `json:"folder_id,omitempty"`
 
@@ -4275,6 +4573,9 @@ type FlowSearchRequest struct {
 	// IncludeDefinition Include the full flow_definition in each result. Omitted by default to keep search payloads small.
 	IncludeDefinition *bool              `json:"include_definition,omitempty"`
 	Pagination        *PaginationRequest `json:"pagination,omitempty"`
+
+	// Role Filter results to flows with this role (`test` or `function`). Omit to return both roles.
+	Role *FlowRole `json:"role,omitempty"`
 
 	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
 	SortDirection *SortDirection `json:"sort_direction,omitempty"`
@@ -4337,14 +4638,14 @@ type FlowTagListResponse struct {
 
 // FlowVersion defines model for FlowVersion.
 type FlowVersion struct {
-	// CreatedAt When this record was created.
+	// CreatedAt When this version was stored.
 	CreatedAt      time.Time      `json:"created_at"`
 	FlowDefinition FlowDefinition `json:"flow_definition"`
 
 	// FlowId The flow this version belongs to.
 	FlowId openapi_types.UUID `json:"flow_id"`
 
-	// Id Unique identifier for this published version.
+	// Id Unique identifier for this version.
 	Id openapi_types.UUID `json:"id"`
 
 	// Metadata Frontend-specific metadata including UI layout information and execution defaults.
@@ -4352,9 +4653,6 @@ type FlowVersion struct {
 
 	// OrganizationId Organization ID.
 	OrganizationId string `json:"organization_id"`
-
-	// PublishedAt When this version was published.
-	PublishedAt time.Time `json:"published_at"`
 
 	// WorkspaceId Reserved workspace ownership. Absent or null in this stage; resources remain organization-scoped.
 	WorkspaceId *string `json:"workspace_id,omitempty"`
@@ -4375,9 +4673,7 @@ type FlowVersionListResponse struct {
 
 // FlowVersionSearchRequest defines model for FlowVersionSearchRequest.
 type FlowVersionSearchRequest struct {
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *FlowVersionSortField `json:"sort_by,omitempty"`
@@ -4483,6 +4779,108 @@ type ImportOpenAPIRequest struct {
 	Spec *map[string]interface{} `json:"spec,omitempty"`
 }
 
+// InboxMessage One email a run inbox received. Attachments are described, never stored.
+type InboxMessage struct {
+	// Attachments Attachments and other non-text parts, by name, type and decoded size.
+	Attachments []InboxMessageAttachment `json:"attachments"`
+
+	// Cc Decoded Cc header, empty when the message has none.
+	//
+	// Examples: Support <support@acme.example.com>
+	Cc string `json:"cc"`
+
+	// EnvelopeFrom SMTP envelope sender (MAIL FROM). Empty for a bounce.
+	//
+	// Examples: bounces@mailer.example.com
+	EnvelopeFrom string `json:"envelope_from"`
+
+	// EnvelopeTo SMTP envelope recipient, with any `+tag`. It decided which inbox stored the message.
+	//
+	// Examples: aanuyjabcdefghijklmsjd6s2g+alice@echopointinbox.dev
+	EnvelopeTo string `json:"envelope_to"`
+
+	// From Decoded From header.
+	//
+	// Examples: Acme <no-reply@acme.example.com>
+	From string `json:"from"`
+
+	// Headers Every header as received, decoded, by canonical name (`Reply-To`, `Received`). A name repeated in the message lists its values in order. The Echopoint envelope headers are left out. At most 100 names and 20 values per name are kept.
+	//
+	// Examples: {"Reply-To":["help@acme.example.com"]}
+	Headers map[string][]string `json:"headers"`
+
+	// Html First text/html part, decoded to UTF-8. Null when the message has none.
+	//
+	// Examples: <p>Your code is <b>123456</b></p>
+	Html *string `json:"html,omitempty"`
+
+	// Id Unique identifier of the stored message.
+	//
+	// Examples: msg_2b7c9d0e1f
+	Id string `json:"id"`
+
+	// MessageId Message-ID header, empty when the message has none.
+	//
+	// Examples: <20261106101500.1234@acme.example.com>
+	MessageId string `json:"message_id"`
+
+	// RawSize Size in bytes of the raw message as the ingest received it, envelope lines included.
+	//
+	// Examples: 18342
+	RawSize int `json:"raw_size"`
+
+	// ReceivedAt When the inbox stored the message.
+	//
+	// Examples: 2026-11-06T10:15:00Z
+	ReceivedAt time.Time `json:"received_at"`
+
+	// Subject Decoded Subject header.
+	//
+	// Examples: Verify your email
+	Subject string `json:"subject"`
+
+	// Text First text/plain part, decoded to UTF-8. Null when the message has none.
+	//
+	// Examples: Your code is 123456
+	Text *string `json:"text,omitempty"`
+
+	// To Decoded To header.
+	//
+	// Examples: aanuyjabcdefghijklmsjd6s2g+alice@echopointinbox.dev
+	To string `json:"to"`
+}
+
+// InboxMessageAttachment defines model for InboxMessageAttachment.
+type InboxMessageAttachment struct {
+	// ContentType Media type of the part.
+	//
+	// Examples: application/pdf
+	ContentType string `json:"content_type"`
+
+	// Filename File name the sender gave, empty when it gave none.
+	//
+	// Examples: invoice.pdf
+	Filename string `json:"filename"`
+
+	// Size Decoded size in bytes.
+	//
+	// Examples: 52311
+	Size int `json:"size"`
+}
+
+// InboxMessageListResponse defines model for InboxMessageListResponse.
+type InboxMessageListResponse struct {
+	// Count The number of items returned in this response.
+	Count int            `json:"count"`
+	Items []InboxMessage `json:"items"`
+
+	// NextCursor Cursor for the next page. Absent on the last page: iterate until it is absent. Never infer the end from count or total.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// Total Number of items matching the filter, independent of the cursor.
+	Total int64 `json:"total"`
+}
+
 // InitResponse Response for provisioning initialization.
 type InitResponse = map[string]interface{}
 
@@ -4492,6 +4890,86 @@ type InitResponse = map[string]interface{}
 type InlineFlowDefinition struct {
 	Edges *[]FlowEdge `json:"edges,omitempty"`
 	Nodes []FlowNode  `json:"nodes"`
+}
+
+// InputFlowNode defines model for InputFlowNode.
+type InputFlowNode struct {
+	// Assertions Validation assertions for the node
+	Assertions *[]CompositeAssertion `json:"assertions,omitempty"`
+
+	// Data Declares the typed JSON Schema input contract of a function flow (ADR-0037).
+	// At run time, each property reads its value using precedence: call input, flow variables,
+	// environment overlay, organization base, then `default`. Validated values are exposed to
+	// downstream steps as `{{<nodeId>.<property>}}`. Only allowed on function (`module`) flows.
+	Data InputNodeData `json:"data"`
+
+	// DisplayName Human-readable name for the node
+	//
+	// Examples: My Node
+	DisplayName string `json:"display_name"`
+
+	// Id Unique identifier for the node
+	//
+	// Examples: node-1
+	Id string `json:"id"`
+
+	// Outputs Named outputs extracted from the response/data
+	Outputs *[]Output `json:"outputs,omitempty"`
+
+	// RunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
+	RunWhen *FlowNodeRunWhen  `json:"run_when,omitempty"`
+	Type    InputFlowNodeType `json:"type"`
+}
+
+// InputFlowNodeType defines model for InputFlowNode.Type.
+type InputFlowNodeType string
+
+// InputNodeData Declares the typed JSON Schema input contract of a function flow (ADR-0037).
+// At run time, each property reads its value using precedence: call input, flow variables,
+// environment overlay, organization base, then `default`. Validated values are exposed to
+// downstream steps as `{{<nodeId>.<property>}}`. Only allowed on function (`module`) flows.
+type InputNodeData struct {
+	// Properties Map of input parameter names to their JSON Schema property definitions.
+	Properties map[string]InputProperty `json:"properties"`
+
+	// Required List of required input parameter names (in addition to any property with `required: true`).
+	//
+	// Examples: ["email","seats"]
+	Required *[]string `json:"required,omitempty"`
+}
+
+// InputProperty JSON Schema constraint for one input parameter on an `input` node.
+type InputProperty struct {
+	// Default Fallback value used when neither the caller nor any variable layer provides a value.
+	//
+	// Examples: pro
+	Default interface{} `json:"default,omitempty"`
+
+	// Description Human- and agent-readable description of this input parameter.
+	//
+	// Examples: Customer email address
+	Description *string `json:"description,omitempty"`
+
+	// Enum Allowed values for this parameter.
+	//
+	// Examples: ["starter","pro"]
+	Enum *[]interface{} `json:"enum,omitempty"`
+
+	// Format String format validation (`email`, `uuid`, `uri`, `url`, `date`, or `date-time`).
+	//
+	// Examples: email
+	Format *string `json:"format,omitempty"`
+
+	// Required Marks this parameter as required when no default or caller value is supplied.
+	Required *bool `json:"required,omitempty"`
+
+	// Secret Marks this parameter value as secret so it is masked as `***` across results, progress events, and errors.
+	Secret *bool `json:"secret,omitempty"`
+
+	// Type JSON Schema primitive or container type (`string`, `integer`, `number`, `boolean`, `array`, `object`, or `any`).
+	//
+	// Examples: string
+	Type *string `json:"type,omitempty"`
 }
 
 // Integration defines model for Integration.
@@ -4904,6 +5382,16 @@ type LaunchFlowAcceptedResponse struct {
 	Execution FlowExecution `json:"execution"`
 }
 
+// LaunchFlowCompletedResponse Synchronous launch response returned with 200 OK when a flow finishes within the
+// RFC 7240 `Prefer: wait=N` window.
+type LaunchFlowCompletedResponse struct {
+	Execution FlowExecution `json:"execution"`
+
+	// Outputs Redacted values emitted by completed `output` contract nodes (merged by node ID).
+	// Omitted when the flow has no `output` nodes or failed before reaching them.
+	Outputs *map[string]interface{} `json:"outputs,omitempty"`
+}
+
 // LaunchFlowRequest Optional launch settings for selecting the execution backend and version.
 type LaunchFlowRequest struct {
 	// EnvironmentKey Optional named organization environment to overlay before flow variables.
@@ -4913,6 +5401,14 @@ type LaunchFlowRequest struct {
 
 	// EphemeralJobVersion Required when runner_type is ephemeral. Prevents older clients from executing masked launch data.
 	EphemeralJobVersion *LaunchFlowRequestEphemeralJobVersion `json:"ephemeral_job_version,omitempty"`
+
+	// Inputs Optional call-time inputs for a function flow. Every key must be declared on an
+	// `input` contract node of the flow (undeclared keys return 400 `UNDECLARED_LAUNCH_INPUT`),
+	// and keys marked `secret: true` must be strings so they are encrypted before storage.
+	// Overrides flow variables, environment overlays, organization base variables, and input
+	// node defaults (ADR-0037). Rejected with 400 `FLOW_INPUTS_NOT_ALLOWED` when sent to a
+	// `test` flow.
+	Inputs *map[string]interface{} `json:"inputs,omitempty"`
 
 	// RunnerType Execution backend used to run a flow.
 	// `cloud` runs on Echopoint infrastructure, `self_hosted` is claimed by a long-lived
@@ -4927,10 +5423,6 @@ type LaunchFlowRequest struct {
 	// schedule launching the flow on its cadence. The shape of `trigger_metadata` is determined
 	// by this value.
 	TriggerType *TriggerType `json:"trigger_type,omitempty"`
-
-	// VersionId Optional flow version ID to execute. When omitted, the current flow definition
-	// is used. Specify a version ID to run an immutable snapshot.
-	VersionId *openapi_types.UUID `json:"version_id,omitempty"`
 }
 
 // LaunchFlowRequestEphemeralJobVersion Required when runner_type is ephemeral. Prevents older clients from executing masked launch data.
@@ -4961,6 +5453,9 @@ type LicenseRules struct {
 
 	// MaxHttpCallsPerExecution Outbound HTTP calls one execution may send across every node, nested body, retry and followed redirect. The next call is refused and the sending node fails.
 	MaxHttpCallsPerExecution int64 `json:"max_http_calls_per_execution"`
+
+	// MaxInboxSizeMib What the inbox of one run stores, in MiB, counted on the headers, text, HTML and attachment metadata of its messages. A full inbox refuses new mail until its run ends.
+	MaxInboxSizeMib int64 `json:"max_inbox_size_mib"`
 
 	// MinScheduledRunIntervalSeconds A schedule that would run more often is rejected on save.
 	MinScheduledRunIntervalSeconds int64 `json:"min_scheduled_run_interval_seconds"`
@@ -5194,7 +5689,7 @@ type ModuleFlowNodeType string
 
 // ModuleNodeData defines model for ModuleNodeData.
 type ModuleNodeData struct {
-	// FlowId Referenced child flow executed by this module node.
+	// FlowId Referenced child flow executed by this module node. The nil UUID (00000000-0000-0000-0000-000000000000) names no flow; create and launch refuse it with 400 INVALID_FLOW_DEFINITION, reason invalid_module_flow_id.
 	FlowId openapi_types.UUID `json:"flow_id"`
 
 	// InputBindings Inputs bound from parent flow variables and upstream outputs.
@@ -5223,7 +5718,7 @@ type Monitor struct {
 	HealthPolicy *MonitorHealthPolicy `json:"health_policy,omitempty"`
 	Id           openapi_types.UUID   `json:"id"`
 
-	// IgnoreModules Whether the tag selector skips flows whose role is `module`.
+	// IgnoreModules Whether the tag selector skips flows whose role is `function`.
 	IgnoreModules bool `json:"ignore_modules"`
 
 	// IntervalSeconds Interval cadence of a monitor with a health policy; 0 for a cron monitor.
@@ -5445,9 +5940,7 @@ type MonitorRunOrigin string
 
 // MonitorRunSearchRequest defines model for MonitorRunSearchRequest.
 type MonitorRunSearchRequest struct {
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *MonitorRunSortField `json:"sort_by,omitempty"`
@@ -5549,9 +6042,7 @@ type NodeExecutionHistoryResponse struct {
 
 // NodeExecutionHistorySearchRequest defines model for NodeExecutionHistorySearchRequest.
 type NodeExecutionHistorySearchRequest struct {
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *NodeExecutionHistorySortField `json:"sort_by,omitempty"`
@@ -5750,6 +6241,11 @@ type OpenAPISyncConfig struct {
 
 	// UseBaseUrlVariable Whether synced request URLs are rewritten as {{baseUrl}}/path
 	UseBaseUrlVariable bool `json:"use_base_url_variable"`
+
+	// Warnings Warnings of the config write that answers them, such as a base URL variable the caller could not create without environment:update; sync runs then write request URLs that name a variable the organization does not define until an admin sets it. Only createOrUpdateOpenAPISyncConfig sets it.
+	//
+	// Examples: ["Base URL variable \"baseUrl\" was not created: creating an organization variable needs the environment:update permission. Ask an organization admin to set it."]
+	Warnings *[]string `json:"warnings,omitempty"`
 }
 
 // OpenAPISyncConfigListResponse defines model for OpenAPISyncConfigListResponse.
@@ -5783,9 +6279,7 @@ type OpenAPISyncConfigSortField string
 
 // OpenAPISyncHistorySearchRequest defines model for OpenAPISyncHistorySearchRequest.
 type OpenAPISyncHistorySearchRequest struct {
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *OpenAPISyncChangeSortField `json:"sort_by,omitempty"`
@@ -5940,9 +6434,7 @@ type OrganizationInvitationListResponse struct {
 
 // OrganizationInvitationSearchRequest defines model for OrganizationInvitationSearchRequest.
 type OrganizationInvitationSearchRequest struct {
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *OrganizationInvitationSortField `json:"sort_by,omitempty"`
@@ -6077,6 +6569,17 @@ type OrganizationWriteRequest struct {
 type Output struct {
 	// Extractor Extractor configuration that defines how to extract data from the response
 	Extractor struct {
+		// All Return every match as a list (used by html extractor)
+		All *bool `json:"all,omitempty"`
+
+		// Attribute Attribute to read instead of the element text (used by html extractor)
+		//
+		// Examples: href
+		Attribute *string `json:"attribute,omitempty"`
+
+		// Group Capture group to return (used by regex extractor)
+		Group *int `json:"group,omitempty"`
+
 		// HeaderName Header name to extract (used by header extractor)
 		//
 		// Examples: x-custom-id
@@ -6087,11 +6590,26 @@ type Output struct {
 		// Examples: $.user.id
 		Path *string `json:"path,omitempty"`
 
+		// Pattern Regular expression (used by regex extractor)
+		//
+		// Examples: code is:?\s*(\d+)
+		Pattern *string `json:"pattern,omitempty"`
+
+		// Selector CSS selector (used by html extractor)
+		//
+		// Examples: a[href*='/invitations']
+		Selector *string `json:"selector,omitempty"`
+
 		// Type Type of extractor to use for data extraction.
 		// `body` gives the parsed body. When the body is a JSON object or array, the text operators
 		// (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
 		// `query_param` reads a query parameter of the request a `webhook_wait` node received;
 		// an HTTP response has none.
+		// `html` reads an HTML document with a CSS selector (`HTMLExtractorConfig`): a response body,
+		// the HTML part of an email, or the body of a received webhook request. It parses the way a
+		// browser does, so broken markup never fails the parse.
+		// `regex` returns the first match of a pattern in the raw body or the text of an email
+		// (`RegexExtractorConfig`).
 		Type ExtractorType `json:"type"`
 	} `json:"extractor"`
 
@@ -6102,6 +6620,78 @@ type Output struct {
 
 	// Secret Marks the extracted value as secret. From the moment the node extracts it, the value is replaced by `***` in every execution result, progress event and error, wherever it appears, including module outputs and downstream node inputs and requests that carry it. Downstream nodes still receive the real value. Use it for credentials and tokens; a short or common value masks every occurrence of that text.
 	Secret *bool `json:"secret,omitempty"`
+}
+
+// OutputFlowNode defines model for OutputFlowNode.
+type OutputFlowNode struct {
+	// Assertions Validation assertions for the node
+	Assertions *[]CompositeAssertion `json:"assertions,omitempty"`
+
+	// Data Declares the typed JSON Schema output contract of a function flow (ADR-0037).
+	// At run time, each property resolves its templated `value`, validates `type`/`format`/`enum`,
+	// redacts any `secret: true` value, and exposes the result to calling flows (auto-exported on
+	// binding-less function calls), HTTP callers, and MCP agents. Only allowed on function (`module`) flows.
+	Data OutputNodeData `json:"data"`
+
+	// DisplayName Human-readable name for the node
+	//
+	// Examples: My Node
+	DisplayName string `json:"display_name"`
+
+	// Id Unique identifier for the node
+	//
+	// Examples: node-1
+	Id string `json:"id"`
+
+	// Outputs Named outputs extracted from the response/data
+	Outputs *[]Output `json:"outputs,omitempty"`
+
+	// RunWhen Controls whether a node runs only in the normal success path or also after the main flow has already failed.
+	RunWhen *FlowNodeRunWhen   `json:"run_when,omitempty"`
+	Type    OutputFlowNodeType `json:"type"`
+}
+
+// OutputFlowNodeType defines model for OutputFlowNode.Type.
+type OutputFlowNodeType string
+
+// OutputNodeData Declares the typed JSON Schema output contract of a function flow (ADR-0037).
+// At run time, each property resolves its templated `value`, validates `type`/`format`/`enum`,
+// redacts any `secret: true` value, and exposes the result to calling flows (auto-exported on
+// binding-less function calls), HTTP callers, and MCP agents. Only allowed on function (`module`) flows.
+type OutputNodeData struct {
+	// Properties Map of output parameter names to their value bindings and JSON Schema definitions.
+	Properties map[string]OutputProperty `json:"properties"`
+}
+
+// OutputProperty Value binding and JSON Schema constraint for one output parameter on an `output` node.
+type OutputProperty struct {
+	// Description Human- and agent-readable description of this output parameter.
+	//
+	// Examples: Created account summary
+	Description *string `json:"description,omitempty"`
+
+	// Enum Allowed values for this output parameter.
+	//
+	// Examples: ["active","pending"]
+	Enum *[]interface{} `json:"enum,omitempty"`
+
+	// Format String format validation (`email`, `uuid`, `uri`, `url`, `date`, or `date-time`).
+	//
+	// Examples: uuid
+	Format *string `json:"format,omitempty"`
+
+	// Secret Marks the resolved output value as secret so it is masked as `***` across results, progress events, and errors.
+	Secret *bool `json:"secret,omitempty"`
+
+	// Type JSON Schema primitive or container type (`string`, `integer`, `number`, `boolean`, `array`, `object`, or `any`).
+	//
+	// Examples: string
+	Type *string `json:"type,omitempty"`
+
+	// Value Value or template expression (e.g. `{{create.id}}` or `{{{create.seats}}}`) resolved at run time.
+	//
+	// Examples: {{input.email}}:{{input.plan}}
+	Value interface{} `json:"value"`
 }
 
 // PagedListResponse defines model for PagedListResponse.
@@ -6130,6 +6720,16 @@ type PaginationRequest struct {
 
 // Permission defines model for Permission.
 type Permission struct {
+	// Assignability Whether the caller may assign the permission to a new API key.
+	// `ASSIGNABLE`: the caller's organization role holds it.
+	// `RUNNER_ONLY_KEY`: a runner permission the caller does not hold; it may go only on a key whose every permission is a runner permission.
+	// `NOT_HELD`: the caller's organization role does not hold it, so the caller cannot assign it. Creating a key with it answers 403 `PERMISSION_ASSIGNMENT_FORBIDDEN`.
+	// New values may be added.
+	//
+	//
+	// Examples: ASSIGNABLE
+	Assignability PermissionAssignability `json:"assignability"`
+
 	// Description Optional human-readable description.
 	Description *string `json:"description,omitempty"`
 
@@ -6141,6 +6741,15 @@ type Permission struct {
 	// ScopeModifier Optional scope modifier provided by Nanostack.
 	ScopeModifier *string `json:"scope_modifier,omitempty"`
 }
+
+// PermissionAssignability Whether the caller may assign the permission to a new API key.
+// `ASSIGNABLE`: the caller's organization role holds it.
+// `RUNNER_ONLY_KEY`: a runner permission the caller does not hold; it may go only on a key whose every permission is a runner permission.
+// `NOT_HELD`: the caller's organization role does not hold it, so the caller cannot assign it. Creating a key with it answers 403 `PERMISSION_ASSIGNMENT_FORBIDDEN`.
+// New values may be added.
+//
+// Examples: ASSIGNABLE
+type PermissionAssignability string
 
 // PermissionListResponse defines model for PermissionListResponse.
 type PermissionListResponse struct {
@@ -6205,6 +6814,19 @@ type PollNodeData struct {
 	//
 	// Examples: 60000
 	TimeoutMs *int `json:"timeout_ms,omitempty"`
+}
+
+// PreviewSpecCommandsRequest defines model for PreviewSpecCommandsRequest.
+type PreviewSpecCommandsRequest struct {
+	// BaseVersion The Live version the commands were written against. When Live is no
+	// longer that version, the request is refused with `SPEC_LIVE_MOVED`.
+	//
+	//
+	// Examples: 1.4.0
+	BaseVersion *string `json:"base_version,omitempty"`
+
+	// Commands The commands, applied in order. All apply or none does.
+	Commands []SpecCommand `json:"commands"`
 }
 
 // PublicStatusService defines model for PublicStatusService.
@@ -6287,9 +6909,7 @@ type ReceivedInvitationListResponse struct {
 
 // ReceivedInvitationSearchRequest defines model for ReceivedInvitationSearchRequest.
 type ReceivedInvitationSearchRequest struct {
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *OrganizationInvitationSortField `json:"sort_by,omitempty"`
@@ -6472,7 +7092,7 @@ type ResourceSearchIdentifiers struct {
 	// ResourceId Canonical identifier for the matched resource.
 	ResourceId openapi_types.UUID `json:"resource_id"`
 
-	// SpecSlug The unique slug of the spec when the resource is a spec. It addresses the spec in the specs routes and in the CLI, for example `echopoint spec view <slug>`.
+	// SpecSlug The slug of the spec, unique in its workspace, when the resource is a spec. It addresses the spec in the specs routes and in the CLI, for example `echopoint spec view <slug>`.
 	SpecSlug *string `json:"spec_slug,omitempty"`
 }
 
@@ -6625,6 +7245,10 @@ type RunOpenAPISyncNowRequest struct {
 // RunnerCapability A feature a runner build supports. `secret_outputs`: the runner masks the values of
 // node outputs declared `secret` in everything it reports (ADR-0018). `form_body`: the
 // runner sends a request node with `body_encoding: form` form-encoded (ADR-0024).
+// `email_wait`: the runner can execute an `email_wait` node (accepted so runners that
+// declare it can claim; launch does not hand out email_wait nodes until the control
+// plane supports them). `contract_nodes`: the runner can parse and execute `input`
+// and `output` contract nodes (ADR-0037).
 type RunnerCapability string
 
 // RunnerInputs Effective root inputs snapshot resolved for a runner execution.
@@ -6858,7 +7482,7 @@ type ScheduleRunExecution struct {
 
 // ScheduleTagPreviewRequest Resolve which organization flows currently match a tag selector.
 type ScheduleTagPreviewRequest struct {
-	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+	// IgnoreModules Skip flows whose role is `function` when resolving the tag selector. Omitted defaults to true.
 	IgnoreModules *bool `json:"ignore_modules,omitempty"`
 
 	// TagMatchMode Whether any or all of the provided tags must match.
@@ -6890,6 +7514,14 @@ type ScheduledTriggerMetadata struct {
 
 	// ScheduleRunId Schedule run (one per fire) this launch belongs to.
 	ScheduleRunId openapi_types.UUID `json:"schedule_run_id"`
+}
+
+// SearchPageRequest Generic search request template for a search with no text columns. The search pages and sorts, but there is nothing for a full-text term to match, so the contract offers no full_text_search. A request that still sends the field over HTTP is accepted and ignored; an MCP tool composed from this schema refuses it as an unknown argument.
+type SearchPageRequest struct {
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
+
+	// SortDirection Sort direction. When omitted, a search keeps the direction of its documented default order, and sorts DESC when only sort_by is sent. The default is deliberately not declared in the schema: a schema default is filled in before the server reads the request, which would make an omitted direction look like DESC.
+	SortDirection *SortDirection `json:"sort_direction,omitempty"`
 }
 
 // SearchRequest Generic search request template
@@ -6971,7 +7603,7 @@ type Spec struct {
 	// Live A Live version of a spec, without its document and its changes.
 	Live SpecVersionSummary `json:"live"`
 
-	// Slug The spec's unique slug within the organization. It addresses the spec in URLs and in the CLI, for example `echopoint spec view <slug>`.
+	// Slug The spec's slug, unique within its workspace (another workspace of the organization may use it too). It addresses the spec in URLs and in the CLI, for example `echopoint spec view <slug>`.
 	//
 	// Examples: echopoint-api
 	Slug string `json:"slug"`
@@ -7118,6 +7750,20 @@ type SpecCommandType string
 // - `add_response` (on an operation: `status`, `description`, `schema` or `type`), `set_response`, `remove_response`.
 type SpecCommandKind string
 
+// SpecCommandsPreview What a request of edit commands would change in the Live version, if it were applied.
+type SpecCommandsPreview struct {
+	// BaseVersion The Live version the commands were applied to.
+	//
+	// Examples: 1.4.0
+	BaseVersion string `json:"base_version"`
+
+	// Changes The differences between the Live version and the result. Empty when the commands change nothing.
+	Changes []SpecChange `json:"changes"`
+
+	// Findings The convention findings the commands introduce, each with `introduced` true. Findings the Live version already has are left out.
+	Findings []SpecFinding `json:"findings"`
+}
+
 // SpecDocument A Live version's document in the canonical YAML layout, as `spec pull` writes it.
 type SpecDocument struct {
 	// Document The canonical YAML, byte for byte.
@@ -7248,9 +7894,7 @@ type SpecVersionListResponse struct {
 
 // SpecVersionSearchRequest defines model for SpecVersionSearchRequest.
 type SpecVersionSearchRequest struct {
-	// FullTextSearch Full-text search term to match against searchable fields.
-	FullTextSearch *string            `json:"full_text_search,omitempty"`
-	Pagination     *PaginationRequest `json:"pagination,omitempty"`
+	Pagination *PaginationRequest `json:"pagination,omitempty"`
 
 	// SortBy Field to sort by.
 	SortBy *SpecVersionSortField `json:"sort_by,omitempty"`
@@ -7556,7 +8200,10 @@ type UpdateFlowRequest struct {
 	// Description Optional description of the flow.
 	//
 	// Examples: Test user endpoints with branching logic
-	Description    *string         `json:"description,omitempty"`
+	Description *string `json:"description,omitempty"`
+
+	// ExposeOnMcp Expose this Function flow as a callable tool on `/mcp`. Omit to preserve the current setting; demoting a flow to `test` without setting this field automatically resets it to `false`. Setting `true` on a `test` flow returns 400 `EXPOSE_ON_MCP_REQUIRES_FUNCTION`.
+	ExposeOnMcp    *bool           `json:"expose_on_mcp,omitempty"`
 	FlowDefinition *FlowDefinition `json:"flow_definition,omitempty"`
 
 	// Metadata Frontend-specific metadata including UI layout information and execution defaults.
@@ -7570,7 +8217,7 @@ type UpdateFlowRequest struct {
 	// Role How the flow may be run. Omit to preserve the current role.
 	Role *FlowRole `json:"role,omitempty"`
 
-	// Source A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, and auto_layout. A folder in the file does not move the flow. Compile errors return 400 and change nothing.
+	// Source A flow file. When set, the server compiles it and stores that document. The file replaces the whole flow: name, version, flow_definition and auto_layout come from the file. For description, tags, role and metadata a value the file sets wins, a value sent beside the file applies when the file leaves it out, and with neither the stored value is kept. An empty tags list or an empty description, in the file or sent beside it, clears them. A folder in the file does not move the flow. Compile errors, including an invalid tag, more than 32 tags or a cycle, return 400 INVALID_FLOW_DEFINITION and change nothing.
 	Source *string `json:"source,omitempty"`
 
 	// Tags Optional flat tags for the flow. Omit to preserve the current tags;
@@ -7597,8 +8244,8 @@ type UpdateFolderRequest struct {
 	// Examples: Updated Folder Name
 	Name *string `json:"name,omitempty"`
 
-	// ParentId Parent folder ID (null to move to root)
-	ParentId *openapi_types.UUID `json:"parent_id,omitempty"`
+	// ParentId Parent folder ID. Null moves the folder to the collection root; an absent field leaves it where it is.
+	ParentId openapi_types.UUID `json:"parent_id,omitempty"`
 }
 
 // UpdateMonitorRequest Replace the mutable configuration of a monitor. Same rules as creation; omit health_policy to remove it.
@@ -7613,7 +8260,7 @@ type UpdateMonitorRequest struct {
 	// HealthPolicy Turns a monitor into a health measurement. Requires interval_seconds; freshness_seconds must cover interval_seconds + timeout_seconds.
 	HealthPolicy *MonitorHealthPolicy `json:"health_policy,omitempty"`
 
-	// IgnoreModules Skip flows whose role is `module` when resolving the tag selector. Omit to keep the current value.
+	// IgnoreModules Skip flows whose role is `function` when resolving the tag selector. Omit to keep the current value.
 	IgnoreModules *bool `json:"ignore_modules,omitempty"`
 
 	// IntervalSeconds Interval cadence in seconds; only with a health policy.
@@ -7645,8 +8292,8 @@ type UpdateRequestRequest struct {
 	// Description Optional request description
 	Description *string `json:"description,omitempty"`
 
-	// FolderId Parent folder ID
-	FolderId *openapi_types.UUID `json:"folder_id,omitempty"`
+	// FolderId Parent folder ID. On update, null moves the request to the collection root and an absent field leaves it where it is. An execution saves nothing, so it ignores the field.
+	FolderId openapi_types.UUID `json:"folder_id,omitempty"`
 
 	// Headers Non-auth HTTP headers
 	Headers *map[string]string `json:"headers,omitempty"`
@@ -7685,7 +8332,7 @@ type UpsertOpenAPISyncConfigRequest struct {
 	// SourceUrl Source URL used to fetch the upstream OpenAPI document
 	SourceUrl string `json:"source_url"`
 
-	// UseBaseUrlVariable Whether synced request URLs should be rewritten as {{baseUrl}}/path
+	// UseBaseUrlVariable Whether synced request URLs should be rewritten as {{baseUrl}}/path. Omitted keeps the stored choice; on a first configuration it is true when a request URL of the collection already starts with a {{variable}}, which then names the variable. Sync runs always use the stored choice.
 	UseBaseUrlVariable *bool `json:"use_base_url_variable,omitempty"`
 }
 
@@ -7721,13 +8368,16 @@ type VariableSet struct {
 	// Examples: {"API_KEY":{"created_at":"2025-11-09 10:00:00+00:00","organization_id":"org_123","updated_at":"2025-11-09 10:00:00+00:00","value":"secret123"},"BASE_URL":{"created_at":"2025-11-09 10:05:00+00:00","organization_id":"org_123","updated_at":"2025-11-09 10:05:00+00:00","value":"https://api.example.com"}}
 	Base VariableLayer `json:"base"`
 
-	// CreatedAt When the variable set was created
+	// CreatedAt When the variable set was created. Zero time while the owner has no stored variables.
 	CreatedAt time.Time `json:"created_at"`
 
 	// Environments Named environment overlays owned by this variable set.
 	Environments EnvironmentLayers `json:"environments"`
 
-	// Id Server-generated unique identifier
+	// Id Server-generated unique identifier. It is the nil UUID
+	// (00000000-0000-0000-0000-000000000000) while the owner has no stored
+	// variables; owner_id, owner_type and organization_id are always filled.
+	//
 	//
 	// Examples: 550e8400-e29b-41d4-a716-446655440000
 	Id openapi_types.UUID `json:"id"`
@@ -7747,7 +8397,7 @@ type VariableSet struct {
 	// Examples: flow
 	OwnerType VariableSetOwnerType `json:"owner_type"`
 
-	// UpdatedAt When the variable set was last updated
+	// UpdatedAt When the variable set was last updated. Zero time while the owner has no stored variables.
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
@@ -8237,6 +8887,13 @@ type XMLPathExtractorConfig struct {
 	Path string `json:"path"`
 }
 
+// AnalyticsFlowRoleQuery How a flow may be run (ADR-0037). A `test` flow verifies a scenario and produces a
+// pass/fail verdict. A `function` flow is a reusable parameterized building block
+// with `input`/`output` contract nodes that other flows call through a module
+// (`Function call`) step: you can still launch it directly to test it, but schedules
+// skip it when their tags match it unless the schedule sets `ignore_modules` to false.
+type AnalyticsFlowRoleQuery = FlowRole
+
 // AnalyticsWindowQuery How far back analytics look. `24h` covers the current hour and the 23
 // before it, in hourly buckets; `7d` and `30d` cover the current UTC day
 // and the 6 or 29 before it, in daily buckets.
@@ -8299,6 +8956,9 @@ type BadRequest = ApiErrorResponse
 // Conflict defines model for Conflict.
 type Conflict = ApiErrorResponse
 
+// ContentTooLarge defines model for ContentTooLarge.
+type ContentTooLarge = ApiErrorResponse
+
 // Forbidden defines model for Forbidden.
 type Forbidden = ApiErrorResponse
 
@@ -8313,6 +8973,9 @@ type TooManyRequests = ApiErrorResponse
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ApiErrorResponse
+
+// WebhookRateLimited defines model for WebhookRateLimited.
+type WebhookRateLimited = ApiErrorResponse
 
 // RebuildExecutionAnalyticsParams defines parameters for RebuildExecutionAnalytics.
 type RebuildExecutionAnalyticsParams struct {
@@ -8337,6 +9000,9 @@ type ListEndpointAnalyticsParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
 
+	// FlowRole Filter analytics to executions of flows with this role (`test` or `function`). Omit to include both.
+	FlowRole *AnalyticsFlowRoleQuery `form:"flow_role,omitempty" json:"flow_role,omitempty"`
+
 	// FlowId Keep only the calls this flow's runs sent.
 	FlowId *openapi_types.UUID `form:"flow_id,omitempty" json:"flow_id,omitempty"`
 
@@ -8352,6 +9018,9 @@ type ListFlowAnalyticsParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
 
+	// FlowRole Filter analytics to executions of flows with this role (`test` or `function`). Omit to include both.
+	FlowRole *AnalyticsFlowRoleQuery `form:"flow_role,omitempty" json:"flow_role,omitempty"`
+
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
 	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
@@ -8363,6 +9032,9 @@ type ListFlowAnalyticsParams struct {
 type GetExecutionAnalyticsSummaryParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
+
+	// FlowRole Filter analytics to executions of flows with this role (`test` or `function`). Omit to include both.
+	FlowRole *AnalyticsFlowRoleQuery `form:"flow_role,omitempty" json:"flow_role,omitempty"`
 
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
 	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
@@ -8403,6 +9075,12 @@ type DeleteAPIKeyParams struct {
 
 // GetAPIKeyParams defines parameters for GetAPIKey.
 type GetAPIKeyParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// UpdateAPIKeyParams defines parameters for UpdateAPIKey.
+type UpdateAPIKeyParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -8970,9 +9648,6 @@ type ListFlowExecutionsParams struct {
 
 // ExportFlowParams defines parameters for ExportFlow.
 type ExportFlowParams struct {
-	// VersionId Optional flow version ID to export. When omitted, the current flow definition is used.
-	VersionId *openapi_types.UUID `form:"version_id,omitempty" json:"version_id,omitempty"`
-
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
 	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
@@ -8986,19 +9661,17 @@ type LaunchFlowParams struct {
 	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
 	// IdempotencyKey Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
-	// by organization, flow, environment key, version ID, runner type, trigger type, and the
+	// by organization, flow, environment key, runner type, trigger type, call inputs, and the
 	// key digest. A matching launch returns the original execution; reusing the key
 	// with different scoped parameters returns 409 Conflict.
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
-// PublishFlowParams defines parameters for PublishFlow.
-type PublishFlowParams struct {
-	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
-	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+	// Prefer Optional RFC 7240 preference header. Send `wait=<seconds>` (1 to 45; higher values
+	// are capped at 45) to wait synchronously for a cloud or self-hosted execution to
+	// complete. Returns 200 OK with `Preference-Applied: wait=<N>`, the terminal execution,
+	// and redacted `output` node values when the run finishes within the wait window;
+	// returns 202 Accepted when the run is still executing (or for ephemeral runs).
+	Prefer *string `json:"Prefer,omitempty"`
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
@@ -9040,21 +9713,6 @@ type SetFlowVariableParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
-// ListFlowVersionsParams defines parameters for ListFlowVersions.
-type ListFlowVersionsParams struct {
-	// Limit Maximum number of items per page.
-	Limit LimitParameter `form:"limit" json:"limit"`
-
-	// Offset Number of items to skip. Absent means 0.
-	Offset OffsetParameter `form:"offset,omitempty" json:"offset,omitempty"`
-
-	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
-	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
-
-	// XOrganizationID Organization context for the request. The authenticated user must be a member.
-	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
-}
-
 // SearchFlowVersionsParams defines parameters for SearchFlowVersions.
 type SearchFlowVersionsParams struct {
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
@@ -9080,6 +9738,18 @@ type RestoreFlowVersionParams struct {
 
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// ReceiveInboundEmailParams defines parameters for ReceiveInboundEmail.
+type ReceiveInboundEmailParams struct {
+	// WebhookId Unique id of this delivery, part of the signed content.
+	WebhookId *string `json:"webhook-id,omitempty"`
+
+	// WebhookTimestamp Unix seconds when the delivery was signed. A timestamp more than five minutes away is refused.
+	WebhookTimestamp *string `json:"webhook-timestamp,omitempty"`
+
+	// WebhookSignature Space-separated signatures, each `v1,` followed by the base64 HMAC-SHA256 of `{webhook-id}.{webhook-timestamp}.{body}`.
+	WebhookSignature *string `json:"webhook-signature,omitempty"`
 }
 
 // SearchIntegrationsParams defines parameters for SearchIntegrations.
@@ -9414,6 +10084,9 @@ type GetOrganizationAnalyticsParams struct {
 	// Window How far back to look. Defaults to 7d.
 	Window *AnalyticsWindowQuery `form:"window,omitempty" json:"window,omitempty"`
 
+	// FlowRole Filter analytics to executions of flows with this role (`test` or `function`). Omit to include both.
+	FlowRole *AnalyticsFlowRoleQuery `form:"flow_role,omitempty" json:"flow_role,omitempty"`
+
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
@@ -9514,6 +10187,14 @@ type CompleteEphemeralExecutionParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// ListRunnerJobInboxMessagesParams defines parameters for ListRunnerJobInboxMessages.
+type ListRunnerJobInboxMessagesParams struct {
+	// After The id of a message of this inbox. The response holds only the messages stored after it, oldest first,
+	// 500 at most. Without it, or with an id the inbox does not hold, the response is not limited to newer
+	// messages: without it the newest 500, with an unknown id the oldest 500.
+	After *string `form:"after,omitempty" json:"after,omitempty"`
+}
+
 // ListLiveRunnersParams defines parameters for ListLiveRunners.
 type ListLiveRunnersParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -9564,6 +10245,15 @@ type GetSpecParams struct {
 
 // ApplySpecCommandsParams defines parameters for ApplySpecCommands.
 type ApplySpecCommandsParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// PreviewSpecCommandsParams defines parameters for PreviewSpecCommands.
+type PreviewSpecCommandsParams struct {
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
 	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
 
@@ -9696,10 +10386,10 @@ type GetWebhookParams struct {
 
 // GetWebhookMethodDistributionParams defines parameters for GetWebhookMethodDistribution.
 type GetWebhookMethodDistributionParams struct {
-	// From Start datetime for analytics data (ISO 8601 format).
+	// From Start of the analytics window, inclusive (ISO 8601 format).
 	From time.Time `form:"from" json:"from"`
 
-	// To End datetime for analytics data (ISO 8601 format).
+	// To End of the analytics window, exclusive (ISO 8601 format). Must be after `from`, or the request is refused with 400 VALIDATION_ERROR.
 	To time.Time `form:"to" json:"to"`
 
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
@@ -9711,10 +10401,10 @@ type GetWebhookMethodDistributionParams struct {
 
 // GetWebhookRequestVolumesParams defines parameters for GetWebhookRequestVolumes.
 type GetWebhookRequestVolumesParams struct {
-	// From Start datetime for analytics data (ISO 8601 format).
+	// From Start of the analytics window, inclusive (ISO 8601 format).
 	From time.Time `form:"from" json:"from"`
 
-	// To End datetime for analytics data (ISO 8601 format).
+	// To End of the analytics window, exclusive (ISO 8601 format). Must be after `from`, or the request is refused with 400 VALIDATION_ERROR.
 	To time.Time `form:"to" json:"to"`
 
 	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
@@ -9849,11 +10539,17 @@ type ListWorkspaceRolesParams struct {
 // UpdateCloudFleetJSONRequestBody defines body for UpdateCloudFleet for application/json ContentType.
 type UpdateCloudFleetJSONRequestBody = UpdateCloudFleetRequest
 
+// SearchAdministrationOrganizationsJSONRequestBody defines body for SearchAdministrationOrganizations for application/json ContentType.
+type SearchAdministrationOrganizationsJSONRequestBody = AdministrationOrganizationSearchRequest
+
 // CreateAPIKeyJSONRequestBody defines body for CreateAPIKey for application/json ContentType.
 type CreateAPIKeyJSONRequestBody = ApiKeyCreateRequest
 
 // SearchAPIKeysJSONRequestBody defines body for SearchAPIKeys for application/json ContentType.
 type SearchAPIKeysJSONRequestBody = ApiKeySearchRequest
+
+// UpdateAPIKeyJSONRequestBody defines body for UpdateAPIKey for application/json ContentType.
+type UpdateAPIKeyJSONRequestBody = ApiKeyUpdateRequest
 
 // CreateCollectionJSONRequestBody defines body for CreateCollection for application/json ContentType.
 type CreateCollectionJSONRequestBody = CreateCollectionRequest
@@ -10045,6 +10741,9 @@ type SearchSpecsJSONRequestBody = SpecSearchRequest
 
 // ApplySpecCommandsJSONRequestBody defines body for ApplySpecCommands for application/json ContentType.
 type ApplySpecCommandsJSONRequestBody = ApplySpecCommandsRequest
+
+// PreviewSpecCommandsJSONRequestBody defines body for PreviewSpecCommands for application/json ContentType.
+type PreviewSpecCommandsJSONRequestBody = PreviewSpecCommandsRequest
 
 // PushSpecVersionJSONRequestBody defines body for PushSpecVersion for application/json ContentType.
 type PushSpecVersionJSONRequestBody = PushSpecVersionRequest
@@ -10786,6 +11485,108 @@ func (t *FlowNode) MergeWebhookWaitFlowNode(v WebhookWaitFlowNode) error {
 	return err
 }
 
+// AsEmailWaitFlowNode returns the union data inside the FlowNode as a EmailWaitFlowNode
+func (t FlowNode) AsEmailWaitFlowNode() (EmailWaitFlowNode, error) {
+	var body EmailWaitFlowNode
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEmailWaitFlowNode overwrites any union data inside the FlowNode as the provided EmailWaitFlowNode
+func (t *FlowNode) FromEmailWaitFlowNode(v EmailWaitFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"email_wait"}`))
+	t.union = b
+	return err
+}
+
+// MergeEmailWaitFlowNode performs a merge with any union data inside the FlowNode, using the provided EmailWaitFlowNode
+func (t *FlowNode) MergeEmailWaitFlowNode(v EmailWaitFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"email_wait"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsInputFlowNode returns the union data inside the FlowNode as a InputFlowNode
+func (t FlowNode) AsInputFlowNode() (InputFlowNode, error) {
+	var body InputFlowNode
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromInputFlowNode overwrites any union data inside the FlowNode as the provided InputFlowNode
+func (t *FlowNode) FromInputFlowNode(v InputFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"input"}`))
+	t.union = b
+	return err
+}
+
+// MergeInputFlowNode performs a merge with any union data inside the FlowNode, using the provided InputFlowNode
+func (t *FlowNode) MergeInputFlowNode(v InputFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"input"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsOutputFlowNode returns the union data inside the FlowNode as a OutputFlowNode
+func (t FlowNode) AsOutputFlowNode() (OutputFlowNode, error) {
+	var body OutputFlowNode
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromOutputFlowNode overwrites any union data inside the FlowNode as the provided OutputFlowNode
+func (t *FlowNode) FromOutputFlowNode(v OutputFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"output"}`))
+	t.union = b
+	return err
+}
+
+// MergeOutputFlowNode performs a merge with any union data inside the FlowNode, using the provided OutputFlowNode
+func (t *FlowNode) MergeOutputFlowNode(v OutputFlowNode) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"output"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t FlowNode) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"type"`
@@ -10806,10 +11607,16 @@ func (t FlowNode) ValueByDiscriminator() (interface{}, error) {
 		return t.AsBranchFlowNode()
 	case "delay":
 		return t.AsDelayFlowNode()
+	case "email_wait":
+		return t.AsEmailWaitFlowNode()
+	case "input":
+		return t.AsInputFlowNode()
 	case "loop":
 		return t.AsLoopFlowNode()
 	case "module":
 		return t.AsModuleFlowNode()
+	case "output":
+		return t.AsOutputFlowNode()
 	case "poll":
 		return t.AsPollFlowNode()
 	case "request":
@@ -11206,7 +12013,7 @@ type ClientInterface interface {
 	// RebuildExecutionAnalytics Rebuild Execution Analytics
 	//
 	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
-	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+	// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on staff routes.
 	//
 	// Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
 	RebuildExecutionAnalytics(ctx context.Context, params *RebuildExecutionAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -11214,7 +12021,7 @@ type ClientInterface interface {
 	// GetCloudFleet Get Cloud Fleet Capacity
 	//
 	// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
-	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 	//
 	// Corresponds with GET /administrations/cloud-fleet (the `GetCloudFleet` operationId).
 	GetCloudFleet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -11223,7 +12030,7 @@ type ClientInterface interface {
 	//
 	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11234,7 +12041,7 @@ type ClientInterface interface {
 	//
 	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -11245,17 +12052,37 @@ type ClientInterface interface {
 	//
 	// Runs a single monitor immediately instead of waiting for its next occurrence.
 	// Processes the schedule inline — creates the occurrence, advances next_run_at, and
-	// launches pending run items. Reserved for operator use; the caller must authenticate
+	// launches pending run items. Reserved for Echopoint staff; the caller must authenticate
 	// with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
-	// not accepted on admin routes.
+	// not accepted on staff routes.
 	//
 	// Corresponds with POST /administrations/monitors/{monitorId}/run (the `RunFlowScheduleNow` operationId).
 	RunFlowScheduleNow(ctx context.Context, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchAdministrationOrganizationsWithBody Search Organizations And Their Members
+	//
+	// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+	SearchAdministrationOrganizationsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchAdministrationOrganizations Search Organizations And Their Members
+	//
+	// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+	SearchAdministrationOrganizations(ctx context.Context, body SearchAdministrationOrganizationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ResyncResourceSearch Resync Resource Search Documents
 	//
 	// Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant, and returns a report — grouped by organization — of the rows that had drifted and were corrected (missing rows added back, stale rows removed).
-	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
+	// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on staff routes. The operation runs synchronously inside a single transaction and may take time on large databases.
 	//
 	// Corresponds with POST /administrations/resource-search/resync (the `ResyncResourceSearch` operationId).
 	ResyncResourceSearch(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -11280,7 +12107,8 @@ type ClientInterface interface {
 	//
 	// One row per flow that finished a run in the window, most runs first:
 	// how often it ran and failed, how long its runs took, and how many HTTP
-	// calls they sent. A deleted flow keeps its row with an empty name.
+	// calls they sent. A deleted flow has no row, and its runs count in no
+	// analytics read.
 	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 	//
 	// Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
@@ -11366,6 +12194,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api-keys/{id} (the `GetAPIKey` operationId).
 	GetAPIKey(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateAPIKeyWithBody Rename API Key
+	//
+	// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+	UpdateAPIKeyWithBody(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateAPIKey Rename API Key
+	//
+	// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+	UpdateAPIKey(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, body UpdateAPIKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListCollections List Collections
 	//
@@ -11797,7 +12643,7 @@ type ClientInterface interface {
 
 	// CreateFlowWithBody Create Flow
 	//
-	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes any type of body and a specified content type.
@@ -11807,7 +12653,7 @@ type ClientInterface interface {
 
 	// CreateFlow Create Flow
 	//
-	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes a body of the `application/json` content type.
@@ -11817,7 +12663,7 @@ type ClientInterface interface {
 
 	// CompileFlowSourceWithBody Compile Flow File
 	//
-	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11826,7 +12672,7 @@ type ClientInterface interface {
 
 	// CompileFlowSource Compile Flow File
 	//
-	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -12053,7 +12899,7 @@ type ClientInterface interface {
 
 	// UpdateFlowWithBody Update Flow
 	//
-	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes any type of body and a specified content type.
@@ -12063,7 +12909,7 @@ type ClientInterface interface {
 
 	// UpdateFlow Update Flow
 	//
-	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes a body of the `application/json` content type.
@@ -12082,7 +12928,7 @@ type ClientInterface interface {
 
 	// ExportFlow Export Flow
 	//
-	// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
+	// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 	//
 	// Corresponds with GET /flows/{id}/export (the `ExportFlow` operationId).
 	ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -12091,8 +12937,12 @@ type ClientInterface interface {
 	//
 	// Launches a flow execution asynchronously and returns the created execution.
 	// Real-time updates can be consumed separately from the execution stream endpoint.
-	// Specify a version_id in the request body to run a specific published version;
-	// omit it to run the current (mutable) flow definition.
+	// Every launch, monitor occurrences included, runs the flow as saved, with the
+	// modules it calls as saved. To run an earlier version, restore it first.
+	//
+	// A flow that references a variable the chosen environment does not define
+	// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+	// and the `variable_name`, and creates no execution.
 	//
 	// Each organization may launch at most its license's `max_cloud_executions_per_day`
 	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -12106,7 +12956,7 @@ type ClientInterface interface {
 	// launching itself. Past it the launch answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
-	// Cloud launches additionally share an operator-configured fleet budget in
+	// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 	// any 24 hours. Exhausting it also answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 	// survives deletion of flows and executions, excludes self-hosted and
@@ -12121,8 +12971,12 @@ type ClientInterface interface {
 	//
 	// Launches a flow execution asynchronously and returns the created execution.
 	// Real-time updates can be consumed separately from the execution stream endpoint.
-	// Specify a version_id in the request body to run a specific published version;
-	// omit it to run the current (mutable) flow definition.
+	// Every launch, monitor occurrences included, runs the flow as saved, with the
+	// modules it calls as saved. To run an earlier version, restore it first.
+	//
+	// A flow that references a variable the chosen environment does not define
+	// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+	// and the `variable_name`, and creates no execution.
 	//
 	// Each organization may launch at most its license's `max_cloud_executions_per_day`
 	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -12136,7 +12990,7 @@ type ClientInterface interface {
 	// launching itself. Past it the launch answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
-	// Cloud launches additionally share an operator-configured fleet budget in
+	// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 	// any 24 hours. Exhausting it also answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 	// survives deletion of flows and executions, excludes self-hosted and
@@ -12146,13 +13000,6 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
 	LaunchFlow(ctx context.Context, id openapi_types.UUID, params *LaunchFlowParams, body LaunchFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PublishFlow Publish Flow
-	//
-	// Snapshot the current flow definition as an immutable flow version.
-	//
-	// Corresponds with POST /flows/{id}/publish (the `PublishFlow` operationId).
-	PublishFlow(ctx context.Context, id openapi_types.UUID, params *PublishFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteFlowVariables Delete Flow Variables
 	//
@@ -12193,18 +13040,9 @@ type ClientInterface interface {
 	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
 	SetFlowVariable(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListFlowVersions Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
-	//
-	// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
-	//
-	// Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
-	//
-	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ListFlowVersions(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// SearchFlowVersionsWithBody Search Flow Versions
 	//
-	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -12213,7 +13051,7 @@ type ClientInterface interface {
 
 	// SearchFlowVersions Search Flow Versions
 	//
-	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -12230,10 +13068,32 @@ type ClientInterface interface {
 	// RestoreFlowVersion Restore Flow Version
 	//
 	// Copies a saved version's definition and metadata back into the flow.
-	// The original version is preserved.
+	// The original version is preserved. Execution history of steps the restored definition no longer holds is deleted, as on an update.
+	// A concurrent write to the flow returns 409 `FLOW_VERSION_CONFLICT`; read the flow again and retry.
 	//
 	// Corresponds with POST /flows/{id}/versions/{versionId}/restore (the `RestoreFlowVersion` operationId).
 	RestoreFlowVersion(ctx context.Context, id openapi_types.UUID, versionId openapi_types.UUID, params *RestoreFlowVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReceiveInboundEmailWithBody Receive an email for a run inbox
+	//
+	// Stores one email received on Echopoint's mail domain in the run inbox its envelope recipient names
+	// (ADR-0030). Only the Email Worker calls it. The body is the raw RFC 5322 message, with the Worker's
+	// `Echopoint-Envelope-From` and `Echopoint-Envelope-To` header lines first. The request is signed with
+	// the Standard Webhooks scheme (`webhook-id`, `webhook-timestamp`, `webhook-signature`) over the exact
+	// body bytes; a request without these headers, or stale or wrongly signed, answers 401, and so does every request while
+	// no signing secret is configured.
+	//
+	// Each refusal is final for that message, and the Worker turns it into an SMTP rejection: 404 when the
+	// recipient names no inbox or the inbox's run has ended, 413 when the raw message exceeds 10 MiB or its
+	// text and HTML parts exceed 1 MiB together, 429 when the inbox received 60 messages in the last minute
+	// (`INBOX_RATE_LIMITED`) or already stores the license's `max_inbox_size_mib` (`INBOX_FULL`),
+	// 400 when the message has no envelope recipient or cannot be parsed. A message whose Message-ID the
+	// inbox already stored is accepted and not stored again.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /inbound/email (the `ReceiveInboundEmail` operationId).
+	ReceiveInboundEmailWithBody(ctx context.Context, params *ReceiveInboundEmailParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// InitUser Initialize current user organization
 	//
@@ -12794,7 +13654,7 @@ type ClientInterface interface {
 
 	// RunMonitor Run Monitor
 	//
-	// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+	// Starts one diagnostic occurrence of a monitor, with or without a health policy, through the same runners. The occurrence selects flows as a scheduled occurrence does (same version choice and flows-per-run limit) and appears in the run history with origin `diagnostic`. It never confirms or refreshes health and never changes next_run_at. Refused with 409 MONITOR_RUN_ACTIVE while another occurrence is active, and with 400 SCHEDULE_FLOW_INVALID when a selected flow of a monitor without a health policy is unavailable.
 	//
 	// Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
 	RunMonitor(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -13026,7 +13886,7 @@ type ClientInterface interface {
 
 	// ListPermissions List Available Permissions
 	//
-	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
+	// Lists the organization-scoped product permissions an Echopoint API key of the requested type may hold, and whether the caller may assign each one. Workspace-scoped permissions and API key management permissions are never listed: no API key can hold them. Each item's `assignability` says whether the caller may put it on a key: a caller assigns only the permissions its organization role holds, and may put a runner permission it does not hold on a key that holds only runner permissions. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole list: the server follows Anchor's cursor to the last page.
 	//
 	// Corresponds with GET /permissions (the `ListPermissions` operationId).
 	ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -13213,6 +14073,17 @@ type ClientInterface interface {
 	// Corresponds with POST /runner/jobs/{jobId}/events (the `SendRunnerJobEvents` operationId).
 	SendRunnerJobEvents(ctx context.Context, jobId RunnerJobIDParameter, body SendRunnerJobEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListRunnerJobInboxMessages List the email messages of a job's run inbox
+	//
+	// Returns the messages received by the run inbox of this job's execution, oldest first. Launch injects
+	// this URL as `inbox.messages_url`. Authenticate with the job token. The request is refused once the
+	// execution is terminal.
+	// Not paginated: runner protocol authenticated by a job token that returns the newest messages of the run inbox, so it has no search.
+	// A poll sends `after`, the id of the last message it read, and gets only the messages stored after it.
+	//
+	// Corresponds with GET /runner/jobs/{jobId}/inbox-messages (the `ListRunnerJobInboxMessages` operationId).
+	ListRunnerJobInboxMessages(ctx context.Context, jobId RunnerJobIDParameter, params *ListRunnerJobInboxMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetCloudJobPayload Fetch the Cloud job payload
 	//
 	// Returns the flow snapshot, runner inputs, referenced flows, and Cloud
@@ -13220,9 +14091,14 @@ type ClientInterface interface {
 	// never persisted. Self-hosted and ephemeral jobs are not served here.
 	//
 	// The payload is single-use. The first call claims it; a later call is
-	// refused with 409. Message delivery to a Cloud worker is at-least-once,
-	// so a redelivered job can reach a second worker that holds the same
-	// valid token, and a Cloud job must never run twice.
+	// refused with 409 `CLOUD_JOB_PAYLOAD_ALREADY_FETCHED`. Message delivery
+	// to a Cloud worker is at-least-once, so a redelivered job can reach a
+	// second worker that holds the same valid token, and a Cloud job must
+	// never run twice.
+	//
+	// Only a job that is still claimed is served. Once the reconciler failed
+	// the job or a member cancelled it, the fetch is refused with 409
+	// `CLOUD_JOB_NOT_ASSIGNED` and the payload stays unclaimed.
 	//
 	// Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
 	GetCloudJobPayload(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -13264,7 +14140,8 @@ type ClientInterface interface {
 	// semantic version, else `1.0.0`. The document is stored in the canonical
 	// YAML layout.
 	//
-	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+	// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -13282,7 +14159,8 @@ type ClientInterface interface {
 	// semantic version, else `1.0.0`. The document is stored in the canonical
 	// YAML layout.
 	//
-	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+	// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -13327,12 +14205,17 @@ type ClientInterface interface {
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
-	// produced a version returns that version with status 200 and applies
-	// nothing, whatever its commands.
+	// produced a version with the same commands returns that version with
+	// status 200 and `replayed: true`, and applies nothing. A `command_id`
+	// that already produced a version from other commands is refused with
+	// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+	// digests were stored replays whatever the retry carries.
 	//
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+	// `metadata.command_id` names it),
 	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -13352,12 +14235,17 @@ type ClientInterface interface {
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
-	// produced a version returns that version with status 200 and applies
-	// nothing, whatever its commands.
+	// produced a version with the same commands returns that version with
+	// status 200 and `replayed: true`, and applies nothing. A `command_id`
+	// that already produced a version from other commands is refused with
+	// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+	// digests were stored replays whatever the retry carries.
 	//
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+	// `metadata.command_id` names it),
 	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -13367,6 +14255,54 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
 	ApplySpecCommands(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PreviewSpecCommandsWithBody Preview Spec Commands
+	//
+	// Applies edit commands to the spec's Live version without publishing
+	// anything, and returns the changes and the new convention findings the
+	// result would have. The docs editor sends it while a value is typed, so
+	// it shows the consequence of an edit before it is saved. The commands
+	// apply in order and all or nothing, as `applySpecCommands` applies them.
+	//
+	// Commands that change nothing return 200 with no changes, not
+	// `SPEC_NOTHING_TO_PUBLISH`.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+	// result is not a valid OpenAPI document; `metadata.problems` lists why),
+	// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+	// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+	PreviewSpecCommandsWithBody(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PreviewSpecCommands Preview Spec Commands
+	//
+	// Applies edit commands to the spec's Live version without publishing
+	// anything, and returns the changes and the new convention findings the
+	// result would have. The docs editor sends it while a value is typed, so
+	// it shows the consequence of an edit before it is saved. The commands
+	// apply in order and all or nothing, as `applySpecCommands` applies them.
+	//
+	// Commands that change nothing return 200 with no changes, not
+	// `SPEC_NOTHING_TO_PUBLISH`.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+	// result is not a valid OpenAPI document; `metadata.problems` lists why),
+	// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+	// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+	PreviewSpecCommands(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, body PreviewSpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PullSpec Pull Spec
 	//
@@ -13618,14 +14554,14 @@ type ClientInterface interface {
 
 	// GetWebhookMethodDistribution Get Method Distribution
 	//
-	// Returns distribution of HTTP methods for the selected datetime range.
+	// Returns the distribution of HTTP methods for the window [from, to). A time bucket is counted when it starts in the window.
 	//
 	// Corresponds with GET /webhooks/{id}/analytics/requests/methods (the `GetWebhookMethodDistribution` operationId).
 	GetWebhookMethodDistribution(ctx context.Context, id WebhookIdParameter, params *GetWebhookMethodDistributionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetWebhookRequestVolumes Get Request Volumes
 	//
-	// Returns request counts over time for the selected datetime range.
+	// Returns request counts over time for the window [from, to). A time bucket is returned when it starts in the window.
 	//
 	// Corresponds with GET /webhooks/{id}/analytics/requests/volumes (the `GetWebhookRequestVolumes` operationId).
 	GetWebhookRequestVolumes(ctx context.Context, id WebhookIdParameter, params *GetWebhookRequestVolumesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -13870,7 +14806,7 @@ type ClientInterface interface {
 // RebuildExecutionAnalytics Rebuild Execution Analytics
 //
 // Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
-// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on staff routes.
 //
 // Corresponds with POST /administrations/analytics/rebuild (the `RebuildExecutionAnalytics` operationId).
 func (c *Client) RebuildExecutionAnalytics(ctx context.Context, params *RebuildExecutionAnalyticsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13888,7 +14824,7 @@ func (c *Client) RebuildExecutionAnalytics(ctx context.Context, params *RebuildE
 // GetCloudFleet Get Cloud Fleet Capacity
 //
 // Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
-// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 //
 // Corresponds with GET /administrations/cloud-fleet (the `GetCloudFleet` operationId).
 func (c *Client) GetCloudFleet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13907,7 +14843,7 @@ func (c *Client) GetCloudFleet(ctx context.Context, reqEditors ...RequestEditorF
 //
 // Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 // Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 //
 // Takes any type of body and a specified content type.
 //
@@ -13928,7 +14864,7 @@ func (c *Client) UpdateCloudFleetWithBody(ctx context.Context, contentType strin
 //
 // Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 // Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -13949,9 +14885,9 @@ func (c *Client) UpdateCloudFleet(ctx context.Context, body UpdateCloudFleetJSON
 //
 // Runs a single monitor immediately instead of waiting for its next occurrence.
 // Processes the schedule inline — creates the occurrence, advances next_run_at, and
-// launches pending run items. Reserved for operator use; the caller must authenticate
+// launches pending run items. Reserved for Echopoint staff; the caller must authenticate
 // with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
-// not accepted on admin routes.
+// not accepted on staff routes.
 //
 // Corresponds with POST /administrations/monitors/{monitorId}/run (the `RunFlowScheduleNow` operationId).
 func (c *Client) RunFlowScheduleNow(ctx context.Context, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13966,10 +14902,50 @@ func (c *Client) RunFlowScheduleNow(ctx context.Context, monitorId openapi_types
 	return c.Client.Do(req)
 }
 
+// SearchAdministrationOrganizationsWithBody Search Organizations And Their Members
+//
+// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+func (c *Client) SearchAdministrationOrganizationsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchAdministrationOrganizationsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchAdministrationOrganizations Search Organizations And Their Members
+//
+// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+func (c *Client) SearchAdministrationOrganizations(ctx context.Context, body SearchAdministrationOrganizationsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchAdministrationOrganizationsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ResyncResourceSearch Resync Resource Search Documents
 //
 // Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant, and returns a report — grouped by organization — of the rows that had drifted and were corrected (missing rows added back, stale rows removed).
-// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
+// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on staff routes. The operation runs synchronously inside a single transaction and may take time on large databases.
 //
 // Corresponds with POST /administrations/resource-search/resync (the `ResyncResourceSearch` operationId).
 func (c *Client) ResyncResourceSearch(ctx context.Context, params *ResyncResourceSearchParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -14014,7 +14990,8 @@ func (c *Client) ListEndpointAnalytics(ctx context.Context, params *ListEndpoint
 //
 // One row per flow that finished a run in the window, most runs first:
 // how often it ran and failed, how long its runs took, and how many HTTP
-// calls they sent. A deleted flow keeps its row with an empty name.
+// calls they sent. A deleted flow has no row, and its runs count in no
+// analytics read.
 // Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 //
 // Corresponds with GET /analytics/flows (the `ListFlowAnalytics` operationId).
@@ -14190,6 +15167,44 @@ func (c *Client) DeleteAPIKey(ctx context.Context, id ApiKeyIdParameter, params 
 // Corresponds with GET /api-keys/{id} (the `GetAPIKey` operationId).
 func (c *Client) GetAPIKey(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAPIKeyRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateAPIKeyWithBody Rename API Key
+//
+// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+func (c *Client) UpdateAPIKeyWithBody(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAPIKeyRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateAPIKey Rename API Key
+//
+// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+func (c *Client) UpdateAPIKey(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, body UpdateAPIKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAPIKeyRequest(c.Server, id, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -15113,7 +16128,7 @@ func (c *Client) ListFlows(ctx context.Context, params *ListFlowsParams, reqEdit
 
 // CreateFlowWithBody Create Flow
 //
-// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 // A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes any type of body and a specified content type.
@@ -15133,7 +16148,7 @@ func (c *Client) CreateFlowWithBody(ctx context.Context, params *CreateFlowParam
 
 // CreateFlow Create Flow
 //
-// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 // A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes a body of the `application/json` content type.
@@ -15153,7 +16168,7 @@ func (c *Client) CreateFlow(ctx context.Context, params *CreateFlowParams, body 
 
 // CompileFlowSourceWithBody Compile Flow File
 //
-// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15172,7 +16187,7 @@ func (c *Client) CompileFlowSourceWithBody(ctx context.Context, params *CompileF
 
 // CompileFlowSource Compile Flow File
 //
-// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -15667,7 +16682,7 @@ func (c *Client) GetFlow(ctx context.Context, id openapi_types.UUID, params *Get
 
 // UpdateFlowWithBody Update Flow
 //
-// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 // Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes any type of body and a specified content type.
@@ -15687,7 +16702,7 @@ func (c *Client) UpdateFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 
 // UpdateFlow Update Flow
 //
-// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 // Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes a body of the `application/json` content type.
@@ -15725,7 +16740,7 @@ func (c *Client) ListFlowExecutions(ctx context.Context, id openapi_types.UUID, 
 
 // ExportFlow Export Flow
 //
-// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
+// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 //
 // Corresponds with GET /flows/{id}/export (the `ExportFlow` operationId).
 func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -15744,8 +16759,12 @@ func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *
 //
 // Launches a flow execution asynchronously and returns the created execution.
 // Real-time updates can be consumed separately from the execution stream endpoint.
-// Specify a version_id in the request body to run a specific published version;
-// omit it to run the current (mutable) flow definition.
+// Every launch, monitor occurrences included, runs the flow as saved, with the
+// modules it calls as saved. To run an earlier version, restore it first.
+//
+// A flow that references a variable the chosen environment does not define
+// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+// and the `variable_name`, and creates no execution.
 //
 // Each organization may launch at most its license's `max_cloud_executions_per_day`
 // Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -15759,7 +16778,7 @@ func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *
 // launching itself. Past it the launch answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
-// Cloud launches additionally share an operator-configured fleet budget in
+// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 // any 24 hours. Exhausting it also answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 // survives deletion of flows and executions, excludes self-hosted and
@@ -15784,8 +16803,12 @@ func (c *Client) LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 //
 // Launches a flow execution asynchronously and returns the created execution.
 // Real-time updates can be consumed separately from the execution stream endpoint.
-// Specify a version_id in the request body to run a specific published version;
-// omit it to run the current (mutable) flow definition.
+// Every launch, monitor occurrences included, runs the flow as saved, with the
+// modules it calls as saved. To run an earlier version, restore it first.
+//
+// A flow that references a variable the chosen environment does not define
+// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+// and the `variable_name`, and creates no execution.
 //
 // Each organization may launch at most its license's `max_cloud_executions_per_day`
 // Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -15799,7 +16822,7 @@ func (c *Client) LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 // launching itself. Past it the launch answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
-// Cloud launches additionally share an operator-configured fleet budget in
+// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 // any 24 hours. Exhausting it also answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 // survives deletion of flows and executions, excludes self-hosted and
@@ -15810,23 +16833,6 @@ func (c *Client) LaunchFlowWithBody(ctx context.Context, id openapi_types.UUID, 
 // Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
 func (c *Client) LaunchFlow(ctx context.Context, id openapi_types.UUID, params *LaunchFlowParams, body LaunchFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewLaunchFlowRequest(c.Server, id, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PublishFlow Publish Flow
-//
-// Snapshot the current flow definition as an immutable flow version.
-//
-// Corresponds with POST /flows/{id}/publish (the `PublishFlow` operationId).
-func (c *Client) PublishFlow(ctx context.Context, id openapi_types.UUID, params *PublishFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPublishFlowRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -15926,27 +16932,9 @@ func (c *Client) SetFlowVariable(ctx context.Context, id openapi_types.UUID, key
 	return c.Client.Do(req)
 }
 
-// ListFlowVersions Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
-//
-// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
-//
-// Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
-// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-func (c *Client) ListFlowVersions(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListFlowVersionsRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // SearchFlowVersionsWithBody Search Flow Versions
 //
-// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15965,7 +16953,7 @@ func (c *Client) SearchFlowVersionsWithBody(ctx context.Context, id openapi_type
 
 // SearchFlowVersions Search Flow Versions
 //
-// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -16002,11 +16990,43 @@ func (c *Client) GetFlowVersion(ctx context.Context, id openapi_types.UUID, vers
 // RestoreFlowVersion Restore Flow Version
 //
 // Copies a saved version's definition and metadata back into the flow.
-// The original version is preserved.
+// The original version is preserved. Execution history of steps the restored definition no longer holds is deleted, as on an update.
+// A concurrent write to the flow returns 409 `FLOW_VERSION_CONFLICT`; read the flow again and retry.
 //
 // Corresponds with POST /flows/{id}/versions/{versionId}/restore (the `RestoreFlowVersion` operationId).
 func (c *Client) RestoreFlowVersion(ctx context.Context, id openapi_types.UUID, versionId openapi_types.UUID, params *RestoreFlowVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRestoreFlowVersionRequest(c.Server, id, versionId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ReceiveInboundEmailWithBody Receive an email for a run inbox
+//
+// Stores one email received on Echopoint's mail domain in the run inbox its envelope recipient names
+// (ADR-0030). Only the Email Worker calls it. The body is the raw RFC 5322 message, with the Worker's
+// `Echopoint-Envelope-From` and `Echopoint-Envelope-To` header lines first. The request is signed with
+// the Standard Webhooks scheme (`webhook-id`, `webhook-timestamp`, `webhook-signature`) over the exact
+// body bytes; a request without these headers, or stale or wrongly signed, answers 401, and so does every request while
+// no signing secret is configured.
+//
+// Each refusal is final for that message, and the Worker turns it into an SMTP rejection: 404 when the
+// recipient names no inbox or the inbox's run has ended, 413 when the raw message exceeds 10 MiB or its
+// text and HTML parts exceed 1 MiB together, 429 when the inbox received 60 messages in the last minute
+// (`INBOX_RATE_LIMITED`) or already stores the license's `max_inbox_size_mib` (`INBOX_FULL`),
+// 400 when the message has no envelope recipient or cannot be parsed. A message whose Message-ID the
+// inbox already stored is accepted and not stored again.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /inbound/email (the `ReceiveInboundEmail` operationId).
+func (c *Client) ReceiveInboundEmailWithBody(ctx context.Context, params *ReceiveInboundEmailParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReceiveInboundEmailRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -17042,7 +18062,7 @@ func (c *Client) ResumeFlowSchedule(ctx context.Context, monitorId openapi_types
 
 // RunMonitor Run Monitor
 //
-// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+// Starts one diagnostic occurrence of a monitor, with or without a health policy, through the same runners. The occurrence selects flows as a scheduled occurrence does (same version choice and flows-per-run limit) and appears in the run history with origin `diagnostic`. It never confirms or refreshes health and never changes next_run_at. Refused with 409 MONITOR_RUN_ACTIVE while another occurrence is active, and with 400 SCHEDULE_FLOW_INVALID when a selected flow of a monitor without a health policy is unavailable.
 //
 // Corresponds with POST /monitors/{monitorId}/run (the `RunMonitor` operationId).
 func (c *Client) RunMonitor(ctx context.Context, monitorId openapi_types.UUID, params *RunMonitorParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -17552,7 +18572,7 @@ func (c *Client) SetOrganizationVariable(ctx context.Context, key VariableKey, p
 
 // ListPermissions List Available Permissions
 //
-// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
+// Lists the organization-scoped product permissions an Echopoint API key of the requested type may hold, and whether the caller may assign each one. Workspace-scoped permissions and API key management permissions are never listed: no API key can hold them. Each item's `assignability` says whether the caller may put it on a key: a caller assigns only the permissions its organization role holds, and may put a runner permission it does not hold on a key that holds only runner permissions. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole list: the server follows Anchor's cursor to the last page.
 //
 // Corresponds with GET /permissions (the `ListPermissions` operationId).
 func (c *Client) ListPermissions(ctx context.Context, params *ListPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -17907,6 +18927,27 @@ func (c *Client) SendRunnerJobEvents(ctx context.Context, jobId RunnerJobIDParam
 	return c.Client.Do(req)
 }
 
+// ListRunnerJobInboxMessages List the email messages of a job's run inbox
+//
+// Returns the messages received by the run inbox of this job's execution, oldest first. Launch injects
+// this URL as `inbox.messages_url`. Authenticate with the job token. The request is refused once the
+// execution is terminal.
+// Not paginated: runner protocol authenticated by a job token that returns the newest messages of the run inbox, so it has no search.
+// A poll sends `after`, the id of the last message it read, and gets only the messages stored after it.
+//
+// Corresponds with GET /runner/jobs/{jobId}/inbox-messages (the `ListRunnerJobInboxMessages` operationId).
+func (c *Client) ListRunnerJobInboxMessages(ctx context.Context, jobId RunnerJobIDParameter, params *ListRunnerJobInboxMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListRunnerJobInboxMessagesRequest(c.Server, jobId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetCloudJobPayload Fetch the Cloud job payload
 //
 // Returns the flow snapshot, runner inputs, referenced flows, and Cloud
@@ -17914,9 +18955,14 @@ func (c *Client) SendRunnerJobEvents(ctx context.Context, jobId RunnerJobIDParam
 // never persisted. Self-hosted and ephemeral jobs are not served here.
 //
 // The payload is single-use. The first call claims it; a later call is
-// refused with 409. Message delivery to a Cloud worker is at-least-once,
-// so a redelivered job can reach a second worker that holds the same
-// valid token, and a Cloud job must never run twice.
+// refused with 409 `CLOUD_JOB_PAYLOAD_ALREADY_FETCHED`. Message delivery
+// to a Cloud worker is at-least-once, so a redelivered job can reach a
+// second worker that holds the same valid token, and a Cloud job must
+// never run twice.
+//
+// Only a job that is still claimed is served. Once the reconciler failed
+// the job or a member cancelled it, the fetch is refused with 409
+// `CLOUD_JOB_NOT_ASSIGNED` and the payload stays unclaimed.
 //
 // Corresponds with GET /runner/jobs/{jobId}/payload (the `GetCloudJobPayload` operationId).
 func (c *Client) GetCloudJobPayload(ctx context.Context, jobId RunnerJobIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -17997,7 +19043,8 @@ func (c *Client) ListSpecs(ctx context.Context, params *ListSpecsParams, reqEdit
 // semantic version, else `1.0.0`. The document is stored in the canonical
 // YAML layout.
 //
-// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 // 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 // Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 // `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -18025,7 +19072,8 @@ func (c *Client) CreateSpecWithBody(ctx context.Context, params *CreateSpecParam
 // semantic version, else `1.0.0`. The document is stored in the canonical
 // YAML layout.
 //
-// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 // 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 // Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 // `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -18110,12 +19158,17 @@ func (c *Client) GetSpec(ctx context.Context, slug SpecSlugParameter, params *Ge
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
-// produced a version returns that version with status 200 and applies
-// nothing, whatever its commands.
+// produced a version with the same commands returns that version with
+// status 200 and `replayed: true`, and applies nothing. A `command_id`
+// that already produced a version from other commands is refused with
+// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+// digests were stored replays whatever the retry carries.
 //
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+// `metadata.command_id` names it),
 // `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 // `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -18145,12 +19198,17 @@ func (c *Client) ApplySpecCommandsWithBody(ctx context.Context, slug SpecSlugPar
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
-// produced a version returns that version with status 200 and applies
-// nothing, whatever its commands.
+// produced a version with the same commands returns that version with
+// status 200 and `replayed: true`, and applies nothing. A `command_id`
+// that already produced a version from other commands is refused with
+// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+// digests were stored replays whatever the retry carries.
 //
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+// `metadata.command_id` names it),
 // `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 // `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -18161,6 +19219,74 @@ func (c *Client) ApplySpecCommandsWithBody(ctx context.Context, slug SpecSlugPar
 // Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
 func (c *Client) ApplySpecCommands(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewApplySpecCommandsRequest(c.Server, slug, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PreviewSpecCommandsWithBody Preview Spec Commands
+//
+// Applies edit commands to the spec's Live version without publishing
+// anything, and returns the changes and the new convention findings the
+// result would have. The docs editor sends it while a value is typed, so
+// it shows the consequence of an edit before it is saved. The commands
+// apply in order and all or nothing, as `applySpecCommands` applies them.
+//
+// Commands that change nothing return 200 with no changes, not
+// `SPEC_NOTHING_TO_PUBLISH`.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+// result is not a valid OpenAPI document; `metadata.problems` lists why),
+// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+func (c *Client) PreviewSpecCommandsWithBody(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewSpecCommandsRequestWithBody(c.Server, slug, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PreviewSpecCommands Preview Spec Commands
+//
+// Applies edit commands to the spec's Live version without publishing
+// anything, and returns the changes and the new convention findings the
+// result would have. The docs editor sends it while a value is typed, so
+// it shows the consequence of an edit before it is saved. The commands
+// apply in order and all or nothing, as `applySpecCommands` applies them.
+//
+// Commands that change nothing return 200 with no changes, not
+// `SPEC_NOTHING_TO_PUBLISH`.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+// result is not a valid OpenAPI document; `metadata.problems` lists why),
+// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+func (c *Client) PreviewSpecCommands(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, body PreviewSpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewSpecCommandsRequest(c.Server, slug, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -18679,7 +19805,7 @@ func (c *Client) GetWebhook(ctx context.Context, id WebhookIdParameter, params *
 
 // GetWebhookMethodDistribution Get Method Distribution
 //
-// Returns distribution of HTTP methods for the selected datetime range.
+// Returns the distribution of HTTP methods for the window [from, to). A time bucket is counted when it starts in the window.
 //
 // Corresponds with GET /webhooks/{id}/analytics/requests/methods (the `GetWebhookMethodDistribution` operationId).
 func (c *Client) GetWebhookMethodDistribution(ctx context.Context, id WebhookIdParameter, params *GetWebhookMethodDistributionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -18696,7 +19822,7 @@ func (c *Client) GetWebhookMethodDistribution(ctx context.Context, id WebhookIdP
 
 // GetWebhookRequestVolumes Get Request Volumes
 //
-// Returns request counts over time for the selected datetime range.
+// Returns request counts over time for the window [from, to). A time bucket is returned when it starts in the window.
 //
 // Corresponds with GET /webhooks/{id}/analytics/requests/volumes (the `GetWebhookRequestVolumes` operationId).
 func (c *Client) GetWebhookRequestVolumes(ctx context.Context, id WebhookIdParameter, params *GetWebhookRequestVolumesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -19381,6 +20507,46 @@ func NewRunFlowScheduleNowRequest(server string, monitorId openapi_types.UUID, p
 	return req, nil
 }
 
+// NewSearchAdministrationOrganizationsRequest calls the generic SearchAdministrationOrganizations builder with application/json body
+func NewSearchAdministrationOrganizationsRequest(server string, body SearchAdministrationOrganizationsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchAdministrationOrganizationsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSearchAdministrationOrganizationsRequestWithBody constructs an http.Request for the SearchAdministrationOrganizations method, with any body, and a specified content type
+func NewSearchAdministrationOrganizationsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/administrations/organizations/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewResyncResourceSearchRequest constructs an http.Request for the ResyncResourceSearch method
 func NewResyncResourceSearchRequest(server string, params *ResyncResourceSearchParams) (*http.Request, error) {
 	var err error
@@ -19452,6 +20618,18 @@ func NewListEndpointAnalyticsRequest(server string, params *ListEndpointAnalytic
 		if params.Window != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.FlowRole != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_role", *params.FlowRole, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -19551,6 +20729,18 @@ func NewListFlowAnalyticsRequest(server string, params *ListFlowAnalyticsParams)
 
 		}
 
+		if params.FlowRole != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_role", *params.FlowRole, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -19620,6 +20810,18 @@ func NewGetExecutionAnalyticsSummaryRequest(server string, params *GetExecutionA
 		if params.Window != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "window", *params.Window, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.FlowRole != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_role", *params.FlowRole, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -19948,6 +21150,66 @@ func NewGetAPIKeyRequest(server string, id ApiKeyIdParameter, params *GetAPIKeyP
 	if err != nil {
 		return nil, err
 	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewUpdateAPIKeyRequest calls the generic UpdateAPIKey builder with application/json body
+func NewUpdateAPIKeyRequest(server string, id ApiKeyIdParameter, params *UpdateAPIKeyParams, body UpdateAPIKeyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateAPIKeyRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewUpdateAPIKeyRequestWithBody constructs an http.Request for the UpdateAPIKey method, with any body, and a specified content type
+func NewUpdateAPIKeyRequestWithBody(server string, id ApiKeyIdParameter, params *UpdateAPIKeyParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api-keys/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -23859,33 +25121,6 @@ func NewExportFlowRequest(server string, id openapi_types.UUID, params *ExportFl
 		return nil, err
 	}
 
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if params.VersionId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "version_id", *params.VersionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -23986,72 +25221,25 @@ func NewLaunchFlowRequestWithBody(server string, id openapi_types.UUID, params *
 			req.Header.Set("Idempotency-Key", headerParam1)
 		}
 
-		var headerParam2 string
+		if params.Prefer != nil {
+			var headerParam2 string
 
-		headerParam2, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam2)
-
-	}
-
-	return req, nil
-}
-
-// NewPublishFlowRequest constructs an http.Request for the PublishFlow method
-func NewPublishFlowRequest(server string, id openapi_types.UUID, params *PublishFlowParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flows/%s/publish", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		if params.XWorkspaceId != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam2, err = runtime.StyleParamWithOptions("simple", false, "Prefer", *params.Prefer, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-Workspace-Id", headerParam0)
+			req.Header.Set("Prefer", headerParam2)
 		}
 
-		var headerParam1 string
+		var headerParam3 string
 
-		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		headerParam3, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 		if err != nil {
 			return nil, err
 		}
 
-		req.Header.Set("X-Organization-ID", headerParam1)
+		req.Header.Set("X-Organization-ID", headerParam3)
 
 	}
 
@@ -24317,95 +25505,6 @@ func NewSetFlowVariableRequestWithBody(server string, id openapi_types.UUID, key
 	return req, nil
 }
 
-// NewListFlowVersionsRequest constructs an http.Request for the ListFlowVersions method
-func NewListFlowVersionsRequest(server string, id openapi_types.UUID, params *ListFlowVersionsParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/flows/%s/versions", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		if params.XWorkspaceId != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-Workspace-Id", headerParam0)
-		}
-
-		var headerParam1 string
-
-		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("X-Organization-ID", headerParam1)
-
-	}
-
-	return req, nil
-}
-
 // NewSearchFlowVersionsRequest calls the generic SearchFlowVersions builder with application/json body
 func NewSearchFlowVersionsRequest(server string, id openapi_types.UUID, params *SearchFlowVersionsParams, body SearchFlowVersionsJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -24601,6 +25700,72 @@ func NewRestoreFlowVersionRequest(server string, id openapi_types.UUID, versionI
 		}
 
 		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewReceiveInboundEmailRequestWithBody constructs an http.Request for the ReceiveInboundEmail method, with any body, and a specified content type
+func NewReceiveInboundEmailRequestWithBody(server string, params *ReceiveInboundEmailParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/inbound/email")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.WebhookId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "webhook-id", *params.WebhookId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("webhook-id", headerParam0)
+		}
+
+		if params.WebhookTimestamp != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "webhook-timestamp", *params.WebhookTimestamp, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("webhook-timestamp", headerParam1)
+		}
+
+		if params.WebhookSignature != nil {
+			var headerParam2 string
+
+			headerParam2, err = runtime.StyleParamWithOptions("simple", false, "webhook-signature", *params.WebhookSignature, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("webhook-signature", headerParam2)
+		}
 
 	}
 
@@ -27079,6 +28244,18 @@ func NewGetOrganizationAnalyticsRequest(server string, params *GetOrganizationAn
 
 		}
 
+		if params.FlowRole != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "flow_role", *params.FlowRole, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -28118,6 +29295,67 @@ func NewSendRunnerJobEventsRequestWithBody(server string, jobId RunnerJobIDParam
 	return req, nil
 }
 
+// NewListRunnerJobInboxMessagesRequest constructs an http.Request for the ListRunnerJobInboxMessages method
+func NewListRunnerJobInboxMessagesRequest(server string, jobId RunnerJobIDParameter, params *ListRunnerJobInboxMessagesParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "jobId", jobId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/runner/jobs/%s/inbox-messages", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.After != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "after", *params.After, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetCloudJobPayloadRequest constructs an http.Request for the GetCloudJobPayload method
 func NewGetCloudJobPayloadRequest(server string, jobId RunnerJobIDParameter) (*http.Request, error) {
 	var err error
@@ -28522,6 +29760,77 @@ func NewApplySpecCommandsRequestWithBody(server string, slug SpecSlugParameter, 
 	}
 
 	operationPath := fmt.Sprintf("/specs/%s/commands", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewPreviewSpecCommandsRequest calls the generic PreviewSpecCommands builder with application/json body
+func NewPreviewSpecCommandsRequest(server string, slug SpecSlugParameter, params *PreviewSpecCommandsParams, body PreviewSpecCommandsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPreviewSpecCommandsRequestWithBody(server, slug, params, "application/json", bodyReader)
+}
+
+// NewPreviewSpecCommandsRequestWithBody constructs an http.Request for the PreviewSpecCommands method, with any body, and a specified content type
+func NewPreviewSpecCommandsRequestWithBody(server string, slug SpecSlugParameter, params *PreviewSpecCommandsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "slug", slug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/specs/%s/commands/preview", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -30874,7 +32183,7 @@ type ClientWithResponsesInterface interface {
 	// RebuildExecutionAnalyticsWithResponse Rebuild Execution Analytics
 	//
 	// Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
-	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+	// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on staff routes.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -30884,7 +32193,7 @@ type ClientWithResponsesInterface interface {
 	// GetCloudFleetWithResponse Get Cloud Fleet Capacity
 	//
 	// Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
-	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -30895,7 +32204,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -30906,7 +32215,7 @@ type ClientWithResponsesInterface interface {
 	//
 	// Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 	// Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-	// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -30917,19 +32226,39 @@ type ClientWithResponsesInterface interface {
 	//
 	// Runs a single monitor immediately instead of waiting for its next occurrence.
 	// Processes the schedule inline — creates the occurrence, advances next_run_at, and
-	// launches pending run items. Reserved for operator use; the caller must authenticate
+	// launches pending run items. Reserved for Echopoint staff; the caller must authenticate
 	// with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
-	// not accepted on admin routes.
+	// not accepted on staff routes.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /administrations/monitors/{monitorId}/run (the `RunFlowScheduleNow` operationId).
 	RunFlowScheduleNowWithResponse(ctx context.Context, monitorId openapi_types.UUID, params *RunFlowScheduleNowParams, reqEditors ...RequestEditorFn) (*RunFlowScheduleNowResponse, error)
 
+	// SearchAdministrationOrganizationsWithBodyWithResponse Search Organizations And Their Members
+	//
+	// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+	SearchAdministrationOrganizationsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchAdministrationOrganizationsResponse, error)
+
+	// SearchAdministrationOrganizationsWithResponse Search Organizations And Their Members
+	//
+	// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+	SearchAdministrationOrganizationsWithResponse(ctx context.Context, body SearchAdministrationOrganizationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchAdministrationOrganizationsResponse, error)
+
 	// ResyncResourceSearchWithResponse Resync Resource Search Documents
 	//
 	// Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant, and returns a report — grouped by organization — of the rows that had drifted and were corrected (missing rows added back, stale rows removed).
-	// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
+	// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on staff routes. The operation runs synchronously inside a single transaction and may take time on large databases.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -30958,7 +32287,8 @@ type ClientWithResponsesInterface interface {
 	//
 	// One row per flow that finished a run in the window, most runs first:
 	// how often it ran and failed, how long its runs took, and how many HTTP
-	// calls they sent. A deleted flow keeps its row with an empty name.
+	// calls they sent. A deleted flow has no row, and its runs count in no
+	// analytics read.
 	// Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 	//
 	// Returns a wrapper object for the known response body format(s).
@@ -31056,6 +32386,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /api-keys/{id} (the `GetAPIKey` operationId).
 	GetAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *GetAPIKeyParams, reqEditors ...RequestEditorFn) (*GetAPIKeyResponse, error)
+
+	// UpdateAPIKeyWithBodyWithResponse Rename API Key
+	//
+	// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+	UpdateAPIKeyWithBodyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAPIKeyResponse, error)
+
+	// UpdateAPIKeyWithResponse Rename API Key
+	//
+	// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+	UpdateAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, body UpdateAPIKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAPIKeyResponse, error)
 
 	// ListCollectionsWithResponse List Collections
 	//
@@ -31517,7 +32865,7 @@ type ClientWithResponsesInterface interface {
 
 	// CreateFlowWithBodyWithResponse Create Flow
 	//
-	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -31527,7 +32875,7 @@ type ClientWithResponsesInterface interface {
 
 	// CreateFlowWithResponse Create Flow
 	//
-	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+	// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 	// A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -31537,7 +32885,7 @@ type ClientWithResponsesInterface interface {
 
 	// CompileFlowSourceWithBodyWithResponse Compile Flow File
 	//
-	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -31546,7 +32894,7 @@ type ClientWithResponsesInterface interface {
 
 	// CompileFlowSourceWithResponse Compile Flow File
 	//
-	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+	// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -31793,7 +33141,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateFlowWithBodyWithResponse Update Flow
 	//
-	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -31803,7 +33151,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateFlowWithResponse Update Flow
 	//
-	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+	// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 	// Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -31824,7 +33172,7 @@ type ClientWithResponsesInterface interface {
 
 	// ExportFlowWithResponse Export Flow
 	//
-	// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
+	// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -31835,8 +33183,12 @@ type ClientWithResponsesInterface interface {
 	//
 	// Launches a flow execution asynchronously and returns the created execution.
 	// Real-time updates can be consumed separately from the execution stream endpoint.
-	// Specify a version_id in the request body to run a specific published version;
-	// omit it to run the current (mutable) flow definition.
+	// Every launch, monitor occurrences included, runs the flow as saved, with the
+	// modules it calls as saved. To run an earlier version, restore it first.
+	//
+	// A flow that references a variable the chosen environment does not define
+	// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+	// and the `variable_name`, and creates no execution.
 	//
 	// Each organization may launch at most its license's `max_cloud_executions_per_day`
 	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -31850,7 +33202,7 @@ type ClientWithResponsesInterface interface {
 	// launching itself. Past it the launch answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
-	// Cloud launches additionally share an operator-configured fleet budget in
+	// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 	// any 24 hours. Exhausting it also answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 	// survives deletion of flows and executions, excludes self-hosted and
@@ -31865,8 +33217,12 @@ type ClientWithResponsesInterface interface {
 	//
 	// Launches a flow execution asynchronously and returns the created execution.
 	// Real-time updates can be consumed separately from the execution stream endpoint.
-	// Specify a version_id in the request body to run a specific published version;
-	// omit it to run the current (mutable) flow definition.
+	// Every launch, monitor occurrences included, runs the flow as saved, with the
+	// modules it calls as saved. To run an earlier version, restore it first.
+	//
+	// A flow that references a variable the chosen environment does not define
+	// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+	// and the `variable_name`, and creates no execution.
 	//
 	// Each organization may launch at most its license's `max_cloud_executions_per_day`
 	// Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -31880,7 +33236,7 @@ type ClientWithResponsesInterface interface {
 	// launching itself. Past it the launch answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 	//
-	// Cloud launches additionally share an operator-configured fleet budget in
+	// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 	// any 24 hours. Exhausting it also answers 429
 	// `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 	// survives deletion of flows and executions, excludes self-hosted and
@@ -31890,15 +33246,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /flows/{id}/launch (the `LaunchFlow` operationId).
 	LaunchFlowWithResponse(ctx context.Context, id openapi_types.UUID, params *LaunchFlowParams, body LaunchFlowJSONRequestBody, reqEditors ...RequestEditorFn) (*LaunchFlowResponse, error)
-
-	// PublishFlowWithResponse Publish Flow
-	//
-	// Snapshot the current flow definition as an immutable flow version.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with POST /flows/{id}/publish (the `PublishFlow` operationId).
-	PublishFlowWithResponse(ctx context.Context, id openapi_types.UUID, params *PublishFlowParams, reqEditors ...RequestEditorFn) (*PublishFlowResponse, error)
 
 	// DeleteFlowVariablesWithResponse Delete Flow Variables
 	//
@@ -31945,20 +33292,9 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /flows/{id}/variables/{key} (the `SetFlowVariable` operationId).
 	SetFlowVariableWithResponse(ctx context.Context, id openapi_types.UUID, key VariableKey, params *SetFlowVariableParams, body SetFlowVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlowVariableResponse, error)
 
-	// ListFlowVersionsWithResponse Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
-	//
-	// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
-	//
-	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ListFlowVersionsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*ListFlowVersionsResponse, error)
-
 	// SearchFlowVersionsWithBodyWithResponse Search Flow Versions
 	//
-	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -31967,7 +33303,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchFlowVersionsWithResponse Search Flow Versions
 	//
-	// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+	// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -31986,12 +33322,34 @@ type ClientWithResponsesInterface interface {
 	// RestoreFlowVersionWithResponse Restore Flow Version
 	//
 	// Copies a saved version's definition and metadata back into the flow.
-	// The original version is preserved.
+	// The original version is preserved. Execution history of steps the restored definition no longer holds is deleted, as on an update.
+	// A concurrent write to the flow returns 409 `FLOW_VERSION_CONFLICT`; read the flow again and retry.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /flows/{id}/versions/{versionId}/restore (the `RestoreFlowVersion` operationId).
 	RestoreFlowVersionWithResponse(ctx context.Context, id openapi_types.UUID, versionId openapi_types.UUID, params *RestoreFlowVersionParams, reqEditors ...RequestEditorFn) (*RestoreFlowVersionResponse, error)
+
+	// ReceiveInboundEmailWithBodyWithResponse Receive an email for a run inbox
+	//
+	// Stores one email received on Echopoint's mail domain in the run inbox its envelope recipient names
+	// (ADR-0030). Only the Email Worker calls it. The body is the raw RFC 5322 message, with the Worker's
+	// `Echopoint-Envelope-From` and `Echopoint-Envelope-To` header lines first. The request is signed with
+	// the Standard Webhooks scheme (`webhook-id`, `webhook-timestamp`, `webhook-signature`) over the exact
+	// body bytes; a request without these headers, or stale or wrongly signed, answers 401, and so does every request while
+	// no signing secret is configured.
+	//
+	// Each refusal is final for that message, and the Worker turns it into an SMTP rejection: 404 when the
+	// recipient names no inbox or the inbox's run has ended, 413 when the raw message exceeds 10 MiB or its
+	// text and HTML parts exceed 1 MiB together, 429 when the inbox received 60 messages in the last minute
+	// (`INBOX_RATE_LIMITED`) or already stores the license's `max_inbox_size_mib` (`INBOX_FULL`),
+	// 400 when the message has no envelope recipient or cannot be parsed. A message whose Message-ID the
+	// inbox already stored is accepted and not stored again.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /inbound/email (the `ReceiveInboundEmail` operationId).
+	ReceiveInboundEmailWithBodyWithResponse(ctx context.Context, params *ReceiveInboundEmailParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReceiveInboundEmailResponse, error)
 
 	// InitUserWithResponse Initialize current user organization
 	//
@@ -32586,7 +33944,7 @@ type ClientWithResponsesInterface interface {
 
 	// RunMonitorWithResponse Run Monitor
 	//
-	// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+	// Starts one diagnostic occurrence of a monitor, with or without a health policy, through the same runners. The occurrence selects flows as a scheduled occurrence does (same version choice and flows-per-run limit) and appears in the run history with origin `diagnostic`. It never confirms or refreshes health and never changes next_run_at. Refused with 409 MONITOR_RUN_ACTIVE while another occurrence is active, and with 400 SCHEDULE_FLOW_INVALID when a selected flow of a monitor without a health policy is unavailable.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -32846,7 +34204,7 @@ type ClientWithResponsesInterface interface {
 
 	// ListPermissionsWithResponse List Available Permissions
 	//
-	// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
+	// Lists the organization-scoped product permissions an Echopoint API key of the requested type may hold, and whether the caller may assign each one. Workspace-scoped permissions and API key management permissions are never listed: no API key can hold them. Each item's `assignability` says whether the caller may put it on a key: a caller assigns only the permissions its organization role holds, and may put a runner permission it does not hold on a key that holds only runner permissions. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole list: the server follows Anchor's cursor to the last page.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33039,6 +34397,19 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /runner/jobs/{jobId}/events (the `SendRunnerJobEvents` operationId).
 	SendRunnerJobEventsWithResponse(ctx context.Context, jobId RunnerJobIDParameter, body SendRunnerJobEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*SendRunnerJobEventsResponse, error)
 
+	// ListRunnerJobInboxMessagesWithResponse List the email messages of a job's run inbox
+	//
+	// Returns the messages received by the run inbox of this job's execution, oldest first. Launch injects
+	// this URL as `inbox.messages_url`. Authenticate with the job token. The request is refused once the
+	// execution is terminal.
+	// Not paginated: runner protocol authenticated by a job token that returns the newest messages of the run inbox, so it has no search.
+	// A poll sends `after`, the id of the last message it read, and gets only the messages stored after it.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /runner/jobs/{jobId}/inbox-messages (the `ListRunnerJobInboxMessages` operationId).
+	ListRunnerJobInboxMessagesWithResponse(ctx context.Context, jobId RunnerJobIDParameter, params *ListRunnerJobInboxMessagesParams, reqEditors ...RequestEditorFn) (*ListRunnerJobInboxMessagesResponse, error)
+
 	// GetCloudJobPayloadWithResponse Fetch the Cloud job payload
 	//
 	// Returns the flow snapshot, runner inputs, referenced flows, and Cloud
@@ -33046,9 +34417,14 @@ type ClientWithResponsesInterface interface {
 	// never persisted. Self-hosted and ephemeral jobs are not served here.
 	//
 	// The payload is single-use. The first call claims it; a later call is
-	// refused with 409. Message delivery to a Cloud worker is at-least-once,
-	// so a redelivered job can reach a second worker that holds the same
-	// valid token, and a Cloud job must never run twice.
+	// refused with 409 `CLOUD_JOB_PAYLOAD_ALREADY_FETCHED`. Message delivery
+	// to a Cloud worker is at-least-once, so a redelivered job can reach a
+	// second worker that holds the same valid token, and a Cloud job must
+	// never run twice.
+	//
+	// Only a job that is still claimed is served. Once the reconciler failed
+	// the job or a member cancelled it, the fetch is refused with 409
+	// `CLOUD_JOB_NOT_ASSIGNED` and the payload stays unclaimed.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33098,7 +34474,8 @@ type ClientWithResponsesInterface interface {
 	// semantic version, else `1.0.0`. The document is stored in the canonical
 	// YAML layout.
 	//
-	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+	// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -33116,7 +34493,8 @@ type ClientWithResponsesInterface interface {
 	// semantic version, else `1.0.0`. The document is stored in the canonical
 	// YAML layout.
 	//
-	// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+	// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+	// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 	// 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 	// Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 	// `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -33163,12 +34541,17 @@ type ClientWithResponsesInterface interface {
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
-	// produced a version returns that version with status 200 and applies
-	// nothing, whatever its commands.
+	// produced a version with the same commands returns that version with
+	// status 200 and `replayed: true`, and applies nothing. A `command_id`
+	// that already produced a version from other commands is refused with
+	// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+	// digests were stored replays whatever the retry carries.
 	//
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+	// `metadata.command_id` names it),
 	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -33188,12 +34571,17 @@ type ClientWithResponsesInterface interface {
 	// and the docs editor send them.
 	//
 	// `command_id` makes a retry safe: a request whose `command_id` already
-	// produced a version returns that version with status 200 and applies
-	// nothing, whatever its commands.
+	// produced a version with the same commands returns that version with
+	// status 200 and `replayed: true`, and applies nothing. A `command_id`
+	// that already produced a version from other commands is refused with
+	// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+	// digests were stored replays whatever the retry carries.
 	//
 	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 	// document; `metadata.index` names it and `metadata.reason` says why),
 	// `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+	// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+	// `metadata.command_id` names it),
 	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 	// `metadata.live_version` names it),
 	// `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -33203,6 +34591,54 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /specs/{slug}/commands (the `ApplySpecCommands` operationId).
 	ApplySpecCommandsWithResponse(ctx context.Context, slug SpecSlugParameter, params *ApplySpecCommandsParams, body ApplySpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*ApplySpecCommandsResponse, error)
+
+	// PreviewSpecCommandsWithBodyWithResponse Preview Spec Commands
+	//
+	// Applies edit commands to the spec's Live version without publishing
+	// anything, and returns the changes and the new convention findings the
+	// result would have. The docs editor sends it while a value is typed, so
+	// it shows the consequence of an edit before it is saved. The commands
+	// apply in order and all or nothing, as `applySpecCommands` applies them.
+	//
+	// Commands that change nothing return 200 with no changes, not
+	// `SPEC_NOTHING_TO_PUBLISH`.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+	// result is not a valid OpenAPI document; `metadata.problems` lists why),
+	// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+	// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+	PreviewSpecCommandsWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewSpecCommandsResponse, error)
+
+	// PreviewSpecCommandsWithResponse Preview Spec Commands
+	//
+	// Applies edit commands to the spec's Live version without publishing
+	// anything, and returns the changes and the new convention findings the
+	// result would have. The docs editor sends it while a value is typed, so
+	// it shows the consequence of an edit before it is saved. The commands
+	// apply in order and all or nothing, as `applySpecCommands` applies them.
+	//
+	// Commands that change nothing return 200 with no changes, not
+	// `SPEC_NOTHING_TO_PUBLISH`.
+	//
+	// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+	// document; `metadata.index` names it and `metadata.reason` says why),
+	// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+	// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+	// result is not a valid OpenAPI document; `metadata.problems` lists why),
+	// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+	// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+	PreviewSpecCommandsWithResponse(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, body PreviewSpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewSpecCommandsResponse, error)
 
 	// PullSpecWithResponse Pull Spec
 	//
@@ -33468,7 +34904,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetWebhookMethodDistributionWithResponse Get Method Distribution
 	//
-	// Returns distribution of HTTP methods for the selected datetime range.
+	// Returns the distribution of HTTP methods for the window [from, to). A time bucket is counted when it starts in the window.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33477,7 +34913,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetWebhookRequestVolumesWithResponse Get Request Volumes
 	//
-	// Returns request counts over time for the selected datetime range.
+	// Returns request counts over time for the window [from, to). A time bucket is returned when it starts in the window.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33986,6 +35422,75 @@ func (r RunFlowScheduleNowResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RunFlowScheduleNowResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchAdministrationOrganizationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AdministrationOrganizationSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchAdministrationOrganizationsResponse) GetJSON200() *AdministrationOrganizationSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchAdministrationOrganizationsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchAdministrationOrganizationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchAdministrationOrganizationsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SearchAdministrationOrganizationsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchAdministrationOrganizationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchAdministrationOrganizationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchAdministrationOrganizationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchAdministrationOrganizationsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -34627,6 +36132,89 @@ func (r GetAPIKeyResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAPIKeyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateAPIKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ApiKey
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateAPIKeyResponse) GetJSON200() *ApiKey {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateAPIKeyResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateAPIKeyResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateAPIKeyResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateAPIKeyResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateAPIKeyResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateAPIKeyResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateAPIKeyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateAPIKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateAPIKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateAPIKeyResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -38372,9 +39960,16 @@ func (r ExportFlowResponse) ContentType() string {
 	return ""
 }
 
+// LaunchFlowResponse200Headers the declared response headers of an HTTP 200 response for LaunchFlow
+type LaunchFlowResponse200Headers struct {
+	PreferenceApplied *string
+}
+
 type LaunchFlowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *LaunchFlowCompletedResponse
 	// JSON202 the response for an HTTP 202 `application/json` response
 	JSON202 *LaunchFlowAcceptedResponse
 	// JSON400 the response for an HTTP 400 `application/json` response
@@ -38391,6 +39986,13 @@ type LaunchFlowResponse struct {
 	JSON429 *TooManyRequests
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *ApiErrorResponse
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *LaunchFlowResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r LaunchFlowResponse) GetJSON200() *LaunchFlowCompletedResponse {
+	return r.JSON200
 }
 
 // GetJSON202 returns the response for an HTTP 202 `application/json` response
@@ -38456,75 +40058,6 @@ func (r LaunchFlowResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r LaunchFlowResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type PublishFlowResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *FlowVersion
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r PublishFlowResponse) GetJSON201() *FlowVersion {
-	return r.JSON201
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r PublishFlowResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r PublishFlowResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r PublishFlowResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r PublishFlowResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r PublishFlowResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r PublishFlowResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PublishFlowResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r PublishFlowResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -38793,75 +40326,6 @@ func (r SetFlowVariableResponse) ContentType() string {
 	return ""
 }
 
-type ListFlowVersionsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *FlowVersionListResponse
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *NotFound
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListFlowVersionsResponse) GetJSON200() *FlowVersionListResponse {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r ListFlowVersionsResponse) GetJSON400() *BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ListFlowVersionsResponse) GetJSON401() *Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ListFlowVersionsResponse) GetJSON403() *Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r ListFlowVersionsResponse) GetJSON404() *NotFound {
-	return r.JSON404
-}
-
-// GetBody returns the raw response body bytes
-func (r ListFlowVersionsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ListFlowVersionsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListFlowVersionsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ListFlowVersionsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 type SearchFlowVersionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -39013,6 +40477,8 @@ type RestoreFlowVersionResponse struct {
 	JSON403 *Forbidden
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -39040,6 +40506,11 @@ func (r RestoreFlowVersionResponse) GetJSON404() *NotFound {
 	return r.JSON404
 }
 
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r RestoreFlowVersionResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
 // GetBody returns the raw response body bytes
 func (r RestoreFlowVersionResponse) GetBody() []byte {
 	return r.Body
@@ -39063,6 +40534,82 @@ func (r RestoreFlowVersionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RestoreFlowVersionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ReceiveInboundEmailResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON413 the response for an HTTP 413 `application/json` response
+	JSON413 *ContentTooLarge
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *TooManyRequests
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ReceiveInboundEmailResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ReceiveInboundEmailResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ReceiveInboundEmailResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON413 returns the response for an HTTP 413 `application/json` response
+func (r ReceiveInboundEmailResponse) GetJSON413() *ContentTooLarge {
+	return r.JSON413
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReceiveInboundEmailResponse) GetJSON429() *TooManyRequests {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ReceiveInboundEmailResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ReceiveInboundEmailResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ReceiveInboundEmailResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReceiveInboundEmailResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ReceiveInboundEmailResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -43152,6 +44699,61 @@ func (r SendRunnerJobEventsResponse) ContentType() string {
 	return ""
 }
 
+type ListRunnerJobInboxMessagesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InboxMessageListResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListRunnerJobInboxMessagesResponse) GetJSON200() *InboxMessageListResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListRunnerJobInboxMessagesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListRunnerJobInboxMessagesResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListRunnerJobInboxMessagesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListRunnerJobInboxMessagesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListRunnerJobInboxMessagesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListRunnerJobInboxMessagesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetCloudJobPayloadResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -43611,9 +45213,9 @@ type ApplySpecCommandsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *SpecVersion
+	JSON200 *AppliedSpecVersion
 	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *SpecVersion
+	JSON201 *AppliedSpecVersion
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -43627,12 +45229,12 @@ type ApplySpecCommandsResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ApplySpecCommandsResponse) GetJSON200() *SpecVersion {
+func (r ApplySpecCommandsResponse) GetJSON200() *AppliedSpecVersion {
 	return r.JSON200
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r ApplySpecCommandsResponse) GetJSON201() *SpecVersion {
+func (r ApplySpecCommandsResponse) GetJSON201() *AppliedSpecVersion {
 	return r.JSON201
 }
 
@@ -43684,6 +45286,82 @@ func (r ApplySpecCommandsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ApplySpecCommandsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PreviewSpecCommandsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpecCommandsPreview
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PreviewSpecCommandsResponse) GetJSON200() *SpecCommandsPreview {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PreviewSpecCommandsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PreviewSpecCommandsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r PreviewSpecCommandsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r PreviewSpecCommandsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r PreviewSpecCommandsResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r PreviewSpecCommandsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PreviewSpecCommandsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PreviewSpecCommandsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PreviewSpecCommandsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -44402,6 +46080,11 @@ func (r UnpublishStatusPageResponse) ContentType() string {
 	return ""
 }
 
+// ReceiveWebhookDeleteResponse429Headers the declared response headers of an HTTP 429 response for ReceiveWebhookDelete
+type ReceiveWebhookDeleteResponse429Headers struct {
+	RetryAfter *int
+}
+
 type ReceiveWebhookDeleteResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -44409,6 +46092,12 @@ type ReceiveWebhookDeleteResponse struct {
 	JSON200 *WebhookResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON413 the response for an HTTP 413 `application/json` response
+	JSON413 *ContentTooLarge
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *WebhookRateLimited
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReceiveWebhookDeleteResponse429Headers
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -44419,6 +46108,16 @@ func (r ReceiveWebhookDeleteResponse) GetJSON200() *WebhookResponse {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ReceiveWebhookDeleteResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON413 returns the response for an HTTP 413 `application/json` response
+func (r ReceiveWebhookDeleteResponse) GetJSON413() *ContentTooLarge {
+	return r.JSON413
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReceiveWebhookDeleteResponse) GetJSON429() *WebhookRateLimited {
+	return r.JSON429
 }
 
 // GetBody returns the raw response body bytes
@@ -44450,6 +46149,11 @@ func (r ReceiveWebhookDeleteResponse) ContentType() string {
 	return ""
 }
 
+// ReceiveWebhookGetResponse429Headers the declared response headers of an HTTP 429 response for ReceiveWebhookGet
+type ReceiveWebhookGetResponse429Headers struct {
+	RetryAfter *int
+}
+
 type ReceiveWebhookGetResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -44457,6 +46161,12 @@ type ReceiveWebhookGetResponse struct {
 	JSON200 *WebhookResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON413 the response for an HTTP 413 `application/json` response
+	JSON413 *ContentTooLarge
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *WebhookRateLimited
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReceiveWebhookGetResponse429Headers
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -44467,6 +46177,16 @@ func (r ReceiveWebhookGetResponse) GetJSON200() *WebhookResponse {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ReceiveWebhookGetResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON413 returns the response for an HTTP 413 `application/json` response
+func (r ReceiveWebhookGetResponse) GetJSON413() *ContentTooLarge {
+	return r.JSON413
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReceiveWebhookGetResponse) GetJSON429() *WebhookRateLimited {
+	return r.JSON429
 }
 
 // GetBody returns the raw response body bytes
@@ -44498,6 +46218,11 @@ func (r ReceiveWebhookGetResponse) ContentType() string {
 	return ""
 }
 
+// ReceiveWebhookPatchResponse429Headers the declared response headers of an HTTP 429 response for ReceiveWebhookPatch
+type ReceiveWebhookPatchResponse429Headers struct {
+	RetryAfter *int
+}
+
 type ReceiveWebhookPatchResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -44505,6 +46230,12 @@ type ReceiveWebhookPatchResponse struct {
 	JSON200 *WebhookResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON413 the response for an HTTP 413 `application/json` response
+	JSON413 *ContentTooLarge
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *WebhookRateLimited
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReceiveWebhookPatchResponse429Headers
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -44515,6 +46246,16 @@ func (r ReceiveWebhookPatchResponse) GetJSON200() *WebhookResponse {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ReceiveWebhookPatchResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON413 returns the response for an HTTP 413 `application/json` response
+func (r ReceiveWebhookPatchResponse) GetJSON413() *ContentTooLarge {
+	return r.JSON413
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReceiveWebhookPatchResponse) GetJSON429() *WebhookRateLimited {
+	return r.JSON429
 }
 
 // GetBody returns the raw response body bytes
@@ -44546,6 +46287,11 @@ func (r ReceiveWebhookPatchResponse) ContentType() string {
 	return ""
 }
 
+// ReceiveWebhookPostResponse429Headers the declared response headers of an HTTP 429 response for ReceiveWebhookPost
+type ReceiveWebhookPostResponse429Headers struct {
+	RetryAfter *int
+}
+
 type ReceiveWebhookPostResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -44553,6 +46299,12 @@ type ReceiveWebhookPostResponse struct {
 	JSON200 *WebhookResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON413 the response for an HTTP 413 `application/json` response
+	JSON413 *ContentTooLarge
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *WebhookRateLimited
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReceiveWebhookPostResponse429Headers
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -44563,6 +46315,16 @@ func (r ReceiveWebhookPostResponse) GetJSON200() *WebhookResponse {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ReceiveWebhookPostResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON413 returns the response for an HTTP 413 `application/json` response
+func (r ReceiveWebhookPostResponse) GetJSON413() *ContentTooLarge {
+	return r.JSON413
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReceiveWebhookPostResponse) GetJSON429() *WebhookRateLimited {
+	return r.JSON429
 }
 
 // GetBody returns the raw response body bytes
@@ -44594,6 +46356,11 @@ func (r ReceiveWebhookPostResponse) ContentType() string {
 	return ""
 }
 
+// ReceiveWebhookPutResponse429Headers the declared response headers of an HTTP 429 response for ReceiveWebhookPut
+type ReceiveWebhookPutResponse429Headers struct {
+	RetryAfter *int
+}
+
 type ReceiveWebhookPutResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -44601,6 +46368,12 @@ type ReceiveWebhookPutResponse struct {
 	JSON200 *WebhookResponse
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON413 the response for an HTTP 413 `application/json` response
+	JSON413 *ContentTooLarge
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *WebhookRateLimited
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ReceiveWebhookPutResponse429Headers
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -44611,6 +46384,16 @@ func (r ReceiveWebhookPutResponse) GetJSON200() *WebhookResponse {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ReceiveWebhookPutResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON413 returns the response for an HTTP 413 `application/json` response
+func (r ReceiveWebhookPutResponse) GetJSON413() *ContentTooLarge {
+	return r.JSON413
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ReceiveWebhookPutResponse) GetJSON429() *WebhookRateLimited {
+	return r.JSON429
 }
 
 // GetBody returns the raw response body bytes
@@ -46237,7 +48020,7 @@ func (r ListWorkspaceRolesResponse) ContentType() string {
 // RebuildExecutionAnalyticsWithResponse Rebuild Execution Analytics
 //
 // Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
-// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on staff routes.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -46253,7 +48036,7 @@ func (c *ClientWithResponses) RebuildExecutionAnalyticsWithResponse(ctx context.
 // GetCloudFleetWithResponse Get Cloud Fleet Capacity
 //
 // Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
-// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -46270,7 +48053,7 @@ func (c *ClientWithResponses) GetCloudFleetWithResponse(ctx context.Context, req
 //
 // Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 // Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -46287,7 +48070,7 @@ func (c *ClientWithResponses) UpdateCloudFleetWithBodyWithResponse(ctx context.C
 //
 // Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
 // Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-// Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -46304,9 +48087,9 @@ func (c *ClientWithResponses) UpdateCloudFleetWithResponse(ctx context.Context, 
 //
 // Runs a single monitor immediately instead of waiting for its next occurrence.
 // Processes the schedule inline — creates the occurrence, advances next_run_at, and
-// launches pending run items. Reserved for operator use; the caller must authenticate
+// launches pending run items. Reserved for Echopoint staff; the caller must authenticate
 // with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
-// not accepted on admin routes.
+// not accepted on staff routes.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -46319,10 +48102,42 @@ func (c *ClientWithResponses) RunFlowScheduleNowWithResponse(ctx context.Context
 	return ParseRunFlowScheduleNowResponse(rsp)
 }
 
+// SearchAdministrationOrganizationsWithBodyWithResponse Search Organizations And Their Members
+//
+// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+func (c *ClientWithResponses) SearchAdministrationOrganizationsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchAdministrationOrganizationsResponse, error) {
+	rsp, err := c.SearchAdministrationOrganizationsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchAdministrationOrganizationsResponse(rsp)
+}
+
+// SearchAdministrationOrganizationsWithResponse Search Organizations And Their Members
+//
+// Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /administrations/organizations/search (the `SearchAdministrationOrganizations` operationId).
+func (c *ClientWithResponses) SearchAdministrationOrganizationsWithResponse(ctx context.Context, body SearchAdministrationOrganizationsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchAdministrationOrganizationsResponse, error) {
+	rsp, err := c.SearchAdministrationOrganizations(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchAdministrationOrganizationsResponse(rsp)
+}
+
 // ResyncResourceSearchWithResponse Resync Resource Search Documents
 //
 // Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant, and returns a report — grouped by organization — of the rows that had drifted and were corrected (missing rows added back, stale rows removed).
-// Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
+// Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on staff routes. The operation runs synchronously inside a single transaction and may take time on large databases.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -46363,7 +48178,8 @@ func (c *ClientWithResponses) ListEndpointAnalyticsWithResponse(ctx context.Cont
 //
 // One row per flow that finished a run in the window, most runs first:
 // how often it ran and failed, how long its runs took, and how many HTTP
-// calls they sent. A deleted flow keeps its row with an empty name.
+// calls they sent. A deleted flow has no row, and its runs count in no
+// analytics read.
 // Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
 //
 // Returns a wrapper object for the known response body format(s).
@@ -46520,6 +48336,36 @@ func (c *ClientWithResponses) GetAPIKeyWithResponse(ctx context.Context, id ApiK
 		return nil, err
 	}
 	return ParseGetAPIKeyResponse(rsp)
+}
+
+// UpdateAPIKeyWithBodyWithResponse Rename API Key
+//
+// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+func (c *ClientWithResponses) UpdateAPIKeyWithBodyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAPIKeyResponse, error) {
+	rsp, err := c.UpdateAPIKeyWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateAPIKeyResponse(rsp)
+}
+
+// UpdateAPIKeyWithResponse Rename API Key
+//
+// Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api-keys/{id} (the `UpdateAPIKey` operationId).
+func (c *ClientWithResponses) UpdateAPIKeyWithResponse(ctx context.Context, id ApiKeyIdParameter, params *UpdateAPIKeyParams, body UpdateAPIKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAPIKeyResponse, error) {
+	rsp, err := c.UpdateAPIKey(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateAPIKeyResponse(rsp)
 }
 
 // ListCollectionsWithResponse List Collections
@@ -47276,7 +49122,7 @@ func (c *ClientWithResponses) ListFlowsWithResponse(ctx context.Context, params 
 
 // CreateFlowWithBodyWithResponse Create Flow
 //
-// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 // A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -47292,7 +49138,7 @@ func (c *ClientWithResponses) CreateFlowWithBodyWithResponse(ctx context.Context
 
 // CreateFlowWithResponse Create Flow
 //
-// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+// Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
 // A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -47308,7 +49154,7 @@ func (c *ClientWithResponses) CreateFlowWithResponse(ctx context.Context, params
 
 // CompileFlowSourceWithBodyWithResponse Compile Flow File
 //
-// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -47323,7 +49169,7 @@ func (c *ClientWithResponses) CompileFlowSourceWithBodyWithResponse(ctx context.
 
 // CompileFlowSourceWithResponse Compile Flow File
 //
-// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+// Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -47732,7 +49578,7 @@ func (c *ClientWithResponses) GetFlowWithResponse(ctx context.Context, id openap
 
 // UpdateFlowWithBodyWithResponse Update Flow
 //
-// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 // Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
@@ -47748,7 +49594,7 @@ func (c *ClientWithResponses) UpdateFlowWithBodyWithResponse(ctx context.Context
 
 // UpdateFlowWithResponse Update Flow
 //
-// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+// Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
 // Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -47781,7 +49627,7 @@ func (c *ClientWithResponses) ListFlowExecutionsWithResponse(ctx context.Context
 
 // ExportFlowWithResponse Export Flow
 //
-// Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
+// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -47798,8 +49644,12 @@ func (c *ClientWithResponses) ExportFlowWithResponse(ctx context.Context, id ope
 //
 // Launches a flow execution asynchronously and returns the created execution.
 // Real-time updates can be consumed separately from the execution stream endpoint.
-// Specify a version_id in the request body to run a specific published version;
-// omit it to run the current (mutable) flow definition.
+// Every launch, monitor occurrences included, runs the flow as saved, with the
+// modules it calls as saved. To run an earlier version, restore it first.
+//
+// A flow that references a variable the chosen environment does not define
+// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+// and the `variable_name`, and creates no execution.
 //
 // Each organization may launch at most its license's `max_cloud_executions_per_day`
 // Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -47813,7 +49663,7 @@ func (c *ClientWithResponses) ExportFlowWithResponse(ctx context.Context, id ope
 // launching itself. Past it the launch answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
-// Cloud launches additionally share an operator-configured fleet budget in
+// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 // any 24 hours. Exhausting it also answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 // survives deletion of flows and executions, excludes self-hosted and
@@ -47834,8 +49684,12 @@ func (c *ClientWithResponses) LaunchFlowWithBodyWithResponse(ctx context.Context
 //
 // Launches a flow execution asynchronously and returns the created execution.
 // Real-time updates can be consumed separately from the execution stream endpoint.
-// Specify a version_id in the request body to run a specific published version;
-// omit it to run the current (mutable) flow definition.
+// Every launch, monitor occurrences included, runs the flow as saved, with the
+// modules it calls as saved. To run an earlier version, restore it first.
+//
+// A flow that references a variable the chosen environment does not define
+// answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+// and the `variable_name`, and creates no execution.
 //
 // Each organization may launch at most its license's `max_cloud_executions_per_day`
 // Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -47849,7 +49703,7 @@ func (c *ClientWithResponses) LaunchFlowWithBodyWithResponse(ctx context.Context
 // launching itself. Past it the launch answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 //
-// Cloud launches additionally share an operator-configured fleet budget in
+// Cloud launches additionally share a fleet budget configured by Echopoint staff in
 // any 24 hours. Exhausting it also answers 429
 // `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
 // survives deletion of flows and executions, excludes self-hosted and
@@ -47864,21 +49718,6 @@ func (c *ClientWithResponses) LaunchFlowWithResponse(ctx context.Context, id ope
 		return nil, err
 	}
 	return ParseLaunchFlowResponse(rsp)
-}
-
-// PublishFlowWithResponse Publish Flow
-//
-// Snapshot the current flow definition as an immutable flow version.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with POST /flows/{id}/publish (the `PublishFlow` operationId).
-func (c *ClientWithResponses) PublishFlowWithResponse(ctx context.Context, id openapi_types.UUID, params *PublishFlowParams, reqEditors ...RequestEditorFn) (*PublishFlowResponse, error) {
-	rsp, err := c.PublishFlow(ctx, id, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePublishFlowResponse(rsp)
 }
 
 // DeleteFlowVariablesWithResponse Delete Flow Variables
@@ -47956,26 +49795,9 @@ func (c *ClientWithResponses) SetFlowVariableWithResponse(ctx context.Context, i
 	return ParseSetFlowVariableResponse(rsp)
 }
 
-// ListFlowVersionsWithResponse Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions
-//
-// Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /flows/{id}/versions (the `ListFlowVersions` operationId).
-//
-// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-func (c *ClientWithResponses) ListFlowVersionsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListFlowVersionsParams, reqEditors ...RequestEditorFn) (*ListFlowVersionsResponse, error) {
-	rsp, err := c.ListFlowVersions(ctx, id, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListFlowVersionsResponse(rsp)
-}
-
 // SearchFlowVersionsWithBodyWithResponse Search Flow Versions
 //
-// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -47990,7 +49812,7 @@ func (c *ClientWithResponses) SearchFlowVersionsWithBodyWithResponse(ctx context
 
 // SearchFlowVersionsWithResponse Search Flow Versions
 //
-// Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
+// Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -48021,7 +49843,8 @@ func (c *ClientWithResponses) GetFlowVersionWithResponse(ctx context.Context, id
 // RestoreFlowVersionWithResponse Restore Flow Version
 //
 // Copies a saved version's definition and metadata back into the flow.
-// The original version is preserved.
+// The original version is preserved. Execution history of steps the restored definition no longer holds is deleted, as on an update.
+// A concurrent write to the flow returns 409 `FLOW_VERSION_CONFLICT`; read the flow again and retry.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -48032,6 +49855,33 @@ func (c *ClientWithResponses) RestoreFlowVersionWithResponse(ctx context.Context
 		return nil, err
 	}
 	return ParseRestoreFlowVersionResponse(rsp)
+}
+
+// ReceiveInboundEmailWithBodyWithResponse Receive an email for a run inbox
+//
+// Stores one email received on Echopoint's mail domain in the run inbox its envelope recipient names
+// (ADR-0030). Only the Email Worker calls it. The body is the raw RFC 5322 message, with the Worker's
+// `Echopoint-Envelope-From` and `Echopoint-Envelope-To` header lines first. The request is signed with
+// the Standard Webhooks scheme (`webhook-id`, `webhook-timestamp`, `webhook-signature`) over the exact
+// body bytes; a request without these headers, or stale or wrongly signed, answers 401, and so does every request while
+// no signing secret is configured.
+//
+// Each refusal is final for that message, and the Worker turns it into an SMTP rejection: 404 when the
+// recipient names no inbox or the inbox's run has ended, 413 when the raw message exceeds 10 MiB or its
+// text and HTML parts exceed 1 MiB together, 429 when the inbox received 60 messages in the last minute
+// (`INBOX_RATE_LIMITED`) or already stores the license's `max_inbox_size_mib` (`INBOX_FULL`),
+// 400 when the message has no envelope recipient or cannot be parsed. A message whose Message-ID the
+// inbox already stored is accepted and not stored again.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /inbound/email (the `ReceiveInboundEmail` operationId).
+func (c *ClientWithResponses) ReceiveInboundEmailWithBodyWithResponse(ctx context.Context, params *ReceiveInboundEmailParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReceiveInboundEmailResponse, error) {
+	rsp, err := c.ReceiveInboundEmailWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReceiveInboundEmailResponse(rsp)
 }
 
 // InitUserWithResponse Initialize current user organization
@@ -48909,7 +50759,7 @@ func (c *ClientWithResponses) ResumeFlowScheduleWithResponse(ctx context.Context
 
 // RunMonitorWithResponse Run Monitor
 //
-// Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+// Starts one diagnostic occurrence of a monitor, with or without a health policy, through the same runners. The occurrence selects flows as a scheduled occurrence does (same version choice and flows-per-run limit) and appears in the run history with origin `diagnostic`. It never confirms or refreshes health and never changes next_run_at. Refused with 409 MONITOR_RUN_ACTIVE while another occurrence is active, and with 400 SCHEDULE_FLOW_INVALID when a selected flow of a monitor without a health policy is unavailable.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -49337,7 +51187,7 @@ func (c *ClientWithResponses) SetOrganizationVariableWithResponse(ctx context.Co
 
 // ListPermissionsWithResponse List Available Permissions
 //
-// Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor's cursor to the last page.
+// Lists the organization-scoped product permissions an Echopoint API key of the requested type may hold, and whether the caller may assign each one. Workspace-scoped permissions and API key management permissions are never listed: no API key can hold them. Each item's `assignability` says whether the caller may put it on a key: a caller assigns only the permissions its organization role holds, and may put a runner permission it does not hold on a key that holds only runner permissions. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole list: the server follows Anchor's cursor to the last page.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -49631,6 +51481,25 @@ func (c *ClientWithResponses) SendRunnerJobEventsWithResponse(ctx context.Contex
 	return ParseSendRunnerJobEventsResponse(rsp)
 }
 
+// ListRunnerJobInboxMessagesWithResponse List the email messages of a job's run inbox
+//
+// Returns the messages received by the run inbox of this job's execution, oldest first. Launch injects
+// this URL as `inbox.messages_url`. Authenticate with the job token. The request is refused once the
+// execution is terminal.
+// Not paginated: runner protocol authenticated by a job token that returns the newest messages of the run inbox, so it has no search.
+// A poll sends `after`, the id of the last message it read, and gets only the messages stored after it.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /runner/jobs/{jobId}/inbox-messages (the `ListRunnerJobInboxMessages` operationId).
+func (c *ClientWithResponses) ListRunnerJobInboxMessagesWithResponse(ctx context.Context, jobId RunnerJobIDParameter, params *ListRunnerJobInboxMessagesParams, reqEditors ...RequestEditorFn) (*ListRunnerJobInboxMessagesResponse, error) {
+	rsp, err := c.ListRunnerJobInboxMessages(ctx, jobId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListRunnerJobInboxMessagesResponse(rsp)
+}
+
 // GetCloudJobPayloadWithResponse Fetch the Cloud job payload
 //
 // Returns the flow snapshot, runner inputs, referenced flows, and Cloud
@@ -49638,9 +51507,14 @@ func (c *ClientWithResponses) SendRunnerJobEventsWithResponse(ctx context.Contex
 // never persisted. Self-hosted and ephemeral jobs are not served here.
 //
 // The payload is single-use. The first call claims it; a later call is
-// refused with 409. Message delivery to a Cloud worker is at-least-once,
-// so a redelivered job can reach a second worker that holds the same
-// valid token, and a Cloud job must never run twice.
+// refused with 409 `CLOUD_JOB_PAYLOAD_ALREADY_FETCHED`. Message delivery
+// to a Cloud worker is at-least-once, so a redelivered job can reach a
+// second worker that holds the same valid token, and a Cloud job must
+// never run twice.
+//
+// Only a job that is still claimed is served. Once the reconciler failed
+// the job or a member cancelled it, the fetch is refused with 409
+// `CLOUD_JOB_NOT_ASSIGNED` and the payload stays unclaimed.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -49714,7 +51588,8 @@ func (c *ClientWithResponses) ListSpecsWithResponse(ctx context.Context, params 
 // semantic version, else `1.0.0`. The document is stored in the canonical
 // YAML layout.
 //
-// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 // 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 // Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 // `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -49738,7 +51613,8 @@ func (c *ClientWithResponses) CreateSpecWithBodyWithResponse(ctx context.Context
 // semantic version, else `1.0.0`. The document is stored in the canonical
 // YAML layout.
 //
-// Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+// Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+// slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
 // 15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
 // Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
 // `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -49809,12 +51685,17 @@ func (c *ClientWithResponses) GetSpecWithResponse(ctx context.Context, slug Spec
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
-// produced a version returns that version with status 200 and applies
-// nothing, whatever its commands.
+// produced a version with the same commands returns that version with
+// status 200 and `replayed: true`, and applies nothing. A `command_id`
+// that already produced a version from other commands is refused with
+// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+// digests were stored replays whatever the retry carries.
 //
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+// `metadata.command_id` names it),
 // `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 // `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -49840,12 +51721,17 @@ func (c *ClientWithResponses) ApplySpecCommandsWithBodyWithResponse(ctx context.
 // and the docs editor send them.
 //
 // `command_id` makes a retry safe: a request whose `command_id` already
-// produced a version returns that version with status 200 and applies
-// nothing, whatever its commands.
+// produced a version with the same commands returns that version with
+// status 200 and `replayed: true`, and applies nothing. A `command_id`
+// that already produced a version from other commands is refused with
+// `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+// digests were stored replays whatever the retry carries.
 //
 // Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
 // document; `metadata.index` names it and `metadata.reason` says why),
 // `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+// `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+// `metadata.command_id` names it),
 // `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
 // `metadata.live_version` names it),
 // `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -49860,6 +51746,66 @@ func (c *ClientWithResponses) ApplySpecCommandsWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseApplySpecCommandsResponse(rsp)
+}
+
+// PreviewSpecCommandsWithBodyWithResponse Preview Spec Commands
+//
+// Applies edit commands to the spec's Live version without publishing
+// anything, and returns the changes and the new convention findings the
+// result would have. The docs editor sends it while a value is typed, so
+// it shows the consequence of an edit before it is saved. The commands
+// apply in order and all or nothing, as `applySpecCommands` applies them.
+//
+// Commands that change nothing return 200 with no changes, not
+// `SPEC_NOTHING_TO_PUBLISH`.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+// result is not a valid OpenAPI document; `metadata.problems` lists why),
+// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+func (c *ClientWithResponses) PreviewSpecCommandsWithBodyWithResponse(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewSpecCommandsResponse, error) {
+	rsp, err := c.PreviewSpecCommandsWithBody(ctx, slug, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewSpecCommandsResponse(rsp)
+}
+
+// PreviewSpecCommandsWithResponse Preview Spec Commands
+//
+// Applies edit commands to the spec's Live version without publishing
+// anything, and returns the changes and the new convention findings the
+// result would have. The docs editor sends it while a value is typed, so
+// it shows the consequence of an edit before it is saved. The commands
+// apply in order and all or nothing, as `applySpecCommands` applies them.
+//
+// Commands that change nothing return 200 with no changes, not
+// `SPEC_NOTHING_TO_PUBLISH`.
+//
+// Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+// document; `metadata.index` names it and `metadata.reason` says why),
+// `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+// `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+// result is not a valid OpenAPI document; `metadata.problems` lists why),
+// `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+// `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /specs/{slug}/commands/preview (the `PreviewSpecCommands` operationId).
+func (c *ClientWithResponses) PreviewSpecCommandsWithResponse(ctx context.Context, slug SpecSlugParameter, params *PreviewSpecCommandsParams, body PreviewSpecCommandsJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewSpecCommandsResponse, error) {
+	rsp, err := c.PreviewSpecCommands(ctx, slug, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewSpecCommandsResponse(rsp)
 }
 
 // PullSpecWithResponse Pull Spec
@@ -50282,7 +52228,7 @@ func (c *ClientWithResponses) GetWebhookWithResponse(ctx context.Context, id Web
 
 // GetWebhookMethodDistributionWithResponse Get Method Distribution
 //
-// Returns distribution of HTTP methods for the selected datetime range.
+// Returns the distribution of HTTP methods for the window [from, to). A time bucket is counted when it starts in the window.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -50297,7 +52243,7 @@ func (c *ClientWithResponses) GetWebhookMethodDistributionWithResponse(ctx conte
 
 // GetWebhookRequestVolumesWithResponse Get Request Volumes
 //
-// Returns request counts over time for the selected datetime range.
+// Returns request counts over time for the window [from, to). A time bucket is returned when it starts in the window.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -50928,6 +52874,60 @@ func ParseRunFlowScheduleNowResponse(rsp *http.Response) (*RunFlowScheduleNowRes
 	return response, nil
 }
 
+// ParseSearchAdministrationOrganizationsResponse parses an HTTP response from a SearchAdministrationOrganizationsWithResponse call
+func ParseSearchAdministrationOrganizationsResponse(rsp *http.Response) (*SearchAdministrationOrganizationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchAdministrationOrganizationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdministrationOrganizationSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseResyncResourceSearchResponse parses an HTTP response from a ResyncResourceSearchWithResponse call
 func ParseResyncResourceSearchResponse(rsp *http.Response) (*ResyncResourceSearchResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -51409,6 +53409,74 @@ func ParseGetAPIKeyResponse(rsp *http.Response) (*GetAPIKeyResponse, error) {
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateAPIKeyResponse parses an HTTP response from a UpdateAPIKeyWithResponse call
+func ParseUpdateAPIKeyResponse(rsp *http.Response) (*UpdateAPIKeyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateAPIKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ApiKey
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
@@ -54365,6 +56433,13 @@ func ParseLaunchFlowResponse(rsp *http.Response) (*LaunchFlowResponse, error) {
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest LaunchFlowCompletedResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest LaunchFlowAcceptedResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -54423,58 +56498,17 @@ func ParseLaunchFlowResponse(rsp *http.Response) (*LaunchFlowResponse, error) {
 
 	}
 
-	return response, nil
-}
-
-// ParsePublishFlowResponse parses an HTTP response from a PublishFlowWithResponse call
-func ParsePublishFlowResponse(rsp *http.Response) (*PublishFlowResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PublishFlowResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest FlowVersion
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
+	case rsp.StatusCode == 200:
+		var headers LaunchFlowResponse200Headers
+		if values := rsp.Header.Values("Preference-Applied"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Preference-Applied", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.PreferenceApplied = &value
 		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
+		response.Headers200 = &headers
 	}
 
 	return response, nil
@@ -54688,60 +56722,6 @@ func ParseSetFlowVariableResponse(rsp *http.Response) (*SetFlowVariableResponse,
 	return response, nil
 }
 
-// ParseListFlowVersionsResponse parses an HTTP response from a ListFlowVersionsWithResponse call
-func ParseListFlowVersionsResponse(rsp *http.Response) (*ListFlowVersionsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListFlowVersionsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest FlowVersionListResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseSearchFlowVersionsResponse parses an HTTP response from a SearchFlowVersionsWithResponse call
 func ParseSearchFlowVersionsResponse(rsp *http.Response) (*SearchFlowVersionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -54898,6 +56878,77 @@ func ParseRestoreFlowVersionResponse(rsp *http.Response) (*RestoreFlowVersionRes
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseReceiveInboundEmailResponse parses an HTTP response from a ReceiveInboundEmailWithResponse call
+func ParseReceiveInboundEmailResponse(rsp *http.Response) (*ReceiveInboundEmailResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReceiveInboundEmailResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 202:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest ContentTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest TooManyRequests
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 
@@ -58096,6 +60147,46 @@ func ParseSendRunnerJobEventsResponse(rsp *http.Response) (*SendRunnerJobEventsR
 	return response, nil
 }
 
+// ParseListRunnerJobInboxMessagesResponse parses an HTTP response from a ListRunnerJobInboxMessagesWithResponse call
+func ParseListRunnerJobInboxMessagesResponse(rsp *http.Response) (*ListRunnerJobInboxMessagesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListRunnerJobInboxMessagesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InboxMessageListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetCloudJobPayloadResponse parses an HTTP response from a GetCloudJobPayloadWithResponse call
 func ParseGetCloudJobPayloadResponse(rsp *http.Response) (*GetCloudJobPayloadResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -58461,18 +60552,79 @@ func ParseApplySpecCommandsResponse(rsp *http.Response) (*ApplySpecCommandsRespo
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest SpecVersion
+		var dest AppliedSpecVersion
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest SpecVersion
+		var dest AppliedSpecVersion
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePreviewSpecCommandsResponse parses an HTTP response from a PreviewSpecCommandsWithResponse call
+func ParsePreviewSpecCommandsResponse(rsp *http.Response) (*PreviewSpecCommandsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PreviewSpecCommandsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpecCommandsPreview
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
 		var dest BadRequest
@@ -59143,6 +61295,33 @@ func ParseReceiveWebhookDeleteResponse(rsp *http.Response) (*ReceiveWebhookDelet
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest ContentTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest WebhookRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ReceiveWebhookDeleteResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
 	}
 
 	return response, nil
@@ -59176,6 +61355,33 @@ func ParseReceiveWebhookGetResponse(rsp *http.Response) (*ReceiveWebhookGetRespo
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest ContentTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest WebhookRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ReceiveWebhookGetResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
 	}
 
 	return response, nil
@@ -59209,6 +61415,33 @@ func ParseReceiveWebhookPatchResponse(rsp *http.Response) (*ReceiveWebhookPatchR
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest ContentTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest WebhookRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ReceiveWebhookPatchResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
 	}
 
 	return response, nil
@@ -59242,6 +61475,33 @@ func ParseReceiveWebhookPostResponse(rsp *http.Response) (*ReceiveWebhookPostRes
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest ContentTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest WebhookRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ReceiveWebhookPostResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
 	}
 
 	return response, nil
@@ -59275,6 +61535,33 @@ func ParseReceiveWebhookPutResponse(rsp *http.Response) (*ReceiveWebhookPutRespo
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest ContentTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest WebhookRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ReceiveWebhookPutResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
 	}
 
 	return response, nil

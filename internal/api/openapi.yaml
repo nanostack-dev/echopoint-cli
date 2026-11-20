@@ -39,6 +39,8 @@ paths:
             - webhooks:read
       x-ai-description: 'Deprecated: use search_webhooks instead, which pages with a cursor. List webhook endpoints in the organization.'
       x-ai-tool: true
+      x-ai-title: List webhooks
+      x-ai-read-only: true
     post:
       tags:
         - Webhook
@@ -75,6 +77,8 @@ paths:
         - ApiKeys:
             - webhooks:create
       x-ai-tool: true
+      x-ai-title: Create webhook
+      x-ai-read-only: false
   /webhooks/{id}:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -106,6 +110,8 @@ paths:
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
+      x-ai-title: Get webhook
+      x-ai-read-only: true
     delete:
       tags:
         - Webhook
@@ -133,6 +139,8 @@ paths:
         - ApiKeys:
             - webhooks:delete
       x-ai-tool: true
+      x-ai-title: Delete webhook
+      x-ai-read-only: false
   /resources/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -168,6 +176,8 @@ paths:
         - BearerAuth: []
         - ApiKeys: []
       x-ai-tool: true
+      x-ai-title: Search resources
+      x-ai-read-only: true
   /administrations/cloud-fleet:
     get:
       tags:
@@ -175,7 +185,7 @@ paths:
       summary: Get Cloud Fleet Capacity
       description: |-
         Reports the effective Cloud execution safety settings and aggregate usage across every organization in this deployment. The rolling launch budget includes accepted jobs that have not started and survives deletion of executions. An absent persisted override uses deployment defaults.
-        Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+        Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
       operationId: getCloudFleet
       responses:
         "200":
@@ -192,7 +202,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth: []
-      x-ai-danger: Admin route - requires a privileged session.
+      x-ai-danger: 'Not a person action: staff-only route, requires an Echopoint staff session.'
     put:
       tags:
         - Administration
@@ -200,7 +210,7 @@ paths:
       description: |-
         Persists both Cloud fleet limits for this deployment. All API replicas use the override for subsequent launches and claims, and it survives restarts and deployments. A daily launch limit of zero pauses new Cloud launches. The global claimed-job cap must remain positive. Lowering either limit preserves accepted and running jobs; claims wait until usage falls below the new cap.
         Submit the revision returned by Get Cloud Fleet Capacity as expected_revision. A concurrent settings change returns 409 CLOUD_FLEET_SETTINGS_CONFLICT without overwriting it. Revision zero identifies deployment defaults before the first saved override.
-        Requires a Clerk session JWT with the platform admin claim. No organization header is required; API keys and organization administrator roles alone do not grant access.
+        Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
       operationId: updateCloudFleet
       requestBody:
         content:
@@ -227,7 +237,41 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth: []
-      x-ai-danger: Admin route - requires a privileged session.
+      x-ai-danger: 'Not a person action: staff-only route, requires an Echopoint staff session.'
+  /administrations/organizations/search:
+    post:
+      tags:
+        - Administration
+      summary: Search Organizations And Their Members
+      description: |-
+        Searches every organization of this deployment and pages with a cursor. Each organization carries its members, read from Anchor, so the staff console can pick an organization and a member together. Default order: Anchor's organization order. full_text_search matches the organization name. An organization lists at most 100 members; members_truncated tells when it has more. An invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+        Requires an Echopoint staff session: a Clerk session JWT with the `admin` claim. No organization header is required; API keys and organization Admin roles alone do not grant access.
+      operationId: searchAdministrationOrganizations
+      requestBody:
+        description: Search criteria for organizations.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdministrationOrganizationSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Organizations and their members.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationOrganizationSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth: []
+      x-ai-danger: 'Not a person action: staff-only route, requires an Echopoint staff session.'
   /administrations/resource-search/resync:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -237,7 +281,7 @@ paths:
       summary: Resync Resource Search Documents
       description: |-
         Wipes and rebuilds the `resource_search_documents` projection from canonical tables across every tenant, and returns a report — grouped by organization — of the rows that had drifted and were corrected (missing rows added back, stale rows removed).
-        Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on admin routes. The operation runs synchronously inside a single transaction and may take time on large databases.
+        Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim resolves to `true` (configured in the Clerk JWT template from `user.public_metadata.admin`). API-key authentication is not accepted on staff routes. The operation runs synchronously inside a single transaction and may take time on large databases.
       operationId: resyncResourceSearch
       responses:
         "200":
@@ -252,7 +296,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - BearerAuth: []
-      x-ai-danger: Admin route - requires a privileged session.
+      x-ai-danger: 'Not a person action: staff-only route, requires an Echopoint staff session.'
   /administrations/analytics/rebuild:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -262,7 +306,7 @@ paths:
       summary: Rebuild Execution Analytics
       description: |-
         Re-projects the execution analytics of the organization in `X-Organization-ID` from its executions and node results. Every execution the organization finished in the last 30 days is recorded again, replacing its earlier rows; older runs keep the rows they have, because their HTTP calls are past raw retention. The rebuild runs in the background: the response reports when it was accepted, and the rows converge within minutes.
-        Reserved for operator use. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on admin routes.
+        Reserved for Echopoint staff. The caller must authenticate with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is not accepted on staff routes.
       operationId: rebuildExecutionAnalytics
       responses:
         "202":
@@ -277,7 +321,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - BearerAuth: []
-      x-ai-danger: Admin route - requires a privileged session.
+      x-ai-danger: 'Not a person action: staff-only route, requires an Echopoint staff session.'
   /administrations/monitors/{monitorId}/run:
     parameters:
       - name: monitorId
@@ -295,9 +339,9 @@ paths:
       description: |-
         Runs a single monitor immediately instead of waiting for its next occurrence.
         Processes the schedule inline — creates the occurrence, advances next_run_at, and
-        launches pending run items. Reserved for operator use; the caller must authenticate
+        launches pending run items. Reserved for Echopoint staff; the caller must authenticate
         with a Clerk session JWT whose `admin` claim is `true`. API-key authentication is
-        not accepted on admin routes.
+        not accepted on staff routes.
       operationId: runFlowScheduleNow
       responses:
         "202":
@@ -312,7 +356,7 @@ paths:
           $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth: []
-      x-ai-danger: Admin route - requires a privileged session.
+      x-ai-danger: 'Not a person action: staff-only route, requires an Echopoint staff session.'
   /integrations/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -349,6 +393,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Search integrations
+      x-ai-read-only: true
   /integrations/{integrationId}:
     parameters:
       - $ref: '#/components/parameters/IntegrationIdParameter'
@@ -382,6 +428,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get integration
+      x-ai-read-only: true
   /integrations/{integrationId}/items/search:
     parameters:
       - $ref: '#/components/parameters/IntegrationIdParameter'
@@ -421,6 +469,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Search integration items
+      x-ai-read-only: true
   /integrations/{integrationId}/choices:
     parameters:
       - $ref: '#/components/parameters/IntegrationIdParameter'
@@ -456,6 +506,8 @@ paths:
         - ApiKeys:
             - workspace.settings:update
       x-ai-tool: true
+      x-ai-title: Set integration choices
+      x-ai-read-only: false
   /integrations/{integrationId}/connections/search:
     parameters:
       - $ref: '#/components/parameters/IntegrationIdParameter'
@@ -495,6 +547,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Search integration connections
+      x-ai-read-only: true
   /integrations/{integrationId}/connections/{environmentKey}:
     parameters:
       - $ref: '#/components/parameters/IntegrationIdParameter'
@@ -535,6 +589,8 @@ paths:
         - ApiKeys:
             - workspace.settings:update
       x-ai-tool: true
+      x-ai-title: Connect integration
+      x-ai-read-only: false
     delete:
       tags:
         - Integration
@@ -560,6 +616,8 @@ paths:
         - ApiKeys:
             - workspace.settings:update
       x-ai-tool: true
+      x-ai-title: Disconnect integration
+      x-ai-read-only: false
   /webhooks/{id}/signature:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -602,6 +660,8 @@ paths:
         - ApiKeys:
             - webhooks:create
       x-ai-tool: true
+      x-ai-title: Set webhook signature
+      x-ai-read-only: false
     delete:
       tags:
         - Webhook
@@ -633,6 +693,8 @@ paths:
         - ApiKeys:
             - webhooks:create
       x-ai-tool: true
+      x-ai-title: Clear webhook signature
+      x-ai-read-only: false
   /webhooks/{id}/requests/search:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -671,6 +733,8 @@ paths:
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
+      x-ai-title: Search webhook requests
+      x-ai-read-only: true
   /webhooks/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -708,6 +772,8 @@ paths:
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
+      x-ai-title: Search webhooks
+      x-ai-read-only: true
   /webhooks/{id}/stream:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -747,7 +813,7 @@ paths:
             - workspace.webhooks:read
         - ApiKeys:
             - webhooks:read
-      x-ai-danger: SSE stream - long-lived, incompatible with request/response tools.
+      x-ai-danger: 'Transport: SSE stream is long-lived and no MCP transport carries it; poll the execution or request search instead.'
   /webhooks/{id}/analytics/requests/volumes:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -756,13 +822,13 @@ paths:
       tags:
         - Analytics
       summary: Get Request Volumes
-      description: Returns request counts over time for the selected datetime range.
+      description: Returns request counts over time for the window [from, to). A time bucket is returned when it starts in the window.
       operationId: getWebhookRequestVolumes
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: from
           in: query
-          description: Start datetime for analytics data (ISO 8601 format).
+          description: Start of the analytics window, inclusive (ISO 8601 format).
           required: true
           schema:
             type: string
@@ -771,7 +837,7 @@ paths:
               - 2023-01-01 00:00:00+00:00
         - name: to
           in: query
-          description: End datetime for analytics data (ISO 8601 format).
+          description: End of the analytics window, exclusive (ISO 8601 format). Must be after `from`, or the request is refused with 400 VALIDATION_ERROR.
           required: true
           schema:
             type: string
@@ -799,6 +865,8 @@ paths:
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
+      x-ai-title: Get webhook request volumes
+      x-ai-read-only: true
   /webhooks/{id}/analytics/requests/methods:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -807,13 +875,13 @@ paths:
       tags:
         - Analytics
       summary: Get Method Distribution
-      description: Returns distribution of HTTP methods for the selected datetime range.
+      description: Returns the distribution of HTTP methods for the window [from, to). A time bucket is counted when it starts in the window.
       operationId: getWebhookMethodDistribution
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - name: from
           in: query
-          description: Start datetime for analytics data (ISO 8601 format).
+          description: Start of the analytics window, inclusive (ISO 8601 format).
           required: true
           schema:
             type: string
@@ -822,7 +890,7 @@ paths:
               - 2023-01-01 00:00:00+00:00
         - name: to
           in: query
-          description: End datetime for analytics data (ISO 8601 format).
+          description: End of the analytics window, exclusive (ISO 8601 format). Must be after `from`, or the request is refused with 400 VALIDATION_ERROR.
           required: true
           schema:
             type: string
@@ -850,6 +918,8 @@ paths:
         - ApiKeys:
             - webhooks:read
       x-ai-tool: true
+      x-ai-title: Get webhook method distribution
+      x-ai-read-only: true
   /webhook/{id}:
     parameters:
       - $ref: '#/components/parameters/WebhookIdParameter'
@@ -870,7 +940,11 @@ paths:
                 $ref: '#/components/schemas/WebhookResponse'
         "404":
           $ref: '#/components/responses/NotFound'
-      x-ai-danger: Public webhook ingestion - data-plane endpoint, not a control action.
+        "413":
+          $ref: '#/components/responses/ContentTooLarge'
+        "429":
+          $ref: '#/components/responses/WebhookRateLimited'
+      x-ai-danger: 'Not a person action: public webhook ingestion, a data-plane endpoint that is not a control action.'
     put:
       tags:
         - Webhook
@@ -888,7 +962,11 @@ paths:
                 $ref: '#/components/schemas/WebhookResponse'
         "404":
           $ref: '#/components/responses/NotFound'
-      x-ai-danger: Public webhook ingestion - data-plane endpoint, not a control action.
+        "413":
+          $ref: '#/components/responses/ContentTooLarge'
+        "429":
+          $ref: '#/components/responses/WebhookRateLimited'
+      x-ai-danger: 'Not a person action: public webhook ingestion, a data-plane endpoint that is not a control action.'
     post:
       tags:
         - Webhook
@@ -906,7 +984,11 @@ paths:
                 $ref: '#/components/schemas/WebhookResponse'
         "404":
           $ref: '#/components/responses/NotFound'
-      x-ai-danger: Public webhook ingestion - data-plane endpoint, not a control action.
+        "413":
+          $ref: '#/components/responses/ContentTooLarge'
+        "429":
+          $ref: '#/components/responses/WebhookRateLimited'
+      x-ai-danger: 'Not a person action: public webhook ingestion, a data-plane endpoint that is not a control action.'
     delete:
       tags:
         - Webhook
@@ -924,7 +1006,11 @@ paths:
                 $ref: '#/components/schemas/WebhookResponse'
         "404":
           $ref: '#/components/responses/NotFound'
-      x-ai-danger: Public webhook ingestion - data-plane endpoint, not a control action.
+        "413":
+          $ref: '#/components/responses/ContentTooLarge'
+        "429":
+          $ref: '#/components/responses/WebhookRateLimited'
+      x-ai-danger: 'Not a person action: public webhook ingestion, a data-plane endpoint that is not a control action.'
     patch:
       tags:
         - Webhook
@@ -942,7 +1028,11 @@ paths:
                 $ref: '#/components/schemas/WebhookResponse'
         "404":
           $ref: '#/components/responses/NotFound'
-      x-ai-danger: Public webhook ingestion - data-plane endpoint, not a control action.
+        "413":
+          $ref: '#/components/responses/ContentTooLarge'
+        "429":
+          $ref: '#/components/responses/WebhookRateLimited'
+      x-ai-danger: 'Not a person action: public webhook ingestion, a data-plane endpoint that is not a control action.'
   /flows/{id}/launch:
     parameters:
       - name: id
@@ -960,8 +1050,12 @@ paths:
       description: |
         Launches a flow execution asynchronously and returns the created execution.
         Real-time updates can be consumed separately from the execution stream endpoint.
-        Specify a version_id in the request body to run a specific published version;
-        omit it to run the current (mutable) flow definition.
+        Every launch, monitor occurrences included, runs the flow as saved, with the
+        modules it calls as saved. To run an earlier version, restore it first.
+
+        A flow that references a variable the chosen environment does not define
+        answers 400 `INVALID_FLOW_DEFINITION` with `reason: unknown_initial_variable`
+        and the `variable_name`, and creates no execution.
 
         Each organization may launch at most its license's `max_cloud_executions_per_day`
         Cloud executions in any 24 hours, counting every trigger. A Cloud launch past
@@ -975,7 +1069,7 @@ paths:
         launching itself. Past it the launch answers 429
         `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: organization_all_runners`.
 
-        Cloud launches additionally share an operator-configured fleet budget in
+        Cloud launches additionally share a fleet budget configured by Echopoint staff in
         any 24 hours. Exhausting it also answers 429
         `DAILY_EXECUTION_LIMIT_EXCEEDED` with `scope: cloud_fleet`. This budget
         survives deletion of flows and executions, excludes self-hosted and
@@ -994,13 +1088,25 @@ paths:
           in: header
           description: |
             Optional stable key for idempotent launches (e.g. CI retries). Idempotency is scoped
-            by organization, flow, environment key, version ID, runner type, trigger type, and the
+            by organization, flow, environment key, runner type, trigger type, call inputs, and the
             key digest. A matching launch returns the original execution; reusing the key
             with different scoped parameters returns 409 Conflict.
           required: false
           schema:
             type: string
             maxLength: 255
+        - name: Prefer
+          in: header
+          description: |
+            Optional RFC 7240 preference header. Send `wait=<seconds>` (1 to 45; higher values
+            are capped at 45) to wait synchronously for a cloud or self-hosted execution to
+            complete. Returns 200 OK with `Preference-Applied: wait=<N>`, the terminal execution,
+            and redacted `output` node values when the run finishes within the wait window;
+            returns 202 Accepted when the run is still executing (or for ephemeral runs).
+          required: false
+          schema:
+            type: string
+            maxLength: 64
       requestBody:
         content:
           application/json:
@@ -1008,6 +1114,19 @@ paths:
               $ref: '#/components/schemas/LaunchFlowRequest'
         required: true
       responses:
+        "200":
+          description: |
+            Flow execution finished within the RFC 7240 `Prefer: wait=N` window. Returns the
+            terminal execution and any redacted values emitted by completed `output` nodes.
+          headers:
+            Preference-Applied:
+              description: Echoes the applied wait window (for example `wait=30`).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaunchFlowCompletedResponse'
         "202":
           description: |
             Flow execution accepted. Cloud/self-hosted runners start asynchronously. An ephemeral
@@ -1041,6 +1160,8 @@ paths:
             - flows:execute
       x-ai-description: Launch (run) a flow execution asynchronously by flow id. Returns the created execution. Use when the user asks to run, trigger, or test a flow.
       x-ai-tool: true
+      x-ai-title: Launch flow
+      x-ai-read-only: false
   /runner/ephemeral/executions/{executionId}/claim:
     parameters:
       - name: executionId
@@ -1091,7 +1212,7 @@ paths:
             - workspace.flows:execute
         - ApiKeys:
             - flows:execute
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
   /runner/ephemeral/executions/{executionId}/complete:
     parameters:
       - name: executionId
@@ -1152,7 +1273,7 @@ paths:
             - runner:complete
         - BearerAuth:
             - workspace.flows:execute
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
   /runners:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1187,6 +1308,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List live runners
+      x-ai-read-only: true
   /runner/jobs/next:
     post:
       tags:
@@ -1222,7 +1345,65 @@ paths:
       security:
         - ApiKeys:
             - runner:claim
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
+  /inbound/email:
+    post:
+      tags:
+        - Inbox
+      summary: Receive an email for a run inbox
+      description: |
+        Stores one email received on Echopoint's mail domain in the run inbox its envelope recipient names
+        (ADR-0030). Only the Email Worker calls it. The body is the raw RFC 5322 message, with the Worker's
+        `Echopoint-Envelope-From` and `Echopoint-Envelope-To` header lines first. The request is signed with
+        the Standard Webhooks scheme (`webhook-id`, `webhook-timestamp`, `webhook-signature`) over the exact
+        body bytes; a request without these headers, or stale or wrongly signed, answers 401, and so does every request while
+        no signing secret is configured.
+
+        Each refusal is final for that message, and the Worker turns it into an SMTP rejection: 404 when the
+        recipient names no inbox or the inbox's run has ended, 413 when the raw message exceeds 10 MiB or its
+        text and HTML parts exceed 1 MiB together, 429 when the inbox received 60 messages in the last minute
+        (`INBOX_RATE_LIMITED`) or already stores the license's `max_inbox_size_mib` (`INBOX_FULL`),
+        400 when the message has no envelope recipient or cannot be parsed. A message whose Message-ID the
+        inbox already stored is accepted and not stored again.
+      operationId: receiveInboundEmail
+      parameters:
+        - name: webhook-id
+          in: header
+          description: Unique id of this delivery, part of the signed content.
+          required: false
+          schema:
+            type: string
+        - name: webhook-timestamp
+          in: header
+          description: Unix seconds when the delivery was signed. A timestamp more than five minutes away is refused.
+          required: false
+          schema:
+            type: string
+        - name: webhook-signature
+          in: header
+          description: 'Space-separated signatures, each `v1,` followed by the base64 HMAC-SHA256 of `{webhook-id}.{webhook-timestamp}.{body}`.'
+          required: false
+          schema:
+            type: string
+      requestBody:
+        $ref: '#/components/requestBodies/InboundEmailMessage'
+      responses:
+        "202":
+          description: The message is stored, or was already stored.
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "413":
+          $ref: '#/components/responses/ContentTooLarge'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security: []
+      x-ai-danger: 'Not a person action: public email ingestion for the Email Worker, a data-plane endpoint.'
   /runner/jobs/{jobId}/payload:
     parameters:
       - $ref: '#/components/parameters/RunnerJobIDParameter'
@@ -1236,9 +1417,14 @@ paths:
         never persisted. Self-hosted and ephemeral jobs are not served here.
 
         The payload is single-use. The first call claims it; a later call is
-        refused with 409. Message delivery to a Cloud worker is at-least-once,
-        so a redelivered job can reach a second worker that holds the same
-        valid token, and a Cloud job must never run twice.
+        refused with 409 `CLOUD_JOB_PAYLOAD_ALREADY_FETCHED`. Message delivery
+        to a Cloud worker is at-least-once, so a redelivered job can reach a
+        second worker that holds the same valid token, and a Cloud job must
+        never run twice.
+
+        Only a job that is still claimed is served. Once the reconciler failed
+        the job or a member cancelled it, the fetch is refused with 409
+        `CLOUD_JOB_NOT_ASSIGNED` and the payload stays unclaimed.
       operationId: getCloudJobPayload
       responses:
         "200":
@@ -1257,7 +1443,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - JobToken: []
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
   /runner/jobs/{jobId}/complete:
     parameters:
       - $ref: '#/components/parameters/RunnerJobIDParameter'
@@ -1295,7 +1481,7 @@ paths:
         - ApiKeys:
             - runner:complete
         - JobToken: []
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
   /runner/jobs/{jobId}/events:
     parameters:
       - $ref: '#/components/parameters/RunnerJobIDParameter'
@@ -1337,7 +1523,7 @@ paths:
         - ApiKeys:
             - runner:complete
         - JobToken: []
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
   /runner/jobs/heartbeat:
     post:
       tags:
@@ -1375,7 +1561,7 @@ paths:
         - ApiKeys:
             - runner:claim
         - JobToken: []
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
   /flows:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1410,12 +1596,14 @@ paths:
             - flows:read
       x-ai-description: 'Deprecated: use search_flows instead, which pages with a cursor. List flows in the organization. Returns flow ids, names, and metadata. Use to discover available flows.'
       x-ai-tool: true
+      x-ai-title: List flows
+      x-ai-read-only: true
     post:
       tags:
         - Flows
       summary: Create Flow
       description: |
-        Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. A file that does not compile returns 400 and creates nothing.
+        Creates a new flow for the authenticated user. Send `source` to create the flow from a flow file; the server compiles it and stores JSON. The file replaces the name and definition sent alongside it. `folder_id`, `tags`, `description`, `role` and `metadata` sent alongside the file apply when the file leaves them out; a value the file sets wins. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and creates nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle.
         A definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED`, naming the integrations and the steps, and creates nothing.
       operationId: createFlow
       parameters:
@@ -1448,6 +1636,8 @@ paths:
         - ApiKeys:
             - flows:create
       x-ai-tool: true
+      x-ai-title: Create flow
+      x-ai-read-only: false
   /flows/compile:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1455,7 +1645,7 @@ paths:
       tags:
         - Flows
       summary: Compile Flow File
-      description: Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. An empty file returns 400.
+      description: Compiles a flow file and returns the JSON document it would save, plus any diagnostics. This does not create or update a flow. A file with errors still returns 200 so an editor can show them; the request is omitted. Errors include the checks a save runs that the file syntax cannot express, such as a tag that does not match the tag pattern or edges that form a cycle. An empty file returns 400.
       operationId: compileFlowSource
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -1486,6 +1676,8 @@ paths:
             - flows:read
       x-ai-description: Check a flow file without saving it. Returns diagnostics and, when it compiles, the JSON create document.
       x-ai-tool: true
+      x-ai-title: Compile flow source
+      x-ai-read-only: true
   /flows/decompile:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1524,6 +1716,8 @@ paths:
             - flows:read
       x-ai-description: Render a stored flow as a flow file. Does not save.
       x-ai-tool: true
+      x-ai-title: Decompile flow source
+      x-ai-read-only: true
   /flows/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1564,6 +1758,8 @@ paths:
             - flows:read
       x-ai-description: Search flows by name or attributes with filters and pagination.
       x-ai-tool: true
+      x-ai-title: Search flows
+      x-ai-read-only: true
   /flows/folders/move:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1604,9 +1800,10 @@ paths:
             - workspace.flows:update
         - ApiKeys:
             - flows:update
-      x-ai-danger: Mutates many flows in one call; a broad filter can move the entire organization's flows. Confirm the filter scope first.
-      x-ai-description: Move many flows into one folder at once, chosen by explicit ids or by a search filter (null folder = uncategorized).
+      x-ai-description: Move many flows into one folder at once, chosen by explicit ids or by a search filter (null folder = uncategorized). A broad filter can move every flow of the organization, so confirm the filter scope with the user first.
       x-ai-tool: true
+      x-ai-title: Bulk move flows
+      x-ai-read-only: false
   /flows/folders:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1643,6 +1840,8 @@ paths:
             - flows:read
       x-ai-description: 'Deprecated: use search_flow_folders instead, which pages with a cursor. List the organization''s flow folders (id, parent, name) to render the flow tree.'
       x-ai-tool: true
+      x-ai-title: List flow folders
+      x-ai-read-only: true
     post:
       tags:
         - Flows
@@ -1681,6 +1880,8 @@ paths:
         - ApiKeys:
             - flows:create
       x-ai-tool: true
+      x-ai-title: Create flow folder
+      x-ai-read-only: false
   /flows/folders/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1719,6 +1920,8 @@ paths:
             - flows:read
       x-ai-description: Search the organization's flow folders (id, parent, name) to render the flow tree. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search flow folders
+      x-ai-read-only: true
   /flows/folders/{folderId}:
     parameters:
       - name: folderId
@@ -1767,6 +1970,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Update flow folder
+      x-ai-read-only: false
     delete:
       tags:
         - Flows
@@ -1806,6 +2011,8 @@ paths:
             - flows:delete
       x-ai-description: 'Delete a flow folder subtree. Keep delete_flows false unless the user explicitly asked to also delete the flows inside: delete_flows=true irreversibly deletes every flow in the subtree with its execution history.'
       x-ai-tool: true
+      x-ai-title: Delete flow folder
+      x-ai-read-only: false
   /flows/folders/{folderId}/move:
     parameters:
       - name: folderId
@@ -1853,9 +2060,10 @@ paths:
             - workspace.flows:update
         - ApiKeys:
             - flows:update
-      x-ai-danger: Reparents the whole folder subtree; confirm the destination before moving.
-      x-ai-description: Move a folder under another folder, or to the root (send parent_id null).
+      x-ai-description: Move a folder under another folder, or to the root (send parent_id null). It moves the whole folder subtree, so confirm the destination with the user first.
       x-ai-tool: true
+      x-ai-title: Move flow folder
+      x-ai-read-only: false
   /flows/tags:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -1886,6 +2094,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List flow tags
+      x-ai-read-only: true
   /flows/{id}:
     parameters:
       - name: id
@@ -1926,12 +2136,14 @@ paths:
             - flows:read
       x-ai-description: Get a single flow's full definition by id (nodes, edges, configuration).
       x-ai-tool: true
+      x-ai-title: Get flow
+      x-ai-read-only: true
     put:
       tags:
         - Flows
       summary: Update Flow
       description: |
-        Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the name, description, version, definition, tags, role, and layout sent alongside it, and a folder in the file does not move the flow. A file that does not compile returns 400 and changes nothing. Omit `source` to send JSON as before.
+        Updates an existing flow. Send `source` to save a flow file; the server compiles it and stores JSON. The file replaces the whole flow: name, version, definition and layout come from the file. For `description`, `tags`, `role` and `metadata` a value the file sets wins, a value sent alongside the file applies when the file leaves it out, and with neither the stored value is kept. Send `tags: []` or `description: ""` in the file or alongside it to clear them, and `role: test` to demote a function. A folder in the file does not move the flow. A file that does not compile returns 400 `INVALID_FLOW_DEFINITION` and changes nothing; that includes a tag that breaks the tag pattern, more than 32 tags and edges that form a cycle. Omit `source` to send JSON as before.
         Saving a definition with a step of an integration the organization's plan does not include returns 403 `INTEGRATION_NOT_LICENSED` and changes nothing; a change that sends no definition, such as a rename, is not checked.
       operationId: updateFlow
       parameters:
@@ -1966,6 +2178,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Update flow
+      x-ai-read-only: false
     delete:
       tags:
         - Flows
@@ -1989,6 +2203,8 @@ paths:
         - ApiKeys:
             - flows:delete
       x-ai-tool: true
+      x-ai-title: Delete flow
+      x-ai-read-only: false
   /flows/{id}/export:
     parameters:
       - name: id
@@ -1998,19 +2214,12 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: version_id
-        in: query
-        description: Optional flow version ID to export. When omitted, the current flow definition is used.
-        required: false
-        schema:
-          type: string
-          format: uuid
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
     get:
       tags:
         - Flows
       summary: Export Flow
-      description: Returns the raw flow definition JSON formatted for the flow engine. A secret variable is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must set the secret itself.
+      description: Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
       operationId: exportFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -2037,6 +2246,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Export flow
+      x-ai-read-only: true
   /me:
     get:
       tags:
@@ -2063,7 +2274,9 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth: []
-      x-ai-danger: User identity route - API-key callers use get_current_api_key instead.
+      x-ai-tool: true
+      x-ai-title: Get current user
+      x-ai-read-only: true
   /me/invitations:
     get:
       tags:
@@ -2096,7 +2309,9 @@ paths:
       deprecated: true
       security:
         - BearerAuth: []
-      x-ai-danger: Invitee flow - requires a human session of the invited person.
+      x-ai-tool: true
+      x-ai-title: List my invitations
+      x-ai-read-only: true
   /me/invitations/search:
     post:
       tags:
@@ -2142,7 +2357,9 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth: []
-      x-ai-danger: Invitee flow - requires a human session of the invited person.
+      x-ai-tool: true
+      x-ai-title: Search my invitations
+      x-ai-read-only: true
   /organization:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2167,6 +2384,8 @@ paths:
         - BearerAuth: []
         - ApiKeys: []
       x-ai-tool: true
+      x-ai-title: Get organization
+      x-ai-read-only: true
     patch:
       tags:
         - Organizations
@@ -2198,6 +2417,8 @@ paths:
         - ApiKeys:
             - organization:update
       x-ai-tool: true
+      x-ai-title: Rename organization
+      x-ai-read-only: false
   /organization/variables:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2222,6 +2443,8 @@ paths:
         - ApiKeys:
             - environment:read
       x-ai-tool: true
+      x-ai-title: Get organization variables
+      x-ai-read-only: true
     delete:
       tags:
         - Organization
@@ -2239,6 +2462,9 @@ paths:
         - ApiKeys:
             - environment:delete
       x-ai-tool: true
+      x-ai-title: Delete organization variables
+      x-ai-description: 'Deletes every organization variable: the base layer and every environment overlay, secrets included. It cannot be undone. To remove one variable, use delete_organization_variable (base layer) or delete_environment_variable (one environment). Use this tool only when the user asks to delete all of them.'
+      x-ai-read-only: false
   /organization/variables/{key}:
     parameters:
       - $ref: '#/components/parameters/VariableKey'
@@ -2272,6 +2498,8 @@ paths:
         - ApiKeys:
             - environment:update
       x-ai-tool: true
+      x-ai-title: Set organization variable
+      x-ai-read-only: false
     delete:
       tags:
         - Organization
@@ -2289,6 +2517,8 @@ paths:
         - ApiKeys:
             - environment:delete
       x-ai-tool: true
+      x-ai-title: Delete organization variable
+      x-ai-read-only: false
   /organization/environments:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2314,6 +2544,8 @@ paths:
         - ApiKeys:
             - environment:read
       x-ai-tool: true
+      x-ai-title: List environments
+      x-ai-read-only: true
     post:
       tags:
         - Organization
@@ -2345,6 +2577,8 @@ paths:
         - ApiKeys:
             - environment:create
       x-ai-tool: true
+      x-ai-title: Create environment
+      x-ai-read-only: false
   /organization/environments/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2379,6 +2613,8 @@ paths:
             - environment:read
       x-ai-description: Search the environments of the organization by name. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search environments
+      x-ai-read-only: true
   /organization/environments/{environment}:
     parameters:
       - $ref: '#/components/parameters/EnvironmentPath'
@@ -2402,6 +2638,8 @@ paths:
         - ApiKeys:
             - environment:delete
       x-ai-tool: true
+      x-ai-title: Delete environment
+      x-ai-read-only: false
   /organization/environments/{environment}/variables/{key}:
     parameters:
       - $ref: '#/components/parameters/EnvironmentPath'
@@ -2438,6 +2676,8 @@ paths:
         - ApiKeys:
             - environment:update
       x-ai-tool: true
+      x-ai-title: Set environment variable
+      x-ai-read-only: false
     delete:
       tags:
         - Organization
@@ -2457,6 +2697,8 @@ paths:
         - ApiKeys:
             - environment:delete
       x-ai-tool: true
+      x-ai-title: Delete environment variable
+      x-ai-read-only: false
   /init:
     post:
       tags:
@@ -2477,7 +2719,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth: []
-      x-ai-danger: User provisioning route - not an agent action.
+      x-ai-danger: 'Not a person action: user provisioning performed by the web app at first sign-in.'
   /api-keys:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2509,7 +2751,9 @@ paths:
       security:
         - BearerAuth:
             - api_key:read
-      x-ai-danger: API key management - kept off the agent surface.
+      x-ai-tool: true
+      x-ai-title: List API keys
+      x-ai-read-only: true
     post:
       tags:
         - Auth
@@ -2541,7 +2785,7 @@ paths:
       security:
         - BearerAuth:
             - api_key:create
-      x-ai-danger: API key management - an API-key principal minting keys is privilege escalation.
+      x-ai-danger: 'Extends the agent''s own access: an API-key principal minting keys would grant itself new credentials.'
   /api-keys/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2576,7 +2820,9 @@ paths:
       security:
         - BearerAuth:
             - api_key:read
-      x-ai-danger: API key management - kept off the agent surface.
+      x-ai-tool: true
+      x-ai-title: Search API keys
+      x-ai-read-only: true
   /permissions:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2585,7 +2831,7 @@ paths:
       tags:
         - Auth
       summary: List Available Permissions
-      description: 'Lists product permissions that can be assigned to Echopoint API keys for the requested type. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole catalog: the server follows Anchor''s cursor to the last page.'
+      description: 'Lists the organization-scoped product permissions an Echopoint API key of the requested type may hold, and whether the caller may assign each one. Workspace-scoped permissions and API key management permissions are never listed: no API key can hold them. Each item''s `assignability` says whether the caller may put it on a key: a caller assigns only the permissions its organization role holds, and may put a runner permission it does not hold on a key that holds only runner permissions. Not paginated: a static catalog of Anchor permissions, not a persisted collection, so it has no search. The response is always the whole list: the server follows Anchor''s cursor to the last page.'
       operationId: listPermissions
       responses:
         "200":
@@ -2606,6 +2852,8 @@ paths:
         - ApiKeys:
             - api_key:create
       x-ai-tool: true
+      x-ai-title: List permissions
+      x-ai-read-only: true
   /api-keys/self:
     get:
       tags:
@@ -2628,8 +2876,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - ApiKeys: []
-      x-ai-description: 'Get the identity of the current API key (who am I): its organization and granted permissions. Call first when authenticated via API key to learn your scope.'
-      x-ai-tool: true
+      x-ai-danger: "Not a person action: it answers only for an API key caller. A person signed in with OAuth uses get_me."
   /api-keys/{id}:
     parameters:
       - $ref: '#/components/parameters/ApiKeyIdParameter'
@@ -2658,7 +2905,46 @@ paths:
       security:
         - BearerAuth:
             - api_key:read
-      x-ai-danger: API key management - kept off the agent surface.
+      x-ai-tool: true
+      x-ai-title: Get API key
+      x-ai-read-only: true
+    patch:
+      tags:
+        - Auth
+      summary: Rename API Key
+      description: Renames an API key in the current organization. Permissions and expiry are fixed when a key is created; create a new key to change them.
+      operationId: updateAPIKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyUpdateRequest'
+      responses:
+        "200":
+          description: API key renamed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - BearerAuth:
+            - api_key:update
+      x-ai-tool: true
+      x-ai-title: Update API key
+      x-ai-read-only: false
     delete:
       tags:
         - Auth
@@ -2679,7 +2965,7 @@ paths:
       security:
         - BearerAuth:
             - api_key:delete
-      x-ai-danger: API key management - an API-key principal revoking keys is privilege escalation.
+      x-ai-danger: 'Extends the agent''s own access: an API-key principal revoking or deleting keys could cut off or replace its own credentials.'
   /collections:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2714,6 +3000,8 @@ paths:
             - collections:read
       x-ai-description: 'Deprecated: use search_collections instead, which pages with a cursor. List API request collections in the organization.'
       x-ai-tool: true
+      x-ai-title: List collections
+      x-ai-read-only: true
     post:
       tags:
         - Collections
@@ -2748,6 +3036,8 @@ paths:
         - ApiKeys:
             - collections:create
       x-ai-tool: true
+      x-ai-title: Create collection
+      x-ai-read-only: false
   /collections/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -2786,6 +3076,8 @@ paths:
             - collections:read
       x-ai-description: Search API request collections in the organization. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search collections
+      x-ai-read-only: true
   /collections/{id}:
     parameters:
       - name: id
@@ -2826,6 +3118,8 @@ paths:
             - collections:read
       x-ai-description: Get a single collection by id, including its folders and saved requests.
       x-ai-tool: true
+      x-ai-title: Get collection
+      x-ai-read-only: true
     put:
       tags:
         - Collections
@@ -2862,6 +3156,8 @@ paths:
         - ApiKeys:
             - collections:update
       x-ai-tool: true
+      x-ai-title: Update collection
+      x-ai-read-only: false
     delete:
       tags:
         - Collections
@@ -2885,6 +3181,8 @@ paths:
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
+      x-ai-title: Delete collection
+      x-ai-read-only: false
   /collections/{id}/openapi-sync:
     parameters:
       - name: id
@@ -2924,6 +3222,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: Get OpenAPI sync config
+      x-ai-read-only: true
   /collections/{id}/openapi-sync/run:
     parameters:
       - name: id
@@ -2973,6 +3273,8 @@ paths:
         - ApiKeys:
             - collections:update
       x-ai-tool: true
+      x-ai-title: Run OpenAPI sync now
+      x-ai-read-only: false
   /collections/{id}/openapi-sync/history:
     parameters:
       - name: id
@@ -3015,6 +3317,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: List OpenAPI sync history
+      x-ai-read-only: true
     put:
       tags:
         - Collections
@@ -3051,6 +3355,8 @@ paths:
         - ApiKeys:
             - collections:update
       x-ai-tool: true
+      x-ai-title: Create or update OpenAPI sync config
+      x-ai-read-only: false
     delete:
       tags:
         - Collections
@@ -3076,6 +3382,8 @@ paths:
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
+      x-ai-title: Delete OpenAPI sync config
+      x-ai-read-only: false
   /collections/{id}/openapi-sync/history/search:
     parameters:
       - name: id
@@ -3123,6 +3431,8 @@ paths:
             - collections:read
       x-ai-description: Search the OpenAPI sync change history of a collection, newest first, and page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search OpenAPI sync history
+      x-ai-read-only: true
   /collections/{id}/openapi-sync/operations/search:
     parameters:
       - name: id
@@ -3169,6 +3479,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: Search OpenAPI sync operations
+      x-ai-read-only: true
   /openapi-syncs/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -3208,6 +3520,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: Search OpenAPI sync configs
+      x-ai-read-only: true
   /collections/{id}/folders:
     parameters:
       - name: id
@@ -3248,6 +3562,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: List collection folders
+      x-ai-read-only: true
     post:
       tags:
         - Collections
@@ -3284,6 +3600,8 @@ paths:
         - ApiKeys:
             - collections:create
       x-ai-tool: true
+      x-ai-title: Add folder
+      x-ai-read-only: false
   /collections/{id}/folders/search:
     parameters:
       - name: id
@@ -3331,6 +3649,8 @@ paths:
             - collections:read
       x-ai-description: Search the folders of a collection to build its tree. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search collection folders
+      x-ai-read-only: true
   /collections/{collectionId}/folders/{folderId}:
     parameters:
       - name: collectionId
@@ -3386,6 +3706,8 @@ paths:
         - ApiKeys:
             - collections:update
       x-ai-tool: true
+      x-ai-title: Update folder
+      x-ai-read-only: false
     delete:
       tags:
         - Collections
@@ -3411,6 +3733,8 @@ paths:
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
+      x-ai-title: Delete folder
+      x-ai-read-only: false
   /collections/{id}/requests:
     parameters:
       - name: id
@@ -3473,6 +3797,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: List collection requests
+      x-ai-read-only: true
     post:
       tags:
         - Collections
@@ -3509,6 +3835,8 @@ paths:
         - ApiKeys:
             - collections:create
       x-ai-tool: true
+      x-ai-title: Add request
+      x-ai-read-only: false
   /collections/{id}/requests/search:
     parameters:
       - name: id
@@ -3556,6 +3884,8 @@ paths:
             - collections:read
       x-ai-description: Search the requests of a collection by folder, name or URL. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search collection requests
+      x-ai-read-only: true
   /collections/{collectionId}/requests/{requestId}:
     parameters:
       - name: collectionId
@@ -3602,6 +3932,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: Get collection request
+      x-ai-read-only: true
     put:
       tags:
         - Collections
@@ -3638,6 +3970,8 @@ paths:
         - ApiKeys:
             - collections:update
       x-ai-tool: true
+      x-ai-title: Update request
+      x-ai-read-only: false
     delete:
       tags:
         - Collections
@@ -3663,6 +3997,8 @@ paths:
         - ApiKeys:
             - collections:delete
       x-ai-tool: true
+      x-ai-title: Delete request
+      x-ai-read-only: false
   /collections/{collectionId}/requests/{requestId}/execute:
     parameters:
       - name: collectionId
@@ -3716,6 +4052,8 @@ paths:
         - ApiKeys:
             - collections:update
       x-ai-tool: true
+      x-ai-title: Execute collection request
+      x-ai-read-only: false
   /collections/{collectionId}/requests/{requestId}/openapi-sync-history:
     parameters:
       - name: collectionId
@@ -3765,6 +4103,8 @@ paths:
         - ApiKeys:
             - collections:read
       x-ai-tool: true
+      x-ai-title: List collection request OpenAPI sync history
+      x-ai-read-only: true
   /collections/{collectionId}/requests/{requestId}/openapi-sync-history/search:
     parameters:
       - name: collectionId
@@ -3819,6 +4159,8 @@ paths:
             - collections:read
       x-ai-description: Search the OpenAPI sync change history of one request, newest first, and page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search collection request OpenAPI sync history
+      x-ai-read-only: true
   /collections/import/openapi:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -3858,6 +4200,8 @@ paths:
         - ApiKeys:
             - collections:create
       x-ai-tool: true
+      x-ai-title: Import from OpenAPI
+      x-ai-read-only: false
   /flows/{id}/variables:
     parameters:
       - name: id
@@ -3897,6 +4241,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get flow variables
+      x-ai-read-only: true
     delete:
       tags:
         - Flows
@@ -3922,6 +4268,9 @@ paths:
         - ApiKeys:
             - flows:delete
       x-ai-tool: true
+      x-ai-title: Delete flow variables
+      x-ai-description: 'Deletes every variable of the flow, secrets included. It cannot be undone. To remove one variable, use delete_flow_variable. Use this tool only when the user asks to delete all of them.'
+      x-ai-read-only: false
   /flows/{id}/variables/{key}:
     parameters:
       - name: id
@@ -3968,6 +4317,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Set flow variable
+      x-ai-read-only: false
     delete:
       tags:
         - Flows
@@ -3993,87 +4344,8 @@ paths:
         - ApiKeys:
             - flows:delete
       x-ai-tool: true
-  /flows/{id}/publish:
-    parameters:
-      - name: id
-        in: path
-        description: The unique identifier of the flow.
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
-    post:
-      tags:
-        - Flows
-      summary: Publish Flow
-      description: Snapshot the current flow definition as an immutable flow version.
-      operationId: publishFlow
-      parameters:
-        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
-      responses:
-        "403":
-          $ref: '#/components/responses/Forbidden'
-        "201":
-          description: Flow published successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FlowVersion'
-        "400":
-          $ref: '#/components/responses/BadRequest'
-        "401":
-          $ref: '#/components/responses/Unauthorized'
-        "404":
-          $ref: '#/components/responses/NotFound'
-      security:
-        - BearerAuth:
-            - workspace.flows:update
-        - ApiKeys:
-            - flows:update
-      x-ai-tool: true
-  /flows/{id}/versions:
-    parameters:
-      - name: id
-        in: path
-        description: The unique identifier of the flow.
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
-      - $ref: '#/components/parameters/LimitParameter'
-      - $ref: '#/components/parameters/OffsetParameter'
-    get:
-      tags:
-        - Flows
-      summary: 'Deprecated: use search_flow_versions instead, which pages with a cursor. List Flow Versions'
-      description: 'Deprecated: use `searchFlowVersions`, which pages with a cursor. Retrieves a paginated list of saved versions for a flow.'
-      operationId: listFlowVersions
-      parameters:
-        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
-      responses:
-        "400":
-          $ref: '#/components/responses/BadRequest'
-        "403":
-          $ref: '#/components/responses/Forbidden'
-        "200":
-          description: Flow versions retrieved successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FlowVersionListResponse'
-        "401":
-          $ref: '#/components/responses/Unauthorized'
-        "404":
-          $ref: '#/components/responses/NotFound'
-      deprecated: true
-      security:
-        - BearerAuth:
-            - workspace.flows:read
-        - ApiKeys:
-            - flows:read
-      x-ai-tool: true
+      x-ai-title: Delete flow variable
+      x-ai-read-only: false
   /flows/{id}/versions/search:
     parameters:
       - name: id
@@ -4088,7 +4360,7 @@ paths:
       tags:
         - Flows
       summary: Search Flow Versions
-      description: 'Searches the saved versions of a flow and pages with a cursor. Default order: published_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
+      description: 'Searches the version history of a flow and pages with a cursor. A save that changes the definition or layout stores the state it replaces when the newest version is older than 10 minutes; a restore always does. A flow keeps its 30 newest versions. Default order: created_at DESC, then id. A sort_by without sort_direction sorts DESC. full_text_search is not used by this search.'
       operationId: searchFlowVersions
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -4121,6 +4393,8 @@ paths:
             - flows:read
       x-ai-description: Search the saved versions of a flow, newest first, and page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search flow versions
+      x-ai-read-only: true
   /flows/{id}/versions/{versionId}:
     parameters:
       - name: id
@@ -4167,6 +4441,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get flow version
+      x-ai-read-only: true
   /flows/{id}/versions/{versionId}/restore:
     parameters:
       - name: id
@@ -4190,7 +4466,8 @@ paths:
       summary: Restore Flow Version
       description: |
         Copies a saved version's definition and metadata back into the flow.
-        The original version is preserved.
+        The original version is preserved. Execution history of steps the restored definition no longer holds is deleted, as on an update.
+        A concurrent write to the flow returns 409 `FLOW_VERSION_CONFLICT`; read the flow again and retry.
       operationId: restoreFlowVersion
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -4209,12 +4486,16 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
             - workspace.flows:update
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Restore flow version
+      x-ai-read-only: false
   /operations:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4240,6 +4521,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List operations
+      x-ai-read-only: true
   /nodes:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4265,6 +4548,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List nodes
+      x-ai-read-only: true
   /executions/summary:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4303,6 +4588,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get executions summary
+      x-ai-read-only: true
   /license/usage:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4338,6 +4625,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get license usage
+      x-ai-read-only: true
   /organization/analytics:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4354,6 +4643,7 @@ paths:
       operationId: getOrganizationAnalytics
       parameters:
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
+        - $ref: '#/components/parameters/AnalyticsFlowRoleQuery'
       responses:
         "200":
           description: Organization execution analytics.
@@ -4373,6 +4663,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get organization analytics
+      x-ai-read-only: true
   /analytics/summary:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4394,6 +4686,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
+        - $ref: '#/components/parameters/AnalyticsFlowRoleQuery'
       responses:
         "200":
           description: Execution analytics summary.
@@ -4413,6 +4706,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get execution analytics summary
+      x-ai-read-only: true
   /analytics/flows:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4423,12 +4718,14 @@ paths:
       description: |
         One row per flow that finished a run in the window, most runs first:
         how often it ran and failed, how long its runs took, and how many HTTP
-        calls they sent. A deleted flow keeps its row with an empty name.
+        calls they sent. A deleted flow has no row, and its runs count in no
+        analytics read.
         Not paginated: an aggregate computed per request over the window, not a persisted collection, so it has no search.
       operationId: listFlowAnalytics
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
+        - $ref: '#/components/parameters/AnalyticsFlowRoleQuery'
       responses:
         "200":
           description: Per-flow analytics.
@@ -4448,6 +4745,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List flow analytics
+      x-ai-read-only: true
   /analytics/endpoints:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4470,6 +4769,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
         - $ref: '#/components/parameters/AnalyticsWindowQuery'
+        - $ref: '#/components/parameters/AnalyticsFlowRoleQuery'
         - name: flow_id
           in: query
           description: Keep only the calls this flow's runs sent.
@@ -4496,6 +4796,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List endpoint analytics
+      x-ai-read-only: true
   /executions:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4558,6 +4860,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List executions
+      x-ai-read-only: true
   /executions/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4596,6 +4900,8 @@ paths:
             - flows:read
       x-ai-description: Search executions across the organization or for chosen flows, newest first, filtered by status, trigger and start time. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search executions
+      x-ai-read-only: true
   /flows/{id}/executions:
     parameters:
       - name: id
@@ -4638,6 +4944,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List flow executions
+      x-ai-read-only: true
   /flows/{flowId}/executions/{executionId}:
     parameters:
       - name: flowId
@@ -4684,6 +4992,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get execution
+      x-ai-read-only: true
   /runner/jobs/{jobId}/webhook-requests:
     parameters:
       - $ref: '#/components/parameters/RunnerJobIDParameter'
@@ -4710,7 +5020,47 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - JobToken: []
-      x-ai-danger: Runner protocol - machine-to-machine, not an agent action.
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
+  /runner/jobs/{jobId}/inbox-messages:
+    parameters:
+      - $ref: '#/components/parameters/RunnerJobIDParameter'
+    get:
+      tags:
+        - Runner
+      summary: List the email messages of a job's run inbox
+      description: |
+        Returns the messages received by the run inbox of this job's execution, oldest first. Launch injects
+        this URL as `inbox.messages_url`. Authenticate with the job token. The request is refused once the
+        execution is terminal.
+        Not paginated: runner protocol authenticated by a job token that returns the newest messages of the run inbox, so it has no search.
+        A poll sends `after`, the id of the last message it read, and gets only the messages stored after it.
+      operationId: listRunnerJobInboxMessages
+      parameters:
+        - name: after
+          in: query
+          description: |
+            The id of a message of this inbox. The response holds only the messages stored after it, oldest first,
+            500 at most. Without it, or with an id the inbox does not hold, the response is not limited to newer
+            messages: without it the newest 500, with an unknown id the oldest 500.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+      responses:
+        "200":
+          description: Messages received by this run's inbox.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxMessageListResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - JobToken: []
+      x-ai-danger: 'Not a person action: runner protocol, machine-to-machine and authenticated by a job token.'
   /flows/{flowId}/executions/{executionId}/stream:
     parameters:
       - name: flowId
@@ -4757,7 +5107,7 @@ paths:
             - workspace.flows:read
         - ApiKeys:
             - flows:read
-      x-ai-danger: SSE stream - long-lived, incompatible with request/response tools.
+      x-ai-danger: 'Transport: SSE stream is long-lived and no MCP transport carries it; poll the execution or request search instead.'
   /flows/{flowId}/executions/{executionId}/nodes:
     parameters:
       - name: flowId
@@ -4806,6 +5156,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get execution node results
+      x-ai-read-only: true
   /flows/{flowId}/executions/{executionId}/nodes/{nodeId}:
     parameters:
       - name: flowId
@@ -4858,6 +5210,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get node execution result
+      x-ai-read-only: true
   /flows/{flowId}/nodes/{nodeId}/executions:
     parameters:
       - name: flowId
@@ -4906,6 +5260,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get node execution history
+      x-ai-read-only: true
   /flows/{flowId}/nodes/{nodeId}/executions/search:
     parameters:
       - name: flowId
@@ -4959,6 +5315,8 @@ paths:
             - flows:read
       x-ai-description: Search the execution history of one node across the runs of a flow, newest first, and page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search node execution history
+      x-ai-read-only: true
   /workspaces:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -4993,6 +5351,8 @@ paths:
         - ApiKeys:
             - workspaces:create
       x-ai-tool: true
+      x-ai-title: Create workspace
+      x-ai-read-only: false
   /workspaces/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5025,6 +5385,8 @@ paths:
         - BearerAuth:
             - workspaces:join
       x-ai-tool: true
+      x-ai-title: Search workspaces
+      x-ai-read-only: true
   /workspaces/{workspaceId}:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5060,6 +5422,8 @@ paths:
         - ApiKeys:
             - workspace.settings:update
       x-ai-tool: true
+      x-ai-title: Rename workspace
+      x-ai-read-only: false
     delete:
       tags:
         - Workspaces
@@ -5080,7 +5444,9 @@ paths:
             - workspace.settings:delete
         - ApiKeys:
             - workspace.settings:delete
-      x-ai-danger: Irreversible - deletes the workspace and every flow, run, collection, webhook, monitor and spec it owns.
+      x-ai-tool: true
+      x-ai-title: Delete workspace
+      x-ai-read-only: false
   /workspaces/{workspaceId}/invitations/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5116,6 +5482,8 @@ paths:
         - ApiKeys:
             - workspace.access:read
       x-ai-tool: true
+      x-ai-title: Search workspace invitations
+      x-ai-read-only: true
   /workspaces/{workspaceId}/members/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5151,6 +5519,8 @@ paths:
         - ApiKeys:
             - workspace.access:read
       x-ai-tool: true
+      x-ai-title: Search workspace members
+      x-ai-read-only: true
   /workspaces/{workspaceId}/members/{userId}:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5189,6 +5559,8 @@ paths:
         - ApiKeys:
             - workspace.access:manage
       x-ai-tool: true
+      x-ai-title: Set workspace member role
+      x-ai-read-only: false
     delete:
       tags:
         - Workspaces
@@ -5210,6 +5582,8 @@ paths:
         - ApiKeys:
             - workspace.access:manage
       x-ai-tool: true
+      x-ai-title: Remove workspace member
+      x-ai-read-only: false
   /workspaces/{workspaceId}/join:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5235,6 +5609,8 @@ paths:
         - BearerAuth:
             - workspaces:join
       x-ai-tool: true
+      x-ai-title: Join workspace
+      x-ai-read-only: false
   /workspaces/{workspaceId}/roles:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5262,6 +5638,8 @@ paths:
         - ApiKeys:
             - workspace.access:read
       x-ai-tool: true
+      x-ai-title: List workspace roles
+      x-ai-read-only: true
   /workspace-roles:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5288,6 +5666,8 @@ paths:
         - ApiKeys:
             - workspace_roles:manage
       x-ai-tool: true
+      x-ai-title: List organization workspace roles
+      x-ai-read-only: true
     post:
       tags:
         - Workspaces
@@ -5321,6 +5701,8 @@ paths:
         - ApiKeys:
             - workspace_roles:manage
       x-ai-tool: true
+      x-ai-title: Create workspace role
+      x-ai-read-only: false
   /workspace-roles/{roleId}:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5367,6 +5749,8 @@ paths:
         - ApiKeys:
             - workspace_roles:manage
       x-ai-tool: true
+      x-ai-title: Update workspace role
+      x-ai-read-only: false
     delete:
       tags:
         - Workspaces
@@ -5389,7 +5773,9 @@ paths:
             - workspace_roles:manage
         - ApiKeys:
             - workspace_roles:manage
-      x-ai-danger: Deletes a role definition; refused while a member holds it.
+      x-ai-tool: true
+      x-ai-title: Delete workspace role
+      x-ai-read-only: false
   /members:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5432,6 +5818,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List organization members
+      x-ai-read-only: true
   /members/{userId}/role:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5478,6 +5866,8 @@ paths:
         - ApiKeys:
             - members:update
       x-ai-tool: true
+      x-ai-title: Set organization member role
+      x-ai-read-only: false
   /organization-roles:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5504,6 +5894,8 @@ paths:
         - ApiKeys:
             - members:read
       x-ai-tool: true
+      x-ai-title: List organization roles
+      x-ai-read-only: true
   /members/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5539,6 +5931,8 @@ paths:
             - flows:read
       x-ai-description: Search the members of the organization by name or email, with their role. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search organization members
+      x-ai-read-only: true
   /invitations:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5574,7 +5968,9 @@ paths:
       security:
         - BearerAuth:
             - invitations:read
-      x-ai-danger: Membership change - invitations grant admin access; requires a human session.
+      x-ai-tool: true
+      x-ai-title: List organization invitations
+      x-ai-read-only: true
     post:
       tags:
         - Invitations
@@ -5631,7 +6027,9 @@ paths:
       security:
         - BearerAuth:
             - invitations:create
-      x-ai-danger: Membership change - invitations grant admin access; requires a human session.
+      x-ai-tool: true
+      x-ai-title: Create organization invitation
+      x-ai-read-only: false
   /invitations/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5673,7 +6071,9 @@ paths:
       security:
         - BearerAuth:
             - invitations:read
-      x-ai-danger: Membership change - invitations grant admin access; requires a human session.
+      x-ai-tool: true
+      x-ai-title: Search organization invitations
+      x-ai-read-only: true
   /invitations/{invitationId}:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5699,7 +6099,9 @@ paths:
       security:
         - BearerAuth:
             - invitations:delete
-      x-ai-danger: Membership change - requires a human session.
+      x-ai-tool: true
+      x-ai-title: Delete organization invitation
+      x-ai-read-only: false
   /invitations/{invitationId}/resend:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5743,7 +6145,9 @@ paths:
       security:
         - BearerAuth:
             - invitations:create
-      x-ai-danger: Membership change - requires a human session.
+      x-ai-tool: true
+      x-ai-title: Resend organization invitation
+      x-ai-read-only: false
   /invitations/{invitationId}/accept:
     parameters:
       - $ref: '#/components/parameters/InvitationId'
@@ -5806,7 +6210,9 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security:
         - BearerAuth: []
-      x-ai-danger: Membership change - requires a human session of the invited person.
+      x-ai-tool: true
+      x-ai-title: Accept organization invitation
+      x-ai-read-only: false
   /monitors:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5852,6 +6258,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List monitors
+      x-ai-read-only: true
     post:
       tags:
         - Monitors
@@ -5889,6 +6297,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Create monitor
+      x-ai-read-only: false
   /monitors/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5927,6 +6337,8 @@ paths:
             - flows:read
       x-ai-description: Search the monitors of the organization by name, state or health policy. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search monitors
+      x-ai-read-only: true
   /monitors/estimate:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5965,6 +6377,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Estimate monitor
+      x-ai-read-only: true
   /monitors/cloud-budget:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5990,7 +6404,9 @@ paths:
             - flows:read
         - ApiKeys:
             - flows:read
-      x-ai-danger: Web app only - agents read the Cloud plan from POST /monitors/estimate.
+      x-ai-tool: true
+      x-ai-title: Get monitor cloud budget
+      x-ai-read-only: true
   /monitors/preview-tags:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -6029,6 +6445,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Preview schedule tags
+      x-ai-read-only: true
   /monitors/{monitorId}:
     parameters:
       - name: monitorId
@@ -6068,6 +6486,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get monitor
+      x-ai-read-only: true
     put:
       tags:
         - Monitors
@@ -6105,6 +6525,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Update monitor
+      x-ai-read-only: false
     delete:
       tags:
         - Monitors
@@ -6128,6 +6550,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Delete monitor
+      x-ai-read-only: false
   /monitors/{monitorId}/pause:
     parameters:
       - name: monitorId
@@ -6169,6 +6593,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Pause monitor
+      x-ai-read-only: false
   /monitors/{monitorId}/resume:
     parameters:
       - name: monitorId
@@ -6210,6 +6636,8 @@ paths:
         - ApiKeys:
             - flows:update
       x-ai-tool: true
+      x-ai-title: Resume monitor
+      x-ai-read-only: false
   /monitors/{monitorId}/run:
     parameters:
       - name: monitorId
@@ -6224,7 +6652,7 @@ paths:
       tags:
         - Monitors
       summary: Run Monitor
-      description: Starts a private diagnostic occurrence of a monitor with a health policy through the same runners. Diagnostic runs appear in the run history but never confirm or refresh health. Refused with 409 while another occurrence is active and with 400 for a monitor without a health policy.
+      description: Starts one diagnostic occurrence of a monitor, with or without a health policy, through the same runners. The occurrence selects flows as a scheduled occurrence does (same version choice and flows-per-run limit) and appears in the run history with origin `diagnostic`. It never confirms or refreshes health and never changes next_run_at. Refused with 409 MONITOR_RUN_ACTIVE while another occurrence is active, and with 400 SCHEDULE_FLOW_INVALID when a selected flow of a monitor without a health policy is unavailable.
       operationId: runMonitor
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -6251,6 +6679,8 @@ paths:
         - ApiKeys:
             - flows:execute
       x-ai-tool: true
+      x-ai-title: Run monitor
+      x-ai-read-only: false
   /monitors/{monitorId}/runs:
     parameters:
       - name: monitorId
@@ -6293,6 +6723,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: List monitor runs
+      x-ai-read-only: true
   /monitors/{monitorId}/runs/search:
     parameters:
       - name: monitorId
@@ -6340,6 +6772,8 @@ paths:
             - flows:read
       x-ai-description: Search the runs of one monitor, most recent first, and page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search monitor runs
+      x-ai-read-only: true
   /monitors/{monitorId}/runs/{runId}:
     parameters:
       - name: monitorId
@@ -6386,6 +6820,8 @@ paths:
         - ApiKeys:
             - flows:read
       x-ai-tool: true
+      x-ai-title: Get monitor run
+      x-ai-read-only: true
   /specs:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -6419,6 +6855,8 @@ paths:
         - ApiKeys:
             - specs:read
       x-ai-tool: true
+      x-ai-title: List specs
+      x-ai-read-only: true
     post:
       tags:
         - Specs
@@ -6429,7 +6867,8 @@ paths:
         semantic version, else `1.0.0`. The document is stored in the canonical
         YAML layout.
 
-        Errors: `SPEC_SLUG_TAKEN` (409), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
+        Errors: `SPEC_SLUG_TAKEN` (409, a spec of this workspace has the slug; a
+        slug used only in another workspace is free), `SPEC_DOCUMENT_TOO_LARGE` (400, more than
         15 MB), `SPEC_DOCUMENT_UNREADABLE` (400), `SPEC_UNSUPPORTED_VERSION` (400,
         Swagger 2.0 or an OpenAPI version other than 3.0.x and 3.1.x),
         `SPEC_EXTERNAL_REF` (400, the metadata lists each pointer), and
@@ -6464,6 +6903,8 @@ paths:
         - ApiKeys:
             - specs:write
       x-ai-tool: true
+      x-ai-title: Create spec
+      x-ai-read-only: false
   /specs/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -6502,6 +6943,8 @@ paths:
             - specs:read
       x-ai-description: Search the specs of the organization by slug or title, with their Live version. Page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search specs
+      x-ai-read-only: true
   /specs/{slug}:
     parameters:
       - $ref: '#/components/parameters/SpecSlugParameter'
@@ -6535,6 +6978,8 @@ paths:
         - ApiKeys:
             - specs:read
       x-ai-tool: true
+      x-ai-title: Get spec
+      x-ai-read-only: true
   /specs/{slug}/versions:
     parameters:
       - $ref: '#/components/parameters/SpecSlugParameter'
@@ -6571,6 +7016,8 @@ paths:
         - ApiKeys:
             - specs:read
       x-ai-tool: true
+      x-ai-title: List spec versions
+      x-ai-read-only: true
     post:
       tags:
         - Specs
@@ -6620,6 +7067,8 @@ paths:
         - ApiKeys:
             - specs:write
       x-ai-tool: true
+      x-ai-title: Push spec version
+      x-ai-read-only: false
   /specs/{slug}/versions/search:
     parameters:
       - $ref: '#/components/parameters/SpecSlugParameter'
@@ -6661,6 +7110,8 @@ paths:
             - specs:read
       x-ai-description: Search the Live versions of a spec, newest first, and page with the returned next_cursor.
       x-ai-tool: true
+      x-ai-title: Search spec versions
+      x-ai-read-only: true
   /specs/{slug}/versions/{version}:
     parameters:
       - $ref: '#/components/parameters/SpecSlugParameter'
@@ -6702,6 +7153,8 @@ paths:
         - ApiKeys:
             - specs:read
       x-ai-tool: true
+      x-ai-title: Get spec version
+      x-ai-read-only: true
   /specs/{slug}/commands:
     parameters:
       - $ref: '#/components/parameters/SpecSlugParameter'
@@ -6718,12 +7171,17 @@ paths:
         and the docs editor send them.
 
         `command_id` makes a retry safe: a request whose `command_id` already
-        produced a version returns that version with status 200 and applies
-        nothing, whatever its commands.
+        produced a version with the same commands returns that version with
+        status 200 and `replayed: true`, and applies nothing. A `command_id`
+        that already produced a version from other commands is refused with
+        `SPEC_COMMAND_ID_REUSED` (409); a version published before command
+        digests were stored replays whatever the retry carries.
 
         Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
         document; `metadata.index` names it and `metadata.reason` says why),
         `SPEC_NOTHING_TO_PUBLISH` (409, the commands change nothing),
+        `SPEC_COMMAND_ID_REUSED` (409, the `command_id` applied other commands;
+        `metadata.command_id` names it),
         `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
         `metadata.live_version` names it),
         `SPEC_DOCUMENT_INVALID` (400, the result is not a valid OpenAPI
@@ -6739,17 +7197,17 @@ paths:
         required: true
       responses:
         "200":
-          description: The command ID was already applied; the version it produced.
+          description: The command ID was already applied; the version it produced, with `replayed` true.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SpecVersion'
+                $ref: '#/components/schemas/AppliedSpecVersion'
         "201":
-          description: Live version created.
+          description: Live version created, with `replayed` false.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SpecVersion'
+                $ref: '#/components/schemas/AppliedSpecVersion'
         "400":
           $ref: '#/components/responses/BadRequest'
         "401":
@@ -6766,6 +7224,65 @@ paths:
         - ApiKeys:
             - specs:write
       x-ai-tool: true
+      x-ai-title: Apply spec commands
+      x-ai-read-only: false
+  /specs/{slug}/commands/preview:
+    parameters:
+      - $ref: '#/components/parameters/SpecSlugParameter'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Specs
+      summary: Preview Spec Commands
+      description: |
+        Applies edit commands to the spec's Live version without publishing
+        anything, and returns the changes and the new convention findings the
+        result would have. The docs editor sends it while a value is typed, so
+        it shows the consequence of an edit before it is saved. The commands
+        apply in order and all or nothing, as `applySpecCommands` applies them.
+
+        Commands that change nothing return 200 with no changes, not
+        `SPEC_NOTHING_TO_PUBLISH`.
+
+        Errors: `SPEC_COMMAND_REFUSED` (400, a command does not fit the
+        document; `metadata.index` names it and `metadata.reason` says why),
+        `SPEC_LIVE_MOVED` (409, Live is no longer `base_version`;
+        `metadata.live_version` names it), `SPEC_DOCUMENT_INVALID` (400, the
+        result is not a valid OpenAPI document; `metadata.problems` lists why),
+        `SPEC_EXTERNAL_REF` (400), `SPEC_DOCUMENT_TOO_LARGE` (400),
+        `SPEC_DOCUMENT_UNREADABLE` (400) and `SPEC_COMPARISON_FAILED` (400).
+      operationId: previewSpecCommands
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewSpecCommandsRequest'
+        required: true
+      responses:
+        "200":
+          description: What the commands would change.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecCommandsPreview'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace.specs:write
+        - ApiKeys:
+            - specs:write
+      x-ai-danger: 'Not a person action: the docs editor''s keystroke preview. An agent applies commands with applySpecCommands and reads the version it returns.'
   /specs/{slug}/document:
     parameters:
       - $ref: '#/components/parameters/SpecSlugParameter'
@@ -6810,6 +7327,8 @@ paths:
         - ApiKeys:
             - specs:read
       x-ai-tool: true
+      x-ai-title: Pull spec
+      x-ai-read-only: true
   /status-pages/current:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -6848,6 +7367,8 @@ paths:
         - ApiKeys:
             - status_pages:read
       x-ai-tool: true
+      x-ai-title: Get status page
+      x-ai-read-only: true
     put:
       tags:
         - Status pages
@@ -6889,6 +7410,8 @@ paths:
         - ApiKeys:
             - status_pages:update
       x-ai-tool: true
+      x-ai-title: Save status page
+      x-ai-read-only: false
   /status-pages/current/publish:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -6932,7 +7455,9 @@ paths:
             - status_pages:publish
         - ApiKeys:
             - status_pages:publish
-      x-ai-danger: Changes public availability; use the status-page studio publication controls in milestone 1.
+      x-ai-tool: true
+      x-ai-title: Publish status page
+      x-ai-read-only: false
   /status-pages/current/unpublish:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -6976,7 +7501,9 @@ paths:
             - status_pages:publish
         - ApiKeys:
             - status_pages:publish
-      x-ai-danger: Changes public availability; use the status-page studio publication controls in milestone 1.
+      x-ai-tool: true
+      x-ai-title: Unpublish status page
+      x-ai-read-only: false
   /public/status-pages/{slug}:
     parameters:
       - name: slug
@@ -7018,7 +7545,7 @@ paths:
         "500":
           $ref: '#/components/responses/InternalServerError'
       security: []
-      x-ai-danger: Anonymous public projection; visitor data endpoint, not a workspace tool.
+      x-ai-danger: 'Not a person action: anonymous public projection for status-page visitors, not a workspace action.'
   /public/status-pages/organizations/{organization_key}:
     parameters:
       - name: organization_key
@@ -7060,11 +7587,11 @@ paths:
         "500":
           $ref: '#/components/responses/InternalServerError'
       security: []
-      x-ai-danger: Anonymous public projection; visitor data endpoint, not a workspace tool.
+      x-ai-danger: 'Not a person action: anonymous public projection for status-page visitors, not a workspace action.'
 components:
   schemas:
     CloudFleetSettingsSource:
-      description: Whether the effective settings come from deployment configuration or a saved platform administrator override.
+      description: Whether the effective settings come from deployment configuration or a saved Echopoint staff override.
       type: string
       enum:
         - deployment_defaults
@@ -7356,6 +7883,18 @@ components:
           type: array
           items:
             type: string
+    ApiKeyUpdateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          description: New human-readable name for the API key. Must be unique within the organization.
+          type: string
+          minLength: 1
+          maxLength: 100
+          examples:
+            - GitHub Actions
     ApiKeyCreateRequest:
       type: object
       required:
@@ -7388,12 +7927,15 @@ components:
       type: object
       required:
         - name
+        - assignability
       properties:
         name:
           description: Permission identifier.
           type: string
           examples:
             - flows:read
+        assignability:
+          $ref: '#/components/schemas/PermissionAssignability'
         description:
           description: Optional human-readable description.
           type:
@@ -7404,6 +7946,20 @@ components:
           type:
             - string
             - "null"
+    PermissionAssignability:
+      description: |
+        Whether the caller may assign the permission to a new API key.
+        `ASSIGNABLE`: the caller's organization role holds it.
+        `RUNNER_ONLY_KEY`: a runner permission the caller does not hold; it may go only on a key whose every permission is a runner permission.
+        `NOT_HELD`: the caller's organization role does not hold it, so the caller cannot assign it. Creating a key with it answers 403 `PERMISSION_ASSIGNMENT_FORBIDDEN`.
+        New values may be added.
+      type: string
+      enum:
+        - ASSIGNABLE
+        - RUNNER_ONLY_KEY
+        - NOT_HELD
+      examples:
+        - ASSIGNABLE
     ApiKeyPermissionType:
       description: The API key permission catalog to return. `custom` is the full grantable catalog, `runner` is runner-only scopes, and `ci` is the curated preset for CI/CD (flow execution + ephemeral runner completion).
       type: string
@@ -7546,14 +8102,15 @@ components:
       default: any
     FlowRole:
       description: |
-        How a flow may be run. A `standalone` flow is a test of its own. A `module` flow is a
-        reusable building block that other flows call through a module node: you can still
-        launch it directly to test it, but schedules skip it when their tags match it unless
-        the schedule sets `ignore_modules` to false.
+        How a flow may be run (ADR-0037). A `test` flow verifies a scenario and produces a
+        pass/fail verdict. A `function` flow is a reusable parameterized building block
+        with `input`/`output` contract nodes that other flows call through a module
+        (`Function call`) step: you can still launch it directly to test it, but schedules
+        skip it when their tags match it unless the schedule sets `ignore_modules` to false.
       type: string
       enum:
-        - standalone
-        - module
+        - test
+        - function
     SearchRequest:
       description: Generic search request template
       type: object
@@ -7563,6 +8120,14 @@ components:
         full_text_search:
           description: Full-text search term to match against searchable fields.
           type: string
+        sort_direction:
+          $ref: '#/components/schemas/SortDirection'
+    SearchPageRequest:
+      description: Generic search request template for a search with no text columns. The search pages and sorts, but there is nothing for a full-text term to match, so the contract offers no full_text_search. A request that still sends the field over HTTP is accepted and ignored; an MCP tool composed from this schema refuses it as an unknown argument.
+      type: object
+      properties:
+        pagination:
+          $ref: '#/components/schemas/PaginationRequest'
         sort_direction:
           $ref: '#/components/schemas/SortDirection'
     ResourceSearchDomain:
@@ -7656,7 +8221,7 @@ components:
             - "null"
           format: uuid
         spec_slug:
-          description: The unique slug of the spec when the resource is a spec. It addresses the spec in the specs routes and in the CLI, for example `echopoint spec view <slug>`.
+          description: The slug of the spec, unique in its workspace, when the resource is a spec. It addresses the spec in the specs routes and in the CLI, for example `echopoint spec view <slug>`.
           type:
             - string
             - "null"
@@ -8730,6 +9295,140 @@ components:
                 - received_at
                 - method
                 - ip_address
+    InboxMessageListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/InboxMessage'
+    InboxMessage:
+      type: object
+      description: One email a run inbox received. Attachments are described, never stored.
+      required:
+        - id
+        - envelope_from
+        - envelope_to
+        - from
+        - to
+        - cc
+        - subject
+        - message_id
+        - headers
+        - attachments
+        - raw_size
+        - received_at
+      properties:
+        id:
+          description: Unique identifier of the stored message.
+          type: string
+          examples:
+            - msg_2b7c9d0e1f
+        envelope_from:
+          description: SMTP envelope sender (MAIL FROM). Empty for a bounce.
+          type: string
+          examples:
+            - bounces@mailer.example.com
+        envelope_to:
+          description: SMTP envelope recipient, with any `+tag`. It decided which inbox stored the message.
+          type: string
+          examples:
+            - aanuyjabcdefghijklmsjd6s2g+alice@echopointinbox.dev
+        from:
+          description: Decoded From header.
+          type: string
+          examples:
+            - Acme <no-reply@acme.example.com>
+        to:
+          description: Decoded To header.
+          type: string
+          examples:
+            - aanuyjabcdefghijklmsjd6s2g+alice@echopointinbox.dev
+        cc:
+          description: Decoded Cc header, empty when the message has none.
+          type: string
+          examples:
+            - Support <support@acme.example.com>
+        subject:
+          description: Decoded Subject header.
+          type: string
+          examples:
+            - Verify your email
+        headers:
+          description: >-
+            Every header as received, decoded, by canonical name (`Reply-To`,
+            `Received`). A name repeated in the message lists its values in
+            order. The Echopoint envelope headers are left out. At most 100
+            names and 20 values per name are kept.
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          examples:
+            - Reply-To:
+                - help@acme.example.com
+        message_id:
+          description: Message-ID header, empty when the message has none.
+          type: string
+          examples:
+            - <20261106101500.1234@acme.example.com>
+        text:
+          description: First text/plain part, decoded to UTF-8. Null when the message has none.
+          type:
+            - string
+            - 'null'
+          examples:
+            - Your code is 123456
+        html:
+          description: First text/html part, decoded to UTF-8. Null when the message has none.
+          type:
+            - string
+            - 'null'
+          examples:
+            - <p>Your code is <b>123456</b></p>
+        attachments:
+          description: Attachments and other non-text parts, by name, type and decoded size.
+          type: array
+          items:
+            $ref: '#/components/schemas/InboxMessageAttachment'
+        raw_size:
+          description: Size in bytes of the raw message as the ingest received it, envelope lines included.
+          type: integer
+          examples:
+            - 18342
+        received_at:
+          description: When the inbox stored the message.
+          type: string
+          format: date-time
+          examples:
+            - 2026-11-06T10:15:00Z
+    InboxMessageAttachment:
+      type: object
+      required:
+        - filename
+        - content_type
+        - size
+      properties:
+        filename:
+          description: File name the sender gave, empty when it gave none.
+          type: string
+          examples:
+            - invoice.pdf
+        content_type:
+          description: Media type of the part.
+          type: string
+          examples:
+            - application/pdf
+        size:
+          description: Decoded size in bytes.
+          type: integer
+          examples:
+            - 52311
     WebhookRequestListResponse:
       allOf:
         - $ref: '#/components/schemas/PagedListResponse'
@@ -8803,7 +9502,7 @@ components:
             - initial_inputs
           properties:
             initial_inputs:
-              description: Initial input variables for the flow (from its variable set)
+              description: Variables a run of the flow resolves. A plain value stored on the flow is inlined; a secret or an organization or environment key is the placeholder `{{KEY}}`.
               type: object
               additionalProperties: true
     BaseFlowNode:
@@ -8857,6 +9556,9 @@ components:
           poll: '#/components/schemas/PollFlowNode'
           sse: '#/components/schemas/SseFlowNode'
           webhook_wait: '#/components/schemas/WebhookWaitFlowNode'
+          email_wait: '#/components/schemas/EmailWaitFlowNode'
+          input: '#/components/schemas/InputFlowNode'
+          output: '#/components/schemas/OutputFlowNode'
       oneOf:
         - $ref: '#/components/schemas/RequestFlowNode'
         - $ref: '#/components/schemas/DelayFlowNode'
@@ -8868,6 +9570,9 @@ components:
         - $ref: '#/components/schemas/PollFlowNode'
         - $ref: '#/components/schemas/SseFlowNode'
         - $ref: '#/components/schemas/WebhookWaitFlowNode'
+        - $ref: '#/components/schemas/EmailWaitFlowNode'
+        - $ref: '#/components/schemas/InputFlowNode'
+        - $ref: '#/components/schemas/OutputFlowNode'
     RequestFlowNode:
       allOf:
         - $ref: '#/components/schemas/BaseFlowNode'
@@ -9024,6 +9729,186 @@ components:
             $ref: '#/components/schemas/WebhookExpectation'
         integration:
           $ref: '#/components/schemas/IntegrationNodeRef'
+    EmailWaitFlowNode:
+      allOf:
+        - $ref: '#/components/schemas/BaseFlowNode'
+        - type: object
+          required:
+            - data
+          properties:
+            type:
+              type: string
+              const: email_wait
+            data:
+              $ref: '#/components/schemas/EmailWaitNodeData'
+    EmailWaitNodeData:
+      description: |
+        Polls the run inbox, whose address launch injects as `inbox.address`, until a message
+        passes the node's assertions (ADR-0030). Without an assertion the first message matches.
+        Default timeout is 60 seconds, at most 120 minutes: the address lifetime.
+      type: object
+      properties:
+        timeout_ms:
+          description: Wait budget in milliseconds. Defaults to 60000, at most 7200000.
+          type: integer
+          default: 60000
+          minimum: 0
+          maximum: 7200000
+          examples:
+            - 60000
+        settle_ms:
+          description: How long the wait keeps listening once every expectation has its events. Only used with `expect`. Defaults to 0.
+          type: integer
+          default: 0
+          minimum: 0
+        link_pattern:
+          description: Go regular expression that keeps the links it matches. Empty keeps every link.
+          type: string
+          examples:
+            - 'https://app\.example\.com/verify'
+        code_pattern:
+          description: Go regular expression that finds the code in the text. With a capture group the code is group 1. Defaults to six digits.
+          type: string
+          examples:
+            - '\b\d{6}\b'
+        expect:
+          description: The events this wait expects, as for a webhook wait.
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookExpectation'
+    InputFlowNode:
+      allOf:
+        - $ref: '#/components/schemas/BaseFlowNode'
+        - type: object
+          required:
+            - data
+          properties:
+            type:
+              type: string
+              const: input
+            data:
+              $ref: '#/components/schemas/InputNodeData'
+    InputNodeData:
+      description: |
+        Declares the typed JSON Schema input contract of a function flow (ADR-0037).
+        At run time, each property reads its value using precedence: call input, flow variables,
+        environment overlay, organization base, then `default`. Validated values are exposed to
+        downstream steps as `{{<nodeId>.<property>}}`. Only allowed on function (`module`) flows.
+      type: object
+      required:
+        - properties
+      properties:
+        properties:
+          description: Map of input parameter names to their JSON Schema property definitions.
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/InputProperty'
+        required:
+          description: 'List of required input parameter names (in addition to any property with `required: true`).'
+          type: array
+          items:
+            type: string
+          examples:
+            - - email
+              - seats
+    InputProperty:
+      description: JSON Schema constraint for one input parameter on an `input` node.
+      type: object
+      properties:
+        type:
+          description: JSON Schema primitive or container type (`string`, `integer`, `number`, `boolean`, `array`, `object`, or `any`).
+          type: string
+          examples:
+            - string
+        format:
+          description: String format validation (`email`, `uuid`, `uri`, `url`, `date`, or `date-time`).
+          type: string
+          examples:
+            - email
+        description:
+          description: Human- and agent-readable description of this input parameter.
+          type: string
+          examples:
+            - Customer email address
+        enum:
+          description: Allowed values for this parameter.
+          type: array
+          items: {}
+          examples:
+            - - starter
+              - pro
+        default:
+          description: Fallback value used when neither the caller nor any variable layer provides a value.
+          examples:
+            - pro
+        required:
+          description: Marks this parameter as required when no default or caller value is supplied.
+          type: boolean
+        secret:
+          description: Marks this parameter value as secret so it is masked as `***` across results, progress events, and errors.
+          type: boolean
+    OutputFlowNode:
+      allOf:
+        - $ref: '#/components/schemas/BaseFlowNode'
+        - type: object
+          required:
+            - data
+          properties:
+            type:
+              type: string
+              const: output
+            data:
+              $ref: '#/components/schemas/OutputNodeData'
+    OutputNodeData:
+      description: |
+        Declares the typed JSON Schema output contract of a function flow (ADR-0037).
+        At run time, each property resolves its templated `value`, validates `type`/`format`/`enum`,
+        redacts any `secret: true` value, and exposes the result to calling flows (auto-exported on
+        binding-less function calls), HTTP callers, and MCP agents. Only allowed on function (`module`) flows.
+      type: object
+      required:
+        - properties
+      properties:
+        properties:
+          description: Map of output parameter names to their value bindings and JSON Schema definitions.
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/OutputProperty'
+    OutputProperty:
+      description: Value binding and JSON Schema constraint for one output parameter on an `output` node.
+      type: object
+      required:
+        - value
+      properties:
+        type:
+          description: JSON Schema primitive or container type (`string`, `integer`, `number`, `boolean`, `array`, `object`, or `any`).
+          type: string
+          examples:
+            - string
+        format:
+          description: String format validation (`email`, `uuid`, `uri`, `url`, `date`, or `date-time`).
+          type: string
+          examples:
+            - uuid
+        description:
+          description: Human- and agent-readable description of this output parameter.
+          type: string
+          examples:
+            - Created account summary
+        enum:
+          description: Allowed values for this output parameter.
+          type: array
+          items: {}
+          examples:
+            - - active
+              - pending
+        value:
+          description: Value or template expression (e.g. `{{create.id}}` or `{{{create.seats}}}`) resolved at run time.
+          examples:
+            - '{{input.email}}:{{input.plan}}'
+        secret:
+          description: Marks the resolved output value as secret so it is masked as `***` across results, progress events, and errors.
+          type: boolean
     WebhookExpectation:
       description: One event the wait expects, described by the assertions it must pass.
       type: object
@@ -9157,7 +10042,7 @@ components:
         - flow_id
       properties:
         flow_id:
-          description: Referenced child flow executed by this module node.
+          description: Referenced child flow executed by this module node. The nil UUID (00000000-0000-0000-0000-000000000000) names no flow; create and launch refuse it with 400 INVALID_FLOW_DEFINITION, reason invalid_module_flow_id.
           type: string
           format: uuid
         input_bindings:
@@ -9381,6 +10266,28 @@ components:
               type: string
               examples:
                 - x-custom-id
+            selector:
+              description: CSS selector (used by html extractor)
+              type: string
+              examples:
+                - a[href*='/invitations']
+            attribute:
+              description: Attribute to read instead of the element text (used by html extractor)
+              type: string
+              examples:
+                - href
+            all:
+              description: Return every match as a list (used by html extractor)
+              type: boolean
+            pattern:
+              description: Regular expression (used by regex extractor)
+              type: string
+              examples:
+                - 'code is:?\s*(\d+)'
+            group:
+              description: Capture group to return (used by regex extractor)
+              type: integer
+              minimum: 0
         secret:
           description: Marks the extracted value as secret. From the moment the node extracts it, the value is replaced by `***` in every execution result, progress event and error, wherever it appears, including module outputs and downstream node inputs and requests that carry it. Downstream nodes still receive the real value. Use it for credentials and tokens; a short or common value masks every occurrence of that text.
           type: boolean
@@ -9424,12 +10331,12 @@ components:
           examples:
             - e-success
         source:
-          description: ID of the source node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE.
+          description: ID of the source node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE. Edges must not form a cycle (every edge type counts, inside loop and poll bodies too); a create, update or restore with one returns 400 FLOW_EDGE_CYCLE naming the node_ids on it.
           type: string
           examples:
             - req-1
         target:
-          description: ID of the target node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE.
+          description: ID of the target node. It must name a node of the same definition; a create or update whose edge names an unknown node returns 400 UNKNOWN_EDGE_NODE. Edges must not form a cycle (every edge type counts, inside loop and poll bodies too); a create, update or restore with one returns 400 FLOW_EDGE_CYCLE naming the node_ids on it.
           type: string
           examples:
             - req-success
@@ -9673,6 +10580,7 @@ components:
         - metadata
         - tags
         - role
+        - expose_on_mcp
         - created_at
         - updated_at
       properties:
@@ -9718,6 +10626,9 @@ components:
               - monitoring
         role:
           $ref: '#/components/schemas/FlowRole'
+        expose_on_mcp:
+          description: Whether this Function flow is registered as a callable tool on the remote /mcp endpoint. Always false for `test` flows.
+          type: boolean
         folder_id:
           description: The flow's folder, or null when it is uncategorized.
           type:
@@ -9782,7 +10693,10 @@ components:
               - monitoring
         role:
           $ref: '#/components/schemas/FlowRole'
-          description: How the flow may be run. Omitted defaults to `standalone`.
+          description: How the flow may be run. Omitted defaults to `test`.
+        expose_on_mcp:
+          description: Expose this Function flow as a callable tool on `/mcp`. Only valid when `role` is `function` (400 `EXPOSE_ON_MCP_REQUIRES_FUNCTION` otherwise). Omitted defaults to `false`.
+          type: boolean
         folder_id:
           description: Folder to create the flow in. Omit or send null to leave it uncategorized. A folder unknown to the organization yields 400 INVALID_FOLDER_ID.
           type:
@@ -9791,7 +10705,7 @@ components:
           format: uuid
         source:
           description: |
-            A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, auto_layout, and folder_id. name and flow_definition stay required so a JSON client is unchanged; the file replaces both. Compile errors return 400 and create nothing.
+            A flow file. When set, the server compiles it and stores that document. The file replaces name, version, flow_definition and auto_layout. For folder_id, tags, description, role and metadata a value the file sets wins, and a value sent beside the file applies when the file leaves it out. name and flow_definition stay required so a JSON client is unchanged; the file replaces both. Compile errors, including an invalid tag, more than 32 tags or a cycle, return 400 INVALID_FLOW_DEFINITION and create nothing.
           type: string
     UpdateFlowRequest:
       type: object
@@ -9836,9 +10750,12 @@ components:
         role:
           $ref: '#/components/schemas/FlowRole'
           description: How the flow may be run. Omit to preserve the current role.
+        expose_on_mcp:
+          description: Expose this Function flow as a callable tool on `/mcp`. Omit to preserve the current setting; demoting a flow to `test` without setting this field automatically resets it to `false`. Setting `true` on a `test` flow returns 400 `EXPOSE_ON_MCP_REQUIRES_FUNCTION`.
+          type: boolean
         source:
           description: |
-            A flow file. When set, the server compiles it and stores that document. The file replaces name, description, version, flow_definition, tags, role, metadata, and auto_layout. A folder in the file does not move the flow. Compile errors return 400 and change nothing.
+            A flow file. When set, the server compiles it and stores that document. The file replaces the whole flow: name, version, flow_definition and auto_layout come from the file. For description, tags, role and metadata a value the file sets wins, a value sent beside the file applies when the file leaves it out, and with neither the stored value is kept. An empty tags list or an empty description, in the file or sent beside it, clears them. A folder in the file does not move the flow. Compile errors, including an invalid tag, more than 32 tags or a cycle, return 400 INVALID_FLOW_DEFINITION and change nothing.
           type: string
     CompileFlowSourceRequest:
       type: object
@@ -10140,6 +11057,12 @@ components:
               description: Return only flows with no folder (the Uncategorized bucket). Takes precedence over folder_id.
               type: boolean
               default: false
+            role:
+              $ref: '#/components/schemas/FlowRole'
+              description: Filter results to flows with this role (`test` or `function`). Omit to return both roles.
+            expose_on_mcp:
+              description: Filter results by whether the flow is exposed as a callable tool on `/mcp`. Omit to include both.
+              type: boolean
     FlowRunStatus:
       description: 'Outcome of a flow''s most recent terminal execution, folded to the states the Flow Library list renders: passed (completed), failed (failed), or none (no terminal run yet). In-flight and cancelled runs are ignored: they never erase the last real pass/fail badge.'
       type: string
@@ -10157,6 +11080,7 @@ components:
         - version
         - tags
         - role
+        - expose_on_mcp
         - node_count
         - last_run_status
         - created_at
@@ -10181,6 +11105,9 @@ components:
             type: string
         role:
           $ref: '#/components/schemas/FlowRole'
+        expose_on_mcp:
+          description: Whether this Function flow is registered as a callable tool on the remote /mcp endpoint. Always false for `test` flows.
+          type: boolean
         folder_id:
           description: The flow's folder, or null when it is uncategorized.
           type:
@@ -10256,11 +11183,10 @@ components:
         - organization_id
         - flow_definition
         - metadata
-        - published_at
         - created_at
       properties:
         id:
-          description: Unique identifier for this published version.
+          description: Unique identifier for this version.
           type: string
           format: uuid
         flow_id:
@@ -10274,12 +11200,8 @@ components:
           $ref: '#/components/schemas/FlowDefinition'
         metadata:
           $ref: '#/components/schemas/FlowMetadata'
-        published_at:
-          description: When this version was published.
-          type: string
-          format: date-time
         created_at:
-          description: When this record was created.
+          description: When this version was stored.
           type: string
           format: date-time
         workspace_id:
@@ -10303,10 +11225,10 @@ components:
       description: Field to sort flow version search results by.
       type: string
       enum:
-        - published_at
+        - created_at
     FlowVersionSearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             sort_by:
@@ -10344,6 +11266,9 @@ components:
         - branch
         - sse
         - webhook_wait
+        - email_wait
+        - input
+        - output
     FlowNodeRunWhen:
       description: Controls whether a node runs only in the normal success path or also after the main flow has already failed.
       type: string
@@ -10472,12 +11397,6 @@ components:
           type: string
           examples:
             - dev
-        version_id:
-          description: |
-            Optional flow version ID to execute. When omitted, the current flow definition
-            is used. Specify a version ID to run an immutable snapshot.
-          type: string
-          format: uuid
         trigger_type:
           $ref: '#/components/schemas/TriggerType'
         trigger_metadata:
@@ -10485,6 +11404,16 @@ components:
           anyOf:
             - $ref: '#/components/schemas/TriggerMetadata'
             - type: "null"
+        inputs:
+          description: |
+            Optional call-time inputs for a function flow. Every key must be declared on an
+            `input` contract node of the flow (undeclared keys return 400 `UNDECLARED_LAUNCH_INPUT`),
+            and keys marked `secret: true` must be strings so they are encrypted before storage.
+            Overrides flow variables, environment overlays, organization base variables, and input
+            node defaults (ADR-0037). Rejected with 400 `FLOW_INPUTS_NOT_ALLOWED` when sent to a
+            `test` flow.
+          type: object
+          additionalProperties: true
     RunnerJobTerminalStatus:
       description: Terminal status reported by a runner for a claimed job
       type: string
@@ -10663,10 +11592,16 @@ components:
         A feature a runner build supports. `secret_outputs`: the runner masks the values of
         node outputs declared `secret` in everything it reports (ADR-0018). `form_body`: the
         runner sends a request node with `body_encoding: form` form-encoded (ADR-0024).
+        `email_wait`: the runner can execute an `email_wait` node (accepted so runners that
+        declare it can claim; launch does not hand out email_wait nodes until the control
+        plane supports them). `contract_nodes`: the runner can parse and execute `input`
+        and `output` contract nodes (ADR-0037).
       type: string
       enum:
         - secret_outputs
         - form_body
+        - email_wait
+        - contract_nodes
     EphemeralJobClaimResponse:
       description: One-time delivery of the Job credential and runnable payload.
       type: object
@@ -11305,7 +12240,7 @@ components:
           format: date-time
     ExecutionSearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             filter:
@@ -11430,7 +12365,7 @@ components:
           type: string
           format: uuid
         flow_name:
-          description: The flow's current name; empty when the flow was deleted.
+          description: The flow's current name.
           type: string
         peak:
           type: integer
@@ -11585,6 +12520,7 @@ components:
         - min_scheduled_run_interval_seconds
         - max_cloud_execution_duration_seconds
         - max_flows_per_scheduled_run
+        - max_inbox_size_mib
       properties:
         max_http_calls_per_execution:
           description: Outbound HTTP calls one execution may send across every node, nested body, retry and followed redirect. The next call is refused and the sending node fails.
@@ -11603,6 +12539,11 @@ components:
           minimum: 1
         max_flows_per_scheduled_run:
           description: A tag suite matching more flows runs the first ones only.
+          type: integer
+          format: int64
+          minimum: 1
+        max_inbox_size_mib:
+          description: What the inbox of one run stores, in MiB, counted on the headers, text, HTML and attachment metadata of its messages. A full inbox refuses new mail until its run ends.
           type: integer
           format: int64
           minimum: 1
@@ -11648,6 +12589,22 @@ components:
       properties:
         execution:
           $ref: '#/components/schemas/FlowExecution'
+    LaunchFlowCompletedResponse:
+      description: |
+        Synchronous launch response returned with 200 OK when a flow finishes within the
+        RFC 7240 `Prefer: wait=N` window.
+      type: object
+      required:
+        - execution
+      properties:
+        execution:
+          $ref: '#/components/schemas/FlowExecution'
+        outputs:
+          description: |
+            Redacted values emitted by completed `output` contract nodes (merged by node ID).
+            Omitted when the flow has no `output` nodes or failed before reaching them.
+          type: object
+          additionalProperties: true
     EphemeralCompletionRequest:
       description: |
         Terminal result for an ephemeral execution, published by a caller-owned runner via the
@@ -11724,7 +12681,7 @@ components:
         - created_at
     NodeExecutionHistorySearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             sort_by:
@@ -12057,7 +13014,16 @@ components:
           examples:
             - Collection for testing my API
         source:
-          $ref: '#/components/schemas/CollectionSource'
+          description: |
+            Deprecated and ignored: a created collection is always `manual`.
+            An `openapi` collection comes from `importFromOpenAPI`, which keeps
+            its document and sync configuration. Released clients may still
+            send this field; omit it.
+          type: string
+          enum:
+            - manual
+            - openapi
+          deprecated: true
     UpdateCollectionRequest:
       type: object
       properties:
@@ -12116,11 +13082,12 @@ components:
             - string
             - "null"
         parent_id:
-          description: Parent folder ID (null to move to root)
+          description: Parent folder ID. Null moves the folder to the collection root; an absent field leaves it where it is.
           type:
             - string
             - "null"
           format: uuid
+          x-go-type-skip-optional-pointer: true
     CreateRequestRequest:
       type: object
       required:
@@ -12230,18 +13197,19 @@ components:
         response_spec:
           $ref: '#/components/schemas/CollectionRequestResponseSpec'
         folder_id:
-          description: Parent folder ID
+          description: Parent folder ID. On update, null moves the request to the collection root and an absent field leaves it where it is. An execution saves nothing, so it ignores the field.
           type:
             - string
             - "null"
           format: uuid
+          x-go-type-skip-optional-pointer: true
     ExecuteRequestRequest:
       allOf:
         - $ref: '#/components/schemas/UpdateRequestRequest'
         - type: object
           properties:
             environment_key:
-              description: Optional named organization environment override. Base organization variables are always loaded.
+              description: Optional named organization environment override. Base organization variables are always loaded. A key that names no environment of the organization answers 400 ENVIRONMENT_KEY_NOT_FOUND.
               type:
                 - string
                 - "null"
@@ -12442,9 +13410,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/OpenAPIGroupingStrategy'
         use_base_url_variable:
-          description: Whether synced request URLs should be rewritten as {{baseUrl}}/path
+          description: Whether synced request URLs should be rewritten as {{baseUrl}}/path. Omitted keeps the stored choice; on a first configuration it is true when a request URL of the collection already starts with a {{variable}}, which then names the variable. Sync runs always use the stored choice.
           type: boolean
-          default: false
         base_url_variable_name:
           description: 'Variable name to use for rewritten base URLs when enabled. Empty or omitted means baseUrl. Follows the variable key rule: a letter or underscore, then letters, digits, underscores, or hyphens.'
           type: string
@@ -12526,6 +13493,13 @@ components:
         updated_at:
           type: string
           format: date-time
+        warnings:
+          description: Warnings of the config write that answers them, such as a base URL variable the caller could not create without environment:update; sync runs then write request URLs that name a variable the organization does not define until an admin sets it. Only createOrUpdateOpenAPISyncConfig sets it.
+          type: array
+          items:
+            type: string
+          examples:
+            - - 'Base URL variable "baseUrl" was not created: creating an organization variable needs the environment:update permission. Ask an organization admin to set it.'
     OpenAPISyncConfigSortField:
       description: Field to sort top-level OpenAPI sync config results by.
       type: string
@@ -12631,7 +13605,7 @@ components:
         - created_at
     OpenAPISyncHistorySearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             sort_by:
@@ -12835,6 +13809,11 @@ components:
         (equals, not_equals, contains, not_contains, starts_with, ends_with, regex) compare the body text as received.
         `query_param` reads a query parameter of the request a `webhook_wait` node received;
         an HTTP response has none.
+        `html` reads an HTML document with a CSS selector (`HTMLExtractorConfig`): a response body,
+        the HTML part of an email, or the body of a received webhook request. It parses the way a
+        browser does, so broken markup never fails the parse.
+        `regex` returns the first match of a pattern in the raw body or the text of an email
+        (`RegexExtractorConfig`).
       type: string
       enum:
         - json_path
@@ -12843,6 +13822,8 @@ components:
         - header
         - body
         - query_param
+        - html
+        - regex
     OperatorType:
       description: Operator to apply in assertions
       type: string
@@ -12903,6 +13884,39 @@ components:
           description: Default value if path not found
           examples:
             - null
+    HTMLExtractorConfig:
+      type: object
+      required:
+        - selector
+      properties:
+        selector:
+          description: CSS selector. The value is the text of the first matching element, with runs of spaces collapsed.
+          type: string
+          examples:
+            - a[href*='/invitations']
+        attribute:
+          description: Read this attribute of the element instead of its text. A matched element without the attribute is skipped.
+          type: string
+          examples:
+            - href
+        all:
+          description: Return a list of every match instead of the first one. With no match the list is empty instead of an error.
+          type: boolean
+          default: false
+    RegexExtractorConfig:
+      type: object
+      required:
+        - pattern
+      properties:
+        pattern:
+          description: Go (RE2) regular expression, matched against the raw body or the text of an email.
+          type: string
+          examples:
+            - 'code is:?\s*(\d+)'
+        group:
+          description: Capture group to return. Without it, the value is group 1 when the pattern has a group, else the whole match.
+          type: integer
+          minimum: 0
     HeaderExtractorConfig:
       type: object
       required:
@@ -13093,7 +14107,10 @@ components:
         - updated_at
       properties:
         id:
-          description: Server-generated unique identifier
+          description: |
+            Server-generated unique identifier. It is the nil UUID
+            (00000000-0000-0000-0000-000000000000) while the owner has no stored
+            variables; owner_id, owner_type and organization_id are always filled.
           type: string
           format: uuid
           examples:
@@ -13135,11 +14152,11 @@ components:
           examples:
             - org_123
         created_at:
-          description: When the variable set was created
+          description: When the variable set was created. Zero time while the owner has no stored variables.
           type: string
           format: date-time
         updated_at:
-          description: When the variable set was last updated
+          description: When the variable set was last updated. Zero time while the owner has no stored variables.
           type: string
           format: date-time
     ScheduleOccurrenceStatus:
@@ -13183,6 +14200,72 @@ components:
           minLength: 2
           maxLength: 100
           pattern: .*\S.*
+    AdministrationOrganizationSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+    AdministrationOrganizationSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/PagedListResponse'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdministrationOrganization'
+    AdministrationOrganization:
+      description: An organization of this deployment with its members, as Echopoint staff see it.
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+        - members
+        - members_truncated
+      properties:
+        id:
+          description: Unique identifier of the organization (KSUID).
+          type: string
+        name:
+          description: Name of the organization.
+          type: string
+        created_at:
+          description: When the organization was created.
+          type: string
+          format: date-time
+        members:
+          description: Members of the organization, at most 100.
+          type: array
+          items:
+            $ref: '#/components/schemas/AdministrationOrganizationMember'
+        members_truncated:
+          description: True when the organization has more members than this response lists.
+          type: boolean
+    AdministrationOrganizationMember:
+      description: A member of an organization, as Echopoint staff see it.
+      type: object
+      required:
+        - user_id
+        - email
+        - role_name
+      properties:
+        user_id:
+          description: Unique identifier of the product user (KSUID).
+          type: string
+        external_id:
+          description: Identifier of the user at the identity provider, when Anchor knows it.
+          type: string
+        email:
+          description: Email address of the member.
+          type: string
+          format: email
+        name:
+          description: Display name of the member, when set.
+          type: string
+        role_name:
+          description: Name of the member's organization role. Empty when the member holds none.
+          type: string
     OrganizationMember:
       description: A member of the current organization, as seen by echopoint (proxied from anchor).
       type: object
@@ -13346,7 +14429,7 @@ components:
         - expires_at
     OrganizationInvitationSearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             sort_by:
@@ -13451,7 +14534,7 @@ components:
             $ref: '#/components/schemas/ReceivedInvitation'
     ReceivedInvitationSearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             sort_by:
@@ -13577,7 +14660,7 @@ components:
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
         ignore_modules:
-          description: Whether the tag selector skips flows whose role is `module`.
+          description: Whether the tag selector skips flows whose role is `function`.
           type: boolean
         name:
           type: string
@@ -13660,7 +14743,7 @@ components:
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
         ignore_modules:
-          description: Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+          description: Skip flows whose role is `function` when resolving the tag selector. Omitted defaults to true.
           type: boolean
           default: true
         name:
@@ -13724,7 +14807,7 @@ components:
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
         ignore_modules:
-          description: Skip flows whose role is `module` when resolving the tag selector. Omit to keep the current value.
+          description: Skip flows whose role is `function` when resolving the tag selector. Omit to keep the current value.
           type: boolean
         name:
           type: string
@@ -13919,7 +15002,7 @@ components:
         - due_at
     MonitorRunSearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             sort_by:
@@ -14150,7 +15233,7 @@ components:
         tag_match_mode:
           $ref: '#/components/schemas/TagMatchMode'
         ignore_modules:
-          description: Skip flows whose role is `module` when resolving the tag selector. Omitted defaults to true.
+          description: Skip flows whose role is `function` when resolving the tag selector. Omitted defaults to true.
           type: boolean
           default: true
     ScheduleTagPreviewResponse:
@@ -14430,7 +15513,7 @@ components:
           type: string
           format: uuid
         slug:
-          description: The spec's unique slug within the organization. It addresses the spec in URLs and in the CLI, for example `echopoint spec view <slug>`.
+          description: The spec's slug, unique within its workspace (another workspace of the organization may use it too). It addresses the spec in URLs and in the CLI, for example `echopoint spec view <slug>`.
           type: string
           examples:
             - echopoint-api
@@ -14515,7 +15598,7 @@ components:
         - created_at
     SpecVersionSearchRequest:
       allOf:
-        - $ref: '#/components/schemas/SearchRequest'
+        - $ref: '#/components/schemas/SearchPageRequest'
         - type: object
           properties:
             sort_by:
@@ -14568,6 +15651,21 @@ components:
             The OpenAPI 3.0.x or 3.1.x document, as YAML or JSON text, at most
             15 MB. It must be self-contained: no external `$ref`.
           type: string
+    AppliedSpecVersion:
+      description: The Live version a request of edit commands produced.
+      allOf:
+        - $ref: '#/components/schemas/SpecVersion'
+        - type: object
+          required:
+            - replayed
+          properties:
+            replayed:
+              description: |
+                True when the `command_id` had already produced this version and
+                nothing was applied (status 200); false for a new version (201).
+                A client that cannot read the status, such as an MCP tool call,
+                reads this instead.
+              type: boolean
     ApplySpecCommandsRequest:
       type: object
       required:
@@ -14595,6 +15693,48 @@ components:
             $ref: '#/components/schemas/SpecCommand'
           minItems: 1
           maxItems: 100
+    PreviewSpecCommandsRequest:
+      type: object
+      required:
+        - commands
+      properties:
+        base_version:
+          description: |
+            The Live version the commands were written against. When Live is no
+            longer that version, the request is refused with `SPEC_LIVE_MOVED`.
+          type: string
+          examples:
+            - 1.4.0
+        commands:
+          description: The commands, applied in order. All apply or none does.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecCommand'
+          minItems: 1
+          maxItems: 100
+    SpecCommandsPreview:
+      description: What a request of edit commands would change in the Live version, if it were applied.
+      type: object
+      required:
+        - base_version
+        - changes
+        - findings
+      properties:
+        base_version:
+          description: The Live version the commands were applied to.
+          type: string
+          examples:
+            - 1.4.0
+        changes:
+          description: The differences between the Live version and the result. Empty when the commands change nothing.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecChange'
+        findings:
+          description: The convention findings the commands introduce, each with `introduced` true. Findings the Live version already has are left out.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecFinding'
     SpecCommandKind:
       description: |
         What a command changes. `pointer` (an RFC 6901 JSON pointer, such as
@@ -15442,6 +16582,7 @@ components:
       required:
         - flow_id
         - flow_name
+        - flow_role
         - runs
         - failed_runs
         - run_ms_total
@@ -15458,8 +16599,11 @@ components:
           type: string
           format: uuid
         flow_name:
-          description: The flow's current name; empty when the flow was deleted.
+          description: The flow's current name.
           type: string
+        flow_role:
+          $ref: '#/components/schemas/FlowRole'
+          description: The flow's current role (`test` or `function`).
         runs:
           type: integer
           format: int64
@@ -15985,8 +17129,31 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorResponse'
+    ContentTooLarge:
+      description: The request body, or a part of it the server stores, exceeds the size the operation accepts. The same request fails again.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
     TooManyRequests:
       description: The caller sent more requests than the window allows. Retrying later succeeds.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    WebhookRateLimited:
+      description: >-
+        The webhook or its organization received more deliveries in the current one-minute window than the ingest
+        limit allows (code `WEBHOOK_RATE_LIMITED`), and the delivery was not stored. `metadata.scope` is `webhook` or
+        `organization`, `metadata.limit` the threshold, `metadata.window_seconds` the window, and
+        `metadata.retry_after_seconds` when the window ends; the `Retry-After` header carries the same seconds. Sent
+        only while the server enforces the limit.
+      headers:
+        Retry-After:
+          description: Seconds until the window ends, equal to `metadata.retry_after_seconds`.
+          schema:
+            type: integer
+            minimum: 1
       content:
         application/json:
           schema:
@@ -16055,6 +17222,13 @@ components:
       required: false
       schema:
         $ref: '#/components/schemas/AnalyticsWindow'
+    AnalyticsFlowRoleQuery:
+      name: flow_role
+      in: query
+      description: Filter analytics to executions of flows with this role (`test` or `function`). Omit to include both.
+      required: false
+      schema:
+        $ref: '#/components/schemas/FlowRole'
     RequiredOrganizationIDHeader:
       name: X-Organization-ID
       in: header
@@ -16069,7 +17243,7 @@ components:
     SpecSlugParameter:
       name: slug
       in: path
-      description: The spec's slug, unique in the organization.
+      description: The spec's slug, unique in the workspace the request selects.
       required: true
       schema:
         type: string
@@ -16164,8 +17338,16 @@ components:
         items:
           $ref: '#/components/schemas/CurrentUserInclude'
   requestBodies:
+    InboundEmailMessage:
+      description: The raw RFC 5322 message, with the Email Worker's envelope header lines first. It is read as bytes and never validated against a schema.
+      content:
+        message/rfc822:
+          schema:
+            type: string
+            format: binary
+      required: true
     WebhookAnyPayload:
-      description: 'Webhook payload in any format. The body is stored byte for byte and is never parsed, so any media type is accepted, including none: a request without a Content-Type header, or with a body that does not match its declared Content-Type, is still received. Only the first 1 MiB of a body is stored.'
+      description: 'Webhook payload in any format. The body is stored byte for byte and is never parsed, so any media type is accepted, including none: a request without a Content-Type header, or with a body that does not match its declared Content-Type, is still received. A body over 1 MiB (1,048,576 bytes) is refused with 413 `WEBHOOK_PAYLOAD_TOO_LARGE` and nothing is stored.'
       content:
         '*/*':
           schema:
@@ -16179,7 +17361,7 @@ components:
   securitySchemes:
     BearerAuth:
       type: http
-      description: Clerk session JWT token in Authorization header
+      description: Clerk session JWT in the Authorization header. The API also accepts the Clerk OAuth access token (prefix `oat_`) of the Echopoint CLI.
       scheme: bearer
       bearerFormat: JWT
     ApiKeys:
@@ -16197,6 +17379,8 @@ tags:
     description: Authentication and current user context operations.
   - name: Webhook
     description: Manage webhook endpoints and capture requests.
+  - name: Inbox
+    description: Email inboxes of flow runs.
   - name: Integration
     description: Third-party integrations, such as Stripe, their reviewed operations and events, and their connections.
   - name: Analytics
@@ -16210,7 +17394,7 @@ tags:
   - name: Resources
     description: Cross-domain resource discovery operations.
   - name: Administration
-    description: Operator-only cross-tenant maintenance operations.
+    description: Cross-tenant maintenance operations for Echopoint staff only.
   - name: Extractors
     description: Manage flow extractors for data extraction from responses
   - name: Assertions

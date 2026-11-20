@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -83,6 +84,9 @@ func completeFlowPlaceholders(state *AppState, cmd *cobra.Command) {
 func newFlowLaunchCmd(state *AppState) *cobra.Command {
 	var runnerType string
 	var environmentKey string
+	var rawInputs []string
+	var jsonInputs []string
+	var waitSeconds int
 
 	cmd := &cobra.Command{
 		Use:   "launch <flow-id>",
@@ -90,16 +94,26 @@ func newFlowLaunchCmd(state *AppState) *cobra.Command {
 		Long: `Ask EchoPoint to run a flow, print the execution id, and return without waiting.
 
 The flow runs on Cloud by default, or on a Self-hosted runner with --runner
-self_hosted. Follow it with 'echopoint flow execution view'.
+self_hosted. Pass --wait <seconds> (1-45) to send Prefer: wait=<N> (RFC 7240):
+when the run finishes within the window, the API returns 200 OK with the
+terminal status and redacted output-node values; otherwise it returns 202
+Accepted so you can follow it with 'echopoint flow execution view'.
+
+Pass --input key=value (or --input-json key=<json>) for a function flow's
+declared input parameters.
 
 To run the flow from this CLI as an Ephemeral runner and wait for the result,
 use 'echopoint flow run'.`,
 		Example: `  echopoint flow launch <flow-id>
-  echopoint flow launch <flow-id> --runner self_hosted -e prd`,
+  echopoint flow launch <flow-id> --runner self_hosted -e prd
+  echopoint flow launch <flow-id> --input email=alice@example.com --wait 30 -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
 				return err
+			}
+			if waitSeconds < 0 || waitSeconds > maxLaunchWaitSeconds {
+				return fmt.Errorf("--wait must be between 0 and %d seconds", maxLaunchWaitSeconds)
 			}
 
 			flowID, err := resolveFlowID(context.Background(), state, args[0])
@@ -107,15 +121,25 @@ use 'echopoint flow run'.`,
 				return err
 			}
 
-			requestBody, err := launchFlowRequestBody(runnerType, environmentKey)
+			inputs, err := parseLaunchInputs(rawInputs, jsonInputs)
 			if err != nil {
 				return err
+			}
+			requestBody, err := launchFlowRequestBody(runnerType, environmentKey, inputs)
+			if err != nil {
+				return err
+			}
+
+			var params *api.LaunchFlowParams
+			if waitSeconds > 0 {
+				prefer := fmt.Sprintf("wait=%d", waitSeconds)
+				params = &api.LaunchFlowParams{Prefer: &prefer}
 			}
 
 			resp, err := state.Client.API().LaunchFlowWithBodyWithResponse(
 				context.Background(),
 				flowID,
-				nil,
+				params,
 				"application/json",
 				strings.NewReader(string(requestBody)),
 			)
@@ -123,22 +147,13 @@ use 'echopoint flow run'.`,
 				return err
 			}
 
-			if resp.JSON202 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			switch state.OutputFormat {
-			case output.FormatJSON:
-				return output.PrintJSON(cmd.OutOrStdout(), resp.JSON202)
-			case output.FormatYAML:
-				return output.PrintYAML(cmd.OutOrStdout(), resp.JSON202)
+			switch {
+			case resp.JSON200 != nil:
+				return printCompletedLaunch(cmd, state, resp.JSON200)
+			case resp.JSON202 != nil:
+				return printAcceptedLaunch(cmd, state, resp.JSON202)
 			default:
-				fmt.Fprintf(cmd.OutOrStdout(), "Execution ID: %s\n", resp.JSON202.Execution.Id)
-				fmt.Fprintf(cmd.OutOrStdout(), "Status: %s\n", resp.JSON202.Execution.Status)
-				if resp.JSON202.Execution.RunnerType != nil {
-					fmt.Fprintf(cmd.OutOrStdout(), "Runner Type: %s\n", *resp.JSON202.Execution.RunnerType)
-				}
-				return nil
+				return formatAPIError(resp.HTTPResponse, resp.Body)
 			}
 		},
 	}
@@ -146,9 +161,99 @@ use 'echopoint flow run'.`,
 	cmd.Flags().StringVar(&runnerType, "runner", defaultRunnerType, "Where EchoPoint runs it: cloud or self_hosted")
 	cmd.Flags().StringVarP(&environmentKey, "environment", "e", "",
 		"Environment to overlay before flow variables (e.g. dev)")
+	cmd.Flags().StringArrayVar(&rawInputs, "input", nil,
+		"String input for a function flow in key=value format (repeatable)")
+	cmd.Flags().StringArrayVar(&jsonInputs, "input-json", nil,
+		"JSON-typed input for a function flow in key=<json> format (repeatable)")
+	cmd.Flags().IntVar(&waitSeconds, "wait", 0,
+		"Wait up to N seconds (1-45) via RFC 7240 Prefer: wait=N for synchronous completion")
 	_ = cmd.RegisterFlagCompletionFunc("runner", staticCompletion(string(api.Cloud), string(api.SelfHosted)))
 	registerEnvironmentFlagCompletion(state, cmd)
 	return cmd
+}
+
+const maxLaunchWaitSeconds = 45
+
+func printAcceptedLaunch(cmd *cobra.Command, state *AppState, accepted *api.LaunchFlowAcceptedResponse) error {
+	switch state.OutputFormat {
+	case output.FormatJSON:
+		return output.PrintJSON(cmd.OutOrStdout(), accepted)
+	case output.FormatYAML:
+		return output.PrintYAML(cmd.OutOrStdout(), accepted)
+	default:
+		fmt.Fprintf(cmd.OutOrStdout(), "Execution ID: %s\n", accepted.Execution.Id)
+		fmt.Fprintf(cmd.OutOrStdout(), "Status: %s\n", accepted.Execution.Status)
+		if accepted.Execution.RunnerType != nil {
+			fmt.Fprintf(cmd.OutOrStdout(), "Runner Type: %s\n", *accepted.Execution.RunnerType)
+		}
+		return nil
+	}
+}
+
+func printCompletedLaunch(cmd *cobra.Command, state *AppState, completed *api.LaunchFlowCompletedResponse) error {
+	switch state.OutputFormat {
+	case output.FormatJSON:
+		return output.PrintJSON(cmd.OutOrStdout(), completed)
+	case output.FormatYAML:
+		return output.PrintYAML(cmd.OutOrStdout(), completed)
+	default:
+		fmt.Fprintf(cmd.OutOrStdout(), "Execution ID: %s\n", completed.Execution.Id)
+		fmt.Fprintf(cmd.OutOrStdout(), "Status: %s\n", completed.Execution.Status)
+		if completed.Execution.RunnerType != nil {
+			fmt.Fprintf(cmd.OutOrStdout(), "Runner Type: %s\n", *completed.Execution.RunnerType)
+		}
+		if completed.Outputs != nil && len(*completed.Outputs) > 0 {
+			keys := make([]string, 0, len(*completed.Outputs))
+			for key := range *completed.Outputs {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+			fmt.Fprintln(cmd.OutOrStdout(), "Outputs:")
+			for _, key := range keys {
+				val := (*completed.Outputs)[key]
+				switch typed := val.(type) {
+				case string:
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s: %s\n", key, typed)
+				default:
+					encoded, err := json.Marshal(typed)
+					if err != nil {
+						fmt.Fprintf(cmd.OutOrStdout(), "  %s: %v\n", key, typed)
+					} else {
+						fmt.Fprintf(cmd.OutOrStdout(), "  %s: %s\n", key, string(encoded))
+					}
+				}
+			}
+		}
+		return nil
+	}
+}
+
+func parseLaunchInputs(rawInputs, jsonInputs []string) (map[string]any, error) {
+	if len(rawInputs) == 0 && len(jsonInputs) == 0 {
+		return nil, nil
+	}
+	inputs := make(map[string]any, len(rawInputs)+len(jsonInputs))
+	for _, entry := range rawInputs {
+		key, value, ok := strings.Cut(entry, "=")
+		key = strings.TrimSpace(key)
+		if !ok || key == "" {
+			return nil, fmt.Errorf("invalid --input %q: expected key=value", entry)
+		}
+		inputs[key] = value
+	}
+	for _, entry := range jsonInputs {
+		key, rawVal, ok := strings.Cut(entry, "=")
+		key = strings.TrimSpace(key)
+		if !ok || key == "" {
+			return nil, fmt.Errorf("invalid --input-json %q: expected key=<json>", entry)
+		}
+		var decoded any
+		if err := json.Unmarshal([]byte(rawVal), &decoded); err != nil {
+			return nil, fmt.Errorf("invalid JSON for --input-json %q: %w", key, err)
+		}
+		inputs[key] = decoded
+	}
+	return inputs, nil
 }
 
 func staticCompletion(values ...string) completionFunc {
@@ -303,7 +408,7 @@ func parseExecutionID(arg string) (uuid.UUID, error) {
 // defaultRunnerType is the runner backend used when none is specified.
 const defaultRunnerType = string(api.Cloud)
 
-func launchFlowRequestBody(runnerType, environmentKey string) ([]byte, error) {
+func launchFlowRequestBody(runnerType, environmentKey string, inputs map[string]any) ([]byte, error) {
 	normalized := strings.TrimSpace(strings.ToLower(runnerType))
 	if normalized == "" {
 		normalized = defaultRunnerType
@@ -315,6 +420,9 @@ func launchFlowRequestBody(runnerType, environmentKey string) ([]byte, error) {
 	payload := api.LaunchFlowRequest{RunnerType: new(api.RunnerType(normalized))}
 	if env := strings.TrimSpace(environmentKey); env != "" {
 		payload.EnvironmentKey = &env
+	}
+	if len(inputs) > 0 {
+		payload.Inputs = &inputs
 	}
 	return json.Marshal(payload)
 }

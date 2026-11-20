@@ -23,17 +23,17 @@ func newFlowRoleCmd(state *AppState) *cobra.Command {
 		Short: "Show a flow's role, or set it with --set",
 		Long: `Show a flow's role, or change it with --set.
 
-A flow is either standalone or a module. A Module flow is a reusable building
-block that other flows call through a module node: it can still be launched
+A flow is either test or function. A Function flow is a reusable parameterized
+flow that other flows, callers, or MCP agents invoke: it can still be launched
 directly to test it, but a schedule skips it when its tags match the flow,
-unless the schedule sets ignore_modules to false. A Standalone flow is a test of
+unless the schedule sets ignore_modules to false. A Test flow is a test of
 its own, and is the default.
 
 --set changes only the role; every other field of the flow stays.`,
 		Example: `  echopoint flow role <flow-id>
   echopoint flow role <flow-id> -o json
-  echopoint flow role <flow-id> --set module
-  echopoint flow role <flow-id> --set standalone`,
+  echopoint flow role <flow-id> --set function
+  echopoint flow role <flow-id> --set test`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireToken(state); err != nil {
@@ -74,16 +74,16 @@ its own, and is the default.
 		},
 	}
 
-	cmd.Flags().StringVar(&set, "set", "", "New role: standalone or module")
+	cmd.Flags().StringVar(&set, "set", "", "New role: test or function")
 	_ = cmd.RegisterFlagCompletionFunc("set", staticCompletion(
-		string(api.FlowRoleStandalone), string(api.FlowRoleModule)))
+		string(api.Test), string(api.Function)))
 	return quietOnError(cmd)
 }
 
 func parseFlowRole(value string) (api.FlowRole, error) {
 	role := api.FlowRole(value)
 	if !role.Valid() {
-		return "", fmt.Errorf("invalid role %q; must be %q or %q", value, api.FlowRoleStandalone, api.FlowRoleModule)
+		return "", fmt.Errorf("invalid role %q; must be %q or %q", value, api.Test, api.Function)
 	}
 	return role, nil
 }
