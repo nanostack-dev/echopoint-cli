@@ -123,7 +123,6 @@ type MultiFlowRunOutput struct {
 func newFlowRunCmd(state *AppState) *cobra.Command {
 	var (
 		flagEnvironment    string
-		flagVersionID      string
 		flagIdempotencyKey string
 		flagPollTimeout    time.Duration
 		flagParallel       int
@@ -238,7 +237,7 @@ Exit codes:
 			zerolog.SetGlobalLevel(runnerLogLevel(flagVerbose, state.Debug))
 			results, exitCode := executeFlows(
 				ctx, state, flowIDs, baseKey,
-				flagEnvironment, flagVersionID, flagParallel, string(format),
+				flagEnvironment, flagParallel, string(format),
 			)
 
 			return emitOutput(format, flagVerbose, results, exitCode, len(flowIDs))
@@ -248,10 +247,6 @@ Exit codes:
 	cmd.Flags().BoolVar(&flagVerbose, "verbose", false,
 		"Print each node's status (name, status, duration) and the runner's logs as the flow runs")
 	cmd.Flags().StringVarP(&flagEnvironment, "environment", "e", "", "Environment to overlay on flow inputs (e.g. dev)")
-	cmd.Flags().StringVar(&flagVersionID, "version-id", "",
-		"Deprecated: run an earlier version of the flow (default: the flow as it is now)")
-	_ = cmd.Flags().MarkDeprecated("version-id",
-		"a run uses the flow as it is now; restore a version in the app to run it again. The API will drop this option")
 	cmd.Flags().StringVar(&flagIdempotencyKey, "idempotency-key", "",
 		"Stable key for idempotent CI retries (auto-derived from GitHub env when GITHUB_ACTIONS=true)")
 	cmd.Flags().DurationVar(&flagPollTimeout, "poll-timeout", 30*time.Minute,
@@ -500,7 +495,6 @@ func executeFlows(
 	flowIDs []string,
 	baseKey string,
 	environment string,
-	versionID string,
 	parallel int,
 	outputFormat string,
 ) ([]FlowRunResult, int) {
@@ -515,7 +509,7 @@ func executeFlows(
 			if len(flowIDs) == 1 && baseKey != "" {
 				key = baseKey
 			}
-			results[i] = runSingleFlow(ctx, state, flowID, key, environment, versionID, outputFormat)
+			results[i] = runSingleFlow(ctx, state, flowID, key, environment, outputFormat)
 		}
 	} else {
 		sem := make(chan struct{}, parallel)
@@ -530,7 +524,7 @@ func executeFlows(
 				defer func() { <-sem }()
 
 				key := derivePerFlowKey(baseKey, fid)
-				result := runSingleFlow(ctx, state, fid, key, environment, versionID, outputFormat)
+				result := runSingleFlow(ctx, state, fid, key, environment, outputFormat)
 				mu.Lock()
 				results[idx] = result
 				mu.Unlock()
@@ -564,7 +558,6 @@ func runSingleFlow(
 	flowID string,
 	idempotencyKey string,
 	environment string,
-	versionID string,
 	outputFormat string,
 ) FlowRunResult {
 	flowUUID, err := resolveFlowID(ctx, state, flowID)
@@ -573,7 +566,7 @@ func runSingleFlow(
 	}
 
 	executionID, terminalResult, launchErr := launchEphemeral(
-		ctx, state, flowUUID, idempotencyKey, environment, versionID, outputFormat,
+		ctx, state, flowUUID, idempotencyKey, environment, outputFormat,
 	)
 	if launchErr != nil {
 		return errorResult(flowID, "", exitCodeForError(launchErr), launchErr.Error())
@@ -638,7 +631,6 @@ func launchEphemeral(
 	flowUUID uuid.UUID,
 	idempotencyKey string,
 	environment string,
-	versionID string,
 	outputFormat string,
 ) (uuid.UUID, *FlowRunResult, error) {
 	runnerTypEphemeral := api.Ephemeral
@@ -649,13 +641,6 @@ func launchEphemeral(
 	}
 	if environment != "" {
 		req.EnvironmentKey = new(environment)
-	}
-	if versionID != "" {
-		vid, err := uuid.Parse(versionID)
-		if err != nil {
-			return uuid.UUID{}, nil, fmt.Errorf("invalid version-id %q: %w", versionID, err)
-		}
-		req.VersionId = &vid
 	}
 
 	if os.Getenv("GITHUB_ACTIONS") == githubActionsTrueValue {

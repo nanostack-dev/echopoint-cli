@@ -98,7 +98,7 @@ func TestIntegration_EphemeralWebhookWaitReadsWithTheJobToken(t *testing.T) {
 	state := makeState(t, "test-api-key", "", srv.URL)
 	state.OrganizationID = "org_test"
 	results, exitCode := executeFlows(
-		context.Background(), state, []string{flowUUID().String()}, "", "", "", 1, "",
+		context.Background(), state, []string{flowUUID().String()}, "", "", 1, "",
 	)
 
 	if exitCode != exitSuccess || len(results) != 1 || results[0].ExitCode != exitSuccess {

@@ -21,8 +21,7 @@ exit: 0
   ]
 }
 --- stderr ---
-Flag --version-id has been deprecated, a run uses the flow as it is now; restore a version in the app to run it again. The API will drop this option
 ✓ Flow 550e8400-e29b-41d4-a716-446655440001: completed (Nms)
 --- launches ---
-POST /flows/550e8400-e29b-41d4-a716-446655440001/launch idempotency-key="" {"environment_key":"dev","ephemeral_job_version":1,"runner_type":"ephemeral","version_id":"550e8400-e29b-41d4-a716-4466554400b1"}
+POST /flows/550e8400-e29b-41d4-a716-446655440001/launch idempotency-key="" {"environment_key":"dev","ephemeral_job_version":1,"runner_type":"ephemeral"}
 --- step summary ---

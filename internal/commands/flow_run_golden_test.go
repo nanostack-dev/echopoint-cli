@@ -25,7 +25,6 @@ const (
 	goldenFailedFlow    = "550e8400-e29b-41d4-a716-4466554400a4"
 	goldenCancelledFlow = "550e8400-e29b-41d4-a716-4466554400a5"
 	goldenSlowFlow      = "550e8400-e29b-41d4-a716-4466554400a6"
-	goldenVersionID     = "550e8400-e29b-41d4-a716-4466554400b1"
 	goldenDirectory     = "testdata/flow_run"
 	updateGoldenEnv     = "UPDATE_GOLDEN"
 )
@@ -195,7 +194,7 @@ func goldenRuns() []goldenRun {
 		{
 			name: "action-flags-json",
 			args: []string{
-				flow1, "-o", "json", "--environment", "dev", "--version-id", goldenVersionID,
+				flow1, "-o", "json", "--environment", "dev",
 				"--poll-timeout", "300s", "--parallel", "1",
 			},
 		},
