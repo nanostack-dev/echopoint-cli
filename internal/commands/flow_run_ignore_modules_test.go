@@ -31,13 +31,13 @@ func makeRoleFlows(modules, standalones int) []roleFlow {
 	for i := range modules {
 		flows = append(flows, roleFlow{
 			id:   uuid.MustParse(fmt.Sprintf("550e8400-e29b-41d4-a716-4466554%05d", i)),
-			role: api.FlowRoleModule,
+			role: api.Function,
 		})
 	}
 	for i := range standalones {
 		flows = append(flows, roleFlow{
 			id:   uuid.MustParse(fmt.Sprintf("650e8400-e29b-41d4-a716-4466554%05d", i)),
-			role: api.FlowRoleStandalone,
+			role: api.Test,
 		})
 	}
 	return flows
@@ -142,7 +142,7 @@ func TestFlowRun_IgnoreModulesSkipsModuleFlows(t *testing.T) {
 	for _, f := range flows {
 		got := stub.launched[f.id.String()]
 		want := 0
-		if f.role == api.FlowRoleStandalone {
+		if f.role == api.Test {
 			want = 1
 		}
 		if got != want {

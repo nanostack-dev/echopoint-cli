@@ -18,7 +18,7 @@ import (
 // specPublished is the Live version an edit published, or found already
 // published under the same command ID.
 type specPublished struct {
-	version  *api.SpecVersion
+	version  *api.AppliedSpecVersion
 	replayed bool
 }
 
@@ -128,14 +128,14 @@ func apiErrorMessage(resp *http.Response, body []byte) string {
 // EchoPoint: the Live version, and whether it was made by an earlier request
 // with the same command ID.
 type specPublishedResult struct {
-	api.SpecVersion
+	api.AppliedSpecVersion
 
 	Replayed bool `json:"replayed"`
 }
 
 func printSpecPublished(w io.Writer, format output.Format, name string, edit specEdit, published *specPublished) error {
 	version := published.version
-	result := specPublishedResult{SpecVersion: *version, Replayed: published.replayed}
+	result := specPublishedResult{AppliedSpecVersion: *version, Replayed: published.replayed}
 	if done, err := printStructured(w, format, result); done {
 		return err
 	}

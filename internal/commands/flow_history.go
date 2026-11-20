@@ -135,7 +135,7 @@ func completeFlowVersionArgs(state *AppState) completionFunc {
 				for _, version := range versions {
 					candidates = append(
 						candidates,
-						completionCandidate{version.Id.String(), "saved " + formatWhen(version.PublishedAt)},
+						completionCandidate{version.Id.String(), "saved " + formatWhen(version.CreatedAt)},
 					)
 				}
 				return candidates

@@ -94,7 +94,7 @@ A file is named `*.flow.yaml`. One file is one flow: a file with a second YAML d
 
 ```yaml
 name: "echopoint: organization member role"
-role: standalone
+role: test
 tags: [echopoint]
 nodes:
   login:
@@ -116,7 +116,7 @@ nodes:
 
 ```yaml
 name: "anchor: login (reusable)"
-role: module
+role: function
 id: eac266b3-2f3f-41b4-b061-f63b92b7b80e
 inputs: [email, password]
 nodes:
@@ -225,15 +225,15 @@ Only the flags given change; the other fields stay.
 With a flow file, the file replaces the name, version and graph. `tags`, `description` and `role` follow the file: a key the file leaves out keeps the stored value, and an explicit `tags: []` or `description: ""` clears it.
 
 ### Flow Role
-A flow is either **standalone** (the default: a test of its own) or a **module**: a reusable building block that other flows call through a module node. A Module flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` runs module flows too unless you pass `--ignore-modules`.
+A flow is either **test** (the default: a test of its own) or a **function**: a reusable building block that other flows call through a module node (or callers invoke directly over HTTP / MCP). A Function flow can still be launched directly to test it, but a schedule skips it when its tags match the flow, unless the schedule sets `ignore_modules` to false (the API default is true). `flow run --tag` runs function flows too unless you pass `--ignore-modules`.
 ```bash
 # show the role
 echopoint flow role <flow-id>
 echopoint flow role <flow-id> -o json
 
 # change it; only the role is sent, every other field stays
-echopoint flow role <flow-id> --set module
-echopoint flow role <flow-id> --set standalone
+echopoint flow role <flow-id> --set function
+echopoint flow role <flow-id> --set test
 ```
 `-o json` and `-o yaml` print `{"id": ..., "role": ...}` for both forms. An unknown role fails before any request. `flow view -o json` and `flow list -o json` carry `role`, and a `CreateFlowRequest` or `UpdateFlowRequest` file may set it.
 

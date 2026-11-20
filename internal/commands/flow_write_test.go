@@ -106,7 +106,7 @@ func TestFlowUpdateRefusesBothModesAndNeither(t *testing.T) {
 }
 
 var flowRowPattern = regexp.MustCompile(
-	`^(Checkout smoke|Login)\s+550e8400-e29b-41d4-a716-0000000000\d\d\s+standalone\s+2026-10-05 12:00$`)
+	`^(Checkout smoke|Login)\s+550e8400-e29b-41d4-a716-0000000000\d\d\s+test\s+2026-10-05 12:00$`)
 
 func TestFlowListShowsNameIDRoleAndUpdatedOnEveryPath(t *testing.T) {
 	folder := idFor("10")

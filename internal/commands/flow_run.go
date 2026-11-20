@@ -385,7 +385,7 @@ func resolveStandaloneFlowIDsByTags(
 		skipped int
 	)
 	for _, item := range matches.Items {
-		if item.Role == api.FlowRoleModule {
+		if item.Role == api.Function {
 			skipped++
 			continue
 		}

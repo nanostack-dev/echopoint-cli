@@ -50,9 +50,9 @@ func TestFlowUpdateFromAFlowFileClearsOnlyWhatTheFileEmpties(t *testing.T) {
 		}
 	}
 
-	raw, sent = updateFromFlowFile(t, "name: Ping\ntags: [smoke]\nrole: module\n")
+	raw, sent = updateFromFlowFile(t, "name: Ping\ntags: [smoke]\nrole: function\n")
 	tags, _ := sent["tags"].([]any)
-	if len(tags) != 1 || tags[0] != "smoke" || sent["role"] != "module" {
+	if len(tags) != 1 || tags[0] != "smoke" || sent["role"] != "function" {
 		t.Errorf("sent %s", raw)
 	}
 }
