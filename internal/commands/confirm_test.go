@@ -200,7 +200,7 @@ func destructiveCases() []destructiveCase {
 		},
 		{
 			name:  "org env delete",
-			build: newOrgCmd, verb: "delete", thing: "the organization variable set",
+			build: newOrgCmd, verb: "delete", thing: "every organization variable",
 			args: func(*apiStub) []string { return []string{"env", "delete"} },
 			setup: func(_ *testing.T, stub *apiStub) {
 				stub.on(http.MethodDelete, "/organization/variables", http.StatusNoContent, nil)
@@ -215,6 +215,15 @@ func destructiveCases() []destructiveCase {
 				stub.on(http.MethodDelete, "/organization/environments/dev", http.StatusNoContent, nil)
 			},
 			performed: stubPerformed(http.MethodDelete, "/organization/environments/dev"),
+		},
+		{
+			name:  "workspace env environments delete",
+			build: newWorkspaceCmd, verb: "delete", thing: "environment sandbox",
+			args: func(*apiStub) []string { return []string{"env", "environments", "delete", "sandbox"} },
+			setup: func(_ *testing.T, stub *apiStub) {
+				stub.on(http.MethodDelete, "/workspace/environments/sandbox", http.StatusNoContent, nil)
+			},
+			performed: stubPerformed(http.MethodDelete, "/workspace/environments/sandbox"),
 		},
 		{
 			name:  "status-page unpublish",

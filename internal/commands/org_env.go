@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"echopoint-cli/internal/api"
-	"echopoint-cli/internal/output"
 
 	"github.com/spf13/cobra"
 )
@@ -31,6 +30,80 @@ func newOrgCmd(state *AppState) *cobra.Command {
 	return cmd
 }
 
+// orgScope is the organization's variable set and its shared environments.
+var orgScope = variableScope{
+	noun:    "organization",
+	command: "org env",
+	read: func(ctx context.Context, state *AppState) (*api.VariableSet, error) {
+		resp, err := state.Client.API().GetOrganizationVariablesWithResponse(ctx, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get organization variables: %w", err)
+		}
+		if resp.JSON200 == nil {
+			return nil, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return resp.JSON200, nil
+	},
+	write: func(ctx context.Context, state *AppState, environment, key string, body api.SetVariableRequest) error {
+		if environment == "" {
+			resp, err := state.Client.API().SetOrganizationVariableWithResponse(ctx, key, nil, body)
+			if err != nil {
+				return fmt.Errorf("failed to set %s: %w", key, err)
+			}
+			return expectStatus(resp.HTTPResponse, resp.Body, http.StatusOK)
+		}
+		resp, err := state.Client.API().SetEnvironmentVariableWithResponse(ctx, environment, key, nil, body)
+		if err != nil {
+			return fmt.Errorf("failed to set %s in %s: %w", key, environment, err)
+		}
+		return expectStatus(resp.HTTPResponse, resp.Body, http.StatusOK)
+	},
+	remove: func(ctx context.Context, state *AppState, environment, key string) error {
+		if environment == "" {
+			resp, err := state.Client.API().DeleteOrganizationVariableWithResponse(ctx, key, nil)
+			if err != nil {
+				return fmt.Errorf("failed to delete %s: %w", key, err)
+			}
+			return expectStatus(resp.HTTPResponse, resp.Body, http.StatusNoContent)
+		}
+		resp, err := state.Client.API().DeleteEnvironmentVariableWithResponse(ctx, environment, key, nil)
+		if err != nil {
+			return fmt.Errorf("failed to delete %s from %s: %w", key, environment, err)
+		}
+		return expectStatus(resp.HTTPResponse, resp.Body, http.StatusNoContent)
+	},
+	search: searchEnvironments,
+	createEnvironment: func(ctx context.Context, state *AppState, name string) (*api.Environment, error) {
+		resp, err := state.Client.API().
+			CreateEnvironmentWithResponse(ctx, nil, api.CreateEnvironmentJSONRequestBody{Name: name})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create environment %q: %w", name, err)
+		}
+		if resp.JSON201 == nil {
+			return nil, formatAPIError(resp.HTTPResponse, resp.Body)
+		}
+		return resp.JSON201, nil
+	},
+	deleteEnvironment: func(ctx context.Context, state *AppState, name string) error {
+		resp, err := state.Client.API().DeleteEnvironmentWithResponse(ctx, name, nil)
+		if err != nil {
+			return fmt.Errorf("failed to delete environment %q: %w", name, err)
+		}
+		return expectStatus(resp.HTTPResponse, resp.Body, http.StatusNoContent)
+	},
+	environmentsLong: `Manage the organization's shared environments.
+
+Every workspace sees a shared environment and can hold its own values for it.
+A workspace can also have environments of its own ('workspace env environments');
+they are not listed here.`,
+	deleteEnvironmentShort: "Delete a shared environment and the organization's values in it",
+	deleteEnvironmentLong: `Delete a shared environment and the organization's values in it.
+
+The base layer is untouched. A workspace that still holds values for the
+environment blocks the delete with ENVIRONMENT_IN_USE: those workspaces delete
+their values first ('workspace env unset -e <name>').`,
+}
+
 func newOrgEnvCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   envCommandName,
@@ -41,18 +114,21 @@ A variable set holds two kinds of layer:
   - base variables, loaded for every flow execution
   - named environments (e.g. dev, staging, prd) selected at launch time
 
+The organization's environments are shared: every workspace sees them. A
+workspace's own values override the organization's ('workspace env').
+
 A variable can be stored as a secret. A secret is encrypted at rest, is never
 returned by a read, and is replaced by ` + "`***`" + ` in execution results, progress
 events and flow exports. A plain variable can become a secret; the reverse is
 refused, so delete it and set it again.`,
 	}
 	cmd.AddCommand(
-		newOrgEnvViewCmd(state),
-		newOrgEnvSetCmd(state),
-		newOrgEnvUnsetCmd(state),
-		newOrgEnvImportCmd(state),
+		orgScope.newViewCmd(state),
+		orgScope.newSetCmd(state),
+		orgScope.newUnsetCmd(state),
+		orgScope.newImportCmd(state),
 		newOrgEnvDeleteCmd(state),
-		newOrgEnvironmentsCmd(state),
+		orgScope.newEnvironmentsCmd(state),
 	)
 	return cmd
 }
@@ -65,18 +141,6 @@ func requireOrg(state *AppState) error {
 		)
 	}
 	return nil
-}
-
-// fetchOrgVariables reads the organization's variable set.
-func fetchOrgVariables(state *AppState) (*api.VariableSet, error) {
-	resp, err := state.Client.API().GetOrganizationVariablesWithResponse(context.Background(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get organization variables: %w", err)
-	}
-	if resp.JSON200 == nil {
-		return nil, formatAPIError(resp.HTTPResponse, resp.Body)
-	}
-	return resp.JSON200, nil
 }
 
 // layerValues flattens a layer for display. A secret has no value to show, so
@@ -95,67 +159,6 @@ func layerValues(layer api.VariableLayer) map[string]string {
 		}
 	}
 	return values
-}
-
-// setOrgVariable writes one variable into the base layer or into a named
-// environment. The environment has to exist already, so a misspelled name
-// fails rather than quietly creating a layer nothing reads.
-func setOrgVariable(state *AppState, environment, key, value string, secret bool) error {
-	body := api.SetVariableRequest{Value: value}
-	if secret {
-		body.Secret = &secret
-	}
-
-	if environment == "" {
-		resp, err := state.Client.API().SetOrganizationVariableWithResponse(
-			context.Background(), key, nil, api.SetOrganizationVariableJSONRequestBody(body),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to set %s: %w", key, err)
-		}
-		if resp.JSON200 == nil {
-			return formatAPIError(resp.HTTPResponse, resp.Body)
-		}
-		return nil
-	}
-
-	resp, err := state.Client.API().SetEnvironmentVariableWithResponse(
-		context.Background(), environment, key, nil, api.SetEnvironmentVariableJSONRequestBody(body),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to set %s in %s: %w", key, environment, err)
-	}
-	if resp.JSON200 == nil {
-		return formatAPIError(resp.HTTPResponse, resp.Body)
-	}
-	return nil
-}
-
-// deleteOrgVariable removes one variable from the base layer or an environment.
-func deleteOrgVariable(state *AppState, environment, key string) error {
-	if environment == "" {
-		resp, err := state.Client.API().DeleteOrganizationVariableWithResponse(
-			context.Background(), key, nil,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to delete %s: %w", key, err)
-		}
-		if resp.StatusCode() != http.StatusNoContent {
-			return formatAPIError(resp.HTTPResponse, resp.Body)
-		}
-		return nil
-	}
-
-	resp, err := state.Client.API().DeleteEnvironmentVariableWithResponse(
-		context.Background(), environment, key, nil,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to delete %s from %s: %w", key, environment, err)
-	}
-	if resp.StatusCode() != http.StatusNoContent {
-		return formatAPIError(resp.HTTPResponse, resp.Body)
-	}
-	return nil
 }
 
 // layerTarget names the layer a write landed in, for the line printed after it.
@@ -211,337 +214,42 @@ func layerPayload(vars map[string]string, showValues bool) any {
 	return variableNames(vars)
 }
 
-func newOrgEnvViewCmd(state *AppState) *cobra.Command {
-	var (
-		environment string
-		showValues  bool
-	)
-
-	cmd := &cobra.Command{
-		Use:     viewVerb,
-		Aliases: []string{getVerb},
-		Short:   "Show organization variables",
-		Example: `  echopoint org env view
-  echopoint org env view -e prd --show-values`,
-		Long: `Show organization variables.
-
-A variable set can hold live credentials, so values are hidden by default and
-only names are shown. Pass --show-values to reveal them. A secret has no value
-to reveal: a read never returns one.`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-
-			set, err := fetchOrgVariables(state)
-			if err != nil {
-				return err
-			}
-
-			if environment != "" {
-				layer, ok := set.Environments[environment]
-				if !ok {
-					return fmt.Errorf("environment %q not found", environment)
-				}
-				vars := layerValues(layer)
-				switch state.OutputFormat {
-				case output.FormatJSON:
-					return output.PrintJSON(os.Stdout, layerPayload(vars, showValues))
-				case output.FormatYAML:
-					return output.PrintYAML(os.Stdout, layerPayload(vars, showValues))
-				}
-				printVars(
-					os.Stdout,
-					fmt.Sprintf("Environment %q variables", environment),
-					vars,
-					showValues,
-				)
-				return nil
-			}
-
-			base := layerValues(set.Base)
-			names := make([]string, 0, len(set.Environments))
-			for name := range set.Environments {
-				names = append(names, name)
-			}
-			sort.Strings(names)
-
-			switch state.OutputFormat {
-			case output.FormatJSON:
-				return output.PrintJSON(os.Stdout, map[string]any{
-					"base":           layerPayload(base, showValues),
-					environmentsVerb: names,
-				})
-			case output.FormatYAML:
-				return output.PrintYAML(os.Stdout, map[string]any{
-					"base":           layerPayload(base, showValues),
-					environmentsVerb: names,
-				})
-			}
-
-			printVars(os.Stdout, "Organization base variables", base, showValues)
-			if len(names) > 0 {
-				fmt.Printf("\nEnvironments: %s\n", strings.Join(names, ", "))
-			}
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
-	registerEnvironmentFlagCompletion(state, cmd)
-	cmd.Flags().BoolVar(&showValues, "show-values", false, "Reveal variable values instead of names only")
-	return cmd
-}
-
-func newOrgEnvSetCmd(state *AppState) *cobra.Command {
-	var (
-		variables   []string
-		environment string
-		secret      bool
-	)
-
-	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "Set organization variables",
-		Long: `Set organization variables.
-
-Each variable is written on its own; the others are left alone. Use
--e/--environment to target a named environment, which has to exist already.
-
-Pass --secret to encrypt the values at rest. A read never returns a secret, and
-execution results, progress events and flow exports replace it with ` + "`***`" + `. A
-plain variable can become a secret; the reverse is refused, so delete it and set
-it again.`,
-		Example: `  echopoint org env set --var KEY=value
-  echopoint org env set --var KEY1=v1 --var KEY2=v2
-  echopoint org env set -e prd --var BASE_URL=https://api.example.com
-  echopoint org env set --secret --var API_KEY=sk-live-...`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-			if len(variables) == 0 {
-				return fmt.Errorf("at least one --var KEY=value is required")
-			}
-
-			updates, err := parseVarFlags(variables)
-			if err != nil {
-				return err
-			}
-
-			for _, key := range sortedKeys(updates) {
-				if err := setOrgVariable(state, environment, key, updates[key], secret); err != nil {
-					return err
-				}
-			}
-
-			kind := "variable(s)"
-			if secret {
-				kind = "secret(s)"
-			}
-			fmt.Printf("Set %d %s in the %s\n", len(updates), kind, layerTarget(environment))
-			return nil
-		},
-	}
-
-	cmd.Flags().StringArrayVar(&variables, "var", nil, "Variable in KEY=value format (repeatable)")
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
-	registerEnvironmentFlagCompletion(state, cmd)
-	cmd.Flags().BoolVar(&secret, "secret", false, "Store the values as secrets (encrypted, never read back)")
-	return cmd
-}
-
-func newOrgEnvUnsetCmd(state *AppState) *cobra.Command {
-	var environment string
-
-	cmd := &cobra.Command{
-		Use:   "unset KEY [KEY...]",
-		Short: "Remove organization variables",
-		Example: `  echopoint org env unset API_KEY
-  echopoint org env unset -e prd BASE_URL`,
-		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-
-			for _, key := range args {
-				if err := deleteOrgVariable(state, environment, key); err != nil {
-					return err
-				}
-			}
-
-			fmt.Printf("Removed %d variable(s) from the %s\n", len(args), layerTarget(environment))
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
-	registerEnvironmentFlagCompletion(state, cmd)
-	return cmd
-}
-
-func newOrgEnvImportCmd(state *AppState) *cobra.Command {
-	var (
-		file        string
-		environment string
-		secret      bool
-	)
-
-	cmd := &cobra.Command{
-		Use:   "import -f <file>",
-		Short: "Import organization variables from a file",
-		Long: `Import variables from a JSON object ({"KEY":"value"}) or a dotenv (KEY=value) file.
-
-Each variable is written on its own; the others are left alone. Pass --secret to
-store every imported value as a secret.`,
-		Example: `  echopoint org env import -f .env
-  echopoint org env import -f vars.json -e prd --secret`,
-		Args: fileFlagArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-
-			updates, err := parseVarFile(file)
-			if err != nil {
-				return err
-			}
-			if len(updates) == 0 {
-				return fmt.Errorf("no variables found in %s", file)
-			}
-
-			for _, key := range sortedKeys(updates) {
-				if err := setOrgVariable(state, environment, key, updates[key], secret); err != nil {
-					return err
-				}
-			}
-
-			fmt.Printf(
-				"Imported %d variable(s) into the %s from %s\n",
-				len(updates), layerTarget(environment), file,
-			)
-			return nil
-		},
-	}
-
-	addFileFlag(cmd, &file, "JSON or dotenv file of variables", "json", "env")
-	_ = cmd.MarkFlagRequired("file")
-	cmd.Flags().StringVarP(&environment, "environment", "e", "", "Target a named environment instead of the base layer")
-	registerEnvironmentFlagCompletion(state, cmd)
-	cmd.Flags().BoolVar(&secret, "secret", false, "Store the imported values as secrets")
-	return quietOnError(cmd)
-}
-
 func newOrgEnvDeleteCmd(state *AppState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   deleteVerb,
-		Short: "Delete the entire organization variable set",
+		Short: "Delete every organization variable",
+		Long: `Delete every organization variable: the base layer and the organization's
+values in every environment.
+
+The shared environments stay, empty, and so do the values workspaces hold for
+them. Delete an environment with 'org env environments delete'.`,
 		Example: `  echopoint org env delete
   echopoint org env delete --yes`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
+			if err := orgScope.require(state); err != nil {
 				return err
 			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-			if err := confirmDestructive(cmd, state, "delete", "the organization variable set"); err != nil {
+			if err := confirmDestructive(cmd, state, "delete", "every organization variable"); err != nil {
 				return err
 			}
 
-			resp, err := state.Client.API().DeleteOrganizationVariablesWithResponse(
-				context.Background(), nil,
-			)
+			resp, err := state.Client.API().DeleteOrganizationVariablesWithResponse(cmd.Context(), nil)
 			if err != nil {
 				return fmt.Errorf("failed to delete organization variables: %w", err)
 			}
-			if resp.StatusCode() != http.StatusNoContent {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
+			if err := expectStatus(resp.HTTPResponse, resp.Body, http.StatusNoContent); err != nil {
+				return err
 			}
 
-			fmt.Println("Deleted the organization variable set")
+			fmt.Println("Deleted every organization variable; the environments stay")
 			return nil
 		},
 	}
 	return quietOnError(cmd)
 }
 
-func newOrgEnvironmentsCmd(state *AppState) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     environmentsVerb,
-		Aliases: []string{"env"},
-		Short:   "Manage named organization environments",
-	}
-	cmd.AddCommand(
-		newOrgEnvironmentsListCmd(state),
-		newOrgEnvironmentsCreateCmd(state),
-		newOrgEnvironmentsDeleteCmd(state),
-	)
-	return cmd
-}
-
-func newOrgEnvironmentsListCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
-		Use:     listVerb,
-		Short:   "List named environments",
-		Example: `  echopoint org env environments list`,
-		Args:    cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-
-			// the list is the names of every environment: walk the search to its end
-			environments, err := walkAll(cmd.Context(), searchEnvironments(state))
-			if err != nil {
-				return fmt.Errorf("failed to list environments: %w", err)
-			}
-
-			names := make([]string, 0, len(environments))
-			for _, environment := range environments {
-				names = append(names, environment.Name)
-			}
-			sort.Strings(names)
-
-			switch state.OutputFormat {
-			case output.FormatJSON:
-				return output.PrintJSON(cmd.OutOrStdout(), names)
-			case output.FormatYAML:
-				return output.PrintYAML(cmd.OutOrStdout(), names)
-			}
-
-			if len(names) == 0 {
-				fmt.Fprintln(cmd.OutOrStdout(), "No environments")
-				return nil
-			}
-			for _, name := range names {
-				fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", name)
-			}
-			return nil
-		},
-	}
-}
-
-// searchEnvironments reads one page of the organization's environments by name.
+// searchEnvironments reads one page of the organization's shared environments.
 func searchEnvironments(state *AppState) pageFetcher[api.Environment] {
 	return func(ctx context.Context, pagination *api.PaginationRequest) (searchPage[api.Environment], error) {
 		resp, err := state.Client.API().SearchEnvironmentsWithResponse(
@@ -555,76 +263,6 @@ func searchEnvironments(state *AppState) pageFetcher[api.Environment] {
 		}
 		return newSearchPage(resp.JSON200.Items, resp.JSON200.Total, resp.JSON200.NextCursor), nil
 	}
-}
-
-func newOrgEnvironmentsCreateCmd(state *AppState) *cobra.Command {
-	return &cobra.Command{
-		Use:   createVerb + " <name>",
-		Short: "Create a named environment",
-		Long: `Create a named environment such as dev or prd.
-
-It starts empty, and stays empty until a variable is written into it.`,
-		Example: `  echopoint org env environments create prd`,
-		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-
-			resp, err := state.Client.API().CreateEnvironmentWithResponse(
-				context.Background(), nil,
-				api.CreateEnvironmentJSONRequestBody{Name: args[0]},
-			)
-			if err != nil {
-				return fmt.Errorf("failed to create environment %q: %w", args[0], err)
-			}
-			if resp.JSON201 == nil {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			fmt.Printf("Created environment %q\n", resp.JSON201.Name)
-			return nil
-		},
-	}
-}
-
-func newOrgEnvironmentsDeleteCmd(state *AppState) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   deleteVerb + " <name>",
-		Short: "Delete a named environment and every variable in it",
-		Example: `  echopoint org env environments delete dev
-  echopoint org env environments delete dev --yes`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireToken(state); err != nil {
-				return err
-			}
-			if err := requireOrg(state); err != nil {
-				return err
-			}
-			if err := confirmDestructive(cmd, state, "delete", "environment "+args[0]); err != nil {
-				return err
-			}
-
-			resp, err := state.Client.API().DeleteEnvironmentWithResponse(
-				context.Background(), args[0], nil,
-			)
-			if err != nil {
-				return fmt.Errorf("failed to delete environment %q: %w", args[0], err)
-			}
-			if resp.StatusCode() != http.StatusNoContent {
-				return formatAPIError(resp.HTTPResponse, resp.Body)
-			}
-
-			fmt.Printf("Deleted environment %q\n", args[0])
-			return nil
-		},
-	}
-	cmd.ValidArgsFunction = completeEnvironmentArg(state)
-	return quietOnError(cmd)
 }
 
 // parseVarFlags turns repeated KEY=value flags into a map.

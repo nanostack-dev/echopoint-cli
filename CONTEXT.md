@@ -4,7 +4,7 @@
 | --- | --- |
 | Profile | Local API target and credentials selection; distinct from an environment. |
 | Organization | Tenant scope selected for API operations; `--org` is the visible flag. |
-| Environment | Named overlay of organization variables. |
+| Environment | Named overlay of variables, one entry of the organization's catalog (Echopoint ADR-0043). A shared environment is seen by every workspace; a workspace environment by its workspace only. A name is unique in the organization. |
 | Flow | Graph identified by an ID and free-text name; it has no slug. |
 | Flow file | YAML file `*.flow.yaml`. `flow create -f` and `flow update -f` compile it into the JSON the API stores. `--json` sends a JSON file unchanged. The API does not store the YAML. |
 | Monitor | Recurring execution configuration selecting flows by tags or explicit IDs, on a cron or interval cadence. It is the API's flow schedule: the `/monitors` paths keep the `FlowSchedule` operation names. |

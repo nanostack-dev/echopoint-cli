@@ -47,8 +47,9 @@ CI has no browser: there, set `ECHOPOINT_API_KEY` to an organization API key and
    ```bash
    echopoint flow list --all                  # the ID column is the <flow-id>
    echopoint flow view <flow-id> -o json      # a flow's nodes, edges and assertions
-   echopoint org env environments list        # named environments such as dev
-   echopoint org env view -e <environment>    # the variable names in one; values stay hidden
+   echopoint workspace env environments list  # named environments such as dev, shared or the workspace's own
+   echopoint workspace env view -e <environment>  # the workspace's variable names in one; values stay hidden
+   echopoint org env view -e <environment>    # the organization's variable names in one
    echopoint monitor list
    ```
 3. When a flow already covers the path, edit that flow (section 3, "Edit a flow").
@@ -96,7 +97,7 @@ The parts:
 
 ### URLs as environment variables, credentials as secrets
 
-A named environment holds the values of one deployment. A flow variable wins over an environment variable, which wins over an organization base variable.
+A named environment holds the values of one deployment. From highest to lowest: flow variable, workspace environment, workspace base, organization environment, organization base. Put values every workspace shares on the organization (`org env`) and values of one workspace on it (`workspace env`).
 
 ```bash
 echopoint org env environments list

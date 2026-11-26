@@ -331,7 +331,7 @@ The rule: **deleting a whole resource asks; editing part of one does not.** `flo
 ```bash
 echopoint flow delete <flow-id> --yes
 ```
-The same holds for `flow env delete`, `collection delete`, `flow folder delete`, `org env delete`, `org env environments delete`, `profile delete`, `config reset` and `status-page unpublish`.
+The same holds for `flow env delete`, `collection delete`, `flow folder delete`, `org env delete`, `org env environments delete`, `workspace env environments delete`, `profile delete`, `config reset` and `status-page unpublish`.
 
 ---
 
