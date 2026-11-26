@@ -221,12 +221,12 @@ func completeFolderArg(state *AppState) completionFunc {
 	}
 }
 
-// completeEnvironments completes the names of the organization's environments.
-func completeEnvironments(state *AppState) completionFunc {
+// completeEnvironments completes the environment names the search returns.
+func completeEnvironments(state *AppState, search func(*AppState) pageFetcher[api.Environment]) completionFunc {
 	return func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return completeFromAPI(state, cmd, toComplete,
 			func(ctx context.Context, _ *api.ClientWithResponses) []completionCandidate {
-				environments := walkSome(ctx, completionMaxPages, searchEnvironments(state))
+				environments := walkSome(ctx, completionMaxPages, search(state))
 				candidates := make([]completionCandidate, 0, len(environments))
 				for _, environment := range environments {
 					candidates = append(candidates, completionCandidate{value: environment.Name})
@@ -236,8 +236,8 @@ func completeEnvironments(state *AppState) completionFunc {
 	}
 }
 
-func completeEnvironmentArg(state *AppState) completionFunc {
-	environments := completeEnvironments(state)
+func completeEnvironmentArg(state *AppState, search func(*AppState) pageFetcher[api.Environment]) completionFunc {
+	environments := completeEnvironments(state, search)
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) > 0 {
 			return noCompletion()
@@ -291,8 +291,10 @@ func loadProfileStore(cmd *cobra.Command) (config.Store, error) {
 	return store, err
 }
 
+// registerEnvironmentFlagCompletion completes -e for a flow launch or run: the
+// environments the selected workspace sees, shared and its own.
 func registerEnvironmentFlagCompletion(state *AppState, cmd *cobra.Command) {
-	_ = cmd.RegisterFlagCompletionFunc("environment", completeEnvironments(state))
+	_ = cmd.RegisterFlagCompletionFunc("environment", completeEnvironments(state, searchWorkspaceEnvironments))
 }
 
 func registerFolderFlagCompletion(state *AppState, cmd *cobra.Command, flag string, reserved ...string) {

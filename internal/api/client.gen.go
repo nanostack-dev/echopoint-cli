@@ -394,6 +394,24 @@ func (e EmailWaitFlowNodeType) Valid() bool {
 	}
 }
 
+// Defines values for EnvironmentScope.
+const (
+	EnvironmentScopeOrganization EnvironmentScope = "organization"
+	EnvironmentScopeWorkspace    EnvironmentScope = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the EnvironmentScope enum.
+func (e EnvironmentScope) Valid() bool {
+	switch e {
+	case EnvironmentScopeOrganization:
+		return true
+	case EnvironmentScopeWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EnvironmentSortField.
 const (
 	EnvironmentSortFieldCreatedAt EnvironmentSortField = "created_at"
@@ -886,6 +904,69 @@ func (e ManualTriggerMetadataActorType) Valid() bool {
 	case ManualTriggerMetadataActorTypeApiKey:
 		return true
 	case ManualTriggerMetadataActorTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpActionKind.
+const (
+	Delete   McpActionKind = "delete"
+	Guarded  McpActionKind = "guarded"
+	Outbound McpActionKind = "outbound"
+	Read     McpActionKind = "read"
+	Write    McpActionKind = "write"
+)
+
+// Valid indicates whether the value is a known member of the McpActionKind enum.
+func (e McpActionKind) Valid() bool {
+	switch e {
+	case Delete:
+		return true
+	case Guarded:
+		return true
+	case Outbound:
+		return true
+	case Read:
+		return true
+	case Write:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpActionScope.
+const (
+	McpActionScopeOrganization McpActionScope = "organization"
+	McpActionScopeWorkspace    McpActionScope = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the McpActionScope enum.
+func (e McpActionScope) Valid() bool {
+	switch e {
+	case McpActionScopeOrganization:
+		return true
+	case McpActionScopeWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpPermissionMode.
+const (
+	Allow McpPermissionMode = "allow"
+	Deny  McpPermissionMode = "deny"
+)
+
+// Valid indicates whether the value is a known member of the McpPermissionMode enum.
+func (e McpPermissionMode) Valid() bool {
+	switch e {
+	case Allow:
+		return true
+	case Deny:
 		return true
 	default:
 		return false
@@ -2213,6 +2294,7 @@ func (e TriggerType) Valid() bool {
 const (
 	VariableSetOwnerTypeFlow         VariableSetOwnerType = "flow"
 	VariableSetOwnerTypeOrganization VariableSetOwnerType = "organization"
+	VariableSetOwnerTypeWorkspace    VariableSetOwnerType = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the VariableSetOwnerType enum.
@@ -2221,6 +2303,8 @@ func (e VariableSetOwnerType) Valid() bool {
 	case VariableSetOwnerTypeFlow:
 		return true
 	case VariableSetOwnerTypeOrganization:
+		return true
+	case VariableSetOwnerTypeWorkspace:
 		return true
 	default:
 		return false
@@ -3723,7 +3807,7 @@ type EndpointAnalyticsList struct {
 	WindowStart time.Time       `json:"window_start"`
 }
 
-// Environment One named environment. It exists on its own, so an environment with no variables is a real environment and survives a round trip.
+// Environment One entry of the organization's environment catalog (ADR-0043). It exists on its own, so an environment with no variables is a real environment and survives a round trip.
 type Environment struct {
 	// CreatedAt When the environment was created
 	CreatedAt time.Time `json:"created_at"`
@@ -3738,9 +3822,19 @@ type Environment struct {
 	// Examples: prd
 	Name string `json:"name"`
 
+	// Scope `organization` for a shared environment that every workspace sees. `workspace` for an environment that only one workspace sees. A name is unique in the organization, whatever its scope.
+	//
+	// Examples: organization
+	Scope EnvironmentScope `json:"scope"`
+
 	// UpdatedAt When the environment was last updated
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// EnvironmentScope `organization` for a shared environment that every workspace sees. `workspace` for an environment that only one workspace sees. A name is unique in the organization, whatever its scope.
+//
+// Examples: organization
+type EnvironmentScope string
 
 // EnvironmentLayers Named environment overlays such as dev, stg1, or prd.
 type EnvironmentLayers map[string]VariableLayer
@@ -3843,7 +3937,7 @@ type ExecuteRequestRequest struct {
 	// Description Optional request description
 	Description *string `json:"description,omitempty"`
 
-	// EnvironmentKey Optional named organization environment override. Base organization variables are always loaded. A key that names no environment of the organization answers 400 ENVIRONMENT_KEY_NOT_FOUND.
+	// EnvironmentKey Optional named environment override. Workspace variables are always loaded. Organization variables are loaded only when the caller holds organization environment:read; without it, a shared environment for which the organization holds values answers 403, and any other visible name resolves the workspace layers. A key that names no environment the workspace sees (the shared ones and its own) answers 400 ENVIRONMENT_KEY_NOT_FOUND.
 	EnvironmentKey *string `json:"environment_key,omitempty"`
 
 	// FolderId Parent folder ID. On update, null moves the request to the collection root and an absent field leaves it where it is. An execution saves nothing, so it ignores the field.
@@ -4048,7 +4142,7 @@ type ExportedFlow struct {
 	// Edges Connections between nodes
 	Edges []FlowEdge `json:"edges"`
 
-	// InitialInputs Variables a run of the flow resolves. A plain value stored on the flow is inlined; a secret or an organization or environment key is the placeholder `{{KEY}}`.
+	// InitialInputs Variables a run of the flow resolves. A plain value stored on the flow is inlined; a secret or an organization, workspace or environment key is the placeholder `{{KEY}}`.
 	InitialInputs map[string]interface{} `json:"initial_inputs"`
 
 	// Name Name of the flow
@@ -4499,7 +4593,7 @@ type FlowMetadata struct {
 		Y *float32 `json:"y,omitempty"`
 	} `json:"node_positions,omitempty"`
 
-	// TargetEnvironmentKey Optional default organization environment key to use when launching this flow.
+	// TargetEnvironmentKey Optional default environment key to use when launching this flow. It names an environment of the organization or of the flow's workspace.
 	//
 	// Examples: staging
 	TargetEnvironmentKey *string                `json:"target_environment_key,omitempty"`
@@ -5136,6 +5230,9 @@ type IntegrationConnectionListResponse struct {
 	Total int64 `json:"total"`
 }
 
+// IntegrationConnectionSearchRequest Generic search request template for a search with no text columns. The search pages and sorts, but there is nothing for a full-text term to match, so the contract offers no full_text_search. A request that still sends the field over HTTP is accepted and ignored; an MCP tool composed from this schema refuses it as an unknown argument.
+type IntegrationConnectionSearchRequest = SearchPageRequest
+
 // IntegrationCuratedNode A hand-written node over one operation or event, with defaults that work.
 type IntegrationCuratedNode struct {
 	Defaults map[string]string `json:"defaults"`
@@ -5311,6 +5408,9 @@ type IntegrationPickerValue struct {
 	Value string `json:"value"`
 }
 
+// IntegrationSearchRequest Generic search request template
+type IntegrationSearchRequest = SearchRequest
+
 // IntegrationSummary defines model for IntegrationSummary.
 type IntegrationSummary struct {
 	// ApiVersion The vendor API version the catalog was generated from, sent on every request.
@@ -5394,7 +5494,7 @@ type LaunchFlowCompletedResponse struct {
 
 // LaunchFlowRequest Optional launch settings for selecting the execution backend and version.
 type LaunchFlowRequest struct {
-	// EnvironmentKey Optional named organization environment to overlay before flow variables.
+	// EnvironmentKey Optional named environment to overlay before flow variables. It names an environment of the organization or of the flow's workspace.
 	//
 	// Examples: dev
 	EnvironmentKey *string `json:"environment_key,omitempty"`
@@ -5628,6 +5728,67 @@ type ManualTriggerMetadata struct {
 
 // ManualTriggerMetadataActorType Whether a user or an organization API key launched the execution.
 type ManualTriggerMetadataActorType string
+
+// McpAction defines model for McpAction.
+type McpAction struct {
+	// DefaultMode allow: the agent's call runs. deny: the call is refused with MCP_DENIED_BY_MEMBER, and only the member changes it in the web app.
+	DefaultMode McpPermissionMode `json:"default_mode"`
+	Description string            `json:"description"`
+	Id          string            `json:"id"`
+
+	// Kind read: read-only tools. write: writes inside Echopoint. outbound: writes that send requests out of Echopoint. delete: deletes one resource. guarded: a delete of a whole set, or an access or credential change. Only read actions default to allow.
+	Kind McpActionKind `json:"kind"`
+
+	// Permission The role permission every tool of the action needs. Absent when every member may call them.
+	Permission *string `json:"permission,omitempty"`
+	Title      string  `json:"title"`
+
+	// Tools Code-mode tool names, namespace.name.
+	Tools []string `json:"tools"`
+}
+
+// McpActionArea defines model for McpActionArea.
+type McpActionArea struct {
+	Actions []McpAction `json:"actions"`
+	Id      string      `json:"id"`
+
+	// Scope workspace: set per workspace. organization: tools that act on no workspace, set once for the organization.
+	Scope McpActionScope `json:"scope"`
+	Title string         `json:"title"`
+}
+
+// McpActionKind read: read-only tools. write: writes inside Echopoint. outbound: writes that send requests out of Echopoint. delete: deletes one resource. guarded: a delete of a whole set, or an access or credential change. Only read actions default to allow.
+type McpActionKind string
+
+// McpActionScope workspace: set per workspace. organization: tools that act on no workspace, set once for the organization.
+type McpActionScope string
+
+// McpPermissionMode allow: the agent's call runs. deny: the call is refused with MCP_DENIED_BY_MEMBER, and only the member changes it in the web app.
+type McpPermissionMode string
+
+// McpPermissionSetting defines model for McpPermissionSetting.
+type McpPermissionSetting struct {
+	Action string `json:"action"`
+
+	// Mode allow: the agent's call runs. deny: the call is refused with MCP_DENIED_BY_MEMBER, and only the member changes it in the web app.
+	Mode McpPermissionMode `json:"mode"`
+
+	// WorkspaceId The workspace; absent for an organization action.
+	WorkspaceId *string `json:"workspace_id,omitempty"`
+}
+
+// McpPermissionsResponse defines model for McpPermissionsResponse.
+type McpPermissionsResponse struct {
+	Areas []McpActionArea `json:"areas"`
+
+	// Settings Only the actions the member set; every other action takes its default_mode.
+	Settings []McpPermissionSetting `json:"settings"`
+}
+
+// McpPermissionsUpdateRequest defines model for McpPermissionsUpdateRequest.
+type McpPermissionsUpdateRequest struct {
+	Changes []McpPermissionSetting `json:"changes"`
+}
 
 // MembershipStatus defines model for MembershipStatus.
 type MembershipStatus string
@@ -6485,7 +6646,7 @@ type OrganizationMemberFilter struct {
 	// UserIds Members with one of these product user ids, as a member page reads one member.
 	UserIds *[]string `json:"user_ids,omitempty"`
 
-	// WorkspaceId Members holding a role on this workspace. Organization admins reach every workspace without one, so they match only when they hold one.
+	// WorkspaceId Members holding a role on this workspace. Requires workspace.access:read on it, as the dedicated workspace members search; a caller without it answers 403. Organization admins reach every workspace without one, so they match only when they hold one.
 	WorkspaceId *string `json:"workspace_id,omitempty"`
 }
 
@@ -8371,7 +8532,7 @@ type VariableSet struct {
 	// CreatedAt When the variable set was created. Zero time while the owner has no stored variables.
 	CreatedAt time.Time `json:"created_at"`
 
-	// Environments Named environment overlays owned by this variable set.
+	// Environments One layer for each environment the owner sees (ADR-0043), empty when the owner holds no value there. The organization sees the shared environments, a workspace the shared ones and its own.
 	Environments EnvironmentLayers `json:"environments"`
 
 	// Id Server-generated unique identifier. It is the nil UUID
@@ -9857,6 +10018,18 @@ type GetLicenseUsageParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// GetMcpPermissionsParams defines parameters for GetMcpPermissions.
+type GetMcpPermissionsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetMcpPermissionsParams defines parameters for SetMcpPermissions.
+type SetMcpPermissionsParams struct {
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // GetMeParams defines parameters for GetMe.
 type GetMeParams struct {
 	// Include Linked data to expand for each organization belonging to the current user. Unrequested data is omitted; requested organizations with no workspaces return an empty array.
@@ -10476,6 +10649,78 @@ type UpdateWorkspaceRoleParams struct {
 	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
 }
 
+// CreateWorkspaceEnvironmentParams defines parameters for CreateWorkspaceEnvironment.
+type CreateWorkspaceEnvironmentParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SearchWorkspaceEnvironmentsParams defines parameters for SearchWorkspaceEnvironments.
+type SearchWorkspaceEnvironmentsParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteWorkspaceEnvironmentParams defines parameters for DeleteWorkspaceEnvironment.
+type DeleteWorkspaceEnvironmentParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteWorkspaceEnvironmentVariableParams defines parameters for DeleteWorkspaceEnvironmentVariable.
+type DeleteWorkspaceEnvironmentVariableParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetWorkspaceEnvironmentVariableParams defines parameters for SetWorkspaceEnvironmentVariable.
+type SetWorkspaceEnvironmentVariableParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// GetWorkspaceVariablesParams defines parameters for GetWorkspaceVariables.
+type GetWorkspaceVariablesParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// DeleteWorkspaceVariableParams defines parameters for DeleteWorkspaceVariable.
+type DeleteWorkspaceVariableParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
+// SetWorkspaceVariableParams defines parameters for SetWorkspaceVariable.
+type SetWorkspaceVariableParams struct {
+	// XWorkspaceId Workspace selection. Authentication verifies that a sent workspace belongs to the authenticated organization and that the caller holds the operation's permissions on it, from a role on the workspace or from an organization role. The operation reaches only the resources of that workspace. When the header is omitted, the request uses the organization's oldest workspace, which holds every resource created before workspaces; an organization with no workspace receives 400 WORKSPACE_REQUIRED.
+	XWorkspaceId *RequiredWorkspaceIDHeader `json:"X-Workspace-Id,omitempty"`
+
+	// XOrganizationID Organization context for the request. The authenticated user must be a member.
+	XOrganizationID RequiredOrganizationIDHeader `json:"X-Organization-ID"`
+}
+
 // CreateWorkspaceParams defines parameters for CreateWorkspace.
 type CreateWorkspaceParams struct {
 	// XOrganizationID Organization context for the request. The authenticated user must be a member.
@@ -10645,13 +10890,13 @@ type SetFlowVariableJSONRequestBody = SetVariableRequest
 type SearchFlowVersionsJSONRequestBody = FlowVersionSearchRequest
 
 // SearchIntegrationsJSONRequestBody defines body for SearchIntegrations for application/json ContentType.
-type SearchIntegrationsJSONRequestBody = SearchRequest
+type SearchIntegrationsJSONRequestBody = IntegrationSearchRequest
 
 // SetIntegrationChoicesJSONRequestBody defines body for SetIntegrationChoices for application/json ContentType.
 type SetIntegrationChoicesJSONRequestBody = IntegrationChoicesRequest
 
 // SearchIntegrationConnectionsJSONRequestBody defines body for SearchIntegrationConnections for application/json ContentType.
-type SearchIntegrationConnectionsJSONRequestBody = SearchRequest
+type SearchIntegrationConnectionsJSONRequestBody = IntegrationConnectionSearchRequest
 
 // ConnectIntegrationJSONRequestBody defines body for ConnectIntegration for application/json ContentType.
 type ConnectIntegrationJSONRequestBody = IntegrationConnectRequest
@@ -10664,6 +10909,9 @@ type CreateOrganizationInvitationJSONRequestBody = CreateOrganizationInvitationR
 
 // SearchOrganizationInvitationsJSONRequestBody defines body for SearchOrganizationInvitations for application/json ContentType.
 type SearchOrganizationInvitationsJSONRequestBody = OrganizationInvitationSearchRequest
+
+// SetMcpPermissionsJSONRequestBody defines body for SetMcpPermissions for application/json ContentType.
+type SetMcpPermissionsJSONRequestBody = McpPermissionsUpdateRequest
 
 // SearchMyInvitationsJSONRequestBody defines body for SearchMyInvitations for application/json ContentType.
 type SearchMyInvitationsJSONRequestBody = ReceivedInvitationSearchRequest
@@ -10777,6 +11025,18 @@ type CreateWorkspaceRoleJSONRequestBody = WorkspaceRoleWriteRequest
 
 // UpdateWorkspaceRoleJSONRequestBody defines body for UpdateWorkspaceRole for application/json ContentType.
 type UpdateWorkspaceRoleJSONRequestBody = WorkspaceRoleWriteRequest
+
+// CreateWorkspaceEnvironmentJSONRequestBody defines body for CreateWorkspaceEnvironment for application/json ContentType.
+type CreateWorkspaceEnvironmentJSONRequestBody = CreateEnvironmentRequest
+
+// SearchWorkspaceEnvironmentsJSONRequestBody defines body for SearchWorkspaceEnvironments for application/json ContentType.
+type SearchWorkspaceEnvironmentsJSONRequestBody = EnvironmentSearchRequest
+
+// SetWorkspaceEnvironmentVariableJSONRequestBody defines body for SetWorkspaceEnvironmentVariable for application/json ContentType.
+type SetWorkspaceEnvironmentVariableJSONRequestBody = SetVariableRequest
+
+// SetWorkspaceVariableJSONRequestBody defines body for SetWorkspaceVariable for application/json ContentType.
+type SetWorkspaceVariableJSONRequestBody = SetVariableRequest
 
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = WorkspaceWriteRequest
@@ -12335,7 +12595,7 @@ type ClientInterface interface {
 
 	// ExecuteCollectionRequestWithBody Execute Request
 	//
-	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -12344,7 +12604,7 @@ type ClientInterface interface {
 
 	// ExecuteCollectionRequest Execute Request
 	//
-	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -12845,6 +13105,11 @@ type ClientInterface interface {
 	// GetNodeExecutionResult Get Specific Node Result
 	//
 	// Retrieves execution result for a specific node in a flow execution.
+	// When the execution has no stored result for the requested node, returns 404
+	// `NODE_RESULT_NOT_FOUND` with diagnostic metadata: `execution_status`, `reason`
+	// (`execution_running`, `node_not_reached`, `unknown_node_id`, or `unknown`),
+	// `available_node_ids` (capped at 100, with `available_node_ids_total` when truncated),
+	// and `first_failed_node_id` (earliest failed node, when present).
 	//
 	// Corresponds with GET /flows/{flowId}/executions/{executionId}/nodes/{nodeId} (the `GetNodeExecutionResult` operationId).
 	GetNodeExecutionResult(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, nodeId string, params *GetNodeExecutionResultParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -12928,7 +13193,7 @@ type ClientInterface interface {
 
 	// ExportFlow Export Flow
 	//
-	// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
+	// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization, the flow's workspace or one of their environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 	//
 	// Corresponds with GET /flows/{id}/export (the `ExportFlow` operationId).
 	ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -13147,7 +13412,7 @@ type ClientInterface interface {
 
 	// SearchIntegrationConnectionsWithBody Search Integration Connections
 	//
-	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13156,7 +13421,7 @@ type ClientInterface interface {
 
 	// SearchIntegrationConnections Search Integration Connections
 	//
-	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13395,6 +13660,31 @@ type ClientInterface interface {
 	// Corresponds with GET /license/usage (the `GetLicenseUsage` operationId).
 	GetLicenseUsage(ctx context.Context, params *GetLicenseUsageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetMcpPermissions Get my MCP permissions
+	//
+	// Returns the MCP actions (groups of MCP tools that need one role permission), each with its default mode, and the signed-in member's mode for each action they set: allow or deny, per workspace, or for the organization when workspace_id is absent. An action with no setting takes its default_mode: allow for a read action, deny for every other kind. Only a web app session can read or change MCP permissions.
+	//
+	// Corresponds with GET /mcp-permissions (the `GetMcpPermissions` operationId).
+	GetMcpPermissions(ctx context.Context, params *GetMcpPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetMcpPermissionsWithBody Change my MCP permissions
+	//
+	// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+	SetMcpPermissionsWithBody(ctx context.Context, params *SetMcpPermissionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetMcpPermissions Change my MCP permissions
+	//
+	// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+	SetMcpPermissions(ctx context.Context, params *SetMcpPermissionsParams, body SetMcpPermissionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetMe Get current user and organization context
 	//
 	// Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
@@ -13484,7 +13774,7 @@ type ClientInterface interface {
 
 	// SearchOrganizationMembersWithBody Search Organization Members
 	//
-	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13493,7 +13783,7 @@ type ClientInterface interface {
 
 	// SearchOrganizationMembers Search Organization Members
 	//
-	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13502,7 +13792,7 @@ type ClientInterface interface {
 
 	// SetOrganizationMemberRoleWithBody Set Organization Member Role
 	//
-	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13511,7 +13801,7 @@ type ClientInterface interface {
 
 	// SetOrganizationMemberRole Set Organization Member Role
 	//
-	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13797,7 +14087,7 @@ type ClientInterface interface {
 
 	// SearchEnvironmentsWithBody Search Environments
 	//
-	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13806,7 +14096,7 @@ type ClientInterface interface {
 
 	// SearchEnvironments Search Environments
 	//
-	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13815,7 +14105,7 @@ type ClientInterface interface {
 
 	// DeleteEnvironment Delete Environment
 	//
-	// Deletes one environment and every variable in it. The base layer is untouched.
+	// Deletes one environment and every variable in it. The base layer is untouched. A workspace can hold values for a shared environment. The call then fails with 409 ENVIRONMENT_IN_USE and its detail gives the number of workspaces (`variable_sets` in the metadata), never their names. Those workspaces delete their values first.
 	//
 	// Corresponds with DELETE /organization/environments/{environment} (the `DeleteEnvironment` operationId).
 	DeleteEnvironment(ctx context.Context, environment EnvironmentPath, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -13847,7 +14137,7 @@ type ClientInterface interface {
 
 	// DeleteOrganizationVariables Delete Organization Variables
 	//
-	// Deletes the organization variable set, its base layer and its named environment overlays.
+	// Deletes every organization variable, the base layer and the value of every environment. The environments stay in the shared catalog, empty, and so does the organization variable set.
 	//
 	// Corresponds with DELETE /organization/variables (the `DeleteOrganizationVariables` operationId).
 	DeleteOrganizationVariables(ctx context.Context, params *DeleteOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -14666,6 +14956,106 @@ type ClientInterface interface {
 	// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
 	UpdateWorkspaceRole(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, body UpdateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// CreateWorkspaceEnvironmentWithBody Create Workspace Environment
+	//
+	// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+	CreateWorkspaceEnvironmentWithBody(ctx context.Context, params *CreateWorkspaceEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateWorkspaceEnvironment Create Workspace Environment
+	//
+	// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+	CreateWorkspaceEnvironment(ctx context.Context, params *CreateWorkspaceEnvironmentParams, body CreateWorkspaceEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchWorkspaceEnvironmentsWithBody Search Workspace Environments
+	//
+	// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+	SearchWorkspaceEnvironmentsWithBody(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchWorkspaceEnvironments Search Workspace Environments
+	//
+	// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+	SearchWorkspaceEnvironments(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, body SearchWorkspaceEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteWorkspaceEnvironment Delete Workspace Environment
+	//
+	// Deletes one environment of the workspace and every value in it. The workspace base layer is untouched. A shared environment, or one of another workspace, answers 404: a shared environment is deleted from the organization, and a workspace removes its values for it with the variable deletes.
+	//
+	// Corresponds with DELETE /workspace/environments/{environment} (the `DeleteWorkspaceEnvironment` operationId).
+	DeleteWorkspaceEnvironment(ctx context.Context, environment EnvironmentPath, params *DeleteWorkspaceEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteWorkspaceEnvironmentVariable Delete Workspace Environment Variable
+	//
+	// Deletes one variable from an environment this workspace sees. Any other name answers 404 ENVIRONMENT_NOT_FOUND; deleting a variable that does not exist succeeds.
+	//
+	// Corresponds with DELETE /workspace/environments/{environment}/variables/{key} (the `DeleteWorkspaceEnvironmentVariable` operationId).
+	DeleteWorkspaceEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteWorkspaceEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWorkspaceEnvironmentVariableWithBody Set Workspace Environment Variable
+	//
+	// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+	SetWorkspaceEnvironmentVariableWithBody(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWorkspaceEnvironmentVariable Set Workspace Environment Variable
+	//
+	// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+	SetWorkspaceEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, body SetWorkspaceEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetWorkspaceVariables Get Workspace Variables
+	//
+	// Retrieves the variable set of the workspace that X-Workspace-Id selects: its base layer, and one layer for each environment the workspace sees (the shared ones and its own), empty when the workspace holds no value there. Secret values are never returned. A run resolves org base < org environment < workspace base < workspace environment < flow base (ADR-0044, ADR-0043).
+	//
+	// Corresponds with GET /workspace/variables (the `GetWorkspaceVariables` operationId).
+	GetWorkspaceVariables(ctx context.Context, params *GetWorkspaceVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteWorkspaceVariable Delete Workspace Variable
+	//
+	// Deletes one variable from the workspace base layer. The organization's value of the same name applies again.
+	//
+	// Corresponds with DELETE /workspace/variables/{key} (the `DeleteWorkspaceVariable` operationId).
+	DeleteWorkspaceVariable(ctx context.Context, key VariableKey, params *DeleteWorkspaceVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWorkspaceVariableWithBody Set Workspace Variable
+	//
+	// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+	SetWorkspaceVariableWithBody(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetWorkspaceVariable Set Workspace Variable
+	//
+	// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+	SetWorkspaceVariable(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, body SetWorkspaceVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateWorkspaceWithBody Create Workspace
 	//
 	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -14772,14 +15162,14 @@ type ClientInterface interface {
 
 	// RemoveWorkspaceMember Remove Workspace Member
 	//
-	// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+	// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. An API key cannot remove a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 	//
 	// Corresponds with DELETE /workspaces/{workspaceId}/members/{userId} (the `RemoveWorkspaceMember` operationId).
 	RemoveWorkspaceMember(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *RemoveWorkspaceMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SetWorkspaceMemberRoleWithBody Set Workspace Member Role
 	//
-	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -14788,7 +15178,7 @@ type ClientInterface interface {
 
 	// SetWorkspaceMemberRole Set Workspace Member Role
 	//
-	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -15476,7 +15866,7 @@ func (c *Client) UpdateRequest(ctx context.Context, collectionId openapi_types.U
 
 // ExecuteCollectionRequestWithBody Execute Request
 //
-// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15495,7 +15885,7 @@ func (c *Client) ExecuteCollectionRequestWithBody(ctx context.Context, collectio
 
 // ExecuteCollectionRequest Execute Request
 //
-// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -16559,6 +16949,11 @@ func (c *Client) GetExecutionNodeResults(ctx context.Context, flowId openapi_typ
 // GetNodeExecutionResult Get Specific Node Result
 //
 // Retrieves execution result for a specific node in a flow execution.
+// When the execution has no stored result for the requested node, returns 404
+// `NODE_RESULT_NOT_FOUND` with diagnostic metadata: `execution_status`, `reason`
+// (`execution_running`, `node_not_reached`, `unknown_node_id`, or `unknown`),
+// `available_node_ids` (capped at 100, with `available_node_ids_total` when truncated),
+// and `first_failed_node_id` (earliest failed node, when present).
 //
 // Corresponds with GET /flows/{flowId}/executions/{executionId}/nodes/{nodeId} (the `GetNodeExecutionResult` operationId).
 func (c *Client) GetNodeExecutionResult(ctx context.Context, flowId openapi_types.UUID, executionId openapi_types.UUID, nodeId string, params *GetNodeExecutionResultParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -16740,7 +17135,7 @@ func (c *Client) ListFlowExecutions(ctx context.Context, id openapi_types.UUID, 
 
 // ExportFlow Export Flow
 //
-// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
+// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization, the flow's workspace or one of their environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 //
 // Corresponds with GET /flows/{id}/export (the `ExportFlow` operationId).
 func (c *Client) ExportFlow(ctx context.Context, id openapi_types.UUID, params *ExportFlowParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -17149,7 +17544,7 @@ func (c *Client) SetIntegrationChoices(ctx context.Context, integrationId Integr
 
 // SearchIntegrationConnectionsWithBody Search Integration Connections
 //
-// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 //
 // Takes any type of body and a specified content type.
 //
@@ -17168,7 +17563,7 @@ func (c *Client) SearchIntegrationConnectionsWithBody(ctx context.Context, integ
 
 // SearchIntegrationConnections Search Integration Connections
 //
-// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -17556,6 +17951,61 @@ func (c *Client) GetLicenseUsage(ctx context.Context, params *GetLicenseUsagePar
 	return c.Client.Do(req)
 }
 
+// GetMcpPermissions Get my MCP permissions
+//
+// Returns the MCP actions (groups of MCP tools that need one role permission), each with its default mode, and the signed-in member's mode for each action they set: allow or deny, per workspace, or for the organization when workspace_id is absent. An action with no setting takes its default_mode: allow for a read action, deny for every other kind. Only a web app session can read or change MCP permissions.
+//
+// Corresponds with GET /mcp-permissions (the `GetMcpPermissions` operationId).
+func (c *Client) GetMcpPermissions(ctx context.Context, params *GetMcpPermissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMcpPermissionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetMcpPermissionsWithBody Change my MCP permissions
+//
+// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+func (c *Client) SetMcpPermissionsWithBody(ctx context.Context, params *SetMcpPermissionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetMcpPermissionsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetMcpPermissions Change my MCP permissions
+//
+// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+func (c *Client) SetMcpPermissions(ctx context.Context, params *SetMcpPermissionsParams, body SetMcpPermissionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetMcpPermissionsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetMe Get current user and organization context
 //
 // Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
@@ -17693,7 +18143,7 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, params *ListOrgani
 
 // SearchOrganizationMembersWithBody Search Organization Members
 //
-// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes any type of body and a specified content type.
 //
@@ -17712,7 +18162,7 @@ func (c *Client) SearchOrganizationMembersWithBody(ctx context.Context, params *
 
 // SearchOrganizationMembers Search Organization Members
 //
-// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -17731,7 +18181,7 @@ func (c *Client) SearchOrganizationMembers(ctx context.Context, params *SearchOr
 
 // SetOrganizationMemberRoleWithBody Set Organization Member Role
 //
-// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 //
 // Takes any type of body and a specified content type.
 //
@@ -17750,7 +18200,7 @@ func (c *Client) SetOrganizationMemberRoleWithBody(ctx context.Context, userId s
 
 // SetOrganizationMemberRole Set Organization Member Role
 //
-// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -18373,7 +18823,7 @@ func (c *Client) CreateEnvironment(ctx context.Context, params *CreateEnvironmen
 
 // SearchEnvironmentsWithBody Search Environments
 //
-// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 //
 // Takes any type of body and a specified content type.
 //
@@ -18392,7 +18842,7 @@ func (c *Client) SearchEnvironmentsWithBody(ctx context.Context, params *SearchE
 
 // SearchEnvironments Search Environments
 //
-// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -18411,7 +18861,7 @@ func (c *Client) SearchEnvironments(ctx context.Context, params *SearchEnvironme
 
 // DeleteEnvironment Delete Environment
 //
-// Deletes one environment and every variable in it. The base layer is untouched.
+// Deletes one environment and every variable in it. The base layer is untouched. A workspace can hold values for a shared environment. The call then fails with 409 ENVIRONMENT_IN_USE and its detail gives the number of workspaces (`variable_sets` in the metadata), never their names. Those workspaces delete their values first.
 //
 // Corresponds with DELETE /organization/environments/{environment} (the `DeleteEnvironment` operationId).
 func (c *Client) DeleteEnvironment(ctx context.Context, environment EnvironmentPath, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -18483,7 +18933,7 @@ func (c *Client) SetEnvironmentVariable(ctx context.Context, environment Environ
 
 // DeleteOrganizationVariables Delete Organization Variables
 //
-// Deletes the organization variable set, its base layer and its named environment overlays.
+// Deletes every organization variable, the base layer and the value of every environment. The environments stay in the shared catalog, empty, and so does the organization variable set.
 //
 // Corresponds with DELETE /organization/variables (the `DeleteOrganizationVariables` operationId).
 func (c *Client) DeleteOrganizationVariables(ctx context.Context, params *DeleteOrganizationVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -20057,6 +20507,226 @@ func (c *Client) UpdateWorkspaceRole(ctx context.Context, roleId string, params 
 	return c.Client.Do(req)
 }
 
+// CreateWorkspaceEnvironmentWithBody Create Workspace Environment
+//
+// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+func (c *Client) CreateWorkspaceEnvironmentWithBody(ctx context.Context, params *CreateWorkspaceEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkspaceEnvironmentRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateWorkspaceEnvironment Create Workspace Environment
+//
+// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+func (c *Client) CreateWorkspaceEnvironment(ctx context.Context, params *CreateWorkspaceEnvironmentParams, body CreateWorkspaceEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkspaceEnvironmentRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchWorkspaceEnvironmentsWithBody Search Workspace Environments
+//
+// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+func (c *Client) SearchWorkspaceEnvironmentsWithBody(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspaceEnvironmentsRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchWorkspaceEnvironments Search Workspace Environments
+//
+// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+func (c *Client) SearchWorkspaceEnvironments(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, body SearchWorkspaceEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchWorkspaceEnvironmentsRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteWorkspaceEnvironment Delete Workspace Environment
+//
+// Deletes one environment of the workspace and every value in it. The workspace base layer is untouched. A shared environment, or one of another workspace, answers 404: a shared environment is deleted from the organization, and a workspace removes its values for it with the variable deletes.
+//
+// Corresponds with DELETE /workspace/environments/{environment} (the `DeleteWorkspaceEnvironment` operationId).
+func (c *Client) DeleteWorkspaceEnvironment(ctx context.Context, environment EnvironmentPath, params *DeleteWorkspaceEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteWorkspaceEnvironmentRequest(c.Server, environment, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteWorkspaceEnvironmentVariable Delete Workspace Environment Variable
+//
+// Deletes one variable from an environment this workspace sees. Any other name answers 404 ENVIRONMENT_NOT_FOUND; deleting a variable that does not exist succeeds.
+//
+// Corresponds with DELETE /workspace/environments/{environment}/variables/{key} (the `DeleteWorkspaceEnvironmentVariable` operationId).
+func (c *Client) DeleteWorkspaceEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteWorkspaceEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteWorkspaceEnvironmentVariableRequest(c.Server, environment, key, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWorkspaceEnvironmentVariableWithBody Set Workspace Environment Variable
+//
+// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+func (c *Client) SetWorkspaceEnvironmentVariableWithBody(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspaceEnvironmentVariableRequestWithBody(c.Server, environment, key, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWorkspaceEnvironmentVariable Set Workspace Environment Variable
+//
+// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+func (c *Client) SetWorkspaceEnvironmentVariable(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, body SetWorkspaceEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspaceEnvironmentVariableRequest(c.Server, environment, key, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetWorkspaceVariables Get Workspace Variables
+//
+// Retrieves the variable set of the workspace that X-Workspace-Id selects: its base layer, and one layer for each environment the workspace sees (the shared ones and its own), empty when the workspace holds no value there. Secret values are never returned. A run resolves org base < org environment < workspace base < workspace environment < flow base (ADR-0044, ADR-0043).
+//
+// Corresponds with GET /workspace/variables (the `GetWorkspaceVariables` operationId).
+func (c *Client) GetWorkspaceVariables(ctx context.Context, params *GetWorkspaceVariablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetWorkspaceVariablesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteWorkspaceVariable Delete Workspace Variable
+//
+// Deletes one variable from the workspace base layer. The organization's value of the same name applies again.
+//
+// Corresponds with DELETE /workspace/variables/{key} (the `DeleteWorkspaceVariable` operationId).
+func (c *Client) DeleteWorkspaceVariable(ctx context.Context, key VariableKey, params *DeleteWorkspaceVariableParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteWorkspaceVariableRequest(c.Server, key, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWorkspaceVariableWithBody Set Workspace Variable
+//
+// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+func (c *Client) SetWorkspaceVariableWithBody(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspaceVariableRequestWithBody(c.Server, key, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetWorkspaceVariable Set Workspace Variable
+//
+// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+func (c *Client) SetWorkspaceVariable(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, body SetWorkspaceVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetWorkspaceVariableRequest(c.Server, key, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // CreateWorkspaceWithBody Create Workspace
 //
 // Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -20283,7 +20953,7 @@ func (c *Client) SearchWorkspaceMembers(ctx context.Context, workspaceId Workspa
 
 // RemoveWorkspaceMember Remove Workspace Member
 //
-// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. An API key cannot remove a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 //
 // Corresponds with DELETE /workspaces/{workspaceId}/members/{userId} (the `RemoveWorkspaceMember` operationId).
 func (c *Client) RemoveWorkspaceMember(ctx context.Context, workspaceId WorkspaceIDPathParameter, userId WorkspaceMemberUserIDPathParameter, params *RemoveWorkspaceMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -20300,7 +20970,7 @@ func (c *Client) RemoveWorkspaceMember(ctx context.Context, workspaceId Workspac
 
 // SetWorkspaceMemberRoleWithBody Set Workspace Member Role
 //
-// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 //
 // Takes any type of body and a specified content type.
 //
@@ -20319,7 +20989,7 @@ func (c *Client) SetWorkspaceMemberRoleWithBody(ctx context.Context, workspaceId
 
 // SetWorkspaceMemberRole Set Workspace Member Role
 //
-// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -26622,6 +27292,99 @@ func NewGetLicenseUsageRequest(server string, params *GetLicenseUsageParams) (*h
 	return req, nil
 }
 
+// NewGetMcpPermissionsRequest constructs an http.Request for the GetMcpPermissions method
+func NewGetMcpPermissionsRequest(server string, params *GetMcpPermissionsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-permissions")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewSetMcpPermissionsRequest calls the generic SetMcpPermissions builder with application/json body
+func NewSetMcpPermissionsRequest(server string, params *SetMcpPermissionsParams, body SetMcpPermissionsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetMcpPermissionsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSetMcpPermissionsRequestWithBody constructs an http.Request for the SetMcpPermissions method, with any body, and a specified content type
+func NewSetMcpPermissionsRequestWithBody(server string, params *SetMcpPermissionsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-permissions")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam0)
+
+	}
+
+	return req, nil
+}
+
 // NewGetMeRequest constructs an http.Request for the GetMe method
 func NewGetMeRequest(server string, params *GetMeParams) (*http.Request, error) {
 	var err error
@@ -31588,6 +32351,515 @@ func NewUpdateWorkspaceRoleRequestWithBody(server string, roleId string, params 
 	return req, nil
 }
 
+// NewCreateWorkspaceEnvironmentRequest calls the generic CreateWorkspaceEnvironment builder with application/json body
+func NewCreateWorkspaceEnvironmentRequest(server string, params *CreateWorkspaceEnvironmentParams, body CreateWorkspaceEnvironmentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateWorkspaceEnvironmentRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateWorkspaceEnvironmentRequestWithBody constructs an http.Request for the CreateWorkspaceEnvironment method, with any body, and a specified content type
+func NewCreateWorkspaceEnvironmentRequestWithBody(server string, params *CreateWorkspaceEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/environments")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewSearchWorkspaceEnvironmentsRequest calls the generic SearchWorkspaceEnvironments builder with application/json body
+func NewSearchWorkspaceEnvironmentsRequest(server string, params *SearchWorkspaceEnvironmentsParams, body SearchWorkspaceEnvironmentsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchWorkspaceEnvironmentsRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewSearchWorkspaceEnvironmentsRequestWithBody constructs an http.Request for the SearchWorkspaceEnvironments method, with any body, and a specified content type
+func NewSearchWorkspaceEnvironmentsRequestWithBody(server string, params *SearchWorkspaceEnvironmentsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/environments/search")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteWorkspaceEnvironmentRequest constructs an http.Request for the DeleteWorkspaceEnvironment method
+func NewDeleteWorkspaceEnvironmentRequest(server string, environment EnvironmentPath, params *DeleteWorkspaceEnvironmentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "environment", environment, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/environments/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteWorkspaceEnvironmentVariableRequest constructs an http.Request for the DeleteWorkspaceEnvironmentVariable method
+func NewDeleteWorkspaceEnvironmentVariableRequest(server string, environment EnvironmentPath, key VariableKey, params *DeleteWorkspaceEnvironmentVariableParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "environment", environment, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/environments/%s/variables/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewSetWorkspaceEnvironmentVariableRequest calls the generic SetWorkspaceEnvironmentVariable builder with application/json body
+func NewSetWorkspaceEnvironmentVariableRequest(server string, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, body SetWorkspaceEnvironmentVariableJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetWorkspaceEnvironmentVariableRequestWithBody(server, environment, key, params, "application/json", bodyReader)
+}
+
+// NewSetWorkspaceEnvironmentVariableRequestWithBody constructs an http.Request for the SetWorkspaceEnvironmentVariable method, with any body, and a specified content type
+func NewSetWorkspaceEnvironmentVariableRequestWithBody(server string, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "environment", environment, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/environments/%s/variables/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewGetWorkspaceVariablesRequest constructs an http.Request for the GetWorkspaceVariables method
+func NewGetWorkspaceVariablesRequest(server string, params *GetWorkspaceVariablesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/variables")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteWorkspaceVariableRequest constructs an http.Request for the DeleteWorkspaceVariable method
+func NewDeleteWorkspaceVariableRequest(server string, key VariableKey, params *DeleteWorkspaceVariableParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/variables/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
+// NewSetWorkspaceVariableRequest calls the generic SetWorkspaceVariable builder with application/json body
+func NewSetWorkspaceVariableRequest(server string, key VariableKey, params *SetWorkspaceVariableParams, body SetWorkspaceVariableJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetWorkspaceVariableRequestWithBody(server, key, params, "application/json", bodyReader)
+}
+
+// NewSetWorkspaceVariableRequestWithBody constructs an http.Request for the SetWorkspaceVariable method, with any body, and a specified content type
+func NewSetWorkspaceVariableRequestWithBody(server string, key VariableKey, params *SetWorkspaceVariableParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "key", key, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workspace/variables/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XWorkspaceId != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Workspace-Id", *params.XWorkspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Workspace-Id", headerParam0)
+		}
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Organization-ID", params.XOrganizationID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Organization-ID", headerParam1)
+
+	}
+
+	return req, nil
+}
+
 // NewCreateWorkspaceRequest calls the generic CreateWorkspace builder with application/json body
 func NewCreateWorkspaceRequest(server string, params *CreateWorkspaceParams, body CreateWorkspaceJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -32535,7 +33807,7 @@ type ClientWithResponsesInterface interface {
 
 	// ExecuteCollectionRequestWithBodyWithResponse Execute Request
 	//
-	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -32544,7 +33816,7 @@ type ClientWithResponsesInterface interface {
 
 	// ExecuteCollectionRequestWithResponse Execute Request
 	//
-	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+	// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33077,6 +34349,11 @@ type ClientWithResponsesInterface interface {
 	// GetNodeExecutionResultWithResponse Get Specific Node Result
 	//
 	// Retrieves execution result for a specific node in a flow execution.
+	// When the execution has no stored result for the requested node, returns 404
+	// `NODE_RESULT_NOT_FOUND` with diagnostic metadata: `execution_status`, `reason`
+	// (`execution_running`, `node_not_reached`, `unknown_node_id`, or `unknown`),
+	// `available_node_ids` (capped at 100, with `available_node_ids_total` when truncated),
+	// and `first_failed_node_id` (earliest failed node, when present).
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33172,7 +34449,7 @@ type ClientWithResponsesInterface interface {
 
 	// ExportFlowWithResponse Export Flow
 	//
-	// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
+	// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization, the flow's workspace or one of their environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -33407,7 +34684,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchIntegrationConnectionsWithBodyWithResponse Search Integration Connections
 	//
-	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33416,7 +34693,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchIntegrationConnectionsWithResponse Search Integration Connections
 	//
-	// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+	// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33667,6 +34944,33 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /license/usage (the `GetLicenseUsage` operationId).
 	GetLicenseUsageWithResponse(ctx context.Context, params *GetLicenseUsageParams, reqEditors ...RequestEditorFn) (*GetLicenseUsageResponse, error)
 
+	// GetMcpPermissionsWithResponse Get my MCP permissions
+	//
+	// Returns the MCP actions (groups of MCP tools that need one role permission), each with its default mode, and the signed-in member's mode for each action they set: allow or deny, per workspace, or for the organization when workspace_id is absent. An action with no setting takes its default_mode: allow for a read action, deny for every other kind. Only a web app session can read or change MCP permissions.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /mcp-permissions (the `GetMcpPermissions` operationId).
+	GetMcpPermissionsWithResponse(ctx context.Context, params *GetMcpPermissionsParams, reqEditors ...RequestEditorFn) (*GetMcpPermissionsResponse, error)
+
+	// SetMcpPermissionsWithBodyWithResponse Change my MCP permissions
+	//
+	// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+	SetMcpPermissionsWithBodyWithResponse(ctx context.Context, params *SetMcpPermissionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetMcpPermissionsResponse, error)
+
+	// SetMcpPermissionsWithResponse Change my MCP permissions
+	//
+	// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+	SetMcpPermissionsWithResponse(ctx context.Context, params *SetMcpPermissionsParams, body SetMcpPermissionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SetMcpPermissionsResponse, error)
+
 	// GetMeWithResponse Get current user and organization context
 	//
 	// Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
@@ -33762,7 +35066,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchOrganizationMembersWithBodyWithResponse Search Organization Members
 	//
-	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33771,7 +35075,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchOrganizationMembersWithResponse Search Organization Members
 	//
-	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+	// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33780,7 +35084,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetOrganizationMemberRoleWithBodyWithResponse Set Organization Member Role
 	//
-	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -33789,7 +35093,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetOrganizationMemberRoleWithResponse Set Organization Member Role
 	//
-	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+	// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -34105,7 +35409,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchEnvironmentsWithBodyWithResponse Search Environments
 	//
-	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -34114,7 +35418,7 @@ type ClientWithResponsesInterface interface {
 
 	// SearchEnvironmentsWithResponse Search Environments
 	//
-	// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -34123,7 +35427,7 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteEnvironmentWithResponse Delete Environment
 	//
-	// Deletes one environment and every variable in it. The base layer is untouched.
+	// Deletes one environment and every variable in it. The base layer is untouched. A workspace can hold values for a shared environment. The call then fails with 409 ENVIRONMENT_IN_USE and its detail gives the number of workspaces (`variable_sets` in the metadata), never their names. Those workspaces delete their values first.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -34159,7 +35463,7 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteOrganizationVariablesWithResponse Delete Organization Variables
 	//
-	// Deletes the organization variable set, its base layer and its named environment overlays.
+	// Deletes every organization variable, the base layer and the value of every environment. The environments stay in the shared catalog, empty, and so does the organization variable set.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -35028,6 +36332,114 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /workspace-roles/{roleId} (the `UpdateWorkspaceRole` operationId).
 	UpdateWorkspaceRoleWithResponse(ctx context.Context, roleId string, params *UpdateWorkspaceRoleParams, body UpdateWorkspaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWorkspaceRoleResponse, error)
 
+	// CreateWorkspaceEnvironmentWithBodyWithResponse Create Workspace Environment
+	//
+	// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+	CreateWorkspaceEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateWorkspaceEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceEnvironmentResponse, error)
+
+	// CreateWorkspaceEnvironmentWithResponse Create Workspace Environment
+	//
+	// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+	CreateWorkspaceEnvironmentWithResponse(ctx context.Context, params *CreateWorkspaceEnvironmentParams, body CreateWorkspaceEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceEnvironmentResponse, error)
+
+	// SearchWorkspaceEnvironmentsWithBodyWithResponse Search Workspace Environments
+	//
+	// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+	SearchWorkspaceEnvironmentsWithBodyWithResponse(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspaceEnvironmentsResponse, error)
+
+	// SearchWorkspaceEnvironmentsWithResponse Search Workspace Environments
+	//
+	// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+	SearchWorkspaceEnvironmentsWithResponse(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, body SearchWorkspaceEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspaceEnvironmentsResponse, error)
+
+	// DeleteWorkspaceEnvironmentWithResponse Delete Workspace Environment
+	//
+	// Deletes one environment of the workspace and every value in it. The workspace base layer is untouched. A shared environment, or one of another workspace, answers 404: a shared environment is deleted from the organization, and a workspace removes its values for it with the variable deletes.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /workspace/environments/{environment} (the `DeleteWorkspaceEnvironment` operationId).
+	DeleteWorkspaceEnvironmentWithResponse(ctx context.Context, environment EnvironmentPath, params *DeleteWorkspaceEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceEnvironmentResponse, error)
+
+	// DeleteWorkspaceEnvironmentVariableWithResponse Delete Workspace Environment Variable
+	//
+	// Deletes one variable from an environment this workspace sees. Any other name answers 404 ENVIRONMENT_NOT_FOUND; deleting a variable that does not exist succeeds.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /workspace/environments/{environment}/variables/{key} (the `DeleteWorkspaceEnvironmentVariable` operationId).
+	DeleteWorkspaceEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteWorkspaceEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceEnvironmentVariableResponse, error)
+
+	// SetWorkspaceEnvironmentVariableWithBodyWithResponse Set Workspace Environment Variable
+	//
+	// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+	SetWorkspaceEnvironmentVariableWithBodyWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspaceEnvironmentVariableResponse, error)
+
+	// SetWorkspaceEnvironmentVariableWithResponse Set Workspace Environment Variable
+	//
+	// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+	SetWorkspaceEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, body SetWorkspaceEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspaceEnvironmentVariableResponse, error)
+
+	// GetWorkspaceVariablesWithResponse Get Workspace Variables
+	//
+	// Retrieves the variable set of the workspace that X-Workspace-Id selects: its base layer, and one layer for each environment the workspace sees (the shared ones and its own), empty when the workspace holds no value there. Secret values are never returned. A run resolves org base < org environment < workspace base < workspace environment < flow base (ADR-0044, ADR-0043).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /workspace/variables (the `GetWorkspaceVariables` operationId).
+	GetWorkspaceVariablesWithResponse(ctx context.Context, params *GetWorkspaceVariablesParams, reqEditors ...RequestEditorFn) (*GetWorkspaceVariablesResponse, error)
+
+	// DeleteWorkspaceVariableWithResponse Delete Workspace Variable
+	//
+	// Deletes one variable from the workspace base layer. The organization's value of the same name applies again.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /workspace/variables/{key} (the `DeleteWorkspaceVariable` operationId).
+	DeleteWorkspaceVariableWithResponse(ctx context.Context, key VariableKey, params *DeleteWorkspaceVariableParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceVariableResponse, error)
+
+	// SetWorkspaceVariableWithBodyWithResponse Set Workspace Variable
+	//
+	// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+	SetWorkspaceVariableWithBodyWithResponse(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspaceVariableResponse, error)
+
+	// SetWorkspaceVariableWithResponse Set Workspace Variable
+	//
+	// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+	SetWorkspaceVariableWithResponse(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, body SetWorkspaceVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspaceVariableResponse, error)
+
 	// CreateWorkspaceWithBodyWithResponse Create Workspace
 	//
 	// Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -35138,7 +36550,7 @@ type ClientWithResponsesInterface interface {
 
 	// RemoveWorkspaceMemberWithResponse Remove Workspace Member
 	//
-	// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+	// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. An API key cannot remove a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -35147,7 +36559,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetWorkspaceMemberRoleWithBodyWithResponse Set Workspace Member Role
 	//
-	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -35156,7 +36568,7 @@ type ClientWithResponsesInterface interface {
 
 	// SetWorkspaceMemberRoleWithResponse Set Workspace Member Role
 	//
-	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+	// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -41609,6 +43021,123 @@ func (r GetLicenseUsageResponse) ContentType() string {
 	return ""
 }
 
+type GetMcpPermissionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *McpPermissionsResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetMcpPermissionsResponse) GetJSON200() *McpPermissionsResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetMcpPermissionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetMcpPermissionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r GetMcpPermissionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetMcpPermissionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetMcpPermissionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetMcpPermissionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetMcpPermissionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *McpPermissionsResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetMcpPermissionsResponse) GetJSON200() *McpPermissionsResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetMcpPermissionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetMcpPermissionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetMcpPermissionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SetMcpPermissionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetMcpPermissionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetMcpPermissionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetMcpPermissionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetMeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -43594,6 +45123,8 @@ type DeleteEnvironmentResponse struct {
 	JSON401 *Unauthorized
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
 }
 
 // GetJSON401 returns the response for an HTTP 401 `application/json` response
@@ -43604,6 +45135,11 @@ func (r DeleteEnvironmentResponse) GetJSON401() *Unauthorized {
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r DeleteEnvironmentResponse) GetJSON404() *NotFound {
 	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteEnvironmentResponse) GetJSON409() *Conflict {
+	return r.JSON409
 }
 
 // GetBody returns the raw response body bytes
@@ -47418,6 +48954,495 @@ func (r UpdateWorkspaceRoleResponse) ContentType() string {
 	return ""
 }
 
+type CreateWorkspaceEnvironmentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *Environment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Conflict
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateWorkspaceEnvironmentResponse) GetJSON201() *Environment {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateWorkspaceEnvironmentResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateWorkspaceEnvironmentResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateWorkspaceEnvironmentResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r CreateWorkspaceEnvironmentResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateWorkspaceEnvironmentResponse) GetJSON409() *Conflict {
+	return r.JSON409
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateWorkspaceEnvironmentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateWorkspaceEnvironmentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateWorkspaceEnvironmentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateWorkspaceEnvironmentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchWorkspaceEnvironmentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *EnvironmentSearchResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchWorkspaceEnvironmentsResponse) GetJSON200() *EnvironmentSearchResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchWorkspaceEnvironmentsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchWorkspaceEnvironmentsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchWorkspaceEnvironmentsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchWorkspaceEnvironmentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchWorkspaceEnvironmentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchWorkspaceEnvironmentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchWorkspaceEnvironmentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteWorkspaceEnvironmentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteWorkspaceEnvironmentResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteWorkspaceEnvironmentResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteWorkspaceEnvironmentResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteWorkspaceEnvironmentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteWorkspaceEnvironmentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteWorkspaceEnvironmentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteWorkspaceEnvironmentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteWorkspaceEnvironmentVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteWorkspaceEnvironmentVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteWorkspaceEnvironmentVariableResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteWorkspaceEnvironmentVariableResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteWorkspaceEnvironmentVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteWorkspaceEnvironmentVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteWorkspaceEnvironmentVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteWorkspaceEnvironmentVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetWorkspaceEnvironmentVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *VariableSet
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetWorkspaceEnvironmentVariableResponse) GetJSON200() *VariableSet {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetWorkspaceEnvironmentVariableResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetWorkspaceEnvironmentVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetWorkspaceEnvironmentVariableResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetWorkspaceEnvironmentVariableResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SetWorkspaceEnvironmentVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetWorkspaceEnvironmentVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetWorkspaceEnvironmentVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetWorkspaceEnvironmentVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetWorkspaceVariablesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *VariableSet
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetWorkspaceVariablesResponse) GetJSON200() *VariableSet {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetWorkspaceVariablesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetWorkspaceVariablesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r GetWorkspaceVariablesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetWorkspaceVariablesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetWorkspaceVariablesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetWorkspaceVariablesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteWorkspaceVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteWorkspaceVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteWorkspaceVariableResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteWorkspaceVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteWorkspaceVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteWorkspaceVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteWorkspaceVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetWorkspaceVariableResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *VariableSet
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetWorkspaceVariableResponse) GetJSON200() *VariableSet {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetWorkspaceVariableResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetWorkspaceVariableResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SetWorkspaceVariableResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetWorkspaceVariableResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r SetWorkspaceVariableResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetWorkspaceVariableResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetWorkspaceVariableResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetWorkspaceVariableResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type CreateWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -48582,7 +50607,7 @@ func (c *ClientWithResponses) UpdateRequestWithResponse(ctx context.Context, col
 
 // ExecuteCollectionRequestWithBodyWithResponse Execute Request
 //
-// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -48597,7 +50622,7 @@ func (c *ClientWithResponses) ExecuteCollectionRequestWithBodyWithResponse(ctx c
 
 // ExecuteCollectionRequestWithResponse Execute Request
 //
-// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+// Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -49472,6 +51497,11 @@ func (c *ClientWithResponses) GetExecutionNodeResultsWithResponse(ctx context.Co
 // GetNodeExecutionResultWithResponse Get Specific Node Result
 //
 // Retrieves execution result for a specific node in a flow execution.
+// When the execution has no stored result for the requested node, returns 404
+// `NODE_RESULT_NOT_FOUND` with diagnostic metadata: `execution_status`, `reason`
+// (`execution_running`, `node_not_reached`, `unknown_node_id`, or `unknown`),
+// `available_node_ids` (capped at 100, with `available_node_ids_total` when truncated),
+// and `first_failed_node_id` (earliest failed node, when present).
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -49627,7 +51657,7 @@ func (c *ClientWithResponses) ListFlowExecutionsWithResponse(ctx context.Context
 
 // ExportFlowWithResponse Export Flow
 //
-// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
+// Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization, the flow's workspace or one of their environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -49976,7 +52006,7 @@ func (c *ClientWithResponses) SetIntegrationChoicesWithResponse(ctx context.Cont
 
 // SearchIntegrationConnectionsWithBodyWithResponse Search Integration Connections
 //
-// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -49991,7 +52021,7 @@ func (c *ClientWithResponses) SearchIntegrationConnectionsWithBodyWithResponse(c
 
 // SearchIntegrationConnectionsWithResponse Search Integration Connections
 //
-// Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+// Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -50332,6 +52362,51 @@ func (c *ClientWithResponses) GetLicenseUsageWithResponse(ctx context.Context, p
 	return ParseGetLicenseUsageResponse(rsp)
 }
 
+// GetMcpPermissionsWithResponse Get my MCP permissions
+//
+// Returns the MCP actions (groups of MCP tools that need one role permission), each with its default mode, and the signed-in member's mode for each action they set: allow or deny, per workspace, or for the organization when workspace_id is absent. An action with no setting takes its default_mode: allow for a read action, deny for every other kind. Only a web app session can read or change MCP permissions.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /mcp-permissions (the `GetMcpPermissions` operationId).
+func (c *ClientWithResponses) GetMcpPermissionsWithResponse(ctx context.Context, params *GetMcpPermissionsParams, reqEditors ...RequestEditorFn) (*GetMcpPermissionsResponse, error) {
+	rsp, err := c.GetMcpPermissions(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetMcpPermissionsResponse(rsp)
+}
+
+// SetMcpPermissionsWithBodyWithResponse Change my MCP permissions
+//
+// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+func (c *ClientWithResponses) SetMcpPermissionsWithBodyWithResponse(ctx context.Context, params *SetMcpPermissionsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetMcpPermissionsResponse, error) {
+	rsp, err := c.SetMcpPermissionsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetMcpPermissionsResponse(rsp)
+}
+
+// SetMcpPermissionsWithResponse Change my MCP permissions
+//
+// Sets the signed-in member's mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /mcp-permissions (the `SetMcpPermissions` operationId).
+func (c *ClientWithResponses) SetMcpPermissionsWithResponse(ctx context.Context, params *SetMcpPermissionsParams, body SetMcpPermissionsJSONRequestBody, reqEditors ...RequestEditorFn) (*SetMcpPermissionsResponse, error) {
+	rsp, err := c.SetMcpPermissions(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetMcpPermissionsResponse(rsp)
+}
+
 // GetMeWithResponse Get current user and organization context
 //
 // Returns the authenticated user profile and every organization the user belongs to, each with the role and permissions the user holds in it. Organizations are ordered by membership creation, oldest first, then by organization id, so the order does not change between calls. The first entry is usually the personal organization, but not always: an invitation accepted before the personal organization exists comes first. The client picks one organization and sends its id in the X-Organization-ID header of every other request. The permissions of that request are those of the picked organization, and a request for an organization the user does not belong to is refused with 403.
@@ -50457,7 +52532,7 @@ func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Co
 
 // SearchOrganizationMembersWithBodyWithResponse Search Organization Members
 //
-// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -50472,7 +52547,7 @@ func (c *ClientWithResponses) SearchOrganizationMembersWithBodyWithResponse(ctx 
 
 // SearchOrganizationMembersWithResponse Search Organization Members
 //
-// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
+// Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member's email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -50487,7 +52562,7 @@ func (c *ClientWithResponses) SearchOrganizationMembersWithResponse(ctx context.
 
 // SetOrganizationMemberRoleWithBodyWithResponse Set Organization Member Role
 //
-// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -50502,7 +52577,7 @@ func (c *ClientWithResponses) SetOrganizationMemberRoleWithBodyWithResponse(ctx 
 
 // SetOrganizationMemberRoleWithResponse Set Organization Member Role
 //
-// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.
+// Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -51022,7 +53097,7 @@ func (c *ClientWithResponses) CreateEnvironmentWithResponse(ctx context.Context,
 
 // SearchEnvironmentsWithBodyWithResponse Search Environments
 //
-// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -51037,7 +53112,7 @@ func (c *ClientWithResponses) SearchEnvironmentsWithBodyWithResponse(ctx context
 
 // SearchEnvironmentsWithResponse Search Environments
 //
-// Searches the organization's environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+// Searches the organization's shared environments, the ones every workspace sees, and pages with a cursor. A workspace's own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -51052,7 +53127,7 @@ func (c *ClientWithResponses) SearchEnvironmentsWithResponse(ctx context.Context
 
 // DeleteEnvironmentWithResponse Delete Environment
 //
-// Deletes one environment and every variable in it. The base layer is untouched.
+// Deletes one environment and every variable in it. The base layer is untouched. A workspace can hold values for a shared environment. The call then fails with 409 ENVIRONMENT_IN_USE and its detail gives the number of workspaces (`variable_sets` in the metadata), never their names. Those workspaces delete their values first.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -51112,7 +53187,7 @@ func (c *ClientWithResponses) SetEnvironmentVariableWithResponse(ctx context.Con
 
 // DeleteOrganizationVariablesWithResponse Delete Organization Variables
 //
-// Deletes the organization variable set, its base layer and its named environment overlays.
+// Deletes every organization variable, the base layer and the value of every environment. The environments stay in the shared catalog, empty, and so does the organization variable set.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -52436,6 +54511,186 @@ func (c *ClientWithResponses) UpdateWorkspaceRoleWithResponse(ctx context.Contex
 	return ParseUpdateWorkspaceRoleResponse(rsp)
 }
 
+// CreateWorkspaceEnvironmentWithBodyWithResponse Create Workspace Environment
+//
+// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+func (c *ClientWithResponses) CreateWorkspaceEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateWorkspaceEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceEnvironmentResponse, error) {
+	rsp, err := c.CreateWorkspaceEnvironmentWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateWorkspaceEnvironmentResponse(rsp)
+}
+
+// CreateWorkspaceEnvironmentWithResponse Create Workspace Environment
+//
+// Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspace/environments (the `CreateWorkspaceEnvironment` operationId).
+func (c *ClientWithResponses) CreateWorkspaceEnvironmentWithResponse(ctx context.Context, params *CreateWorkspaceEnvironmentParams, body CreateWorkspaceEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceEnvironmentResponse, error) {
+	rsp, err := c.CreateWorkspaceEnvironment(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateWorkspaceEnvironmentResponse(rsp)
+}
+
+// SearchWorkspaceEnvironmentsWithBodyWithResponse Search Workspace Environments
+//
+// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+func (c *ClientWithResponses) SearchWorkspaceEnvironmentsWithBodyWithResponse(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchWorkspaceEnvironmentsResponse, error) {
+	rsp, err := c.SearchWorkspaceEnvironmentsWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspaceEnvironmentsResponse(rsp)
+}
+
+// SearchWorkspaceEnvironmentsWithResponse Search Workspace Environments
+//
+// Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /workspace/environments/search (the `SearchWorkspaceEnvironments` operationId).
+func (c *ClientWithResponses) SearchWorkspaceEnvironmentsWithResponse(ctx context.Context, params *SearchWorkspaceEnvironmentsParams, body SearchWorkspaceEnvironmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchWorkspaceEnvironmentsResponse, error) {
+	rsp, err := c.SearchWorkspaceEnvironments(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchWorkspaceEnvironmentsResponse(rsp)
+}
+
+// DeleteWorkspaceEnvironmentWithResponse Delete Workspace Environment
+//
+// Deletes one environment of the workspace and every value in it. The workspace base layer is untouched. A shared environment, or one of another workspace, answers 404: a shared environment is deleted from the organization, and a workspace removes its values for it with the variable deletes.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /workspace/environments/{environment} (the `DeleteWorkspaceEnvironment` operationId).
+func (c *ClientWithResponses) DeleteWorkspaceEnvironmentWithResponse(ctx context.Context, environment EnvironmentPath, params *DeleteWorkspaceEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceEnvironmentResponse, error) {
+	rsp, err := c.DeleteWorkspaceEnvironment(ctx, environment, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteWorkspaceEnvironmentResponse(rsp)
+}
+
+// DeleteWorkspaceEnvironmentVariableWithResponse Delete Workspace Environment Variable
+//
+// Deletes one variable from an environment this workspace sees. Any other name answers 404 ENVIRONMENT_NOT_FOUND; deleting a variable that does not exist succeeds.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /workspace/environments/{environment}/variables/{key} (the `DeleteWorkspaceEnvironmentVariable` operationId).
+func (c *ClientWithResponses) DeleteWorkspaceEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *DeleteWorkspaceEnvironmentVariableParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceEnvironmentVariableResponse, error) {
+	rsp, err := c.DeleteWorkspaceEnvironmentVariable(ctx, environment, key, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteWorkspaceEnvironmentVariableResponse(rsp)
+}
+
+// SetWorkspaceEnvironmentVariableWithBodyWithResponse Set Workspace Environment Variable
+//
+// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+func (c *ClientWithResponses) SetWorkspaceEnvironmentVariableWithBodyWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspaceEnvironmentVariableResponse, error) {
+	rsp, err := c.SetWorkspaceEnvironmentVariableWithBody(ctx, environment, key, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspaceEnvironmentVariableResponse(rsp)
+}
+
+// SetWorkspaceEnvironmentVariableWithResponse Set Workspace Environment Variable
+//
+// Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspace/environments/{environment}/variables/{key} (the `SetWorkspaceEnvironmentVariable` operationId).
+func (c *ClientWithResponses) SetWorkspaceEnvironmentVariableWithResponse(ctx context.Context, environment EnvironmentPath, key VariableKey, params *SetWorkspaceEnvironmentVariableParams, body SetWorkspaceEnvironmentVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspaceEnvironmentVariableResponse, error) {
+	rsp, err := c.SetWorkspaceEnvironmentVariable(ctx, environment, key, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspaceEnvironmentVariableResponse(rsp)
+}
+
+// GetWorkspaceVariablesWithResponse Get Workspace Variables
+//
+// Retrieves the variable set of the workspace that X-Workspace-Id selects: its base layer, and one layer for each environment the workspace sees (the shared ones and its own), empty when the workspace holds no value there. Secret values are never returned. A run resolves org base < org environment < workspace base < workspace environment < flow base (ADR-0044, ADR-0043).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /workspace/variables (the `GetWorkspaceVariables` operationId).
+func (c *ClientWithResponses) GetWorkspaceVariablesWithResponse(ctx context.Context, params *GetWorkspaceVariablesParams, reqEditors ...RequestEditorFn) (*GetWorkspaceVariablesResponse, error) {
+	rsp, err := c.GetWorkspaceVariables(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetWorkspaceVariablesResponse(rsp)
+}
+
+// DeleteWorkspaceVariableWithResponse Delete Workspace Variable
+//
+// Deletes one variable from the workspace base layer. The organization's value of the same name applies again.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /workspace/variables/{key} (the `DeleteWorkspaceVariable` operationId).
+func (c *ClientWithResponses) DeleteWorkspaceVariableWithResponse(ctx context.Context, key VariableKey, params *DeleteWorkspaceVariableParams, reqEditors ...RequestEditorFn) (*DeleteWorkspaceVariableResponse, error) {
+	rsp, err := c.DeleteWorkspaceVariable(ctx, key, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteWorkspaceVariableResponse(rsp)
+}
+
+// SetWorkspaceVariableWithBodyWithResponse Set Workspace Variable
+//
+// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+func (c *ClientWithResponses) SetWorkspaceVariableWithBodyWithResponse(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetWorkspaceVariableResponse, error) {
+	rsp, err := c.SetWorkspaceVariableWithBody(ctx, key, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspaceVariableResponse(rsp)
+}
+
+// SetWorkspaceVariableWithResponse Set Workspace Variable
+//
+// Creates or replaces one variable in the workspace base layer. It overrides the organization's value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /workspace/variables/{key} (the `SetWorkspaceVariable` operationId).
+func (c *ClientWithResponses) SetWorkspaceVariableWithResponse(ctx context.Context, key VariableKey, params *SetWorkspaceVariableParams, body SetWorkspaceVariableJSONRequestBody, reqEditors ...RequestEditorFn) (*SetWorkspaceVariableResponse, error) {
+	rsp, err := c.SetWorkspaceVariable(ctx, key, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetWorkspaceVariableResponse(rsp)
+}
+
 // CreateWorkspaceWithBodyWithResponse Create Workspace
 //
 // Creates a workspace in the current organization. A session caller becomes its first member with the workspace_admin role. Requires the organization permission workspaces:create.
@@ -52618,7 +54873,7 @@ func (c *ClientWithResponses) SearchWorkspaceMembersWithResponse(ctx context.Con
 
 // RemoveWorkspaceMemberWithResponse Remove Workspace Member
 //
-// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+// Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. An API key cannot remove a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -52633,7 +54888,7 @@ func (c *ClientWithResponses) RemoveWorkspaceMemberWithResponse(ctx context.Cont
 
 // SetWorkspaceMemberRoleWithBodyWithResponse Set Workspace Member Role
 //
-// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -52648,7 +54903,7 @@ func (c *ClientWithResponses) SetWorkspaceMemberRoleWithBodyWithResponse(ctx con
 
 // SetWorkspaceMemberRoleWithResponse Set Workspace Member Role
 //
-// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+// Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -57732,6 +59987,93 @@ func ParseGetLicenseUsageResponse(rsp *http.Response) (*GetLicenseUsageResponse,
 	return response, nil
 }
 
+// ParseGetMcpPermissionsResponse parses an HTTP response from a GetMcpPermissionsWithResponse call
+func ParseGetMcpPermissionsResponse(rsp *http.Response) (*GetMcpPermissionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetMcpPermissionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest McpPermissionsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetMcpPermissionsResponse parses an HTTP response from a SetMcpPermissionsWithResponse call
+func ParseSetMcpPermissionsResponse(rsp *http.Response) (*SetMcpPermissionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetMcpPermissionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest McpPermissionsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetMeResponse parses an HTTP response from a GetMeWithResponse call
 func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -59278,6 +61620,13 @@ func ParseDeleteEnvironmentResponse(rsp *http.Response) (*DeleteEnvironmentRespo
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -62335,6 +64684,384 @@ func ParseUpdateWorkspaceRoleResponse(rsp *http.Response) (*UpdateWorkspaceRoleR
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateWorkspaceEnvironmentResponse parses an HTTP response from a CreateWorkspaceEnvironmentWithResponse call
+func ParseCreateWorkspaceEnvironmentResponse(rsp *http.Response) (*CreateWorkspaceEnvironmentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateWorkspaceEnvironmentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest Environment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSearchWorkspaceEnvironmentsResponse parses an HTTP response from a SearchWorkspaceEnvironmentsWithResponse call
+func ParseSearchWorkspaceEnvironmentsResponse(rsp *http.Response) (*SearchWorkspaceEnvironmentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchWorkspaceEnvironmentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EnvironmentSearchResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteWorkspaceEnvironmentResponse parses an HTTP response from a DeleteWorkspaceEnvironmentWithResponse call
+func ParseDeleteWorkspaceEnvironmentResponse(rsp *http.Response) (*DeleteWorkspaceEnvironmentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteWorkspaceEnvironmentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteWorkspaceEnvironmentVariableResponse parses an HTTP response from a DeleteWorkspaceEnvironmentVariableWithResponse call
+func ParseDeleteWorkspaceEnvironmentVariableResponse(rsp *http.Response) (*DeleteWorkspaceEnvironmentVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteWorkspaceEnvironmentVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetWorkspaceEnvironmentVariableResponse parses an HTTP response from a SetWorkspaceEnvironmentVariableWithResponse call
+func ParseSetWorkspaceEnvironmentVariableResponse(rsp *http.Response) (*SetWorkspaceEnvironmentVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetWorkspaceEnvironmentVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VariableSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetWorkspaceVariablesResponse parses an HTTP response from a GetWorkspaceVariablesWithResponse call
+func ParseGetWorkspaceVariablesResponse(rsp *http.Response) (*GetWorkspaceVariablesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetWorkspaceVariablesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VariableSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteWorkspaceVariableResponse parses an HTTP response from a DeleteWorkspaceVariableWithResponse call
+func ParseDeleteWorkspaceVariableResponse(rsp *http.Response) (*DeleteWorkspaceVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteWorkspaceVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetWorkspaceVariableResponse parses an HTTP response from a SetWorkspaceVariableWithResponse call
+func ParseSetWorkspaceVariableResponse(rsp *http.Response) (*SetWorkspaceVariableResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetWorkspaceVariableResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VariableSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

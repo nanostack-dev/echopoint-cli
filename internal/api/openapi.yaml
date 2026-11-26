@@ -372,7 +372,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SearchRequest'
+              $ref: '#/components/schemas/IntegrationSearchRequest'
         required: true
       responses:
         "200":
@@ -516,7 +516,7 @@ paths:
       tags:
         - Integration
       summary: Search Integration Connections
-      description: Lists the workspace's connections to an integration, one per environment, ordered by environment key.
+      description: Lists the workspace's connections to an integration, one per environment, ordered by environment key. full_text_search is not used by this search.
       operationId: searchIntegrationConnections
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -524,7 +524,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SearchRequest'
+              $ref: '#/components/schemas/IntegrationConnectionSearchRequest'
         required: true
       responses:
         "200":
@@ -1304,7 +1304,8 @@ paths:
         "500":
           $ref: '#/components/responses/InternalServerError'
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - flows:read
         - ApiKeys:
             - flows:read
       x-ai-tool: true
@@ -2219,7 +2220,7 @@ paths:
       tags:
         - Flows
       summary: Export Flow
-      description: Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization or one of its environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
+      description: Returns the raw flow definition JSON formatted for the flow engine. `initial_inputs` inlines only a plain variable stored on the flow itself. A secret, and a key the organization, the flow's workspace or one of their environments supplies, is exported as the placeholder `{{KEY}}` instead of its value, so the importing organization must define it. Such a key appears only when the exported definition, or a module flow it calls, names it. Reading organization values and names needs environment:read, which this route does not require.
       operationId: exportFlow
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -2449,11 +2450,11 @@ paths:
       tags:
         - Organization
       summary: Delete Organization Variables
-      description: Deletes the organization variable set, its base layer and its named environment overlays.
+      description: Deletes every organization variable, the base layer and the value of every environment. The environments stay in the shared catalog, empty, and so does the organization variable set.
       operationId: deleteOrganizationVariables
       responses:
         "204":
-          description: Organization variable set deleted successfully or already deleted.
+          description: Organization variables deleted successfully or already deleted.
         "401":
           $ref: '#/components/responses/Unauthorized'
       security:
@@ -2463,7 +2464,7 @@ paths:
             - environment:delete
       x-ai-tool: true
       x-ai-title: Delete organization variables
-      x-ai-description: 'Deletes every organization variable: the base layer and every environment overlay, secrets included. It cannot be undone. To remove one variable, use delete_organization_variable (base layer) or delete_environment_variable (one environment). Use this tool only when the user asks to delete all of them.'
+      x-ai-description: 'Deletes every organization variable: the base layer and the value of every environment, secrets included. The environments themselves stay. It cannot be undone. To remove one variable, use delete_organization_variable (base layer) or delete_environment_variable (one environment). Use this tool only when the user asks to delete all of them.'
       x-ai-read-only: false
   /organization/variables/{key}:
     parameters:
@@ -2586,7 +2587,7 @@ paths:
       tags:
         - Organization
       summary: Search Environments
-      description: 'Searches the organization''s environments and pages with a cursor. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.'
+      description: 'Searches the organization''s shared environments, the ones every workspace sees, and pages with a cursor. A workspace''s own environments are never listed here. Variables are not included; read them from the organization variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.'
       operationId: searchEnvironments
       requestBody:
         description: Search criteria for environments.
@@ -2611,7 +2612,7 @@ paths:
             - environment:read
         - ApiKeys:
             - environment:read
-      x-ai-description: Search the environments of the organization by name. Page with the returned next_cursor.
+      x-ai-description: Search the shared environments of the organization by name. Page with the returned next_cursor.
       x-ai-tool: true
       x-ai-title: Search environments
       x-ai-read-only: true
@@ -2623,7 +2624,7 @@ paths:
       tags:
         - Organization
       summary: Delete Environment
-      description: Deletes one environment and every variable in it. The base layer is untouched.
+      description: Deletes one environment and every variable in it. The base layer is untouched. A workspace can hold values for a shared environment. The call then fails with 409 ENVIRONMENT_IN_USE and its detail gives the number of workspaces (`variable_sets` in the metadata), never their names. Those workspaces delete their values first.
       operationId: deleteEnvironment
       responses:
         "204":
@@ -2632,6 +2633,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         "404":
           $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
       security:
         - BearerAuth:
             - environment:delete
@@ -2698,6 +2701,278 @@ paths:
             - environment:delete
       x-ai-tool: true
       x-ai-title: Delete environment variable
+      x-ai-read-only: false
+  /workspace/variables:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Workspaces
+      summary: Get Workspace Variables
+      description: 'Retrieves the variable set of the workspace that X-Workspace-Id selects: its base layer, and one layer for each environment the workspace sees (the shared ones and its own), empty when the workspace holds no value there. Secret values are never returned. A run resolves org base < org environment < workspace base < workspace environment < flow base (ADR-0044, ADR-0043).'
+      operationId: getWorkspaceVariables
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      responses:
+        "200":
+          description: Workspace variable set retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableSet'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-tool: true
+      x-ai-title: Get workspace variables
+      x-ai-read-only: true
+  /workspace/variables/{key}:
+    parameters:
+      - $ref: '#/components/parameters/VariableKey'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    put:
+      tags:
+        - Workspaces
+      summary: Set Workspace Variable
+      description: 'Creates or replaces one variable in the workspace base layer. It overrides the organization''s value of the same name, in its base layer and in every organization environment, for the flows of this workspace. A plain variable can be turned into a secret. A secret cannot be turned back into a plain variable: delete it and create it again. It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.'
+      operationId: setWorkspaceVariable
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetVariableRequest'
+        required: true
+      responses:
+        "200":
+          description: Variable stored successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableSet'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.environments:update
+        - ApiKeys:
+            - environment:update
+      x-ai-tool: true
+      x-ai-title: Set workspace variable
+      x-ai-read-only: false
+    delete:
+      tags:
+        - Workspaces
+      summary: Delete Workspace Variable
+      description: Deletes one variable from the workspace base layer. The organization's value of the same name applies again.
+      operationId: deleteWorkspaceVariable
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      responses:
+        "204":
+          description: Variable deleted successfully or already deleted.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.environments:delete
+        - ApiKeys:
+            - environment:delete
+      x-ai-tool: true
+      x-ai-title: Delete workspace variable
+      x-ai-read-only: false
+  /workspace/environments:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Workspaces
+      summary: Create Workspace Environment
+      description: 'Creates one environment of the workspace (ADR-0043). It is visible to this workspace only. It starts empty, and stays empty until a variable is written into it. A name is unique in the organization: a name that exists anywhere in it, shared or in any workspace, answers 409 ENVIRONMENT_ALREADY_EXISTS, and the answer never names the workspace that holds it. A workspace holds at most 50 environments (TOO_MANY_ENVIRONMENTS). It answers 404 WORKSPACE_NOT_FOUND while the workspace is being deleted.'
+      operationId: createWorkspaceEnvironment
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEnvironmentRequest'
+        required: true
+      responses:
+        "201":
+          description: Environment created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+      security:
+        - BearerAuth:
+            - workspace.environments:create
+        - ApiKeys:
+            - environment:create
+      x-ai-tool: true
+      x-ai-title: Create workspace environment
+      x-ai-read-only: false
+  /workspace/environments/search:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    post:
+      tags:
+        - Workspaces
+      summary: Search Workspace Environments
+      description: 'Searches the environments this workspace sees (the shared ones and its own) and pages with a cursor. Each item has a scope: `organization` for a shared environment, `workspace` for one of this workspace. Names only; read the values from the workspace variable set. Default order: name ASC, then id. A sort_by without sort_direction sorts DESC. full_text_search matches the environment name, case-insensitively.'
+      operationId: searchWorkspaceEnvironments
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        description: Search criteria for environments.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnvironmentSearchRequest'
+        required: true
+      responses:
+        "200":
+          description: Environments retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentSearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth:
+            - workspace.flows:read
+        - ApiKeys:
+            - flows:read
+      x-ai-description: Search the environments this workspace sees, shared and its own, by name. Each has a scope. Page with the returned next_cursor.
+      x-ai-tool: true
+      x-ai-title: Search workspace environments
+      x-ai-read-only: true
+  /workspace/environments/{environment}:
+    parameters:
+      - $ref: '#/components/parameters/EnvironmentPath'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    delete:
+      tags:
+        - Workspaces
+      summary: Delete Workspace Environment
+      description: 'Deletes one environment of the workspace and every value in it. The workspace base layer is untouched. A shared environment, or one of another workspace, answers 404: a shared environment is deleted from the organization, and a workspace removes its values for it with the variable deletes.'
+      operationId: deleteWorkspaceEnvironment
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      responses:
+        "204":
+          description: Environment deleted successfully.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.environments:delete
+        - ApiKeys:
+            - environment:delete
+      x-ai-tool: true
+      x-ai-title: Delete workspace environment
+      x-ai-read-only: false
+  /workspace/environments/{environment}/variables/{key}:
+    parameters:
+      - $ref: '#/components/parameters/EnvironmentPath'
+      - $ref: '#/components/parameters/VariableKey'
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    put:
+      tags:
+        - Workspaces
+      summary: Set Workspace Environment Variable
+      description: 'Creates or replaces one variable in an environment this workspace sees (a shared one or its own). Any other name answers 404 ENVIRONMENT_NOT_FOUND: a write never creates an environment. A plain variable can be turned into a secret; the reverse is refused.'
+      operationId: setWorkspaceEnvironmentVariable
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetVariableRequest'
+        required: true
+      responses:
+        "200":
+          description: Variable stored successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableSet'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.environments:update
+        - ApiKeys:
+            - environment:update
+      x-ai-tool: true
+      x-ai-title: Set workspace environment variable
+      x-ai-read-only: false
+    delete:
+      tags:
+        - Workspaces
+      summary: Delete Workspace Environment Variable
+      description: Deletes one variable from an environment this workspace sees. Any other name answers 404 ENVIRONMENT_NOT_FOUND; deleting a variable that does not exist succeeds.
+      operationId: deleteWorkspaceEnvironmentVariable
+      parameters:
+        - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
+      responses:
+        "204":
+          description: Variable deleted successfully or already deleted.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth:
+            - workspace.environments:delete
+        - ApiKeys:
+            - environment:delete
+      x-ai-tool: true
+      x-ai-title: Delete workspace environment variable
       x-ai-read-only: false
   /init:
     post:
@@ -2942,9 +3217,7 @@ paths:
       security:
         - BearerAuth:
             - api_key:update
-      x-ai-tool: true
-      x-ai-title: Update API key
-      x-ai-read-only: false
+      x-ai-danger: 'Web app only: API keys are managed in the web app; agents neither create, change nor delete them (ADR-0040).'
     delete:
       tags:
         - Auth
@@ -4020,7 +4293,7 @@ paths:
       tags:
         - Collections
       summary: Execute Request
-      description: Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers.
+      description: "Executes the current request draft server-side so upstream responses remain visible even when the target API does not expose browser CORS headers. Variables resolve with the collection's workspace: org base < org environment < workspace base < workspace environment. Resolving organization variables additionally requires organization-level `environment:read`. Callers without it resolve the workspace layers only. An `environment_key` that the collection's workspace does not see answers 400 ENVIRONMENT_KEY_NOT_FOUND, and a shared environment for which the organization holds values answers 403, because those values would be dropped silently. Any other visible name resolves the workspace layers."
       operationId: executeCollectionRequest
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -5185,7 +5458,13 @@ paths:
       tags:
         - Flows
       summary: Get Specific Node Result
-      description: Retrieves execution result for a specific node in a flow execution.
+      description: |
+        Retrieves execution result for a specific node in a flow execution.
+        When the execution has no stored result for the requested node, returns 404
+        `NODE_RESULT_NOT_FOUND` with diagnostic metadata: `execution_status`, `reason`
+        (`execution_running`, `node_not_reached`, `unknown_node_id`, or `unknown`),
+        `available_node_ids` (capped at 100, with `available_node_ids_total` when truncated),
+        and `first_failed_node_id` (earliest failed node, when present).
       operationId: getNodeExecutionResult
       parameters:
         - $ref: '#/components/parameters/RequiredWorkspaceIDHeader'
@@ -5444,9 +5723,7 @@ paths:
             - workspace.settings:delete
         - ApiKeys:
             - workspace.settings:delete
-      x-ai-tool: true
-      x-ai-title: Delete workspace
-      x-ai-read-only: false
+      x-ai-danger: 'Web app only: deleting a workspace deletes everything it owns; a member does it in the web app, never an agent (ADR-0040).'
   /workspaces/{workspaceId}/invitations/search:
     parameters:
       - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
@@ -5530,7 +5807,7 @@ paths:
       tags:
         - Workspaces
       summary: Set Workspace Member Role
-      description: Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. Requires workspace.access:manage on the workspace.
+      description: Gives an organization member a role on the workspace, or replaces the one they hold. A member cannot change their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The role must be a workspace role of the product. A user who is not a member of the organization answers 404 ORGANIZATION_MEMBER_NOT_FOUND; a role that is not a workspace role answers 400 WORKSPACE_ROLE_NOT_FOUND. An API key neither gives a role whose permissions it does not hold nor changes a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
       operationId: setWorkspaceMemberRole
       requestBody:
         required: true
@@ -5565,7 +5842,7 @@ paths:
       tags:
         - Workspaces
       summary: Remove Workspace Member
-      description: Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. Requires workspace.access:manage on the workspace.
+      description: Removes the member's role on the workspace. A member cannot remove their own role (403 OWN_ROLE_CHANGE_FORBIDDEN). The next request of that member is decided without it. Removing a user who holds no role on the workspace succeeds. An API key cannot remove a member whose current workspace role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN). Requires workspace.access:manage on the workspace.
       operationId: removeWorkspaceMember
       responses:
         "204":
@@ -5835,7 +6112,7 @@ paths:
       tags:
         - Members
       summary: Set Organization Member Role
-      description: 'Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). Requires members:update.'
+      description: 'Gives a member an organization role: role_id names any role of GET /organization-roles (an unknown one answers 400 ORGANIZATION_ROLE_NOT_FOUND); role names admin, who reaches every workspace, or member, who reaches only the workspaces of their workspace roles. Nobody changes their own role (403 OWN_ROLE_CHANGE_FORBIDDEN), and the organization keeps at least one admin (409 LAST_ADMIN). An API key neither assigns a role whose permissions it does not hold nor changes a member whose current role holds permissions the key lacks (403 ROLE_GRANT_FORBIDDEN); because API keys never hold api_key:* permissions, no API key can promote to or demote an organization admin. Requires members:update.'
       operationId: setOrganizationMemberRole
       requestBody:
         required: true
@@ -5903,7 +6180,7 @@ paths:
       tags:
         - Members
       summary: Search Organization Members
-      description: 'Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member''s email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.'
+      description: 'Searches the members of the current organization (proxied from anchor) and pages with a cursor. Backs the recipient picker for schedule failure alerts and the members page; returns each member''s email, display name, and role. Default order: joined_at DESC, then user_id. A sort_by without sort_direction sorts DESC. full_text_search matches the member name and email. A workspace_id filter requires workspace.access:read on that workspace, as the dedicated workspace members search; a caller without it answers 403. Anchor owns the memberships: an invalid cursor is refused by Anchor and answers 400 INVALID_CURSOR.'
       operationId: searchOrganizationMembers
       requestBody:
         description: Search criteria for organization members.
@@ -7588,8 +7865,170 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       security: []
       x-ai-danger: 'Not a person action: anonymous public projection for status-page visitors, not a workspace action.'
+  /mcp-permissions:
+    parameters:
+      - $ref: '#/components/parameters/RequiredOrganizationIDHeader'
+    get:
+      tags:
+        - Code mode
+      summary: Get my MCP permissions
+      description: 'Returns the MCP actions (groups of MCP tools that need one role permission), each with its default mode, and the signed-in member''s mode for each action they set: allow or deny, per workspace, or for the organization when workspace_id is absent. An action with no setting takes its default_mode: allow for a read action, deny for every other kind. Only a web app session can read or change MCP permissions.'
+      operationId: getMcpPermissions
+      responses:
+        "200":
+          description: The MCP actions and the member's settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPermissionsResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth: []
+      x-ai-danger: 'Extends the agent''s own access: only the member, in the web app, reads and changes MCP permissions.'
+    put:
+      tags:
+        - Code mode
+      summary: Change my MCP permissions
+      description: 'Sets the signed-in member''s mode (allow or deny) for one or more actions, each in one workspace or in the organization (no workspace_id). An unknown action gets 400 MCP_ACTION_UNKNOWN; a mode other than allow or deny gets 400 MCP_MODE_INVALID. A role that does not grant the action still refuses its tools whatever the mode. Only a web app session can change MCP permissions: no agent tool changes a mode.'
+      operationId: setMcpPermissions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/McpPermissionsUpdateRequest'
+      responses:
+        "200":
+          description: The MCP actions and the member's settings after the change.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPermissionsResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - BearerAuth: []
+      x-ai-danger: 'Extends the agent''s own access: only the member, in the web app, reads and changes MCP permissions.'
 components:
   schemas:
+    McpPermissionMode:
+      description: 'allow: the agent''s call runs. deny: the call is refused with MCP_DENIED_BY_MEMBER, and only the member changes it in the web app.'
+      type: string
+      enum:
+        - allow
+        - deny
+    McpActionKind:
+      description: 'read: read-only tools. write: writes inside Echopoint. outbound: writes that send requests out of Echopoint. delete: deletes one resource. guarded: a delete of a whole set, or an access or credential change. Only read actions default to allow.'
+      type: string
+      enum:
+        - read
+        - write
+        - outbound
+        - delete
+        - guarded
+    McpActionScope:
+      description: 'workspace: set per workspace. organization: tools that act on no workspace, set once for the organization.'
+      type: string
+      enum:
+        - workspace
+        - organization
+    McpAction:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - kind
+        - default_mode
+        - tools
+      properties:
+        id:
+          type: string
+          example: flows.launch
+        title:
+          type: string
+          example: Launch flows
+        description:
+          type: string
+        kind:
+          $ref: '#/components/schemas/McpActionKind'
+        default_mode:
+          $ref: '#/components/schemas/McpPermissionMode'
+        permission:
+          description: The role permission every tool of the action needs. Absent when every member may call them.
+          type: string
+          example: flows:execute
+        tools:
+          description: Code-mode tool names, namespace.name.
+          type: array
+          items:
+            type: string
+    McpActionArea:
+      type: object
+      required:
+        - id
+        - title
+        - scope
+        - actions
+      properties:
+        id:
+          type: string
+          example: flows
+        title:
+          type: string
+        scope:
+          $ref: '#/components/schemas/McpActionScope'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpAction'
+    McpPermissionSetting:
+      type: object
+      required:
+        - action
+        - mode
+      properties:
+        workspace_id:
+          description: The workspace; absent for an organization action.
+          type: string
+        action:
+          type: string
+          example: flows.launch
+        mode:
+          $ref: '#/components/schemas/McpPermissionMode'
+    McpPermissionsResponse:
+      type: object
+      required:
+        - areas
+        - settings
+      properties:
+        areas:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpActionArea'
+        settings:
+          description: Only the actions the member set; every other action takes its default_mode.
+          type: array
+          items:
+            $ref: '#/components/schemas/McpPermissionSetting'
+    McpPermissionsUpdateRequest:
+      type: object
+      required:
+        - changes
+      properties:
+        changes:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/McpPermissionSetting'
     CloudFleetSettingsSource:
       description: Whether the effective settings come from deployment configuration or a saved Echopoint staff override.
       type: string
@@ -8685,6 +9124,12 @@ components:
           type: array
           items:
             type: string
+    IntegrationSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchRequest'
+    IntegrationConnectionSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchPageRequest'
     IntegrationItemSearchRequest:
       allOf:
         - $ref: '#/components/schemas/SearchRequest'
@@ -9502,7 +9947,7 @@ components:
             - initial_inputs
           properties:
             initial_inputs:
-              description: Variables a run of the flow resolves. A plain value stored on the flow is inlined; a secret or an organization or environment key is the placeholder `{{KEY}}`.
+              description: Variables a run of the flow resolves. A plain value stored on the flow is inlined; a secret or an organization, workspace or environment key is the placeholder `{{KEY}}`.
               type: object
               additionalProperties: true
     BaseFlowNode:
@@ -11022,7 +11467,7 @@ components:
               "y":
                 type: number
         target_environment_key:
-          description: Optional default organization environment key to use when launching this flow.
+          description: Optional default environment key to use when launching this flow. It names an environment of the organization or of the flow's workspace.
           type: string
           examples:
             - staging
@@ -11393,7 +11838,7 @@ components:
           enum:
             - 1
         environment_key:
-          description: Optional named organization environment to overlay before flow variables.
+          description: Optional named environment to overlay before flow variables. It names an environment of the organization or of the flow's workspace.
           type: string
           examples:
             - dev
@@ -13209,7 +13654,7 @@ components:
         - type: object
           properties:
             environment_key:
-              description: Optional named organization environment override. Base organization variables are always loaded. A key that names no environment of the organization answers 400 ENVIRONMENT_KEY_NOT_FOUND.
+              description: Optional named environment override. Workspace variables are always loaded. Organization variables are loaded only when the caller holds organization environment:read; without it, a shared environment for which the organization holds values answers 403, and any other visible name resolves the workspace layers. A key that names no environment the workspace sees (the shared ones and its own) answers 400 ENVIRONMENT_KEY_NOT_FOUND.
               type:
                 - string
                 - "null"
@@ -14019,11 +14464,12 @@ components:
       additionalProperties:
         $ref: '#/components/schemas/VariableLayer'
     Environment:
-      description: One named environment. It exists on its own, so an environment with no variables is a real environment and survives a round trip.
+      description: One entry of the organization's environment catalog (ADR-0043). It exists on its own, so an environment with no variables is a real environment and survives a round trip.
       type: object
       required:
         - id
         - name
+        - scope
         - created_at
         - updated_at
       properties:
@@ -14038,6 +14484,14 @@ components:
           type: string
           examples:
             - prd
+        scope:
+          description: '`organization` for a shared environment that every workspace sees. `workspace` for an environment that only one workspace sees. A name is unique in the organization, whatever its scope.'
+          type: string
+          enum:
+            - organization
+            - workspace
+          examples:
+            - organization
         created_at:
           description: When the environment was created
           type: string
@@ -14127,6 +14581,7 @@ components:
           enum:
             - flow
             - organization
+            - workspace
           examples:
             - flow
         base:
@@ -14145,7 +14600,7 @@ components:
                 updated_at: 2025-11-09 10:05:00+00:00
         environments:
           $ref: '#/components/schemas/EnvironmentLayers'
-          description: Named environment overlays owned by this variable set.
+          description: One layer for each environment the owner sees (ADR-0043), empty when the owner holds no value there. The organization sees the shared environments, a workspace the shared ones and its own.
         organization_id:
           description: Organization ID that owns this variable set.
           type: string
@@ -14349,7 +14804,7 @@ components:
             minLength: 1
             maxLength: 255
         workspace_id:
-          description: Members holding a role on this workspace. Organization admins reach every workspace without one, so they match only when they hold one.
+          description: Members holding a role on this workspace. Requires workspace.access:read on it, as the dedicated workspace members search; a caller without it answers 403. Organization admins reach every workspace without one, so they match only when they hold one.
           type: string
           minLength: 1
           maxLength: 255
@@ -17375,6 +17830,8 @@ components:
       name: X-Job-Token
       in: header
 tags:
+  - name: Code mode
+    description: The MCP permissions of MCP code mode (ADR-0040, ADR-0042). Web app only.
   - name: Auth
     description: Authentication and current user context operations.
   - name: Webhook

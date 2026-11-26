@@ -39,6 +39,7 @@ act in.`,
 		newWorkspaceRenameCmd(state),
 		newWorkspaceMemberCmd(state),
 		newWorkspaceRoleCmd(state),
+		newWorkspaceEnvCmd(state),
 	)
 	return cmd
 }

@@ -215,7 +215,7 @@ echopoint profile delete staging
 ```
 
 A **profile** is the CLI's API target; it is not an environment (`dev`, `prd`), which is a
-named overlay of variables on an organization. Select a profile for a single command
+named overlay of variables, shared by the organization or owned by one workspace. Select a profile for a single command
 without switching the active one:
 
 ```bash
@@ -243,10 +243,10 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
 ### Conventions
 
 - **One read verb: `view`.** `flow view`, `collection view`, `status-page view`,
-  `flow execution view`, `flow env view`, `org view`, `org env view`, `spec view` and `config view` show one thing; `get` and
+  `flow execution view`, `flow env view`, `org view`, `org env view`, `workspace env view`, `spec view` and `config view` show one thing; `get` and
   `show` still work as aliases of `view`. `list` shows many.
 - **A file is always `-f/--file`.** `flow create`, `flow update`, `collection import`,
-  `org env import`, `flow env set`, `monitor create|update|estimate`, `status-page save`, `status-page validate` and the
+  `org env import`, `workspace env import`, `flow env set`, `monitor create|update|estimate`, `status-page save`, `status-page validate` and the
   `spec` commands take it that way; a file typed as an argument fails with
   `pass the file with -f`. `-f -` reads stdin where the command says so
   (`status-page save|validate`, `monitor create|update|estimate`).
@@ -255,7 +255,7 @@ Every command has an `Example:` in its `--help`. An unknown subcommand fails wit
   fails before any request.
 - **Deleting a whole resource asks; editing part of one does not.** `flow delete`,
   `collection delete`, `flow folder delete`, `flow env delete`, `org env delete`,
-  `org env environments delete`, `profile delete`, `config reset` and
+  `org env environments delete`, `workspace env environments delete`, `profile delete`, `config reset` and
   `monitor delete` and `status-page unpublish` ask `Delete flow <id>? [y/N]` on stderr when stdin and
   stdout are terminals; anything but `y` or `yes` cancels with exit code 2. Without a
   terminal they refuse (`pass --yes to delete flow <id> without a prompt`) unless
@@ -509,9 +509,13 @@ echopoint org view -o json
 echopoint org rename "Acme Payments"
 ```
 
-### Organization Variables and Environments
+### Variables and Environments
 
-An **environment** is a named overlay of variables on an organization (`dev`, `prd`).
+An **environment** is a named overlay of variables (`dev`, `prd`). The organization's
+environments are shared: every workspace sees them. A workspace can also have its own.
+A name is unique in the organization. A run resolves organization base < organization
+environment < workspace base < workspace environment < flow variables
+([environment management](docs/environment-management.md)).
 
 ```bash
 echopoint org env view -e prd
@@ -519,8 +523,15 @@ echopoint org env set -e prd --var BASE_URL=https://api.example.com
 echopoint org env import -f vars.env -e prd --secret
 echopoint org env environments list
 echopoint org env environments create prd
-echopoint org env environments delete prd
-echopoint org env delete
+echopoint org env environments delete prd    # refused while a workspace holds values in it
+echopoint org env delete                     # every organization value; the environments stay
+
+# the workspace --workspace selects (without it, the organization's oldest workspace)
+echopoint workspace env view
+echopoint workspace env set -e prd --var BASE_URL=https://payments.example.com
+echopoint workspace env environments list    # shared and own, with their scope
+echopoint workspace env environments create sandbox
+echopoint workspace env environments delete sandbox
 ```
 
 ### OpenAPI Specs
@@ -643,8 +654,8 @@ echopoint config reset            # asks first; removes every profile
 
 ### Completion
 
-Flows (as `<id>`, with their name and folder), folders, executions of the flow already typed, collections, environments (`-e`
-and `org env environments delete`) and profiles (`profile use|delete`, `--profile`)
+Flows (as `<id>`, with their name and folder), folders, executions of the flow already typed, collections, environments (`-e`,
+`org env environments delete` and `workspace env environments delete`) and profiles (`profile use|delete`, `--profile`)
 complete with Tab, next to spec slugs and versions:
 
 ```bash

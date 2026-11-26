@@ -65,6 +65,9 @@ func completionStub(t *testing.T) *apiStub {
 	stub.onSearch("/collections/search", api.Collection{Id: idFor("30"), Name: "Payments API"})
 	stub.onSearch("/organization/environments/search",
 		api.Environment{Id: idFor("40"), Name: "dev"}, api.Environment{Id: idFor("41"), Name: "prd"})
+	stub.onSearch("/workspace/environments/search",
+		api.Environment{Id: idFor("40"), Name: "dev", Scope: api.EnvironmentScopeOrganization},
+		api.Environment{Id: idFor("42"), Name: "sandbox", Scope: api.EnvironmentScopeWorkspace})
 	isolateCLIEnvironment(t, stub.server.URL)
 	return stub
 }
@@ -192,23 +195,35 @@ func TestFoldersCompleteAsPathsAndSomeAcceptAReservedDestination(t *testing.T) {
 	}
 }
 
+// The organization commands complete its shared environments. A flow runs in
+// a workspace, so flow run, flow launch and the workspace commands complete the
+// environments the workspace sees: the shared ones and its own.
 func TestEnvironmentNamesCompleteForTheFlagAndTheDeleteArgument(t *testing.T) {
 	completionStub(t)
-	want := []string{"dev", "prd"}
+	shared := []string{"dev", "prd"}
+	seenByWorkspace := []string{"dev", "sandbox"}
 
-	for _, args := range [][]string{
-		{"flow", "run", "-e", ""},
-		{"flow", "run", "--environment", ""},
-		{"flow", "launch", "-e", ""},
-		{"org", "env", "view", "-e", ""},
-		{"org", "env", "get", "-e", ""},
-		{"org", "env", "set", "--environment", ""},
-		{"org", "env", "unset", "-e", ""},
-		{"org", "env", "import", "-e", ""},
-		{"org", "env", "environments", "delete", ""},
+	for _, tc := range []struct {
+		args []string
+		want []string
+	}{
+		{[]string{"flow", "run", "-e", ""}, seenByWorkspace},
+		{[]string{"flow", "run", "--environment", ""}, seenByWorkspace},
+		{[]string{"flow", "launch", "-e", ""}, seenByWorkspace},
+		{[]string{"org", "env", "view", "-e", ""}, shared},
+		{[]string{"org", "env", "get", "-e", ""}, shared},
+		{[]string{"org", "env", "set", "--environment", ""}, shared},
+		{[]string{"org", "env", "unset", "-e", ""}, shared},
+		{[]string{"org", "env", "import", "-e", ""}, shared},
+		{[]string{"org", "env", "environments", "delete", ""}, shared},
+		{[]string{"workspace", "env", "view", "-e", ""}, seenByWorkspace},
+		{[]string{"workspace", "env", "set", "-e", ""}, seenByWorkspace},
+		{[]string{"workspace", "env", "unset", "-e", ""}, seenByWorkspace},
+		{[]string{"workspace", "env", "import", "-e", ""}, seenByWorkspace},
+		{[]string{"workspace", "env", "environments", "delete", ""}, seenByWorkspace},
 	} {
-		if got := completeCLI(t, args...); !slices.Equal(got, want) {
-			t.Errorf("%v = %q, want %q", args, got, want)
+		if got := completeCLI(t, tc.args...); !slices.Equal(got, tc.want) {
+			t.Errorf("%v = %q, want %q", tc.args, got, tc.want)
 		}
 	}
 	if got := completeCLI(t, "org", "env", "environments", "delete", "dev", ""); len(got) != 0 {
