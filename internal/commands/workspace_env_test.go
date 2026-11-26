@@ -15,7 +15,7 @@ func workspaceEnvStub(t *testing.T) *apiStub {
 	t.Helper()
 	stub := newAPIStub(t)
 	set := map[string]any{
-		"id": idFor("50"), "organization_id": "org_test", "workspace_id": "ws_payments",
+		"id": idFor("50"), "organization_id": "org_test", "owner_id": idFor("51"), "owner_type": "workspace",
 		"created_at": "2026-11-01T00:00:00Z", "updated_at": "2026-11-01T00:00:00Z",
 		"base": map[string]any{
 			"BASE_URL": map[string]any{"value": "https://api.example.com", "secret": false},
@@ -137,7 +137,10 @@ func TestWorkspaceEnvironmentsListGivesEachEnvironmentItsScope(t *testing.T) {
 		t.Errorf("rows = %+v, want %+v", rows, want)
 	}
 
-	table, _, _ := runCLI(t, "workspace", "env", "environments", "list")
+	table, stderr, code := runCLI(t, "workspace", "env", "environments", "list")
+	if code != 0 {
+		t.Fatalf("list exited %d: %s", code, stderr)
+	}
 	if !strings.Contains(table, "shared") || !strings.Contains(table, "workspace") {
 		t.Errorf("table does not name the scopes:\n%s", table)
 	}
@@ -156,5 +159,56 @@ func TestWorkspaceEnvironmentsCreateSendsTheName(t *testing.T) {
 	}
 	if !strings.Contains(stdout, `Created environment "sandbox"`) {
 		t.Errorf("stdout = %q", stdout)
+	}
+}
+
+// The organization keeps the words it printed before workspaces had variables;
+// the workspace names itself.
+func TestEnvWritesNameTheLayerTheyLandedIn(t *testing.T) {
+	stub := workspaceEnvStub(t)
+	stub.on(http.MethodPut, "/organization/environments/prd/variables/A", http.StatusOK, map[string]any{})
+	stub.on(http.MethodPut, "/workspace/variables/A", http.StatusOK, map[string]any{})
+	stub.on(http.MethodPut, "/workspace/variables/B", http.StatusOK, map[string]any{})
+	vars := writeTemp(t, "vars.env", "A=1\nB=2\n")
+
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"org", "env", "set", "-e", "prd", "--var", "A=1"}, `Set 1 variable(s) in the environment "prd"`},
+		{[]string{"workspace", "env", "set", "--var", "A=1"}, "Set 1 variable(s) in the workspace base layer"},
+		{[]string{"workspace", "env", "import", "-f", vars}, "Imported 2 variable(s) into the workspace base layer"},
+	} {
+		stdout, stderr, code := runCLI(t, tc.args...)
+		if code != 0 || !strings.Contains(stdout, tc.want) {
+			t.Errorf("%v exited %d, printed %q (stderr %q), want %q", tc.args, code, stdout, stderr, tc.want)
+		}
+	}
+	if got := len(stub.requestsTo(http.MethodPut, "/workspace/variables/B")); got != 1 {
+		t.Errorf("import sent PUT /workspace/variables/B %d times, want 1", got)
+	}
+}
+
+// A refusal prints the API's reason once, without the usage, and exits 1.
+func TestWorkspaceEnvironmentRefusalsPrintTheReason(t *testing.T) {
+	stub := workspaceEnvStub(t)
+	stub.on(http.MethodPost, "/workspace/environments", http.StatusConflict, map[string]any{
+		"error": map[string]any{"code": "ENVIRONMENT_ALREADY_EXISTS", "message": `environment "dev" already exists`},
+	})
+	stub.on(http.MethodDelete, "/workspace/environments/dev", http.StatusNotFound, map[string]any{
+		"error": map[string]any{"code": "ENVIRONMENT_NOT_FOUND", "message": `environment "dev" does not exist`},
+	})
+
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"workspace", "env", "environments", "create", "dev"}, "409"},
+		{[]string{"workspace", "env", "environments", "delete", "dev", "--yes"}, "404"},
+	} {
+		_, stderr, code := runCLI(t, tc.args...)
+		if code != 1 || !strings.Contains(stderr, tc.want) || strings.Contains(stderr, "Usage:") {
+			t.Errorf("%v exited %d with stderr %q, want exit 1, %s and no usage", tc.args, code, stderr, tc.want)
+		}
 	}
 }

@@ -46,6 +46,16 @@ type variableScope struct {
 	deleteEnvironmentLong  string
 }
 
+// target names the layer a write landed in. The organization keeps the words
+// it printed before workspaces had variables ("base layer"), so a script that
+// reads them still matches.
+func (s variableScope) target(environment string) string {
+	if s.noun == "organization" {
+		return layerTarget(environment)
+	}
+	return s.noun + " " + layerTarget(environment)
+}
+
 func (s variableScope) title() string {
 	return strings.ToUpper(s.noun[:1]) + s.noun[1:]
 }
@@ -199,7 +209,7 @@ it again.`, s.noun),
 			if secret {
 				kind = "secret(s)"
 			}
-			fmt.Printf("Set %d %s in the %s %s\n", len(updates), kind, s.noun, layerTarget(environment))
+			fmt.Printf("Set %d %s in the %s\n", len(updates), kind, s.target(environment))
 			return nil
 		},
 	}
@@ -228,7 +238,7 @@ func (s variableScope) newUnsetCmd(state *AppState) *cobra.Command {
 					return err
 				}
 			}
-			fmt.Printf("Removed %d variable(s) from the %s %s\n", len(args), s.noun, layerTarget(environment))
+			fmt.Printf("Removed %d variable(s) from the %s\n", len(args), s.target(environment))
 			return nil
 		},
 	}
@@ -270,8 +280,8 @@ store every imported value as a secret.`,
 				return err
 			}
 
-			fmt.Printf("Imported %d variable(s) into the %s %s from %s\n",
-				len(updates), s.noun, layerTarget(environment), file)
+			fmt.Printf("Imported %d variable(s) into the %s from %s\n",
+				len(updates), s.target(environment), file)
 			return nil
 		},
 	}

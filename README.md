@@ -215,7 +215,7 @@ echopoint profile delete staging
 ```
 
 A **profile** is the CLI's API target; it is not an environment (`dev`, `prd`), which is a
-named overlay of variables on an organization. Select a profile for a single command
+named overlay of variables, shared by the organization or owned by one workspace. Select a profile for a single command
 without switching the active one:
 
 ```bash

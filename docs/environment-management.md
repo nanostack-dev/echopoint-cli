@@ -83,7 +83,7 @@ commands complete its shared environments, and `flow run`, `flow launch` and the
 
 | Command | Refusal |
 | --- | --- |
-| `environments create` | 409 `ENVIRONMENT_ALREADY_EXISTS` when the name exists anywhere in the organization; the answer never names the workspace that holds it. A workspace holds at most 50 environments (`TOO_MANY_ENVIRONMENTS`). |
+| `environments create` | 409 `ENVIRONMENT_ALREADY_EXISTS` when the name exists anywhere in the organization; the answer never names the workspace that holds it. `workspace env environments create` also refuses a 51st environment of the workspace (`TOO_MANY_ENVIRONMENTS`). |
 | `org env environments delete` | 409 `ENVIRONMENT_IN_USE` while a workspace holds values for it. Those workspaces remove their values first (`workspace env unset -e <name> ...`). |
 | `workspace env environments delete` | 404 for a shared environment: delete it with `org env`, or remove the workspace's values with `unset`. |
 | `org env delete` | Deletes values only. The shared environments, and the workspaces' values in them, stay. |

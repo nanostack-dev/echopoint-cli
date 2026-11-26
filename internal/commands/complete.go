@@ -221,7 +221,7 @@ func completeFolderArg(state *AppState) completionFunc {
 	}
 }
 
-// completeEnvironments completes the names of the organization's environments.
+// completeEnvironments completes the environment names the search returns.
 func completeEnvironments(state *AppState, search func(*AppState) pageFetcher[api.Environment]) completionFunc {
 	return func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return completeFromAPI(state, cmd, toComplete,
